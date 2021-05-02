@@ -1,0 +1,786 @@
+import connect from '../Config/dbConnection';
+import csv from 'csvtojson';
+const Json2csvParser = require("json2csv").Parser;
+import fs from "fs";
+import md5 from "md5"
+
+
+class Mailing{
+    //Abre o csv do mailing a ser importado
+    async abreCsv(path,delimitador,callback){
+        await csv({delimiter:delimitador}).fromFile(path).then(callback)
+    }
+
+    //Cria uma nova tabela para o mailing
+    criarBase(base,req,callback){
+        const keys = Object.keys(base)
+        //criando tabela
+        const nomeTabela=md5(req.body.nome)
+        let campos='';
+        if(req.body.header==1){
+           // console.log('Headers '+keys)
+            for(let i=0; i<keys.length; i++){
+                let k = keys[i]
+                campos+="`"+k.replace(/�/gi, "ç")+"` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8_general_ci',"
+            }                 
+        }else{
+           // console.log('Sem Header');
+            for(let i=0; i<keys.length; i++){
+                campos+="`campo_"+(i+1)+"` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8_general_ci',"
+            }
+        }
+        //console.log(`Campos: ${campos}`)
+        const sql = "CREATE TABLE IF NOT EXISTS `mailings_"+nomeTabela+"` (`id_key_base` INT(11) NOT NULL AUTO_INCREMENT, "+campos+" `ddd_db` INT(2) NULL DEFAULT NULL,`uf_db` CHAR(2) NULL DEFAULT NULL COLLATE 'utf8_general_ci',`tentativas` INT(11) NULL DEFAULT NULL,`status_tabulacao` INT(11) NULL DEFAULT NULL,`contatado` CHAR(2) NULL DEFAULT NULL COLLATE 'utf8_general_ci',`produtivo` INT(11) NULL DEFAULT NULL, PRIMARY KEY (id_key_base) USING BTREE) COLLATE='utf8_general_ci' ENGINE=InnoDB;" 
+        
+        connect.mailings.query(sql,callback)
+    }
+
+    //Tenta reconhecer e setar os tipos de campo de cada coluna
+    setaTipoCampo(base,req,callback){
+        const keys = Object.keys(base)
+        const nomeTabela=md5(req.body.nome)
+        let sql='INSERT INTO mailing_tipo_campo (tabela,campo,tipo) VALUES ';
+        for(let i=0; i<keys.length; i++){
+            //Pegando campo ta tabela
+            let k=keys[i];
+            let campo = k.replace(/�/gi, "ç")
+            let campoTest=campo.toLowerCase()
+            
+            //Pegando valor do campo 
+            let valor=base[keys[i]]
+            //Identificando tipo de campo
+            //verifica o nome do campo de
+            let tipo = 'dados';
+            if(campoTest=='ddd'){
+                 tipo = 'ddd';                
+            }else if((campoTest=='numero')||
+                     (campoTest=='telefone')||
+                     (campoTest=='celular')||
+                     (campoTest=='tel')||
+                     (campoTest=='cel')||
+                     (campoTest=='contato')){
+                        if(valor.length==11){       
+                            let t = parseInt(valor.slice(2, 3))
+                            if(t>=7){
+                                tipo = 'ddd_e_telefone'; 
+                            }    
+                        }else if(valor.length==10){
+                            let t = parseInt(valor.slice(2, 3))
+                            if(t<7){
+                                tipo = 'ddd_e_telefone'; 
+                            } 
+                        }else if(valor.length==9){                        
+                            let t = parseInt(valor.slice(0,1))                        
+                            if(t>=7){                            
+                                tipo = 'telefone'; 
+                            } 
+                        }else if(valor.length==8){
+                            let t = parseInt(valor.slice(0,1))
+                            if(t<7){
+                                tipo = 'telefone';
+                            }
+                        }
+
+            }else if((campoTest=='cep')||
+                     (campoTest=='cpf')||
+                     (campoTest=='cnpj')||
+                     (campoTest=='cpf/cnpj')||
+                     (campoTest=='rg')||
+                     (campoTest=='cnh')||
+                     (campoTest=='documento')||
+                     (campoTest=='habilitacao')){
+                tipo = 'dados';  
+            }else{
+                //verifica se eh numero     
+                let nvalor=parseInt(valor)      
+                if(Number.isInteger(parseInt(nvalor))){
+                    //verifica a quantidade de caracteres                   
+                    if(valor.length==2){
+                       tipo = 'ddd';
+                    }else if(valor.length==11){                       
+                        let t = parseInt(valor.slice(2, 3))
+                        if(t>=9){
+                            tipo = 'ddd_e_telefone'; 
+                        }                        
+                    }else if(valor.length==10){
+                        let t = parseInt(valor.slice(2, 3))
+                        if(t<9){
+                            tipo = 'ddd_e_telefone'; 
+                        } 
+                    }else if(valor.length==9){                        
+                        let t = parseInt(valor.slice(0,1))                       
+                        if(t>=9){                            
+                            tipo = 'telefone'; 
+                        } 
+                    }else if(valor.length==8){
+                        let t = parseInt(valor.slice(0,1))
+                        if(t<=9){
+                            tipo = 'telefone'; 
+                        } 
+                    }
+                }
+            } 
+            
+            //Montando query
+            sql +=`('mailings_${nomeTabela}','${campo}','${tipo}')`
+            if(i==keys.length-1){
+                sql +=';'
+            }else{
+                sql +=','
+            }
+
+        } 
+        connect.banco.query(sql,callback)
+    }
+
+    //Adiciona as informacoes do mailing na tabela de controle de mailings
+    addMailing(req,callback){
+        const nomeTabela=md5(req.body.nome)
+        const filename = req.file.filename.split('-');
+        const sql = `INSERT INTO mailings (data,termino_importacao,nome,arquivo,tabela,pronto,higienizado,status) VALUES (NOW(),now(),'${req.body.nome}','${filename[1]}','mailings_${nomeTabela}',0,0,1)`
+        connect.banco.query(sql,callback)
+    }
+
+    //Separa as colunas do novo mailing
+    separarColunas(base,req,callback){
+        let keys = Object.keys(base)
+        const nomeTabela=md5(req.body.nome)
+        let campos='';
+        let insertHeader='';
+        if(req.body.header==1){
+            //console.log('Headers '+keys)
+            for(let i=0; i<keys.length; i++){
+                campos+="`"+keys[i].replace(/�/gi, "ç")+"`,"
+            }                 
+        }else{
+            //console.log('Sem Header');
+            for(let i=0; i<keys.length; i++){
+                campos+="`campo_"+(i+1)+"`,"
+            }
+            insertHeader+="INSERT INTO `mailings_"+nomeTabela+"` ("+campos+"`ddd_db`,`uf_db`,`tentativas`,`status_tabulacao`,`contatado`,`produtivo`) VALUES`(";
+            for(let i=0; i<keys.length; i++){
+                insertHeader+=`'${keys[i]}',`
+            }
+            insertHeader+="'00','uf',0,0,'',0)";
+        }
+        if(insertHeader){
+            //Inserindo 1 linha
+            connect.mailings.query(insertHeader,(erro)=>{
+                if(erro) throw erro;
+                
+            })
+        }
+        //console.log('Campos => '+campos)
+
+        //setando o campo de ddd
+        const sql=`SELECT campo,tipo FROM mailing_tipo_campo WHERE tabela='mailings_${nomeTabela}' AND (tipo = 'ddd' OR tipo = 'ddd_e_telefone') LIMIT 1`;
+        connect.banco.query(sql,(erro,result)=>{
+            if(erro) throw erro;
+            
+            let r = new Object() 
+                r.tipo=result[0].tipo
+                r.campo=result[0].campo
+            
+
+            callback(nomeTabela,campos,r)
+        })
+
+        //callback(nomeTabela,campos)
+    }
+
+    //Importa os dados do arquivo csv para a tabela criada
+    importaDados(base,nomeTabela,campos,base_id,campoDDD,callback){
+        let erros=0
+       
+        const totalBase = base.length
+        let taxaTransferencia
+        if(totalBase<=100000){
+            taxaTransferencia=2000
+        }else if(totalBase<=300000){
+            taxaTransferencia=1000
+        }else if(totalBase<=500000){
+            taxaTransferencia=500
+        }else if(totalBase<=700000){
+            taxaTransferencia=300
+        }else if(totalBase<=900000){
+            taxaTransferencia=200    
+        }else{
+            taxaTransferencia=100
+        }
+        
+
+        //console.log('Total: '+totalBase+' x Taxa '+taxaTransferencia)
+
+        const key= Object.keys(base[0][1])
+        
+        
+        let sqlValue="INSERT INTO `mailings_"+nomeTabela+"` ("+campos+"`ddd_db`,`uf_db`,`tentativas`,`status_tabulacao`,`contatado`,`produtivo`) VALUES";
+        const limit = taxaTransferencia
+        let length=0
+        if(base.length>limit){
+            length=limit
+        }else{
+           length=base.length
+        }
+        let ddd
+        let uf=''
+        
+        const ddds_UFS=[
+             //Lista de DDDs
+            //Centro-Oeste
+
+            //Distrito Federal 
+            {ddd:61,uf:'DF'},
+            //Goiás
+            {ddd:62,uf:'GO'},
+            {ddd:64,uf:'GO'},
+            //Mato Grosso 
+            {ddd:65,uf:'MT'},
+            {ddd:66,uf:'MT'},
+            //Mato Grosso do Sul
+            {ddd:67,uf:'MS'},
+
+            //Nordeste
+            //Alagoas
+            {ddd:82,uf:'AL'},
+            //Bahia
+            {ddd:71,uf:'BA'},
+            {ddd:73,uf:'BA'},
+            {ddd:74,uf:'BA'},
+            {ddd:75,uf:'BA'},
+            {ddd:77,uf:'BA'},
+            //Ceará
+            {ddd:85,uf:'CE'},
+            {ddd:88,uf:'CE'},
+            //Maranhão
+            {ddd:98,uf:'MA'},
+            {ddd:99,uf:'MA'},
+            //Paraíba
+            {ddd:83,uf:'PB'},
+            //Pernambuco
+            {ddd:87,uf:'PE'},            
+            {ddd:87,uf:'PE'},
+            //Piauí
+            {ddd:86,uf:'PI'},
+            {ddd:89,uf:'PI'},
+            //Rio Grande do Norte 
+            {ddd:84,uf:'RN'},
+            //Sergipe
+            {ddd:79,uf:'SE'},
+
+            //Norte
+            //Acre
+            {ddd:68,uf:'AC'},
+            //Amapá
+            {ddd:96,uf:'AP'},
+            //Amazonas
+            {ddd:92,uf:'AM'},
+            {ddd:97,uf:'AM'},
+            //Pará
+            {ddd:91,uf:'PA'},
+            {ddd:93,uf:'PA'},
+            {ddd:94,uf:'PA'},
+             //Rondônia
+            {ddd:69,uf:'RO'},
+            //Roraima
+            {ddd:95,uf:'RR'},
+            //Tocantins
+            {ddd:63,uf:'TO'},
+
+            //Sudeste
+            //Espírito Santo
+            {ddd:27,uf:'ES'},
+            {ddd:28,uf:'ES'},
+            //Minas Gerais
+            {ddd:31,uf:'MG'},
+            {ddd:32,uf:'MG'},
+            {ddd:33,uf:'MG'},
+            {ddd:34,uf:'MG'},
+            {ddd:35,uf:'MG'},
+            {ddd:37,uf:'MG'},
+            {ddd:38,uf:'MG'},
+            //Rio de Janeiro
+            {ddd:21,uf:'RJ'},
+            {ddd:22,uf:'RJ'},
+            {ddd:24,uf:'RJ'},
+            //São Paulo
+            {ddd:11,uf:'SP'},
+            {ddd:12,uf:'SP'},
+            {ddd:13,uf:'SP'},
+            {ddd:14,uf:'SP'},
+            {ddd:15,uf:'SP'},
+            {ddd:16,uf:'SP'},
+            {ddd:17,uf:'SP'},
+            {ddd:18,uf:'SP'},
+            {ddd:19,uf:'SP'},
+
+            //Sul
+            //Paraná
+            {ddd:41,uf:'PR'},
+            {ddd:42,uf:'PR'},
+            {ddd:43,uf:'PR'},
+            {ddd:44,uf:'PR'},
+            {ddd:45,uf:'PR'},
+            {ddd:46,uf:'PR'},
+            //Rio Grande do Sul
+            {ddd:51,uf:'RS'},
+            {ddd:53,uf:'RS'},
+            {ddd:54,uf:'RS'},
+            {ddd:55,uf:'RS'},
+            //Santa Catarina
+            {ddd:47,uf:'SC'},
+            {ddd:48,uf:'SC'},
+            {ddd:49,uf:'SC'}            
+        ]     
+
+        //Tipo de campo onde esta o ddd
+        const tipoCampo_DDD = campoDDD.tipo    
+
+        //Campo onde esta o ddd
+        const campo_DDD = campoDDD.campo
+
+        for(let i=0;i<length; i++){ 
+           
+            sqlValue+=" (";
+                for(let v=0; v<key.length; v++){
+                    let valor=base[0][1][key[v]]
+                    sqlValue+=`'${valor.replace(/'/gi,'')}',`                    
+                }
+               
+                
+                if(tipoCampo_DDD=='ddd'){                    
+                     ddd = parseInt(base[0][1][campo_DDD])                    
+                }else if(tipoCampo_DDD=='ddd_e_telefone'){            
+                    
+                     ddd = parseInt(base[0][1][campo_DDD].slice(0,2))
+                     console.log(ddd)
+                }
+                //console.log(`ddd ${i}: ${ddd}`)
+
+                for(let d=0; d<ddds_UFS.length; d++){
+                    if (ddds_UFS[d].ddd == ddd){
+                        uf = ddds_UFS[d].uf 
+                    }
+                }              
+              
+                
+                
+
+            base.shift()
+            
+            if(i>=length-1){
+                sqlValue+="'"+ddd+"','"+uf+"',0,0,'',0);";
+            }else{
+                sqlValue+="'"+ddd+"','"+uf+"',0,0,'',0),";
+            }
+            
+                  
+        }
+
+        //console.log('Query:')
+        //    console.log(sqlValue) 
+
+        
+        
+        //populando tabela        
+        connect.mailings.query(sqlValue,(erro,result)=>{ 
+            if(erro) console.log(erro)
+
+            this.totalReg(`mailings_${nomeTabela}`, (erro,resultado)=>{
+                if(erro) throw erro;
+               
+                let totalReg = resultado[0].total
+                if(base.length>0){
+                    const sql = `UPDATE mailings SET totalReg='${totalReg}' WHERE id='${base_id}'`
+                    connect.banco.query(sql,(erro,result)=>{
+                        this.importaDados(base,nomeTabela,campos,base_id,campoDDD,callback)
+                    })
+                }else{
+                    //gravando log
+                    const sql = `UPDATE mailings SET termino_importacao=now(), pronto=1, totalReg='${totalReg}' WHERE id='${base_id}'`
+                    connect.banco.query(sql,callback)
+                      
+                }                   
+            })
+        })
+        
+              
+    }
+
+    //Abre o mailing importado por paginas com a qtd de reg informada
+    abrirMailing(id,p,r,callback){
+        const sql = `SELECT tabela FROM mailings WHERE id=${id}`
+        connect.banco.query(sql,(e,result)=>{
+            if(e) throw e
+            const qtd=r
+            const pag=((p-1)*r)
+            const tabela = result[0].tabela
+            console.log(`SELECT * FROM ${tabela} LIMIT ${pag},${qtd}`)
+            
+            const sql = `SELECT * FROM ${tabela} LIMIT ${pag},${qtd}`
+            connect.mailings.query(sql,callback)
+            
+        })
+    }
+
+    //Retorna o nome da tabela do mailing correspondente ao id enviado
+    tabelaMailing(idMailing,callback){
+        const sql = `SELECT tabela FROM mailings WHERE id=${idMailing}`
+
+        connect.banco.query(sql,callback)
+    }
+    
+
+    //Listar mailings importados
+    listaMailing(callback){
+        const sql = 'SELECT * FROM mailings WHERE status = 1 ORDER BY `id` DESC'
+        connect.banco.query(sql,callback);
+    }
+
+    //Conta o total de registros em uma tabela de mailing
+    totalReg(tabela, callback){
+        const sql = `SELECT count(id_key_base) as total FROM ${tabela}`
+        connect.mailings.query(sql, callback)
+    }
+
+    //Remover Mailing
+    removerMailing(req,callback){
+        const idMailing = parseInt(req.params.idMailing);
+        const sql = `SELECT tabela FROM mailings WHERE id=${idMailing}`
+        connect.banco.query(sql,(erro,result)=>{
+            if(erro) throw erro;
+            
+            const tabela = result[0].tabela
+            const sql = `DROP TABLE ${tabela}`
+            connect.mailings.query(sql,(erro,result)=>{
+                if(erro) throw erro;
+
+                const sql = `DELETE FROM mailings WHERE id=${idMailing}`
+                connect.banco.query(sql,callback)                
+            })
+
+        })
+    }
+
+    //ExportarMailing
+    exportarMailing(id,res,callback){
+       
+        const sql = `SELECT tabela FROM mailings WHERE id=${id}` 
+        connect.banco.query(sql,(error, result) =>{
+            if (error) throw error;
+            const tabela = result[0].tabela
+
+            console.log(tabela)
+
+            const sql = `SELECT * FROM ${tabela}`    
+            connect.mailings.query(sql,(error, data, fields) =>{
+                if (error) throw error;
+            
+                const jsonData = JSON.parse(JSON.stringify(data));
+                console.log("jsonData", jsonData);
+
+                const json2csvParser = new Json2csvParser({ header: true});
+                const csv = json2csvParser.parse(jsonData);
+
+                const inputPath = `tmp/files/`;
+                const fileName = `${tabela}.csv`;
+                const file = `${inputPath}${tabela}.csv`;
+
+
+                fs.writeFile(file, csv, function(error) {
+                    if (error) throw error;
+                    console.log(`Write to ${file}.csv successfully!`);
+                    res.download(file)
+                    /*res.download(fileName, fileName, (err)=>{
+                        if(err) throw err
+                        console.log(fileName)
+                    })
+                    var options = {
+                        root: inputPath,
+                        dotfiles: 'deny',
+                        headers: {
+                          'x-timestamp': Date.now(),
+                          'x-sent': true
+                        }
+                    }
+                    res.sendFile(fileName, options, function (err) {
+                        if (err) {
+                          next(err)
+                        } else {
+                          console.log('Sent:', fileName)
+                        }
+                    })*/
+                });
+            })        
+        })
+    }
+
+    //CONFIGURA O MAILING
+    //Status mailing
+    statusMailing(idMailing,callback){
+        const sql = `SELECT configurado,totalReg,pronto,status FROM mailings WHERE id=${idMailing}`
+        connect.banco.query(sql,callback) 
+    }
+    //Prévia dos dados
+    previaMailing(tabela,limit,callback){
+        const sql = `SELECT * FROM ${tabela} ORDER BY RAND() LIMIT ${limit}`
+        connect.mailings.query(sql,callback) 
+    }
+
+    //Conta os ufs do mailing
+    ufsMailing(idMailing,callback){
+        const sql = `SELECT tabela FROM mailings WHERE id='${idMailing}'`;
+        connect.banco.query(sql,(e,r)=>{
+            if(e) throw e
+
+            const tabela = r[0].tabela
+
+            const sql = `SELECT COUNT(uf_db) AS total, uf_db AS uf FROM ${tabela} GROUP BY uf_db`
+            connect.mailings.query(sql,(e,r)=>{
+                if(e) throw e
+
+                const estados=[
+                   //Centro-Oeste       
+                   {estado:'Distrito Federal',uf:'DF'},
+                   {estado:'Goiás',uf:'GO'},
+                   {estado:'Mato Grosso',uf:'MT'},
+                   {estado:'Mato Grosso do Sul',uf:'MS'},       
+                   //Nordeste
+                   {estado:'Alagoas',uf:'AL'},
+                   {estado:'Bahia',uf:'BA'},
+                   {estado:'Ceará',uf:'CE'},
+                   {estado:'Maranhão',uf:'MA'},
+                   {estado:'Paraíba',uf:'PB'},
+                   {estado:'Pernambuco',uf:'PE'},
+                   {estado:'Piauí',uf:'PI'},
+                   {estado:'Rio Grande do Norte ',uf:'RN'},
+                   {estado:'Sergipe',uf:'SE'},       
+                   //Norte
+                   {estado:'Acre',uf:'AC'},
+                   {estado:'Amapá',uf:'AP'},
+                   {estado:'Amazonas',uf:'AM'},
+                   {estado:'Pará',uf:'PA'},
+                   {estado:'Rondônia',uf:'RO'},
+                   {estado:'Roraima',uf:'RR'},
+                   {estado:'Tocantins',uf:'TO'},       
+                   //Sudeste
+                   {estado:'Espírito Santo',uf:'ES'},
+                   {estado:'Minas Gerais',uf:'MG'},
+                   {estado:'Rio de Janeiro',uf:'RJ'},
+                   {estado:'São Paulo',uf:'SP'},       
+                   //Sul
+                   {estado:'Paraná',uf:'PR'},
+                   {estado:'Rio Grande do Sul',uf:'RS'},
+                   {estado:'Santa Catarina',uf:'SC'}            
+               ]     
+
+                let ufs='{'
+                for(let i=0; i<r.length; i++){
+                    let estado
+                    for(let e=0; e<estados.length; e++){
+                        if (estados[e].uf == r[i].uf){
+                            estado = estados[e].estado
+                            break
+                        }
+                    }      
+                  
+                    ufs += `"${r[i].uf}":`
+                    ufs += `{`
+                    ufs += `"fill":"#185979",`
+                    ufs += `"total":${r[i].total},`
+                    ufs += `"name":"${estado}"`
+                    if(i==r.length-1){
+                        ufs += `}`
+                    }else{
+                        ufs += `},`
+                    }                 
+                    
+                }
+                ufs += '}'             
+                
+                
+                callback(e,JSON.parse(ufs))
+            })
+        })
+    }
+
+    //DDDs por uf do mailing
+    dddsUfMailing(tabela,uf,callback){
+        const sql = `SELECT ddd_db AS ddd, COUNT(id_key_base) AS total FROM ${tabela} WHERE uf_db='${uf}' GROUP BY ddd_db ORDER BY ddd_db ASC`
+        connect.mailings.query(sql,callback)
+    }
+
+    //Resumo por ddd
+    totalRegUF(tabela,callback){
+        const sql = `SELECT uf_db AS UF, COUNT(id_key_base) AS registros FROM ${tabela} GROUP BY uf_db ORDER BY uf_db ASC`
+        connect.mailings.query(sql,callback)
+    }
+
+
+    //Saude do mailing
+    totalRegistros(tabela,callback){
+        const sql = `SELECT COUNT(id_key_base) AS total FROM ${tabela}`
+        connect.mailings.query(sql,callback)
+    }
+    registrosContatados(tabela,callback){
+        const sql = `SELECT COUNT(id_key_base) AS contatados FROM ${tabela} WHERE contatado='S'`
+        connect.mailings.query(sql,callback)
+    }
+    registrosNaoContatados(tabela,callback){
+        const sql = `SELECT COUNT(id_key_base) AS nao_contatados FROM ${tabela} WHERE contatado='N'`
+        connect.mailings.query(sql,callback)
+    }
+
+    //Campos do Mailing e seu tipo
+    camposVsTipo(tabela,callback){
+        const sql = `SELECT id as idCampo, campo,tipo,conferido FROM mailing_tipo_campo WHERE tabela='${tabela}'`
+        connect.banco.query(sql,callback)
+    }
+
+    //Atualizar tipo do campo
+    atualizaTipoCampo(idCampo,novoTipo,callback){
+        const sql = `UPDATE mailing_tipo_campo SET tipo='${novoTipo}', conferido=1 WHERE id=${idCampo}`
+        connect.banco.query(sql,callback)
+    }
+
+    nomeTabela_byidCampo(idCampo,callback){
+        const sql = `SELECT tabela FROM mailing_tipo_campo WHERE id=${idCampo}`
+        connect.banco.query(sql,callback)
+    }
+
+    confereCampos(tabela,callback){
+        const sql = `SELECT COUNT(id) AS pendentes FROM mailing_tipo_campo WHERE tabela='${tabela}' AND conferido != 1`
+        connect.banco.query(sql,callback)
+
+    }
+
+    configuraMailing(tabela,configurado,callback){
+        const sql = `UPDATE mailings SET configurado=${configurado} WHERE tabela='${tabela}'`
+        connect.banco.query(sql,callback)
+    }
+
+
+
+
+
+    //ADICIONA O MAILING A UMA CAMPANHA
+    addMailingCampanha(idCampanha,idMailing,callback){
+        //verifica se mailing ja existem
+        const sql = `SELECT id FROM campanhas_mailing WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
+        connect.banco.query(sql,(e,r)=>{
+            if (e) throw e;
+
+            if(r.length==0){
+                const sql = `INSERT INTO campanhas_mailing (idCampanha,idMailing) VALUES ('${idCampanha}','${idMailing}')`
+                connect.banco.query(sql,callback)
+
+            }
+
+            this.tabelaTabulacaoMailing(idMailing,idCampanha,(e,r)=>{            
+            connect.banco.query(sql,(e,r)=>{ 
+                    if (e) throw e;
+    
+                })
+            })
+        })
+    }
+
+    //Criando banco de tabulacao do mailing
+    tabelaTabulacaoMailing(idMailing,idCampanha,callback){
+        //recuperando o nome da tabela do mailing
+        const sql = `SELECT tabela FROM mailings WHERE id=${idMailing}`
+        connect.banco.query(sql,(e,r)=>{
+            if (e) throw e;
+            const tabela = r[0].tabela
+            //abre o mailing e insere todos os ids no mesmo com o id da campanha na tabela de tabulacao
+            const sql = `SELECT id_key_base FROM ${tabela}`
+            connect.mailings.query(sql,(e,reg)=>{
+                if (e) throw e;
+                console.log(`${reg.length} registros`)
+                for(let i=0; i<reg.length; i++){
+                    const sql = `INSERT INTO campanhas_tabulacao_mailing (idCampanha,idMailing,idRegistro,estado,desc_estado,tentativas) VALUES (${idCampanha},${idMailing},${reg[i].id_key_base},0,'Disponivel',0)`
+                    connect.banco.query(sql,(e,r)=>{
+                        if (e) throw e;
+                    })
+                }
+            })
+        })
+        callback(false,true)
+    }
+
+    //Lista os mailings adicionados em uma campanha
+    listarMailingCampanha(idCampanha,callback){
+        const sql = `SELECT * FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
+        connect.banco.query(sql,callback)
+    }
+
+    //Remove o mailing de uma campanha
+    removeMailingCampanha(id,callback){
+        //Recuperando o id da campanha
+        const sql = `SELECT idCampanha FROM campanhas_mailing WHERE id=${id}`
+        connect.banco.query(sql,(e,r)=>{
+            if(e) throw e;
+
+            const idCampanha = r[0].idCampanha
+            //Removendo registros da tabela de tabulacao
+            const sql = `DELETE FROM campanhas_tabulacao_mailing WHERE idCampanha=${idCampanha}`
+            connect.banco.query(sql,(e,r)=>{
+                if(e) throw e;
+                //Removendo integracao do mailing com a campanha
+                const sql = `DELETE FROM campanhas_mailing WHERE id=${id}`
+                connect.banco.query(sql,(err,res)=>{
+                    if(err) throw err;
+                    //Removendo o setup de colunas do mailing na campanha
+                    const sql = `DELETE FROM campanhas_selecao_colunas WHERE id_campanha_mailing=${id}`
+                    connect.banco.query(sql,callback)
+                })
+            })
+        })
+    }
+
+
+
+    //OLD  - MÉTODOS QUE PRECISAM SER REVISADOS    
+    listarColunasMailing(idMailing,callback){
+        const sql = `SELECT tabela FROM mailings WHERE id=${idMailing}`
+        connect.banco.query(sql,(err,result)=>{
+            if(err) throw err
+            const tabela=result[0].tabela
+            const sql = `SELECT * FROM ${tabela} LIMIT 2`
+            connect.mailings.query(sql,callback)
+        })
+    }
+
+    selecionaColuna(valores,callback){
+        const sql = `INSERT INTO campanhas_selecao_colunas (id_campanha_mailing,id_campanha,id_mailing,nome_coluna,nome_campo,descricao,telefone_principal,telefone) VALUE ('${valores.id_campanha_mailing}','${valores.id_campanha}','${valores.id_mailing}','${valores.nome_coluna}','${valores.nome_campo}','${valores.descricao}','${valores.telefone_principal}','${valores.telefone}');`
+        connect.banco.query(sql,valores,callback)
+    }
+
+    listarColunas(idCamp_Mailing,callback){
+        const sql = `SELECT * FROM campanhas_selecao_colunas WHERE id_campanha_mailing=${idCamp_Mailing}`
+        connect.banco.query(sql,callback)
+    }
+
+    atualizarColuna(idColuna,valores,callback){
+        const sql = 'UPDATE campanhas_selecao_colunas SET ? WHERE id=?'
+        connect.banco.query(sql,[valores,idColuna],callback)
+        
+    }
+
+    removerColuna(idColuna,callback){
+        const sql = `DELETE FROM campanhas_selecao_colunas WHERE id=${idColuna}`
+        connect.banco.query(sql,callback)
+    }
+
+
+   
+      confCamposMailing(tabela,callback){
+        const sql = `SELECT * FROM ${tabela} LIMIT 2`
+        connect.mailings.query(sql,callback)
+    }
+
+}
+export default new Mailing();
+
+
+
