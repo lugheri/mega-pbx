@@ -147,6 +147,11 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
         //Mailing por UF
 
         //Configurar tela do agente
+        //get Fields
+        routes.get('/getFieldsUserScreen/:idCampanha',_CampanhasController2.default.getFieldsUserScreen)
+
+        //Update Fields
+        routes.patch('/updateFieldsUserScreen/:idCampanha',_CampanhasController2.default.updateFieldsUserScreen)
 
     //TABULACOES
         //LISTA DE TABULACOES     
@@ -245,8 +250,7 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
 
 
 
-    //Separar Campos
-    routes.get('/configurarCamposMailing/:idMailing',_MailingController2.default.confCamposMailing)
+   
 
 
     
@@ -296,45 +300,9 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
 
 
 
-//TESTES
 
 
-
-
-
-
-
-
-
-
-
-   
-
-
-    
-
-   
-
-   
-
-    
-    
-    //Colunas Mailing
-    //Seleciona colunas Mailing
-    routes.get('/listarColunasMailing/:idMailing', _CampanhasController2.default.listarColunasMailing)
-    
-    //selecionar Coluna
-    routes.post('/setaColuna', _CampanhasController2.default.setaColuna);
-    
-    //listarColunas
-    routes.get('/listarColunas/:idCamp_Mailing', _CampanhasController2.default.listarColunas);
-
-    //atualizarColuna
-    routes.patch('/atualizarColuna/:idColuna',_CampanhasController2.default.atualizarColuna)
-
-    //removerColuna
-    routes.delete('/removerColuna/:idColuna',_CampanhasController2.default.removerColuna)
-
+    //TESTES
     //atribui campanha
     routes.post('/addFila/:idCampanha/:nomeFila',_CampanhasController2.default.addFilaCampanha)
 

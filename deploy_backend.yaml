@@ -73,7 +73,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: lugheri/api-central:v77
+        image: lugheri/api-central:v95
         env:
         - name: TZ
           value: America/Sao_Paulo
@@ -411,7 +411,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: mega10/frontendcentral:v33
+        image: mega10/frontendcentral:v38
         env:
         - name: TZ
           value: America/Sao_Paulo

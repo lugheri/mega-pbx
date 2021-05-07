@@ -11,8 +11,8 @@ class Asterisk{
     //######################Configuração das filas######################
     
     //Criar nova filas
-    criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,callback){
-        const sql = `INSERT INTO queues (name,musiconhold,strategy,timeout,retry,autopause,maxlen) VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}')`
+    criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat,callback){
+        const sql = `INSERT INTO queues (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
         connect.asterisk.query(sql,callback)
     }
     //Remove a fila
@@ -159,7 +159,7 @@ class Asterisk{
             if(e) throw e
             //Atualiza a tabela da campanha
             const sql = `UPDATE campanhas_tabulacao_mailing SET numeroDiscado='${numero}', agente='${ramal}', estado='${estado}', desc_estado='${desc_estado}', contatado='${contatado}', tabulacao=${status_tabulacao}, produtivo='${produtivo}', observacao='${observacao}', tentativas=tentativas+1 WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha}`
-            connect.banco.query(sql,(e,r)=>{
+            connect.mailings.query(sql,(e,r)=>{
                 if(e) throw e
                 //Removendo chamada das chamadas simultaneas
                 const sql = `DELETE FROM campanhas_chamadas_simultaneas  WHERE numero='${numero}'`

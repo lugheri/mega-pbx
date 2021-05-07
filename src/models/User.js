@@ -99,7 +99,7 @@ class User{
     }
 
     listUsers(status,callback){
-        const sql = `SELECT u.id,u.criacao,u.nome,u.usuario,u.nivelAcesso,e.equipe,c.cargo,n.nivel,u.reset,u.logado,u.ultimo_acesso, u.status FROM users AS u LEFT JOIN users_equipes AS e ON u.equipe=e.id  LEFT JOIN users_cargos AS c ON u.cargo=c.id LEFT JOIN users_niveis AS n ON u.nivelAcesso=n.id WHERE u.status=${status} ORDER BY u.id DESC`
+        const sql = `SELECT u.id,DATE_FORMAT (u.criacao,'%d/%m/%Y %H:%i:%s') as criacao,u.nome,u.usuario,u.nivelAcesso,e.equipe,c.cargo,n.nivel,u.reset,u.logado,DATE_FORMAT (u.ultimo_acesso,'%d/%m/%Y %H:%i:%s') as ultimo_acesso, u.status FROM users AS u LEFT JOIN users_equipes AS e ON u.equipe=e.id  LEFT JOIN users_cargos AS c ON u.cargo=c.id LEFT JOIN users_niveis AS n ON u.nivelAcesso=n.id WHERE u.status=${status} ORDER BY u.id DESC`
         connect.banco.query(sql,callback)
     }
 

@@ -191,10 +191,18 @@ class DashboardController{
 
     //Mailing de todas as campanha
     mailingCampanhas(req,res){
-        Campanhas.mailingsNaoTrabalhados((e,nao_Trabalhados)=>{
+        Campanhas.totalMailings((e,total_reg)=>{
             if(e) throw e
+
+           
+            let total
+            if(total_reg[0].total == null){
+                 total = 0
+            }else{
+                total = parseInt(total_reg[0].total)
+            }
+
             
-            const naoTrabalhados = parseInt(nao_Trabalhados[0].nao_trabalhados)
             Campanhas.mailingsContatados((e,ja_contatados)=>{
                 if(e) throw e
 
@@ -205,18 +213,15 @@ class DashboardController{
                     const naoContatados = parseInt(nao_Contatados[0].nao_contatados)
 
                     const trabalhados = contatados + naoContatados
-                    const total = naoTrabalhados + trabalhados
 
                     let perc_trabalhados = 0
                     let perc_contatados = 0
                     let perc_naoContatados = 0
-                    let perc_naoTrabalhados = 0
 
                     if(total!=0){
                         perc_trabalhados = parseFloat((trabalhados / total)*100).toFixed(1)
                         perc_contatados = parseFloat((contatados / total)*100).toFixed(1)
                         perc_naoContatados = parseFloat((naoContatados / total)*100).toFixed(1)
-                        perc_naoTrabalhados = parseFloat((naoTrabalhados / total)*100).toFixed(1)
                     }             
                     
 
@@ -224,7 +229,12 @@ class DashboardController{
                         retorno += `"trabalhado": ${perc_trabalhados},`
                         retorno += `"contatados": ${perc_contatados},`
                         retorno += `"nao_contatados": ${perc_naoContatados}`
-                        retorno += '}'                  
+                        retorno += '}'     
+                        
+                        console.log(total)
+                        console.log(contatados)
+                        console.log(naoContatados)
+                        console.log(trabalhados)  
                     console.log(retorno)
                      
                     retorno = JSON.parse(retorno)                  

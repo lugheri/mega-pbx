@@ -302,37 +302,127 @@ class Campanhas{
         _dbConnection2.default.banco.query(sql,callback)
     }
 
+    //Recupera o nome da tabela pelo id da campanha
+    nomeTabela_byIdCampanha(idCampanha,callback){
+        const sql = `SELECT m.tabela FROM mailings AS m JOIN campanhas_mailing AS c ON m.id=c.idMailing WHERE c.idCampanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
      //Status dos Mailings das campanhas ativas
-    mailingsNaoTrabalhados(callback){
+    /*mailingsNaoTrabalhados(callback){
         const sql = `SELECT count(t.id) AS nao_trabalhados FROM campanhas_tabulacao_mailing AS t JOIN campanhas AS c ON c.id=t.idCampanha WHERE t.contatado is null AND c.estado=1 AND c.status=1`
+        connect.banco.query(sql,callback)
+    }*/
+    totalMailings(callback){
+        const sql = `SELECT SUM(totalReg) AS total FROM mailings as m JOIN campanhas_mailing AS cm ON cm.idMailing=m.id JOIN campanhas AS c ON c.id=cm.idCampanha WHERE c.estado=1 AND c.status=1`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
     mailingsContatados(callback){
-        const sql = `SELECT count(t.id) AS contatados FROM campanhas_tabulacao_mailing AS t JOIN campanhas AS c ON c.id=t.idCampanha WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
+        const sql = `SELECT count(t.id) AS contatados FROM mailings.campanhas_tabulacao_mailing AS t JOIN campanhas AS c ON c.id=t.idCampanha WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
     mailingsNaoContatados(callback){
-        const sql = `SELECT count(t.id) AS nao_contatados FROM campanhas_tabulacao_mailing AS t JOIN campanhas AS c ON c.id=t.idCampanha WHERE t.contatado='N' AND c.estado=1 AND c.status=1`
+        const sql = `SELECT count(t.id) AS nao_contatados FROM mailings.campanhas_tabulacao_mailing AS t JOIN campanhas AS c ON c.id=t.idCampanha WHERE t.contatado='N' AND c.estado=1 AND c.status=1`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
-     //Status dos Mailings por campanha
+    //Status dos Mailings por campanha
+    //Campos Nao Selecionados
+    camposNaoSelecionados(idCampanha,tabela,callback){
+        const sql = `SELECT DISTINCT m.id AS campo FROM mailing_tipo_campo AS m LEFT OUTER JOIN campanhas_campos_tela_agente AS s ON m.id=s.idCampo WHERE m.tabela='${tabela}' AND tipo='dados' AND conferido=1 AND m.id NOT IN (SELECT idCampo FROM campanhas_campos_tela_agente WHERE tabela='${tabela}' AND idCampanha=${idCampanha})`
+        _dbConnection2.default.banco.query(sql,callback) 
+    }
 
-    mailingsNaoTrabalhados_porCampanha(idCampanha,callback){
-        const sql = `SELECT count(id) AS nao_trabalhados FROM campanhas_tabulacao_mailing WHERE contatado IS NULL AND idCampanha=${idCampanha}`
+    //Campos Selecionados na tela do agente
+    camposSelecionados(idCampanha,tabela,callback){
+        const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}' ORDER BY ordem ASC;`
         _dbConnection2.default.banco.query(sql,callback)
     }
+
+    //Reordena campos disponiveis do mailing                         
+    reordenaCamposMailing(idCampo,tabela,posOrigen,posDestino,callback){
+        //Caso ele tenha descido
+        if(posOrigen<posDestino){
+            //diminui a ordem de todos que sao menores ou iguais ao destino
+            const sql = `UPDATE mailings_tipo_campo campo SET ordem=ordem-1 WHERE tabela='${tabela}' AND ordem<=${posDestino}`
+            _dbConnection2.default.banco.query(sql,(e,r)=>{
+                if(e) throw e
+
+                const sql = `UPDATE mailings_tipo_campo SET ordem=${posDestino} WHERE id=${idCampo}`
+                _dbConnection2.default.banco.query(sql,callback)
+            })
+        }else{//Caso ele tenha subido
+            //aumenta a ordem de todos que sao maiores ou iguais ao destino
+            const sql = `UPDATE mailings_tipo_campo SET ordem=ordem+1 WHERE tabela='${tabela}' AND ordem>=${posDestino}`
+            _dbConnection2.default.banco.query(sql,(e,r)=>{
+                if(e) throw e
+
+                const sql = `UPDATE mailings_tipo_campo SET ordem=${posDestino} WHERE id=${idCampo}`
+                _dbConnection2.default.banco.query(sql,callback)
+            })
+        }
+    }
+
+    //Reordena campos selecionados da tela do agente
+    reordenaCampoTelaAgente(idCampanha,tabela,idCampo,posOrigen,posDestino,callback){
+        //Caso ele tenha descido
+        if(posOrigen<posDestino){
+            //diminui a ordem de todos que sao menores ou iguais ao destino
+            const sql = `UPDATE campanhas_campos_tela_agente SET ordem=ordem-1 WHERE idCampanha=${idCampanha} AND tabela='${tabela}' AND ordem<=${posDestino}`
+            _dbConnection2.default.banco.query(sql,(e,r)=>{
+                if(e) throw e
+
+                const sql = `UPDATE campanhas_campos_tela_agente SET ordem=${posDestino} WHERE idCampo=${idCampo}`
+                _dbConnection2.default.banco.query(sql,callback)
+            })
+        }else{//Caso ele tenha subido
+            //aumenta a ordem de todos que sao maiores ou iguais ao destino
+            const sql = `UPDATE campanhas_campos_tela_agente SET ordem=ordem+1 WHERE idCampanha=${idCampanha} AND tabela='${tabela}' AND ordem>=${posDestino}`
+            _dbConnection2.default.banco.query(sql,(e,r)=>{
+                if(e) throw e
+
+                const sql = `UPDATE campanhas_campos_tela_agente SET ordem=${posDestino} WHERE idCampo=${idCampo}`
+                _dbConnection2.default.banco.query(sql,callback)
+            })
+        }
+    }
+
+
+    //Adicionando campo na tela do agente
+    addCampoTelaAgente(idCampanha,tabela,idCampo,ordem,callback){
+        const sql = `UPDATE campanhas_campos_tela_agente SET ordem=ordem+1 WHERE idCampanha=${idCampanha} AND tabela='${tabela}' AND ordem>=${ordem}`
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e
+
+            const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo,ordem) VALUES (${idCampanha},'${tabela}',${idCampo},${ordem})`
+            _dbConnection2.default.banco.query(sql,callback)
+        })
+    }
+
+    //Removendo campo selecionado da tela do agente
+    removeCampoTelaAgente(idCampanha,tabela,idCampo,callback){
+        const sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}' AND idCampo=${idCampo}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+
+    
+    totalMailingsCampanha(idCampanha,callback){
+        const sql = `SELECT SUM(totalReg) AS total FROM mailings as m JOIN campanhas_mailing AS cm ON cm.idMailing=m.id WHERE cm.idCampanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
 
     mailingsContatados_porCampanha(idCampanha,callback){
         const sql = `SELECT count(id) AS contatados FROM campanhas_tabulacao_mailing WHERE contatado='S' AND idCampanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
+        _dbConnection2.default.mailings.query(sql,callback)
     }
 
     mailingsNaoContatados_porCampanha(idCampanha,callback){
         const sql = `SELECT count(id) AS nao_contatados FROM campanhas_tabulacao_mailing WHERE contatado='N' AND idCampanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
+        _dbConnection2.default.mailings.query(sql,callback)
     }
 
     

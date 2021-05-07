@@ -2,8 +2,8 @@ import mysql from 'mysql';
 
 const connect=()=>{};
 
-//const host='mysql'
-const host='localhost'
+const host='mysql'
+//const host='localhost'
                                                                                                                                                                                                         
 connect.banco=mysql.createConnection({
     host : host,

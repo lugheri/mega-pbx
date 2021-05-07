@@ -39,7 +39,9 @@ class CampanhasController{
             const retry = "5"
             const autopause = "no"
             const maxlen = "0"
-            Asterisk.criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,(e,r)=>{
+            const monitorType = "mixmonitor"
+            const monitorFormat = "wav"
+            Asterisk.criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat,(e,r)=>{
                 if(e) throw e;
 
                 Campanhas.addFila(idCampanha,name,(e,r)=>{
@@ -65,10 +67,19 @@ class CampanhasController{
     statusEvolucaoCampanha(req,res){
         const idCampanha = parseInt(req.params.idCampanha)
         console.log(`idCampanha ${idCampanha}`)
-        Campanhas.mailingsNaoTrabalhados_porCampanha(idCampanha,(e,nao_Trabalhados)=>{
-            if(e) throw e
+        Campanhas.totalMailingsCampanha(idCampanha,(e,total_mailing)=>{
+            if(e) throw e           
             
-            const naoTrabalhados = parseInt(nao_Trabalhados[0].nao_trabalhados)
+
+            let total
+            if(total_mailing[0].total == null){
+                 total = 0
+            }else{
+                total = parseInt(total_mailing[0].total)
+            }
+
+          
+
             Campanhas.mailingsContatados_porCampanha(idCampanha,(e,ja_contatados)=>{
                 if(e) throw e
 
@@ -79,18 +90,16 @@ class CampanhasController{
                     const naoContatados = parseInt(nao_Contatados[0].nao_contatados)
 
                     const trabalhados = contatados + naoContatados
-                    const total = naoTrabalhados + trabalhados
                     
                     let perc_trabalhados = 0
                     let perc_contatados = 0
                     let perc_naoContatados = 0
-                    let perc_naoTrabalhados = 0
 
                     if(total!=0){
                         perc_trabalhados = parseFloat((trabalhados / total)*100).toFixed(1)
                         perc_contatados = parseFloat((contatados / total)*100).toFixed(1)
                         perc_naoContatados = parseFloat((naoContatados / total)*100).toFixed(1)
-                        perc_naoTrabalhados = parseFloat((naoTrabalhados / total)*100).toFixed(1)
+                        
                     }           
                     
                     let retorno = '{'
@@ -330,9 +339,7 @@ class CampanhasController{
                 res.json(result) 
             })
         }
-
-
-        
+    
         
         
 
@@ -379,6 +386,115 @@ class CampanhasController{
 
 
         //Configurar tela do agente
+        //Lista campos da tela disponiveis
+        getFieldsUserScreen(req,res){
+            const idCampanha = parseInt(req.params.idCampanha);
+
+            //Buscando nome da tabela
+            Campanhas.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
+                if(e) throw e
+                
+                const tabela= nomeTabela[0].tabela
+                console.log(tabela)
+                Mailing.camposMailing(tabela,(e,campos)=>{
+                    if(e) throw e 
+
+                    let dragDrop_campos = '{"fields":{'
+                    for(let i=0;i<campos.length; i++){
+                        let item = `"${campos[i].id}":{"id":"${campos[i].id}","content":"${campos[i].campo}"}`
+                        dragDrop_campos+=item
+                        if((campos.length-1)>i){
+                            dragDrop_campos+=','
+                        } 
+                    }
+                    dragDrop_campos+='},'
+
+                    //Campos Não Selecionados
+                    Campanhas.camposNaoSelecionados(idCampanha,tabela,(e,camposNaoSelecionados)=>{
+                        if(e) throw e 
+
+                        dragDrop_campos += '"columns":{"naoSelecionados":{"id":"naoSelecionados","camposIds":['
+                        for(let i=0; i<camposNaoSelecionados.length; i++){
+                            let campo  = `"${camposNaoSelecionados[i].campo}"`
+                            dragDrop_campos+=campo
+                            if((camposNaoSelecionados.length-1)>i){
+                                dragDrop_campos+=','
+                            }                 
+                        }
+                        dragDrop_campos+=']},'
+
+                        Campanhas.camposSelecionados(idCampanha,tabela,(e,camposSelecionados)=>{
+                            if(e) throw e 
+
+                            dragDrop_campos += '"camposSelecionados":{"id":"camposSelecionados","camposIds":['
+                            for(let i=0; i<camposSelecionados.length; i++){
+                                let camposSel  = `"${camposSelecionados[i].idCampo}"`
+                                dragDrop_campos+=camposSel
+                                if((camposSelecionados.length-1)>i){
+                                    dragDrop_campos+=','
+                                }                 
+                            }
+                            dragDrop_campos+=']}}}'
+                            console.log(dragDrop_campos)
+                            
+                            const obj = JSON.parse(dragDrop_campos);
+                            res.json(obj)
+                        })
+                    })                   
+                })
+            })           
+        }
+
+        //Atualiza campos da tela do agente
+        updateFieldsUserScreen(req,res){
+            const idCampanha = parseInt(req.params.idCampanha)
+            Campanhas.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
+                if(e) throw e
+                
+                const tabela= nomeTabela[0].tabela
+
+                const idCampo = req.body.idCampo
+
+                const origem = req.body.origem.columName
+                const posOrigen = req.body.origem.posicao
+
+                const destino =  req.body.destino.columName
+                const posDestino = req.body.destino.posicao
+
+                //reordena fora da fila
+                if((origem == 'naoSelecionados')&&(destino == 'naoSelecionados')){                    
+                    Campanhas.reordenaCamposMailing(idCampo,tabela,posOrigen,posDestino,(e,r)=>{
+                        if(e) throw e
+                    })
+                }
+                //insere na fila
+                if((origem == 'naoSelecionados')&&(destino == 'camposSelecionados')){
+                    Campanhas.addCampoTelaAgente(idCampanha,tabela,idCampo,posDestino,(e,r)=>{
+                        if(e) throw e
+                                        
+                        res.json(true)
+                    })
+                }
+
+                //reordena dentro da fila
+                if((origem == 'camposSelecionados')&&(destino == 'camposSelecionados')){                
+                    Campanhas.reordenaCampoTelaAgente(idCampanha,tabela,idCampo,posOrigen,posDestino,(e,r)=>{
+                        if(e) throw e
+                                        
+                        res.json(true)
+                    })
+                }
+
+                //remove da fila
+                if((origem == 'camposSelecionados')&&(destino == 'naoSelecionados')){
+                    Campanhas.removeCampoTelaAgente(idCampanha,tabela,idCampo,(e,r)=>{
+                        if(e) throw e
+                
+                        res.json(true)
+                    })
+                } 
+            })          
+        }
 
 
 

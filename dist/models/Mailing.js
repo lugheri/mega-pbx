@@ -2,7 +2,6 @@
 var _csvtojson = require('csvtojson'); var _csvtojson2 = _interopRequireDefault(_csvtojson);
 const Json2csvParser = require("json2csv").Parser;
 var _fs = require('fs'); var _fs2 = _interopRequireDefault(_fs);
-var _md5 = require('md5'); var _md52 = _interopRequireDefault(_md5);
 
 
 class Mailing{
@@ -12,12 +11,12 @@ class Mailing{
     }
 
     //Cria uma nova tabela para o mailing
-    criarBase(base,req,callback){
+    criarBase(base,nomeTabela,header,callback){
         const keys = Object.keys(base)
         //criando tabela
-        const nomeTabela=_md52.default.call(void 0, req.body.nome)
+       
         let campos='';
-        if(req.body.header==1){
+        if(header==1){
            // console.log('Headers '+keys)
             for(let i=0; i<keys.length; i++){
                 let k = keys[i]
@@ -36,9 +35,8 @@ class Mailing{
     }
 
     //Tenta reconhecer e setar os tipos de campo de cada coluna
-    setaTipoCampo(base,req,callback){
-        const keys = Object.keys(base)
-        const nomeTabela=_md52.default.call(void 0, req.body.nome)
+    setaTipoCampo(base,nomeTabela,callback){
+        const keys = Object.keys(base)       
         let sql='INSERT INTO mailing_tipo_campo (tabela,campo,tipo) VALUES ';
         for(let i=0; i<keys.length; i++){
             //Pegando campo ta tabela
@@ -134,20 +132,18 @@ class Mailing{
     }
 
     //Adiciona as informacoes do mailing na tabela de controle de mailings
-    addMailing(req,callback){
-        const nomeTabela=_md52.default.call(void 0, req.body.nome)
-        const filename = req.file.filename.split('-');
-        const sql = `INSERT INTO mailings (data,termino_importacao,nome,arquivo,tabela,pronto,higienizado,status) VALUES (NOW(),now(),'${req.body.nome}','${filename[1]}','mailings_${nomeTabela}',0,0,1)`
+    addMailing(nome,nomeTabela,filename,callback){       
+        const sql = `INSERT INTO mailings (data,termino_importacao,nome,arquivo,tabela,pronto,higienizado,status) VALUES (NOW(),now(),'${nome}','${filename[1]}','mailings_${nomeTabela}',0,0,1)`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
     //Separa as colunas do novo mailing
-    separarColunas(base,req,callback){
+    separarColunas(base,nomeTabela,header,callback){
         let keys = Object.keys(base)
-        const nomeTabela=_md52.default.call(void 0, req.body.nome)
+       
         let campos='';
         let insertHeader='';
-        if(req.body.header==1){
+        if(header==1){
             //console.log('Headers '+keys)
             for(let i=0; i<keys.length; i++){
                 campos+="`"+keys[i].replace(/�/gi, "ç")+"`,"
@@ -176,10 +172,15 @@ class Mailing{
         const sql=`SELECT campo,tipo FROM mailing_tipo_campo WHERE tabela='mailings_${nomeTabela}' AND (tipo = 'ddd' OR tipo = 'ddd_e_telefone') LIMIT 1`;
         _dbConnection2.default.banco.query(sql,(erro,result)=>{
             if(erro) throw erro;
-            
+
             let r = new Object() 
+
+            console.log(result[0].tipo)
+            
+            if(result[0].tipo){
                 r.tipo=result[0].tipo
                 r.campo=result[0].campo
+            }
             
 
             callback(nomeTabela,campos,r)
@@ -449,16 +450,31 @@ class Mailing{
         const sql = `SELECT tabela FROM mailings WHERE id=${idMailing}`
         _dbConnection2.default.banco.query(sql,(erro,result)=>{
             if(erro) throw erro;
-            
-            const tabela = result[0].tabela
-            const sql = `DROP TABLE ${tabela}`
-            _dbConnection2.default.mailings.query(sql,(erro,result)=>{
-                if(erro) throw erro;
 
-                const sql = `DELETE FROM mailings WHERE id=${idMailing}`
-                _dbConnection2.default.banco.query(sql,callback)                
-            })
+            if(result.length!=0){
+                //Removendo os dados do mailing
+                const tabela = result[0].tabela
+                const sql = `DROP TABLE ${tabela}`
+                _dbConnection2.default.mailings.query(sql,(erro,result)=>{
+                    if(erro) throw erro;
+                    //Removendo as informações do mailing
+                    const sql = `DELETE FROM mailings WHERE id=${idMailing}`
+                    _dbConnection2.default.banco.query(sql,(e,r)=>{
+                        if(erro) throw erro;
 
+                        //Removendo os campos do mailings
+                        const sql = `DELETE FROM mailing_tipo_campo WHERE tabela='${tabela}'`
+                        _dbConnection2.default.banco.query(sql,(e,r)=>{
+                            if(erro) throw erro;  
+                            //Removendo mailing das campanhas
+                            const sql = `DELETE FROM campanhas_mailing WHERE idMailing='${idMailing}'`
+                            _dbConnection2.default.banco.query(sql,callback(e,true))
+                        })
+                    })                
+                })
+            }else{
+                callback(false,false)
+            }
         })
     }
 
@@ -516,6 +532,12 @@ class Mailing{
     }
 
     //CONFIGURA O MAILING
+    //Lista os campos disponiveis do mailing
+    camposMailing(tabela,callback){
+        const sql = `SELECT id, campo FROM mailing_tipo_campo WHERE tabela='${tabela}' AND tipo='dados' AND conferido=1 ORDER BY ordem ASC`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+    
     //Status mailing
     statusMailing(idMailing,callback){
         const sql = `SELECT configurado,totalReg,pronto,status FROM mailings WHERE id=${idMailing}`
@@ -633,13 +655,13 @@ class Mailing{
 
     //Campos do Mailing e seu tipo
     camposVsTipo(tabela,callback){
-        const sql = `SELECT id as idCampo, campo,tipo,conferido FROM mailing_tipo_campo WHERE tabela='${tabela}'`
+        const sql = `SELECT id as idCampo,campo,apelido,tipo,conferido FROM mailing_tipo_campo WHERE tabela='${tabela}'`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
     //Atualizar tipo do campo
-    atualizaTipoCampo(idCampo,novoTipo,callback){
-        const sql = `UPDATE mailing_tipo_campo SET tipo='${novoTipo}', conferido=1 WHERE id=${idCampo}`
+    atualizaTipoCampo(idCampo,apelido,novoTipo,callback){
+        const sql = `UPDATE mailing_tipo_campo SET apelido='${apelido}', tipo='${novoTipo}', conferido=1 WHERE id=${idCampo}`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
@@ -676,12 +698,12 @@ class Mailing{
 
             }
 
-            this.tabelaTabulacaoMailing(idMailing,idCampanha,(e,r)=>{            
-            _dbConnection2.default.banco.query(sql,(e,r)=>{ 
+            /*this.tabelaTabulacaoMailing(idMailing,idCampanha,(e,r)=>{            
+            connect.banco.query(sql,(e,r)=>{ 
                     if (e) throw e;
     
                 })
-            })
+            })*/
         })
     }
 
@@ -724,7 +746,7 @@ class Mailing{
             const idCampanha = r[0].idCampanha
             //Removendo registros da tabela de tabulacao
             const sql = `DELETE FROM campanhas_tabulacao_mailing WHERE idCampanha=${idCampanha}`
-            _dbConnection2.default.banco.query(sql,(e,r)=>{
+            _dbConnection2.default.mailings.query(sql,(e,r)=>{
                 if(e) throw e;
                 //Removendo integracao do mailing com a campanha
                 const sql = `DELETE FROM campanhas_mailing WHERE id=${id}`
@@ -737,48 +759,6 @@ class Mailing{
             })
         })
     }
-
-
-
-    //OLD  - MÉTODOS QUE PRECISAM SER REVISADOS    
-    listarColunasMailing(idMailing,callback){
-        const sql = `SELECT tabela FROM mailings WHERE id=${idMailing}`
-        _dbConnection2.default.banco.query(sql,(err,result)=>{
-            if(err) throw err
-            const tabela=result[0].tabela
-            const sql = `SELECT * FROM ${tabela} LIMIT 2`
-            _dbConnection2.default.mailings.query(sql,callback)
-        })
-    }
-
-    selecionaColuna(valores,callback){
-        const sql = `INSERT INTO campanhas_selecao_colunas (id_campanha_mailing,id_campanha,id_mailing,nome_coluna,nome_campo,descricao,telefone_principal,telefone) VALUE ('${valores.id_campanha_mailing}','${valores.id_campanha}','${valores.id_mailing}','${valores.nome_coluna}','${valores.nome_campo}','${valores.descricao}','${valores.telefone_principal}','${valores.telefone}');`
-        _dbConnection2.default.banco.query(sql,valores,callback)
-    }
-
-    listarColunas(idCamp_Mailing,callback){
-        const sql = `SELECT * FROM campanhas_selecao_colunas WHERE id_campanha_mailing=${idCamp_Mailing}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    atualizarColuna(idColuna,valores,callback){
-        const sql = 'UPDATE campanhas_selecao_colunas SET ? WHERE id=?'
-        _dbConnection2.default.banco.query(sql,[valores,idColuna],callback)
-        
-    }
-
-    removerColuna(idColuna,callback){
-        const sql = `DELETE FROM campanhas_selecao_colunas WHERE id=${idColuna}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-
-   
-      confCamposMailing(tabela,callback){
-        const sql = `SELECT * FROM ${tabela} LIMIT 2`
-        _dbConnection2.default.mailings.query(sql,callback)
-    }
-
 }
 exports. default = new Mailing();
 

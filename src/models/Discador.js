@@ -39,15 +39,57 @@ class Discador{
         connect.banco.query(sql,callback)
     }
 
-    filtrarRegistro(idCampanha,tentativas,ordem,callback){
+    //Modo novo de filtragem que adiciona os ids dos registros na tabela de tabulacao a medida que forem sendo trabalhados
+    filtrarRegistro(idCampanha,tabela,idMailing,tentativas,ordem,callback){
+        const sql = `SELECT m.id_key_base AS idRegistro FROM ${tabela} AS m LEFT OUTER JOIN campanhas_tabulacao_mailing AS t ON m.id_key_base=t.idRegistro WHERE idMailing=${idMailing} AND idCampanha=${idCampanha} AND estado=0 AND t.tentativas < ${tentativas} OR idMailing IS NULL AND idCampanha IS NULL ORDER BY t.tentativas ${ordem} LIMIT 1`
+        connect.mailings.query(sql,(er,reg)=>{
+            if(er) throw er
+
+            if(reg.length > 0){
+           
+                const idRegistro = reg[0].idRegistro
+
+                //Verificando se o registro ja foi adicionado a lista de tabulacao desta campanha
+                const sql = `SELECT id FROM campanhas_tabulacao_mailing WHERE idMailing=${idMailing} AND idCampanha=${idCampanha} AND idRegistro=${idRegistro} LIMIT 1`
+                connect.mailings.query(sql,(er,verificacao)=>{
+
+                    if(verificacao.length == 1){//Caso o registro exista o mesmo eh atualizado
+                        const sql = `UPDATE campanhas_tabulacao_mailing SET estado=1, desc_estado='Discando' WHERE id=${idRegistro}`
+                        connect.mailings.query(sql,(e,r)=>{
+                            if(e) throw e
+                            
+                        })
+                    }else{//Caso contrário insere o mesmo
+                        const sql = `INSERT INTO campanhas_tabulacao_mailing (idCampanha,idMailing,idRegistro,estado,desc_estado,tentativas) VALUES (${idCampanha},${idMailing},${idRegistro},1,'Discando',0)`
+                        connect.mailings.query(sql,(e,r)=>{
+                            if(e) throw e
+                            
+                        })
+                    }
+                })
+                callback(er,reg)
+            }else{
+                callback(er,reg)
+            }
+        })
+        //Estados do registro
+        //0 - Disponivel
+        //1 - Discando
+        //2 - Na Fila
+        //3 - Atendido
+        //4 - Já Trabalhado  
+    }
+
+    //Modo de filtragem de registro com os ids do mailing previamente adicionados a tabulacao
+    filtrarRegistro_off(idCampanha,tabela,tentativas,ordem,callback){
         const sql = `SELECT id,idRegistro FROM campanhas_tabulacao_mailing WHERE idCampanha=${idCampanha} AND estado=0 AND tentativas < ${tentativas} ORDER BY tentativas ${ordem} LIMIT 1`
-        connect.banco.query(sql,(er,reg)=>{
+        connect.mailings.query(sql,(er,reg)=>{
            // if(er) throw er
 
            if(reg.length > 0){
 
             const sql = `UPDATE campanhas_tabulacao_mailing SET estado=1, desc_estado='Discando' WHERE id=${reg[0].id}`
-            connect.banco.query(sql,(e,r)=>{
+            connect.mailings.query(sql,(e,r)=>{
                 if(e) throw e
 
                 callback(er,reg)

@@ -147,6 +147,11 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
         //Mailing por UF
 
         //Configurar tela do agente
+        //get Fields
+        routes.get('/getFieldsUserScreen/:idCampanha',CampanhasController.getFieldsUserScreen)
+
+        //Update Fields
+        routes.patch('/updateFieldsUserScreen/:idCampanha',CampanhasController.updateFieldsUserScreen)
 
     //TABULACOES
         //LISTA DE TABULACOES     
@@ -245,8 +250,7 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
 
 
 
-    //Separar Campos
-    routes.get('/configurarCamposMailing/:idMailing',MailingController.confCamposMailing)
+   
 
 
     
@@ -296,45 +300,9 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
 
 
 
-//TESTES
 
 
-
-
-
-
-
-
-
-
-
-   
-
-
-    
-
-   
-
-   
-
-    
-    
-    //Colunas Mailing
-    //Seleciona colunas Mailing
-    routes.get('/listarColunasMailing/:idMailing', CampanhasController.listarColunasMailing)
-    
-    //selecionar Coluna
-    routes.post('/setaColuna', CampanhasController.setaColuna);
-    
-    //listarColunas
-    routes.get('/listarColunas/:idCamp_Mailing', CampanhasController.listarColunas);
-
-    //atualizarColuna
-    routes.patch('/atualizarColuna/:idColuna',CampanhasController.atualizarColuna)
-
-    //removerColuna
-    routes.delete('/removerColuna/:idColuna',CampanhasController.removerColuna)
-
+    //TESTES
     //atribui campanha
     routes.post('/addFila/:idCampanha/:nomeFila',CampanhasController.addFilaCampanha)
 

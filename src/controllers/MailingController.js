@@ -1,6 +1,8 @@
 
 /*import csv from 'csvtojson';*/
 import Mailing from '../models/Mailing';
+import moment from "moment";
+import md5 from "md5";
 
 
 class MailingController{
@@ -8,31 +10,37 @@ class MailingController{
     importarBase(req,res){
         const path = `tmp/files/${req.file.filename}`;
        // console.log('Passo 1 - Abrindo csv')
-        Mailing.abreCsv(path,req.body.delimitador,async (jsonFile)=>{
-           // console.log('Passo 1 . . . . . . . . . . . . . . . . ok')
+        const delimitador = req.body.delimitador 
+        Mailing.abreCsv(path,delimitador,async (jsonFile)=>{
+            //console.log('Passo 1 . . . . . . . . . . . . . . . . ok')
             // console.log(jsonFile[0])
             //console.log('Passo 2 - Criando Base')
-            Mailing.criarBase(jsonFile[0],req,(erro,result)=>{
+            const hoje = moment().format("Y-MM-DD HH:mm:ss")
+            const nome = req.body.nome
+            const nomeTabela = md5(nome+hoje)
+            const header = req.body.header
+            Mailing.criarBase(jsonFile[0],nomeTabela,header,(erro,result)=>{
                 if(erro) throw erro
                 //console.log('Passo 2 . . . . . . . . . . . . . . . . ok')
 
                 res.json(true);
 
                 //console.log('Passo 3 - Setando tipos de campos')
-                Mailing.setaTipoCampo(jsonFile[0],req,(erro,result)=>{
+                Mailing.setaTipoCampo(jsonFile[0],nomeTabela,(erro,result)=>{
                     if(erro) throw erro
                     //console.log('Passo 3 . . . . . . . . . . . . . . . . ok')
                     
                     //console.log('Passo 4 - Registrando informações do mailing')
-                    Mailing.addMailing(req,(erro,result)=>{
+                    const filename = req.file.filename.split('-');
+                    Mailing.addMailing(nome,nomeTabela,filename,(erro,result)=>{
                         if(erro) throw erro
                         //console.log('Passo 4 . . . . . . . . . . . . . . . . ok')
                     
                         const base_id=result['insertId']
 
                         //console.log('Passo 5 - Separando Colunas') 
-                        Mailing.separarColunas(jsonFile[0],req,(nomeTabela,campos,campoDDD)=>{
-                            console.log(campoDDD)
+                        Mailing.separarColunas(jsonFile[0],nomeTabela,header,(nomeTabela,campos,campoDDD)=>{
+                            //console.log(campoDDD)
                             const base = Object.entries(jsonFile)     
                            
                             
@@ -43,7 +51,7 @@ class MailingController{
                                 if(erro) throw erro
 
                                 //console.log('Passo 6 . . . . . . . . . . . . . . . . ok')
-                                console.log('Importado com sucesso!')
+                                //console.log('Importado com sucesso!')
 
                             })                       
                         })
@@ -232,53 +240,61 @@ class MailingController{
         Mailing.tabelaMailing(idMailing,(e,nomeTabela)=>{
             if(e) throw e
 
-            const tabela = nomeTabela[0].tabela
+           
+            if(nomeTabela.length != 0){
 
-            Mailing.totalRegistros(tabela,(e,nao_Trabalhados)=>{
-                if(e) throw e
-                
-                const totalRegistros = parseInt(nao_Trabalhados[0].total)
-                //console.log(`totalRegistros ${totalRegistros}`)
-                Mailing.registrosContatados(tabela,(e,ja_contatados)=>{
+                const tabela = nomeTabela[0].tabela
+
+                Mailing.totalRegistros(tabela,(e,nao_Trabalhados)=>{
                     if(e) throw e
-
-                    const contatados = parseInt(ja_contatados[0].contatados)
-                //    console.log(`contatados ${contatados}`)
-                    Mailing.registrosNaoContatados(tabela,(e,nao_Contatados)=>{
+                    
+                    const totalRegistros = parseInt(nao_Trabalhados[0].total)
+                    //console.log(`totalRegistros ${totalRegistros}`)
+                    Mailing.registrosContatados(tabela,(e,ja_contatados)=>{
                         if(e) throw e
 
-                        const naoContatados = parseInt(nao_Contatados[0].nao_contatados)
-                  //      console.log(`naoContatados ${naoContatados}`)
+                        const contatados = parseInt(ja_contatados[0].contatados)
+                    //    console.log(`contatados ${contatados}`)
+                        Mailing.registrosNaoContatados(tabela,(e,nao_Contatados)=>{
+                            if(e) throw e
 
-                        const trabalhados = contatados + naoContatados
-                        const naoTrabalhados = totalRegistros-trabalhados
+                            const naoContatados = parseInt(nao_Contatados[0].nao_contatados)
+                    //      console.log(`naoContatados ${naoContatados}`)
 
-                        let perc_naotrabalhados = 0
-                        let perc_contatados = 0
-                        let perc_naoContatados = 0
+                            const trabalhados = contatados + naoContatados
+                            const naoTrabalhados = totalRegistros-trabalhados
 
-                        if(totalRegistros!=0){
-                            perc_naotrabalhados = parseFloat((naoTrabalhados / totalRegistros)*100).toFixed(1)
-                            perc_contatados = parseFloat((contatados / totalRegistros)*100).toFixed(1)
-                            perc_naoContatados = parseFloat((naoContatados / totalRegistros)*100).toFixed(1)                            
-                        }             
-                        
+                            let perc_naotrabalhados = 0
+                            let perc_contatados = 0
+                            let perc_naoContatados = 0
 
-                        let retorno = '{'
-                            retorno += `"nao_trabalhados": ${perc_naotrabalhados},`
-                            retorno += `"contatados": ${perc_contatados},`
-                            retorno += `"nao_contatados": ${perc_naoContatados}`
-                            retorno += '}'                  
-                       // console.log(retorno)
-                        
-                        retorno = JSON.parse(retorno)                  
+                            if(totalRegistros!=0){
+                                perc_naotrabalhados = parseFloat((naoTrabalhados / totalRegistros)*100).toFixed(1)
+                                perc_contatados = parseFloat((contatados / totalRegistros)*100).toFixed(1)
+                                perc_naoContatados = parseFloat((naoContatados / totalRegistros)*100).toFixed(1)                            
+                            }             
+                            
 
-                        res.json(retorno)
+                            let retorno = '{'
+                                retorno += `"nao_trabalhados": ${perc_naotrabalhados},`
+                                retorno += `"contatados": ${perc_contatados},`
+                                retorno += `"nao_contatados": ${perc_naoContatados}`
+                                retorno += '}'                  
+                        // console.log(retorno)
+                            
+                            retorno = JSON.parse(retorno)                  
 
+                            res.json(retorno)
+
+                        })
                     })
                 })
-            })
+            }else{
+                res.json(false)
+            }
         })
+       
+
     }
 
 
@@ -303,7 +319,8 @@ class MailingController{
         //atualizando tipo do campo
         const idCampo = parseInt(req.params.idCampo)
         const novoTipo = req.body.tipo
-        Mailing.atualizaTipoCampo(idCampo,novoTipo,(e,r)=>{
+        const apelido = req.body.apelido
+        Mailing.atualizaTipoCampo(idCampo,apelido,novoTipo,(e,r)=>{
             if(e) throw e
 
             //retornando nome da tabela
@@ -351,6 +368,7 @@ class MailingController{
 
             const tabela = r[0].tabela
             console.log(`Tabela: ${tabela}`)
+        
 
             Mailing.confCamposMailing(tabela,(e,r)=>{
                 if(e) throw e

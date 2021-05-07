@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import cors from 'cors';
 import DiscadorController from './controllers/DiscadorController';
 
+
 const app = express();
 
 
@@ -18,9 +19,6 @@ app.use(morgan('dev'));
 //TESTES
 DiscadorController.checandoCampanhasProntas()
   
-
-
-
 app.use(routes);
 
 app.listen(3000,()=>console.log('Servidor de testes online'));

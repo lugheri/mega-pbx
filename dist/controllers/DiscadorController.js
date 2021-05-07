@@ -116,7 +116,7 @@ class DiscadorController{
             }            
         })//campanhasAtivasHabilitadas
 
-        setTimeout(()=>{this.checandoCampanhasProntas(req,res)},10000)
+        setTimeout(()=>{this.checandoCampanhasProntas(req,res)},5000)
     }
 
     discadorAutomatico(idCampanha,idFila,fila,idMailing,tabela){
@@ -169,8 +169,8 @@ class DiscadorController{
                                     const totalDisponivel = totalAgentesDisponiveis * agressividade                                        
                                     if(chamadasSimultaneas.length < totalDisponivel){
                                         //Filtragem do registro para discagem
-                                            
-                                        _Discador2.default.filtrarRegistro(idCampanha,maxTentativas,ordemDiscagem,(e,registroFiltrado)=>{
+                                                               
+                                        _Discador2.default.filtrarRegistro(idCampanha,tabela,idMailing,maxTentativas,ordemDiscagem,(e,registroFiltrado)=>{
                                             if(e) throw e
                                                 
                                             if(registroFiltrado.length ==0){
