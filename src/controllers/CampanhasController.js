@@ -386,6 +386,8 @@ class CampanhasController{
 
 
         //Configurar tela do agente
+       
+
         //Lista campos da tela disponiveis
         getFieldsUserScreen(req,res){
             const idCampanha = parseInt(req.params.idCampanha);
@@ -777,7 +779,26 @@ class CampanhasController{
         })
     }
 
+    //######################DISCADOR ######################
+    historicoRegistro(req,res){
+        const idReg = parseInt(req.params.idRegistro)
+        Campanhas.historicoRegistro(idReg,(e,historico)=>{
+            if(e) throw e
 
+            res.json(historico)
+        })
+
+    }
+
+    historicoChamadas(req,res){
+        const ramal = req.params.ramal
+        Campanhas.historicoChamadas(ramal,(e,historico)=>{
+            if(e) throw e
+
+            res.json(historico)
+        })
+
+    }
 
 
 

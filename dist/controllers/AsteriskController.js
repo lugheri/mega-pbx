@@ -68,15 +68,16 @@ class AsteriskController{
     //Acoes do discador
     atenderChamada(req,res){
         const ramal = req.params.ramal
-        const estado = 3
+        const estado = 3 //Estado do agente de falando
+        const pausa = 0//Status da pausa de ocupado
         //atualiza para falando
-        _Campanhas2.default.atualizaEstadoAgente(ramal,estado,0,(e,r)=>{
+        _Campanhas2.default.atualizaEstadoAgente(ramal,estado,pausa,(e,r)=>{
             if(e) throw e
 
-            _Asterisk2.default.dadosChamada(ramal,(e,r)=>{
+            _Asterisk2.default.dadosChamada(ramal,(e,calldata)=>{
                 if(e) throw e
               
-                res.json(r);
+                res.json(calldata);
             });
         })
         

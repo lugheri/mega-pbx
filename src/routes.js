@@ -14,8 +14,7 @@ import AsteriskController from './controllers/AsteriskController';
 import authMiddleware from './middlewares/auth';
 
 const routes = Router();
-//Teste de API
-routes.get('/teste', (req, res) =>{
+routes.get('/listaCampos', (req, res) =>{
     res.send('API no ar')
 })
 
@@ -248,15 +247,26 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
     //Atualizar tipo do campo
     routes.patch('/atualizaTipoCampo/:idCampo',MailingController.atualizaTipoCampo)
 
-
-
-   
-
-
-    
-
-
 //DISCADOR
+
+    //Chamada atendida
+    routes.get('/atendeChamada/:ramal',AsteriskController.atenderChamada)
+    
+    //Chamada desligada
+    routes.post('/desligarChamada',AsteriskController.desligarChamada)
+    
+    //Tabular chamada
+    routes.post('/tabularChamada',AsteriskController.tabularChamada)
+
+    //Historico de Registro
+    routes.get('/historicoRegistro/:idRegistro',CampanhasController.historicoRegistro)
+
+    //Historico de Chamadas
+    routes.get('/historicoChamadas/:ramal',CampanhasController.historicoChamadas)
+
+
+
+
 
 //GRAVAÇÕES
 
@@ -311,15 +321,7 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
     //atribui campanha
     routes.delete('/removerFilaCampanha/:idCampanha/:nomeFila',CampanhasController.delFilaCampanha)
 
-    //DISCADOR
-    //Chamada atendida
-    routes.get('/atendeChamada/:ramal',AsteriskController.atenderChamada)
     
-    //Chamada desligada
-    routes.post('/desligarChamada',AsteriskController.desligarChamada)
-    
-    //Tabular chamada
-    routes.post('/tabularChamada',AsteriskController.tabularChamada)
 
 
 

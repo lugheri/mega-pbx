@@ -14,8 +14,7 @@ var _AsteriskController = require('./controllers/AsteriskController'); var _Aste
 var _auth = require('./middlewares/auth'); var _auth2 = _interopRequireDefault(_auth);
 
 const routes = _express.Router.call(void 0, );
-//Teste de API
-routes.get('/teste', (req, res) =>{
+routes.get('/listaCampos', (req, res) =>{
     res.send('API no ar')
 })
 
@@ -248,15 +247,26 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
     //Atualizar tipo do campo
     routes.patch('/atualizaTipoCampo/:idCampo',_MailingController2.default.atualizaTipoCampo)
 
-
-
-   
-
-
-    
-
-
 //DISCADOR
+
+    //Chamada atendida
+    routes.get('/atendeChamada/:ramal',_AsteriskController2.default.atenderChamada)
+    
+    //Chamada desligada
+    routes.post('/desligarChamada',_AsteriskController2.default.desligarChamada)
+    
+    //Tabular chamada
+    routes.post('/tabularChamada',_AsteriskController2.default.tabularChamada)
+
+    //Historico de Registro
+    routes.get('/historicoRegistro/:idRegistro',_CampanhasController2.default.historicoRegistro)
+
+    //Historico de Chamadas
+    routes.get('/historicoChamadas/:ramal',_CampanhasController2.default.historicoChamadas)
+
+
+
+
 
 //GRAVAÇÕES
 
@@ -311,15 +321,7 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
     //atribui campanha
     routes.delete('/removerFilaCampanha/:idCampanha/:nomeFila',_CampanhasController2.default.delFilaCampanha)
 
-    //DISCADOR
-    //Chamada atendida
-    routes.get('/atendeChamada/:ramal',_AsteriskController2.default.atenderChamada)
     
-    //Chamada desligada
-    routes.post('/desligarChamada',_AsteriskController2.default.desligarChamada)
-    
-    //Tabular chamada
-    routes.post('/tabularChamada',_AsteriskController2.default.tabularChamada)
 
 
 

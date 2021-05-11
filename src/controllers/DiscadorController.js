@@ -7,7 +7,7 @@ import moment from 'moment';
 class DiscadorController{
 
     checandoCampanhasProntas(req,res){
-        console.log('Discador Automático iniciado')
+        //console.log('Discador Automático iniciado')
         Discador.registrarChamadasSimultaneas()
        
         //Verifica se existem campanhas ativas
@@ -15,7 +15,7 @@ class DiscadorController{
             if(e) throw e
 
             if(campanhasAtivas.length != 0 ){
-                console.log(`${campanhasAtivas.length} campanhas ativas`)
+                //console.log(`${campanhasAtivas.length} campanhas ativas`)
 
                 //Percorrendo todas as campanhas ativas
                 for(let i=0; i<campanhasAtivas.length; i++){
@@ -155,7 +155,6 @@ class DiscadorController{
                                     if(e) throw e
                                 })
                             }else{
-
                                 const tipoDiscador = parametros[0].tipo_discador
                                 const agressividade = parametros[0].agressividade
                                 const ordemDiscagem = parametros[0].ordem_discagem
@@ -163,50 +162,67 @@ class DiscadorController{
                                 const maxTentativas = parametros[0].tentativas
 
                                 //Verificando se a qtd de agentes disponivel eh equivalente as chamadas
-                                Discador.chamadasSimultaneas(idCampanha,(e,chamadasSimultaneas)=>{
-                                    if(e) throw e
-
-                                    const totalDisponivel = totalAgentesDisponiveis * agressividade                                        
-                                    if(chamadasSimultaneas.length < totalDisponivel){
-                                        //Filtragem do registro para discagem
-                                                               
-                                        Discador.filtrarRegistro(idCampanha,tabela,idMailing,maxTentativas,ordemDiscagem,(e,registroFiltrado)=>{
-                                            if(e) throw e
-                                                
-                                            if(registroFiltrado.length ==0){
-                                                let msg='Nenhum registro disponível'
-                                                let estado = 3
-                                                Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                                    if(e) throw e
-                                                })                               
-                                            }else{
-                                                //Envia registro para discagem
-                                                let msg='Campanha discando'
-                                                let estado = 1
-                                                Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                                    if(e) throw e
-
-                                                    this.discar(idCampanha,idMailing,tabela,registroFiltrado[0].idRegistro,fila) 
-                                                })                                                                                               
-                                            }
-                                        })//filtrarRegistro   
-                                    }else{
-                                        let msg='Limite de chamadas simultâneas atingido, aumente a agressividade ou aguarde os agentes ficarem disponíveis'
-                                        let estado = 2
-                                        Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                            if(e) throw e
-                                        })
-                                    }
-                                })//chamadasSimultaneas                                    
+                                if(tipoDiscador=='preditivo'){
+                                    console.log(`Discador ${tipoDiscador} não configurado!`)
+                                    
                                 }
-                            })//parametrosDiscador                            
-                        //}
+                                if(tipoDiscador=='clicktocall'){
+                                    console.log(`Discador ${tipoDiscador} não configurado!`)
+                                    
+                                }
+                                if(tipoDiscador=='preview'){
+                                    console.log(`Discador ${tipoDiscador} não configurado!`)
+
+                                }    
+                                if(tipoDiscador=='power'){                                    
+                                    Discador.chamadasSimultaneas(idCampanha,(e,chamadasSimultaneas)=>{
+                                        if(e) throw e
+
+                                        const totalDisponivel = totalAgentesDisponiveis * agressividade                                        
+                                        if(chamadasSimultaneas.length < totalDisponivel){
+                                            //Filtragem do registro para discagem
+                                                                
+                                            Discador.filtrarRegistro(idCampanha,tabela,idMailing,maxTentativas,ordemDiscagem,(e,registroFiltrado)=>{
+                                                if(e) throw e
+                                                    
+                                                if(registroFiltrado.length ==0){
+                                                    let msg='Nenhum registro disponível'
+                                                    let estado = 3
+                                                    Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                                                        if(e) throw e
+                                                    })                               
+                                                }else{
+                                                    //Envia registro para discagem
+                                                    let msg='Campanha discando'
+                                                    let estado = 1
+                                                    Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                                                        if(e) throw e
+
+                                                        this.discar(idCampanha,idMailing,tabela,registroFiltrado[0].idRegistro,fila) 
+                                                    })                                                                                               
+                                                }
+                                            })//filtrarRegistro   
+                                        }else{
+                                            let msg='Limite de chamadas simultâneas atingido, aumente a agressividade ou aguarde os agentes ficarem disponíveis'
+                                            let estado = 2
+                                            Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                                                if(e) throw e
+                                            })
+                                        }
+                                    })//chamadasSimultaneas 
+                                }                                   
+                            }
+                        })//parametrosDiscador                            
                     }
                 })//agentesDisponiveis
             }
         })//agentesFila        
     }
 
+    //PREDITIVO
+    //CLICK TO CALL
+    //PREVIEW
+    //POWER
     discar(idCampanha,idMailing,tabela,registroFiltrado,fila){
         Discador.pegarTelefone(registroFiltrado,tabela,(e,contato)=>{
             if(e) throw e
@@ -228,8 +244,6 @@ class DiscadorController{
 
                     console.log(ligacao)
                     console.log(telefone)  
-
-
 
                     console.log('Dados registrados')
                 }) //registraChamada              

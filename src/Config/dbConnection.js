@@ -1,6 +1,6 @@
 import mysql from 'mysql';
 
-const connect=()=>{};
+const  connect=()=>{};
 
 const host='mysql'
 //const host='localhost'

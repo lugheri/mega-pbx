@@ -1,6 +1,7 @@
 import connect from '../Config/dbConnection';
 import Asterisk from './Asterisk';
 import Campanhas from './Campanhas';
+import moment from 'moment';
 class Discador{
  
     agentesFila(fila,callback){
@@ -147,18 +148,20 @@ class Discador{
         const sql = `SELECT * FROM asterisk_ari WHERE active=1`; 
         connect.banco.query(sql,(e,asterisk_server)=>{
             if(e) throw e
-
+            const modo='discador'
             const server = asterisk_server[0].server
             const user =  asterisk_server[0].user
             const pass =  asterisk_server[0].pass
             
-            Asterisk.ligar(server,user,pass,ramal,numero,callback)
+            Asterisk.ligar(server,user,pass,modo,ramal,numero,callback)
             callback(e,true)
         })
     }
 
     registraChamada(ramal,idCampanha,idMailing,tabela,id_reg,numero,fila,callback){
-        const sql = `INSERT INTO campanhas_chamadas_simultaneas (data,ramal,id_campanha,id_mailing,tabela_mailing,id_reg,numero,fila) VALUES (now(),'${ramal}','${idCampanha}','${idMailing}','${tabela}','${id_reg}','0${numero}','${fila}')`
+        const hoje = moment().format("YMMDDHHmmss")
+        const protocolo = hoje+'0'+ramal
+        const sql = `INSERT INTO campanhas_chamadas_simultaneas (data,ramal,protocolo,id_campanha,id_mailing,tabela_mailing,id_reg,numero,fila) VALUES (now(),'${ramal}','${protocolo}','${idCampanha}','${idMailing}','${tabela}','${id_reg}','0${numero}','${fila}')`
         connect.banco.query(sql,callback)
 
         /*STATUS DAS CHAMADAS SIMULTANEAS

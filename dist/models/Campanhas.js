@@ -9,7 +9,7 @@ class Campanhas{
         //verificando se a campanha ja possui status
         this.statusCampanha(idCampanha,(e,r)=>{
             if(e) throw e
-            console.log(`Campanha: ${idCampanha} msg: ${msg}`)
+            //console.log(`Campanha: ${idCampanha} msg: ${msg}`)
             if(r.length!=0){
                 //Caso sim atualiza o mesmo
                 const sql = `UPDATE campanhas_status SET data=now(), mensagem='${msg}', estado=${estado} WHERE idCampanha=${idCampanha}`
@@ -331,9 +331,17 @@ class Campanhas{
     //Status dos Mailings por campanha
     //Campos Nao Selecionados
     camposNaoSelecionados(idCampanha,tabela,callback){
-        const sql = `SELECT DISTINCT m.id AS campo FROM mailing_tipo_campo AS m LEFT OUTER JOIN campanhas_campos_tela_agente AS s ON m.id=s.idCampo WHERE m.tabela='${tabela}' AND tipo='dados' AND conferido=1 AND m.id NOT IN (SELECT idCampo FROM campanhas_campos_tela_agente WHERE tabela='${tabela}' AND idCampanha=${idCampanha})`
+        const sql = `SELECT DISTINCT m.id AS campo FROM mailing_tipo_campo AS m LEFT OUTER JOIN campanhas_campos_tela_agente AS s ON m.id=s.idCampo WHERE m.tabela='${tabela}' AND conferido=1 AND m.id NOT IN (SELECT idCampo FROM campanhas_campos_tela_agente WHERE tabela='${tabela}' AND idCampanha=${idCampanha})`
         _dbConnection2.default.banco.query(sql,callback) 
     }
+
+    
+
+    campoSelecionado(campo,tabela,callback){
+        const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE tabela='${tabela}' AND idCampo='${campo}';`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+    
 
     //Campos Selecionados na tela do agente
     camposSelecionados(idCampanha,tabela,callback){
@@ -473,6 +481,16 @@ class Campanhas{
         _dbConnection2.default.banco.query(sql,(e,r)=>{
             if(e) throw e
         }) 
+    }
+
+    historicoRegistro(idReg,callback){
+        const sql = `SELECT agente, u.nome, protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,status_tabulacao,obs_tabulacao FROM historico_atendimento AS h left JOIN users AS u ON u.id=h.agente WHERE id_registro=${idReg} ORDER BY h.id DESC LIMIT 50`
+        _dbConnection2.default.banco.query(sql,callback) 
+    }
+    
+    historicoChamadas(ramal,callback){
+        const sql = `SELECT agente, u.nome, protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,status_tabulacao,obs_tabulacao FROM historico_atendimento AS h JOIN users AS u ON u.id=h.agente WHERE agente='${ramal}' ORDER BY h.id DESC LIMIT 50`
+        _dbConnection2.default.banco.query(sql,callback) 
     }
 
    

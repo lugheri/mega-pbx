@@ -1,6 +1,7 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
 var _Asterisk = require('./Asterisk'); var _Asterisk2 = _interopRequireDefault(_Asterisk);
 var _Campanhas = require('./Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
+var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 class Discador{
  
     agentesFila(fila,callback){
@@ -147,18 +148,20 @@ class Discador{
         const sql = `SELECT * FROM asterisk_ari WHERE active=1`; 
         _dbConnection2.default.banco.query(sql,(e,asterisk_server)=>{
             if(e) throw e
-
+            const modo='discador'
             const server = asterisk_server[0].server
             const user =  asterisk_server[0].user
             const pass =  asterisk_server[0].pass
             
-            _Asterisk2.default.ligar(server,user,pass,ramal,numero,callback)
+            _Asterisk2.default.ligar(server,user,pass,modo,ramal,numero,callback)
             callback(e,true)
         })
     }
 
     registraChamada(ramal,idCampanha,idMailing,tabela,id_reg,numero,fila,callback){
-        const sql = `INSERT INTO campanhas_chamadas_simultaneas (data,ramal,id_campanha,id_mailing,tabela_mailing,id_reg,numero,fila) VALUES (now(),'${ramal}','${idCampanha}','${idMailing}','${tabela}','${id_reg}','0${numero}','${fila}')`
+        const hoje = _moment2.default.call(void 0, ).format("YMMDDHHmmss")
+        const protocolo = hoje+'0'+ramal
+        const sql = `INSERT INTO campanhas_chamadas_simultaneas (data,ramal,protocolo,id_campanha,id_mailing,tabela_mailing,id_reg,numero,fila) VALUES (now(),'${ramal}','${protocolo}','${idCampanha}','${idMailing}','${tabela}','${id_reg}','0${numero}','${fila}')`
         _dbConnection2.default.banco.query(sql,callback)
 
         /*STATUS DAS CHAMADAS SIMULTANEAS

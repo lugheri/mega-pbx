@@ -93,6 +93,7 @@ class Asterisk{
                 const idCampanha=chamada[0].id_campanha
                 const idMailing=chamada[0].id_mailing
                 const ramal=chamada[0].ramal
+                const protocolo=chamada[0].protocolo
 
                 //Status de tabulacao referente ao nao atendido
                 const tabulacao = 0
@@ -100,7 +101,7 @@ class Asterisk{
                 const produtivo = 0
 
                 //Registra histórico de chamada
-                this.registraHistoricoAtendimento(idCampanha,idMailing,id_reg,ramal,numero,tabulacao,observacoes,contatado,(e,r)=>{
+                this.registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,numero,tabulacao,observacoes,contatado,(e,r)=>{
                     if(e) throw e
                     //Tabula registro
                     this.tabulandoContato(tabela,contatado,tabulacao,observacoes,produtivo,numero,ramal,id_reg,idMailing,idCampanha,callback)
@@ -123,7 +124,7 @@ class Asterisk{
         ch = ch[0].split("/")
         const ramal = ch[1]
 
-        const sql = `UPDATE campanhas_chamadas_simultaneas SET uniqueid='${uniqueid}',ramal=${ramal}, na_fila=0, atendido=1 WHERE numero='${numero}' AND na_fila=1`  
+        const sql = `UPDATE campanhas_chamadas_simultaneas SET uniqueid='${uniqueid}',ramal='${ramal}', na_fila=0, atendido=1 WHERE numero='${numero}' AND na_fila=1`  
         connect.banco.query(sql,callback)
     }
 
@@ -136,8 +137,8 @@ class Asterisk{
     }
 
     //Registra o histórico de atendimento de uma chamada
-    registraHistoricoAtendimento(idCampanha,idMailing,id_reg,ramal,numero,tabulacao,observacoes,contatado,callback){
-        const sql = `INSERT INTO historico_atendimento  (data,hora,campanha,mailing,id_registro,agente,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),now(),${idCampanha},'${idMailing}',${id_reg},${ramal},'${numero}',${tabulacao},'${observacoes}','${contatado}')`
+    registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,numero,tabulacao,observacoes,contatado,callback){
+        const sql = `INSERT INTO historico_atendimento (data,hora,protocolo,campanha,mailing,id_registro,agente,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_reg},${ramal},'${numero}',${tabulacao},'${observacoes}','${contatado}')`
         connect.banco.query(sql,callback)
     }  
 
@@ -174,29 +175,81 @@ class Asterisk{
     //Funcoes do atendimento de ligacao que recupera os dados da ligacao
     dadosChamada(ramal,callback){
         //Separando a campanha que o agente pertence
-        const sql = `SELECT id,id_reg,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND atendido=1`
-        connect.banco.query(sql,(e,r)=>{
+        const sql = `SELECT id,protocolo,id_reg,id_campanha,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND atendido=1`
+        connect.banco.query(sql,(e,calldata)=>{
             if(e) throw e
 
-            if(r.length==0){
-                console.log('ERRO')
-                callback(e,"erro")
+            if(calldata.length==0){
+                console.log('ERRO: Dados da chamada não localizados')
+                callback(e,JSON.parse('{"erro":"Dados da chamada não localizados"}'))
             }else{
-                const idAtendimento = r[0].id
-                const idReg = r[0].id_reg
-                const tabela = r[0].tabela_mailing
-                const numero = r[0].numero
+                const idAtendimento = calldata[0].id
+                const idReg = calldata[0].id_reg
+                const tabela = calldata[0].tabela_mailing
+                const numero = calldata[0].numero
+                const idCampanha = calldata[0].id_campanha
+                const protocolo = calldata[0].protocolo
 
+                //Atualiza chamada simultanea com o status de falando
                 const sql = `UPDATE campanhas_chamadas_simultaneas SET atendido=0, falando=1 WHERE id='${idAtendimento}'`;
                 connect.banco.query(sql,(e,r)=>{
                     if(e) throw e
-                    console.log(r)
+                    //Seleciona os campos de acordo com a configuração da tela do agente
+                    //CAMPOS DE DADOS
+                    const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_Agente AS s ON c.id=s.idCampo WHERE c.tipo='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
+                    connect.banco.query(sql,(e,campos_dados)=>{
+                        if(e) throw e
 
-                    const sql = `SELECT * FROM ${tabela} WHERE id_key_base=${idReg}`
-                    connect.mailings.query(sql,(e,r)=>{
-                        r.push({"numero_discado":`${numero}`,"id_atendimento":`${idAtendimento}`});
-                        callback(e,r)
-                    });
+                        //montando a query de busca dos dados
+                        let campos = '';
+                        for(let i=0; i<campos_dados.length; i++){
+                            let apelido=''
+                            if(campos_dados[i].apelido === null){
+                                apelido=campos_dados[i].campo
+                            }else{
+                                apelido=campos_dados[i].apelido
+                            }
+                            campos += `${campos_dados[i].campo} as ${apelido}, `
+                        }
+                        campos += 'id_key_base'
+
+                        const sql = `SELECT ${campos} FROM ${tabela} WHERE id_key_base=${idReg}`
+                        connect.mailings.query(sql,(e,dados)=>{
+                            if(e) throw e
+
+                            //CAMPOS DE TELEFONE
+                            const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_Agente AS s ON c.id=s.idCampo WHERE c.tipo!='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
+                            connect.banco.query(sql,(e,campos_numeros)=>{
+                                if(e) throw e
+
+                                //montando a query de busca dos numeros
+                                let campos = '';
+                                for(let i=0; i<campos_numeros.length; i++){
+                                    let apelido=''
+                                    if(campos_numeros[i].apelido === null){
+                                        apelido=campos_numeros[i].campo
+                                    }else{
+                                        apelido=campos_numeros[i].apelido
+                                    }
+                                    campos += `${campos_numeros[i].campo} as ${apelido}, `
+                                }
+                                campos += 'id_key_base'
+        
+                                const sql = `SELECT ${campos} FROM ${tabela} WHERE id_key_base=${idReg}`
+                                connect.mailings.query(sql,(e,numeros)=>{
+                                    if(e) throw e
+                                    
+                                    let camposRegistro = '{"campos":{"dados":'+JSON.stringify(dados)+',' 
+                                        camposRegistro += '"numeros":'+JSON.stringify(numeros)+'},'
+                                        //Numero Discado
+                                        camposRegistro += `"numero_discado":{"protocolo":"${protocolo}","telefone":"${numero}","id_atendimento":${idAtendimento}}}`;
+                                        
+                                        callback(false,JSON.parse(camposRegistro))
+                                    
+                                })
+                            })
+                        })
+                    })                    
                 })
             }
         })
@@ -251,20 +304,30 @@ class Asterisk{
     
     //OLD
     
-    ligar(server,user,pass,ramal,numero,callback){
+    ligar(server,user,pass,modo,ramal,numero,callback){
         console.log(`recebendo ligacao ${numero}`)
         console.log(`ramal ${ramal}`)
         ari.connect(server, user, pass, (err,client)=>{
           if(err) console.log(err)
+
+          //Extension
+          let context
+          let endpoint
+          if(modo=='discador'){
+            context = 'dialer'
+            endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
+          }else{
+            context = 'manual'
+            endpoint = `PJSIP/megatrunk/`
+          }
           
           console.log(`numero recebido: ${numero}`)
           console.log(`Servidor: ${server}`)
 
-          const options = {
-            //"endpoint"       : `PJSIP/${ramal}`,
-            "endpoint"       : `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`,
+          const options = {            
+            "endpoint"       : `${endpoint}`,
             "extension"      : `0${numero}`,
-            "context"        : 'external',
+            "context"        : `${context}`,
             "priority"       : 1,
             "app"            : "",
             "appArgs"        : "",
@@ -277,6 +340,9 @@ class Asterisk{
           //client.channel
         })  
     }
+
+
+
 
     ///////////////////////Funcoes de tabulacao automatica - AGI
     
