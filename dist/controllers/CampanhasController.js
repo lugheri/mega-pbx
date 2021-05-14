@@ -8,6 +8,7 @@ var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User
 
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
+var _AsteriskController = require('./AsteriskController'); var _AsteriskController2 = _interopRequireDefault(_AsteriskController);
 
 class CampanhasController{
     //######################CAMPANHAS ######################
@@ -386,19 +387,92 @@ class CampanhasController{
 
 
         //Configurar tela do agente
+
+        listarCamposConfigurados(req,res){
+            const idCampanha = parseInt(req.params.idCampanha)
+            //Buscando nome da tabela
+            _Campanhas2.default.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
+                if(e) throw e
+
+                const tabela= nomeTabela[0].tabela
+                _Campanhas2.default.camposConfiguradosDisponiveis(tabela,idCampanha,(e,campos)=>{
+                    if(e) throw e
+                    let retorno = "["
+                    for(let i=0; i< campos.length; i++){
+                        retorno += "{"
+                        retorno += `"id":"${campos[i].id}",` 
+                        retorno += `"campo":"${campos[i].campo}",` 
+                        retorno += `"apelido":"${campos[i].apelido}",` 
+                        retorno += `"tipo":"${campos[i].tipo}",` 
+                        if(campos[i].idCampanha==idCampanha){
+                            retorno += `"selecionado":true`
+                        }else{
+                            retorno += `"selecionado":false`
+                        }
+                          
+                        if(i==campos.length-1){
+                            retorno += "}"
+                        }else{
+                            retorno += "},"
+                        }                        
+                    }
+                    retorno += "]"
+
+                    res.send(JSON.parse(retorno))
+                })
+            })
+        }
+        
+        adicionaCampo_telaAgente(req,res){
+            const idCampanha = req.body.idCampanha 
+            const idCampo = req.body.idCampo
+            _Campanhas2.default.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
+                const tabela= nomeTabela[0].tabela
+                _Campanhas2.default.addCampoTelaAgente(idCampanha,tabela,idCampo,(e,r)=>{
+                    if(e) throw e
+
+                    res.send(true)
+                })
+            })
+        }
+
+        listaCampos_telaAgente(req,res){
+            const idCampanha = parseInt(req.params.idCampanha)
+            //Buscando nome da tabela
+            _Campanhas2.default.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
+                if(e) throw e
+
+                const tabela= nomeTabela[0].tabela
+                _Campanhas2.default.camposTelaAgente(idCampanha,tabela,(e,campos)=>{
+                    if(e) throw e
+
+                    res.send(campos)
+                })
+            })
+        }
+
+        removeCampo_telaAgente(req,res){
+            const idJoin = parseInt(req.params.idJoin)
+            _Campanhas2.default.delCampoTelaAgente(idJoin,(e,r)=>{
+                if(e) throw e
+
+                res.send(true)
+            })
+        }
        
 
+
         //Lista campos da tela disponiveis
-        getFieldsUserScreen(req,res){
+        /*getFieldsUserScreen(req,res){
             const idCampanha = parseInt(req.params.idCampanha);
 
             //Buscando nome da tabela
-            _Campanhas2.default.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
+            Campanhas.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
                 if(e) throw e
                 
                 const tabela= nomeTabela[0].tabela
                 console.log(tabela)
-                _Mailing2.default.camposMailing(tabela,(e,campos)=>{
+                Mailing.camposMailing(tabela,(e,campos)=>{
                     if(e) throw e 
 
                     let dragDrop_campos = '{"fields":{'
@@ -412,7 +486,7 @@ class CampanhasController{
                     dragDrop_campos+='},'
 
                     //Campos Não Selecionados
-                    _Campanhas2.default.camposNaoSelecionados(idCampanha,tabela,(e,camposNaoSelecionados)=>{
+                    Campanhas.camposNaoSelecionados(idCampanha,tabela,(e,camposNaoSelecionados)=>{
                         if(e) throw e 
 
                         dragDrop_campos += '"columns":{"naoSelecionados":{"id":"naoSelecionados","camposIds":['
@@ -425,7 +499,7 @@ class CampanhasController{
                         }
                         dragDrop_campos+=']},'
 
-                        _Campanhas2.default.camposSelecionados(idCampanha,tabela,(e,camposSelecionados)=>{
+                        Campanhas.camposSelecionados(idCampanha,tabela,(e,camposSelecionados)=>{
                             if(e) throw e 
 
                             dragDrop_campos += '"camposSelecionados":{"id":"camposSelecionados","camposIds":['
@@ -450,7 +524,7 @@ class CampanhasController{
         //Atualiza campos da tela do agente
         updateFieldsUserScreen(req,res){
             const idCampanha = parseInt(req.params.idCampanha)
-            _Campanhas2.default.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
+            Campanhas.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
                 if(e) throw e
                 
                 const tabela= nomeTabela[0].tabela
@@ -465,13 +539,13 @@ class CampanhasController{
 
                 //reordena fora da fila
                 if((origem == 'naoSelecionados')&&(destino == 'naoSelecionados')){                    
-                    _Campanhas2.default.reordenaCamposMailing(idCampo,tabela,posOrigen,posDestino,(e,r)=>{
+                    Campanhas.reordenaCamposMailing(idCampo,tabela,posOrigen,posDestino,(e,r)=>{
                         if(e) throw e
                     })
                 }
                 //insere na fila
                 if((origem == 'naoSelecionados')&&(destino == 'camposSelecionados')){
-                    _Campanhas2.default.addCampoTelaAgente(idCampanha,tabela,idCampo,posDestino,(e,r)=>{
+                    Campanhas.addCampoTelaAgente(idCampanha,tabela,idCampo,posDestino,(e,r)=>{
                         if(e) throw e
                                         
                         res.json(true)
@@ -480,7 +554,7 @@ class CampanhasController{
 
                 //reordena dentro da fila
                 if((origem == 'camposSelecionados')&&(destino == 'camposSelecionados')){                
-                    _Campanhas2.default.reordenaCampoTelaAgente(idCampanha,tabela,idCampo,posOrigen,posDestino,(e,r)=>{
+                    Campanhas.reordenaCampoTelaAgente(idCampanha,tabela,idCampo,posOrigen,posDestino,(e,r)=>{
                         if(e) throw e
                                         
                         res.json(true)
@@ -489,14 +563,14 @@ class CampanhasController{
 
                 //remove da fila
                 if((origem == 'camposSelecionados')&&(destino == 'naoSelecionados')){
-                    _Campanhas2.default.removeCampoTelaAgente(idCampanha,tabela,idCampo,(e,r)=>{
+                    Campanhas.removeCampoTelaAgente(idCampanha,tabela,idCampo,(e,r)=>{
                         if(e) throw e
                 
                         res.json(true)
                     })
                 } 
             })          
-        }
+        }*/
 
 
 
@@ -779,7 +853,119 @@ class CampanhasController{
         })
     }
 
-    //######################DISCADOR ######################
+    //######################TELA DO AGENTE ######################
+
+    //PausasListas
+    //Lista as pausas disponíveis para o agente
+    listarPausasCampanha(req,res){
+        const listaPausa = 1
+        _Pausas2.default.listarPausas(listaPausa,(e,r)=>{
+            if(e) throw e
+
+            res.send(r)
+        })
+
+    }
+
+    //Pausa o agente com o status selecionado
+    pausarAgente(req,res){
+        const ramal = req.body.ramal
+        const idPausa = parseInt(req.body.idPausa)
+        _Pausas2.default.dadosPausa(idPausa,(e,infoPausa)=>{
+            const pausa = infoPausa[0].nome
+            const descricao = infoPausa[0].descricao
+            const tempo = infoPausa[0].tempo
+
+            _Asterisk2.default.pausarAgente(ramal,idPausa,pausa,descricao,tempo,(e,r)=>{
+                if(e) throw e
+
+                res.send(r)
+            })
+
+        })
+    }
+
+    //Exibe o estado e as informacoes da pausa do agente
+    statusPausaAgente(req,res){
+        const ramal = req.params.ramal
+        _Asterisk2.default.infoPausaAgente(ramal,(e,infoPausa)=>{
+            console.log(infoPausa.length)
+            if(infoPausa.length==0){
+                let retorno = '{"status":"agente disponivel"}'  
+                res.send(JSON.parse(retorno))
+            }else{
+                const idPausa = infoPausa[0].idPausa            
+                _Pausas2.default.dadosPausa(idPausa,(e,dadosPausa)=>{
+                    if(e) throw e
+
+
+                    const inicio = infoPausa[0].inicio
+                    const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+                    const agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
+                    const limite = infoPausa[0].limite
+                    const nome = infoPausa[0].nome
+                    const descricao = infoPausa[0].descricao
+                    const tempo = dadosPausa[0].tempo
+
+                    
+                //Tempo passado
+                    let startTime = _moment2.default.call(void 0, `${hoje}T${inicio}`).format();
+                    let endTime = _moment2.default.call(void 0, `${hoje}T${agora}`).format();
+                    let duration = _moment2.default.duration(_moment2.default.call(void 0, endTime).diff(startTime));
+                
+                    let horasPass = duration.hours(); //hours instead of asHours
+                    let minPass = duration.minutes(); //minutes instead of asMinutes
+                    let segPass = duration.seconds(); //minutes instead of asMinutes
+                    
+                    const tempoPassado = horasPass+':'+minPass+':'+segPass
+                    const minutosTotais = (horasPass*60)+minPass+(segPass/60)
+                    const percentual = (minutosTotais/tempo)*100
+
+                    //Tempo restante
+                    let startTime_res = _moment2.default.call(void 0, `${hoje}T${agora}`).format();
+                    let endTime_res = _moment2.default.call(void 0, `${hoje}T${limite}`).format();
+                    let duration_res = _moment2.default.duration(_moment2.default.call(void 0, endTime_res).diff(startTime_res));
+                    let horasRes = duration_res.hours(); //hours instead of asHours
+                    let minRes = duration_res.minutes(); //minutes instead of asMinutes
+                    let segRes = duration_res.seconds(); //minutes instead of asMinutes
+                    
+                    const tempoRestante = horasRes+':'+minRes+':'+segRes
+
+
+                    
+                
+
+                    let retorno = '{'
+                        retorno += `"idPausa":${idPausa},`
+                        retorno += `"nome":"${nome}",`
+                        retorno += `"descricao":"${descricao}",`
+                        retorno += `"tempoTotal":${tempo},`
+                        retorno += `"tempoPassado":"${tempoPassado}",`
+                        retorno += `"tempoRestante":"${tempoRestante}",`
+                        retorno += `"porcentagem":${percentual.toFixed(1)}`
+                    retorno += '}'    
+
+                    
+
+
+
+                    res.send(JSON.parse(retorno))
+                })
+            }
+        })
+    }
+
+    //Tira o agente da pausa
+    removePausaAgente(req,res){
+        const ramal = req.body.ramal
+        _Asterisk2.default.removePausaAgente(ramal,(e,r)=>{
+            if(e) throw e
+
+            res.send(r)
+        })
+    }
+
+    //Historico do id do registro
     historicoRegistro(req,res){
         const idReg = parseInt(req.params.idRegistro)
         _Campanhas2.default.historicoRegistro(idReg,(e,historico)=>{
@@ -790,6 +976,7 @@ class CampanhasController{
 
     }
 
+    //Historico do agente
     historicoChamadas(req,res){
         const ramal = req.params.ramal
         _Campanhas2.default.historicoChamadas(ramal,(e,historico)=>{

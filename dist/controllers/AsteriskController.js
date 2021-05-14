@@ -21,6 +21,19 @@ class AsteriskController{
         })
     }
 
+    setRecord(req,res){
+        const data = req.body.date
+        const hora = req.body.time
+        const ramal = req.body.ramal
+        const uniqueid = req.body.uniqueid
+       
+        _Asterisk2.default.setRecord(data,hora,ramal,uniqueid,(e,server)=>{
+            if(e) throw e
+
+            res.json(server[0].ip) 
+        })
+    }
+
     agi(req,res){
         const action = req.params.action
         const dados = req.body
@@ -117,15 +130,8 @@ class AsteriskController{
 
     }
 
-
-
-
-
-
-
-
-
-
+  
+    
 
 
 

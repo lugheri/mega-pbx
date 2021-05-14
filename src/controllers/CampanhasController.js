@@ -8,6 +8,7 @@ import User from '../models/User';
 
 import moment from 'moment';
 import connect from '../Config/dbConnection';
+import AsteriskController from './AsteriskController';
 
 class CampanhasController{
     //######################CAMPANHAS ######################
@@ -386,10 +387,83 @@ class CampanhasController{
 
 
         //Configurar tela do agente
+
+        listarCamposConfigurados(req,res){
+            const idCampanha = parseInt(req.params.idCampanha)
+            //Buscando nome da tabela
+            Campanhas.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
+                if(e) throw e
+
+                const tabela= nomeTabela[0].tabela
+                Campanhas.camposConfiguradosDisponiveis(tabela,idCampanha,(e,campos)=>{
+                    if(e) throw e
+                    let retorno = "["
+                    for(let i=0; i< campos.length; i++){
+                        retorno += "{"
+                        retorno += `"id":"${campos[i].id}",` 
+                        retorno += `"campo":"${campos[i].campo}",` 
+                        retorno += `"apelido":"${campos[i].apelido}",` 
+                        retorno += `"tipo":"${campos[i].tipo}",` 
+                        if(campos[i].idCampanha==idCampanha){
+                            retorno += `"selecionado":true`
+                        }else{
+                            retorno += `"selecionado":false`
+                        }
+                          
+                        if(i==campos.length-1){
+                            retorno += "}"
+                        }else{
+                            retorno += "},"
+                        }                        
+                    }
+                    retorno += "]"
+
+                    res.send(JSON.parse(retorno))
+                })
+            })
+        }
+        
+        adicionaCampo_telaAgente(req,res){
+            const idCampanha = req.body.idCampanha 
+            const idCampo = req.body.idCampo
+            Campanhas.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
+                const tabela= nomeTabela[0].tabela
+                Campanhas.addCampoTelaAgente(idCampanha,tabela,idCampo,(e,r)=>{
+                    if(e) throw e
+
+                    res.send(true)
+                })
+            })
+        }
+
+        listaCampos_telaAgente(req,res){
+            const idCampanha = parseInt(req.params.idCampanha)
+            //Buscando nome da tabela
+            Campanhas.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
+                if(e) throw e
+
+                const tabela= nomeTabela[0].tabela
+                Campanhas.camposTelaAgente(idCampanha,tabela,(e,campos)=>{
+                    if(e) throw e
+
+                    res.send(campos)
+                })
+            })
+        }
+
+        removeCampo_telaAgente(req,res){
+            const idJoin = parseInt(req.params.idJoin)
+            Campanhas.delCampoTelaAgente(idJoin,(e,r)=>{
+                if(e) throw e
+
+                res.send(true)
+            })
+        }
        
 
+
         //Lista campos da tela disponiveis
-        getFieldsUserScreen(req,res){
+        /*getFieldsUserScreen(req,res){
             const idCampanha = parseInt(req.params.idCampanha);
 
             //Buscando nome da tabela
@@ -496,7 +570,7 @@ class CampanhasController{
                     })
                 } 
             })          
-        }
+        }*/
 
 
 
@@ -779,7 +853,119 @@ class CampanhasController{
         })
     }
 
-    //######################DISCADOR ######################
+    //######################TELA DO AGENTE ######################
+
+    //PausasListas
+    //Lista as pausas disponíveis para o agente
+    listarPausasCampanha(req,res){
+        const listaPausa = 1
+        Pausas.listarPausas(listaPausa,(e,r)=>{
+            if(e) throw e
+
+            res.send(r)
+        })
+
+    }
+
+    //Pausa o agente com o status selecionado
+    pausarAgente(req,res){
+        const ramal = req.body.ramal
+        const idPausa = parseInt(req.body.idPausa)
+        Pausas.dadosPausa(idPausa,(e,infoPausa)=>{
+            const pausa = infoPausa[0].nome
+            const descricao = infoPausa[0].descricao
+            const tempo = infoPausa[0].tempo
+
+            Asterisk.pausarAgente(ramal,idPausa,pausa,descricao,tempo,(e,r)=>{
+                if(e) throw e
+
+                res.send(r)
+            })
+
+        })
+    }
+
+    //Exibe o estado e as informacoes da pausa do agente
+    statusPausaAgente(req,res){
+        const ramal = req.params.ramal
+        Asterisk.infoPausaAgente(ramal,(e,infoPausa)=>{
+            console.log(infoPausa.length)
+            if(infoPausa.length==0){
+                let retorno = '{"status":"agente disponivel"}'  
+                res.send(JSON.parse(retorno))
+            }else{
+                const idPausa = infoPausa[0].idPausa            
+                Pausas.dadosPausa(idPausa,(e,dadosPausa)=>{
+                    if(e) throw e
+
+
+                    const inicio = infoPausa[0].inicio
+                    const hoje = moment().format("Y-MM-DD")
+                    const agora = moment().format("HH:mm:ss")
+                    const limite = infoPausa[0].limite
+                    const nome = infoPausa[0].nome
+                    const descricao = infoPausa[0].descricao
+                    const tempo = dadosPausa[0].tempo
+
+                    
+                //Tempo passado
+                    let startTime = moment(`${hoje}T${inicio}`).format();
+                    let endTime = moment(`${hoje}T${agora}`).format();
+                    let duration = moment.duration(moment(endTime).diff(startTime));
+                
+                    let horasPass = duration.hours(); //hours instead of asHours
+                    let minPass = duration.minutes(); //minutes instead of asMinutes
+                    let segPass = duration.seconds(); //minutes instead of asMinutes
+                    
+                    const tempoPassado = horasPass+':'+minPass+':'+segPass
+                    const minutosTotais = (horasPass*60)+minPass+(segPass/60)
+                    const percentual = (minutosTotais/tempo)*100
+
+                    //Tempo restante
+                    let startTime_res = moment(`${hoje}T${agora}`).format();
+                    let endTime_res = moment(`${hoje}T${limite}`).format();
+                    let duration_res = moment.duration(moment(endTime_res).diff(startTime_res));
+                    let horasRes = duration_res.hours(); //hours instead of asHours
+                    let minRes = duration_res.minutes(); //minutes instead of asMinutes
+                    let segRes = duration_res.seconds(); //minutes instead of asMinutes
+                    
+                    const tempoRestante = horasRes+':'+minRes+':'+segRes
+
+
+                    
+                
+
+                    let retorno = '{'
+                        retorno += `"idPausa":${idPausa},`
+                        retorno += `"nome":"${nome}",`
+                        retorno += `"descricao":"${descricao}",`
+                        retorno += `"tempoTotal":${tempo},`
+                        retorno += `"tempoPassado":"${tempoPassado}",`
+                        retorno += `"tempoRestante":"${tempoRestante}",`
+                        retorno += `"porcentagem":${percentual.toFixed(1)}`
+                    retorno += '}'    
+
+                    
+
+
+
+                    res.send(JSON.parse(retorno))
+                })
+            }
+        })
+    }
+
+    //Tira o agente da pausa
+    removePausaAgente(req,res){
+        const ramal = req.body.ramal
+        Asterisk.removePausaAgente(ramal,(e,r)=>{
+            if(e) throw e
+
+            res.send(r)
+        })
+    }
+
+    //Historico do id do registro
     historicoRegistro(req,res){
         const idReg = parseInt(req.params.idRegistro)
         Campanhas.historicoRegistro(idReg,(e,historico)=>{
@@ -790,6 +976,7 @@ class CampanhasController{
 
     }
 
+    //Historico do agente
     historicoChamadas(req,res){
         const ramal = req.params.ramal
         Campanhas.historicoChamadas(ramal,(e,historico)=>{

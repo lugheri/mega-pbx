@@ -534,7 +534,7 @@ class Mailing{
     //CONFIGURA O MAILING
     //Lista os campos disponiveis do mailing
     camposMailing(tabela,callback){
-        const sql = `SELECT id, campo FROM mailing_tipo_campo WHERE tabela='${tabela}' AND conferido=1 ORDER BY ordem ASC`
+        const sql = `SELECT id, campo, apelido, tipo FROM mailing_tipo_campo WHERE tabela='${tabela}' AND conferido=1 ORDER BY ordem ASC`
         connect.banco.query(sql,callback)
     }    
     

@@ -329,19 +329,38 @@ class Campanhas{
     }
 
     //Status dos Mailings por campanha
+    camposConfiguradosDisponiveis(tabela,idCampanha,callback){
+        const sql = `SELECT m.id, m.campo, m.apelido, m.tipo ,t.idCampanha FROM mailing_tipo_campo AS m LEFT JOIN campanhas_campos_tela_agente AS t ON m.id = t.idCampo WHERE m.tabela='${tabela}' AND (t.idCampanha=${idCampanha} OR t.idCampanha != ${idCampanha} OR t.idCampanha is null) AND m.conferido=1`
+        connect.banco.query(sql,callback)
+    }
+
+    addCampoTelaAgente(idCampanha,tabela,idCampo,callback){
+        const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo) VALUES (${idCampanha},'${tabela}',${idCampo})`
+        connect.banco.query(sql,callback)
+    }
+
+    camposTelaAgente(idCampanha,tabela,callback){
+        const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo FROM campanhas_campos_tela_agente AS t JOIN mailing_tipo_campo AS m ON m.id=t.idCampo WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
+        connect.banco.query(sql,callback)
+    }
+
+    delCampoTelaAgente(idJoin,callback){
+        const sql = `DELETE FROM campanhas_campos_tela_agente WHERE id=${idJoin}`
+        connect.banco.query(sql,callback)
+    }
+  
+   
+    /*
     //Campos Nao Selecionados
     camposNaoSelecionados(idCampanha,tabela,callback){
         const sql = `SELECT DISTINCT m.id AS campo FROM mailing_tipo_campo AS m LEFT OUTER JOIN campanhas_campos_tela_agente AS s ON m.id=s.idCampo WHERE m.tabela='${tabela}' AND conferido=1 AND m.id NOT IN (SELECT idCampo FROM campanhas_campos_tela_agente WHERE tabela='${tabela}' AND idCampanha=${idCampanha})`
         connect.banco.query(sql,callback) 
     }
 
-    
-
     campoSelecionado(campo,tabela,callback){
         const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE tabela='${tabela}' AND idCampo='${campo}';`
         connect.banco.query(sql,callback)
-    }
-    
+    }    
 
     //Campos Selecionados na tela do agente
     camposSelecionados(idCampanha,tabela,callback){
@@ -414,6 +433,7 @@ class Campanhas{
         const sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}' AND idCampo=${idCampo}`
         connect.banco.query(sql,callback)
     }
+    */
 
 
     

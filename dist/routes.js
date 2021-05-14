@@ -7,6 +7,7 @@ var _UserController = require('./controllers/UserController'); var _UserControll
 var _SessionController = require('./controllers/SessionController'); var _SessionController2 = _interopRequireDefault(_SessionController);
 var _CampanhasController = require('./controllers/CampanhasController'); var _CampanhasController2 = _interopRequireDefault(_CampanhasController); 
 var _MailingController = require('./controllers/MailingController'); var _MailingController2 = _interopRequireDefault(_MailingController);
+var _GravacaoController = require('./controllers/GravacaoController'); var _GravacaoController2 = _interopRequireDefault(_GravacaoController);
 var _ReportController = require('./controllers/ReportController'); var _ReportController2 = _interopRequireDefault(_ReportController);
 var _AsteriskController = require('./controllers/AsteriskController'); var _AsteriskController2 = _interopRequireDefault(_AsteriskController);
 
@@ -20,6 +21,9 @@ routes.get('/listaCampos', (req, res) =>{
 
 //AUTENTICAÇÃO
 routes.post('/login', _SessionController2.default.store);
+
+//Retornando dominio do servidor
+routes.post('/setRecord', _AsteriskController2.default.setRecord)
 
 //OPERACOES DO AGI-ASTERISK
 routes.post('/agi/:action',_AsteriskController2.default.agi);
@@ -146,11 +150,26 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
         //Mailing por UF
 
         //Configurar tela do agente
+        //Listar campos configurados
+        routes.get('/listarCamposConfigurados/:idCampanha', _CampanhasController2.default.listarCamposConfigurados)
+
+        //Atualiza nome e inclui campo na tela do agente
+        routes.post('/adicionaCampo_telaAgente', _CampanhasController2.default.adicionaCampo_telaAgente)
+
+        //Listar campos adicionados na tela do agente
+        routes.get('/listaCampos_telaAgente/:idCampanha', _CampanhasController2.default.listaCampos_telaAgente)
+
+        //remove campo da tela do agente
+        routes.delete('/removeCampo_telaAgente/:idJoin', _CampanhasController2.default.removeCampo_telaAgente)
+
+
+
+        //Old
         //get Fields
-        routes.get('/getFieldsUserScreen/:idCampanha',_CampanhasController2.default.getFieldsUserScreen)
+        /*routes.get('/getFieldsUserScreen/:idCampanha',CampanhasController.getFieldsUserScreen)
 
         //Update Fields
-        routes.patch('/updateFieldsUserScreen/:idCampanha',_CampanhasController2.default.updateFieldsUserScreen)
+        routes.patch('/updateFieldsUserScreen/:idCampanha',CampanhasController.updateFieldsUserScreen)*/
 
     //TABULACOES
         //LISTA DE TABULACOES     
@@ -264,11 +283,34 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
     //Historico de Chamadas
     routes.get('/historicoChamadas/:ramal',_CampanhasController2.default.historicoChamadas)
 
+//TELA DE ATENDIMENTO
+    //Abrir Listagem de Pausa da Campanha
+    routes.get('/pausasDisponiveis',_CampanhasController2.default.listarPausasCampanha)
+
+    //Pausar agente
+    routes.post('/pausarAgente',_CampanhasController2.default.pausarAgente)
+
+    //Status Pausa Agente
+    routes.get('/statusPausaAgente/:ramal',_CampanhasController2.default.statusPausaAgente)
+ 
+    //Retirar Pausa
+    routes.post('/removePausa/',_CampanhasController2.default.removePausaAgente)
 
 
 
 
 //GRAVAÇÕES
+    //Listar gravacao
+    routes.get('/listarGravacoes', _GravacaoController2.default.listarGravacoes)
+
+    //Busca as gravacoes
+    routes.get('/compartilharGravacao/:idGravacao',_GravacaoController2.default.compartilharGravacao)
+
+    //Compartilhar Gravacao
+    routes.post('/buscarGravacoes',_GravacaoController2.default.buscarGravacoes)
+
+    //Baixar Gravacao
+    routes.get('/baixarGravacao/:idGravacao',_GravacaoController2.default.baixarGravacao)
 
 //RELATORIOS
 

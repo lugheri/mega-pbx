@@ -329,24 +329,43 @@ class Campanhas{
     }
 
     //Status dos Mailings por campanha
+    camposConfiguradosDisponiveis(tabela,idCampanha,callback){
+        const sql = `SELECT m.id, m.campo, m.apelido, m.tipo ,t.idCampanha FROM mailing_tipo_campo AS m LEFT JOIN campanhas_campos_tela_agente AS t ON m.id = t.idCampo WHERE m.tabela='${tabela}' AND (t.idCampanha=${idCampanha} OR t.idCampanha != ${idCampanha} OR t.idCampanha is null) AND m.conferido=1`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    addCampoTelaAgente(idCampanha,tabela,idCampo,callback){
+        const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo) VALUES (${idCampanha},'${tabela}',${idCampo})`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    camposTelaAgente(idCampanha,tabela,callback){
+        const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo FROM campanhas_campos_tela_agente AS t JOIN mailing_tipo_campo AS m ON m.id=t.idCampo WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    delCampoTelaAgente(idJoin,callback){
+        const sql = `DELETE FROM campanhas_campos_tela_agente WHERE id=${idJoin}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+  
+   
+    /*
     //Campos Nao Selecionados
     camposNaoSelecionados(idCampanha,tabela,callback){
         const sql = `SELECT DISTINCT m.id AS campo FROM mailing_tipo_campo AS m LEFT OUTER JOIN campanhas_campos_tela_agente AS s ON m.id=s.idCampo WHERE m.tabela='${tabela}' AND conferido=1 AND m.id NOT IN (SELECT idCampo FROM campanhas_campos_tela_agente WHERE tabela='${tabela}' AND idCampanha=${idCampanha})`
-        _dbConnection2.default.banco.query(sql,callback) 
+        connect.banco.query(sql,callback) 
     }
-
-    
 
     campoSelecionado(campo,tabela,callback){
         const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE tabela='${tabela}' AND idCampo='${campo}';`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-    
+        connect.banco.query(sql,callback)
+    }    
 
     //Campos Selecionados na tela do agente
     camposSelecionados(idCampanha,tabela,callback){
         const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}' ORDER BY ordem ASC;`
-        _dbConnection2.default.banco.query(sql,callback)
+        connect.banco.query(sql,callback)
     }
 
     //Reordena campos disponiveis do mailing                         
@@ -355,20 +374,20 @@ class Campanhas{
         if(posOrigen<posDestino){
             //diminui a ordem de todos que sao menores ou iguais ao destino
             const sql = `UPDATE mailings_tipo_campo campo SET ordem=ordem-1 WHERE tabela='${tabela}' AND ordem<=${posDestino}`
-            _dbConnection2.default.banco.query(sql,(e,r)=>{
+            connect.banco.query(sql,(e,r)=>{
                 if(e) throw e
 
                 const sql = `UPDATE mailings_tipo_campo SET ordem=${posDestino} WHERE id=${idCampo}`
-                _dbConnection2.default.banco.query(sql,callback)
+                connect.banco.query(sql,callback)
             })
         }else{//Caso ele tenha subido
             //aumenta a ordem de todos que sao maiores ou iguais ao destino
             const sql = `UPDATE mailings_tipo_campo SET ordem=ordem+1 WHERE tabela='${tabela}' AND ordem>=${posDestino}`
-            _dbConnection2.default.banco.query(sql,(e,r)=>{
+            connect.banco.query(sql,(e,r)=>{
                 if(e) throw e
 
                 const sql = `UPDATE mailings_tipo_campo SET ordem=${posDestino} WHERE id=${idCampo}`
-                _dbConnection2.default.banco.query(sql,callback)
+                connect.banco.query(sql,callback)
             })
         }
     }
@@ -379,20 +398,20 @@ class Campanhas{
         if(posOrigen<posDestino){
             //diminui a ordem de todos que sao menores ou iguais ao destino
             const sql = `UPDATE campanhas_campos_tela_agente SET ordem=ordem-1 WHERE idCampanha=${idCampanha} AND tabela='${tabela}' AND ordem<=${posDestino}`
-            _dbConnection2.default.banco.query(sql,(e,r)=>{
+            connect.banco.query(sql,(e,r)=>{
                 if(e) throw e
 
                 const sql = `UPDATE campanhas_campos_tela_agente SET ordem=${posDestino} WHERE idCampo=${idCampo}`
-                _dbConnection2.default.banco.query(sql,callback)
+                connect.banco.query(sql,callback)
             })
         }else{//Caso ele tenha subido
             //aumenta a ordem de todos que sao maiores ou iguais ao destino
             const sql = `UPDATE campanhas_campos_tela_agente SET ordem=ordem+1 WHERE idCampanha=${idCampanha} AND tabela='${tabela}' AND ordem>=${posDestino}`
-            _dbConnection2.default.banco.query(sql,(e,r)=>{
+            connect.banco.query(sql,(e,r)=>{
                 if(e) throw e
 
                 const sql = `UPDATE campanhas_campos_tela_agente SET ordem=${posDestino} WHERE idCampo=${idCampo}`
-                _dbConnection2.default.banco.query(sql,callback)
+                connect.banco.query(sql,callback)
             })
         }
     }
@@ -401,19 +420,20 @@ class Campanhas{
     //Adicionando campo na tela do agente
     addCampoTelaAgente(idCampanha,tabela,idCampo,ordem,callback){
         const sql = `UPDATE campanhas_campos_tela_agente SET ordem=ordem+1 WHERE idCampanha=${idCampanha} AND tabela='${tabela}' AND ordem>=${ordem}`
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
+        connect.banco.query(sql,(e,r)=>{
             if(e) throw e
 
             const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo,ordem) VALUES (${idCampanha},'${tabela}',${idCampo},${ordem})`
-            _dbConnection2.default.banco.query(sql,callback)
+            connect.banco.query(sql,callback)
         })
     }
 
     //Removendo campo selecionado da tela do agente
     removeCampoTelaAgente(idCampanha,tabela,idCampo,callback){
         const sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}' AND idCampo=${idCampo}`
-        _dbConnection2.default.banco.query(sql,callback)
+        connect.banco.query(sql,callback)
     }
+    */
 
 
     

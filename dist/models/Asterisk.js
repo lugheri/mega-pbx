@@ -6,10 +6,12 @@ var _util = require('util'); var _util2 = _interopRequireDefault(_util);
 var _amiio = require('ami-io'); var _amiio2 = _interopRequireDefault(_amiio);
 var _Tabulacoes = require('../models/Tabulacoes'); var _Tabulacoes2 = _interopRequireDefault(_Tabulacoes);
 
+var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 
 class Asterisk{
     //######################Configuração das filas######################
-    
+   
+
     //Criar nova filas
     criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat,callback){
         const sql = `INSERT INTO queues (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
@@ -63,6 +65,18 @@ class Asterisk{
     }*/
 
     //######################Configuração do Asterisk######################
+    setRecord(data,hora,ramal,uniqueid,callback){
+        const sql = `INSERT INTO records (date,date_record,time_record,ramal,uniqueid) VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}')`
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e
+            this.servidorWebRTC(callback)
+        })
+    }
+    getDomain(callback){//Ip/dominio do servidor onde o asterisk esta instalado
+        const sql = "SELECT ip FROM servidor_webrtc WHERE status=1"
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
     servidorWebRTC(callback){//Ip da maquina onde o asterisk esta instalado
         const sql = "SELECT * FROM servidor_webrtc WHERE status=1"
         _dbConnection2.default.banco.query(sql,callback)
@@ -99,9 +113,10 @@ class Asterisk{
                 const tabulacao = 0
                 const contatado = 'N'
                 const produtivo = 0
+                const uniqueid=chamada[0].uniqueid
 
                 //Registra histórico de chamada
-                this.registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,numero,tabulacao,observacoes,contatado,(e,r)=>{
+                this.registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,uniqueid,numero,tabulacao,observacoes,contatado,(e,r)=>{
                     if(e) throw e
                     //Tabula registro
                     this.tabulandoContato(tabela,contatado,tabulacao,observacoes,produtivo,numero,ramal,id_reg,idMailing,idCampanha,callback)
@@ -137,8 +152,8 @@ class Asterisk{
     }
 
     //Registra o histórico de atendimento de uma chamada
-    registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,numero,tabulacao,observacoes,contatado,callback){
-        const sql = `INSERT INTO historico_atendimento (data,hora,protocolo,campanha,mailing,id_registro,agente,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_reg},${ramal},'${numero}',${tabulacao},'${observacoes}','${contatado}')`
+    registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,uniqueid,numero,tabulacao,observacoes,contatado,callback){
+        const sql = `INSERT INTO historico_atendimento (data,hora,protocolo,campanha,mailing,id_registro,agente,uniqueid,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_reg},${ramal},'${uniqueid}','${numero}',${tabulacao},'${observacoes}','${contatado}')`
         _dbConnection2.default.banco.query(sql,callback)
     }  
 
@@ -283,22 +298,72 @@ class Asterisk{
     }
 
 
+    //Pausar Agente
+    pausarAgente(ramal,idPausa,pausa,descricao,tempo,callback){
+        //atualiza estado do agente na fila das campanhas
+        const sql = `UPDATE agentes_filas SET estado=2, idpausa=${idPausa} WHERE ramal='${parseInt(ramal)}'`
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e
+
+            //pausa agente no asterisk
+            const sql = `UPDATE queue_members SET paused=1 WHERE membername='${ramal}'`
+            _dbConnection2.default.asterisk.query(sql,(e,r)=>{
+                if(e) throw e
+                const agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
+                const resultado = _moment2.default.call(void 0, agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
+
+                //insere na lista dos agentes pausados
+                const sql = `INSERT INTO agentes_pausados (data,ramal,inicio,termino,idPausa,nome,descricao) VALUES (now(),'${ramal}',now(), '${resultado}', ${idPausa}, '${pausa}','${descricao}')`
+                _dbConnection2.default.banco.query(sql,(e,r)=>{
+                    if(e) throw e
+
+                    const agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
+                    const resultado = _moment2.default.call(void 0, agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
+
+                    const sql = `INSERT INTO log_pausas (ramal,idPausa,data,inicio,ativa) VALUES ('${ramal}',${idPausa},now(),now(),1)`
+                    _dbConnection2.default.banco.query(sql,(e,r)=>{
+                        if(e) throw e
+                        callback(false,true)
+                    })
+                })           
+            })          
+        })
+    }  
+
+    //Retorna o status de pausa do agente
+    infoPausaAgente(ramal,callback){
+        const sql = `SELECT idPausa, inicio, termino as limite, nome, descricao FROM agentes_pausados WHERE ramal='${ramal}'`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    //Tira o agente da pausa
+    removePausaAgente(ramal,callback){
+        //atualiza estado do agente na fila das campanhas
+        const sql = `UPDATE agentes_filas SET estado=1, idpausa=0 WHERE ramal='${parseInt(ramal)}'`
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e
+
+            //pausa agente no asterisk
+            const sql = `UPDATE queue_members SET paused=0 WHERE membername='${ramal}'`
+            _dbConnection2.default.asterisk.query(sql,(e,r)=>{
+                if(e) throw e
+                
+               
+                //Removeo agente da lista dos agentes pausados
+                const sql = `DELETE FROM agentes_pausados WHERE ramal='${ramal}'`
+                _dbConnection2.default.banco.query(sql,(e,r)=>{
+                    if(e) throw e
+                    
+                    //Atualiza Log
+                    const sql = `UPDATE log_pausas SET termino=now(), ativa=0 WHERE ramal='${ramal}' AND ativa=1`
+                    _dbConnection2.default.banco.query(sql,(e,r)=>{
+                        if(e) throw e
+                        callback(false,true)
+                    })
+                })           
+            })          
+        })
+    }
     
     
     
@@ -366,14 +431,15 @@ class Asterisk{
         const obs_tabulacao = dados.obs_tabulacao        
         const tipo_tabulacao = dados.tipo_tabulacao
 
-        const sql = `SELECT id_campanha, id_mailing, id_reg FROM chamadas_temporeal WHERE id=${idAtendimento}`
+        const sql = `SELECT id_campanha, id_mailing, id_reg, uniqueid FROM chamadas_temporeal WHERE id=${idAtendimento}`
         _dbConnection2.default.banco.query(sql, (e,r)=>{
             if(e) throw e
             const id_campanha = r[0].id_campanha
             const id_mailing = r[0].id_mailing
             const id_reg = r[0].id_reg
+            const uniqueid= r[0].uniqueid
             //insere no dial com a tabulacao
-            const sql = `INSERT INTO historico_atendimento (data,hora,campanha,mailing,id_registro,agente,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),${id_campanha},${id_mailing},${id_reg},${ramal},"${numero}",${status_tabulacao},"${obs_tabulacao}","${tipo_tabulacao}") `
+            const sql = `INSERT INTO historico_atendimento (data,hora,campanha,mailing,id_registro,agente,uniqueid,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),${id_campanha},${id_mailing},${id_reg},${ramal},"${uniqueid}","${numero}",${status_tabulacao},"${obs_tabulacao}","${tipo_tabulacao}") `
             _dbConnection2.default.banco.query(sql, (e,r)=>{
                 if(e) throw e
 

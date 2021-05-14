@@ -20,13 +20,9 @@ class UserController{
         _User2.default.listUsers(status,(e,r)=>{
             if(e) throw e
 
-
-
             res.json(r)
         })
-    }
-
-   
+    }  
 
     userData(req,res){
         const userId = parseInt(req.params.userId)
@@ -160,8 +156,10 @@ class UserController{
             res.json(r)
         })
     }
+    
 
     //############################DASHBOARD###########################
+    
 
   
 
