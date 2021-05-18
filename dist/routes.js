@@ -44,6 +44,9 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
 
 //DASHBOARD 
     //Usuarios
+        //Usuários em tempo real
+        routes.get('/usersRealTime',_DashboardController2.default.usersRealTime)
+
         //Qtd de usuarios dos ultimos dias
         routes.get('/usersByDay/:limit',_DashboardController2.default.logadosPorDia)
 
@@ -55,6 +58,9 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
 
 
     //Campanhas
+        //Campanhas em tempo real
+        routes.get('/campainsRealTime',_DashboardController2.default.campainsRealTime)
+
         //Qtd de campanhas
         routes.get('/campanhasByDay/:limit',_DashboardController2.default.campanhasByDay)
 
@@ -160,7 +166,7 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
         routes.get('/listaCampos_telaAgente/:idCampanha', _CampanhasController2.default.listaCampos_telaAgente)
 
         //remove campo da tela do agente
-        routes.delete('/removeCampo_telaAgente/:idJoin', _CampanhasController2.default.removeCampo_telaAgente)
+        routes.delete('/removeCampo_telaAgente/:idCampanha/:idCampo', _CampanhasController2.default.removeCampo_telaAgente)
 
 
 
@@ -372,6 +378,9 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
 
 
 //REPORTS
+    //Monitoramento de agentes
+    routes.get('/')
+
     //Criar Relatorio
     routes.post('/criarRelatorio', _ReportController2.default.criarRelatorio)
 

@@ -35,6 +35,11 @@ class Campanhas{
     }
     
     //Total de campanhas ativas
+    totalCampanhasAtivas(callback){
+        const sql = `SELECT COUNT(id) as total FROM campanhas WHERE status=1 AND estado=1`
+        connect.banco.query(sql,callback)
+    }
+    
     campanhasAtivas(callback){
         const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo FROM campanhas AS c LEFT JOIN campanhas_status AS s ON c.id = s.idCampanha WHERE c.status=1 AND c.estado=1 AND s.estado=1`
         connect.banco.query(sql,callback)
@@ -151,53 +156,77 @@ class Campanhas{
     }
 
     //######################Configuração das filas das campanhas######################
-    
-    
-    membrosForaFila(idFila,callback){
-        const sql = `SELECT DISTINCT u.id AS agente FROM users AS u LEFT OUTER JOIN agentes_filas AS f ON u.id=f.ramal WHERE u.status=1 AND u.id NOT IN (SELECT ramal FROM agentes_filas WHERE fila=${idFila})`
-        connect.banco.query(sql,callback)              
-    }   
-
-
     membrosNaFila(idFila,callback){
         const sql = `SELECT ramal FROM agentes_filas WHERE fila=${idFila} ORDER BY ordem ASC;`
         connect.banco.query(sql,callback)
     }
 
-    //adiciona membros a fila
+    //Reordena fora da fila
+    reordenaMembrosForaFila(idAgente,idFila,posOrigen,posDestino,callback){
+        //se o destino eh maior que a origem
+        if(posOrigen>posDestino){
+            //aumenta todas as ordens maiores ou iguais ao destino que o destino
+            const sql = `UPDATE users SET ordem=ordem+1 WHERE ordem>=${posDestino}`
+            connect.banco.query(sql,(e,r)=>{
+                //atualiza o id atual para a ordem correta
+                const sql = `UPDATE users SET ordem=${posDestino} WHERE id=${idAgente}`
+                connect.banco.query(sql,callback)
+            })
+        }
+
+        //se a origem eh maior que o destino
+        if(posOrigen<posDestino){
+             //diminui todas as ordens menores ou iguais ao destino que o destino
+             const sql = `UPDATE users SET ordem=ordem-1 WHERE ordem<=${posDestino}`
+             connect.banco.query(sql,(e,r)=>{
+                 //atualiza o id atual para a ordem correta
+                 const sql = `UPDATE users SET ordem=${posDestino} WHERE id=${idAgente}`
+                 connect.banco.query(sql,callback)
+             })
+        }
+    }   
+    
+    //Reordena dentro fila
+    atualizaOrdemAgenteFila(fila,ordemOrigem,ordem,callback){
+        if(ordemOrigem>ordem){
+            const sql = `UPDATE agentes_filas SET ordem=ordem+1 WHERE fila=${fila} AND ordem>=${ordem}`;
+            connect.banco.query(sql,callback)
+        }
+        if(ordemOrigem<ordem){
+            const sql = `UPDATE agentes_filas SET ordem=ordem-1 WHERE fila=${fila} AND ordem <= ${ordem}`;
+            connect.banco.query(sql,callback)
+        }
+        
+    }
+
+    //AddMembro
     addMembroFila(idAgente,idFila,ordemOrigem,ordem,callback){
         this.verificaMembroFila(idAgente,idFila,(e,r)=>{
             if(e) throw e 
 
-            if(r.length === 0){
-                //Verifica se a ordem ja existe e atualiza as restantes
-                this.atualizaOrdemAgenteFila(idFila,ordem+1,ordem,(e,r)=>{
+            if(r.length === 0){//Caso agente nao exista
+                User.agenteLogado(idAgente,(e,logado)=>{
                     if(e) throw e 
-
-                    User.agenteLogado(idAgente,(e,logado)=>{
+                    const estado = logado[0].logado  
+                    const sql = `INSERT INTO agentes_filas (ramal,fila,estado,ordem) VALUES (${idAgente},${idFila},${estado},${ordem})`
+                    connect.banco.query(sql,(e,r)=>{   
                         if(e) throw e 
-
-                        const estado = logado[0].logado                   
-
-                        const sql = `INSERT INTO agentes_filas (ramal,fila,estado,ordem) VALUES (${idAgente},${idFila},${estado},${ordem})`
+                        
+                        const sql = `SELECT nomeFila FROM campanhas_filas WHERE id=${idFila}`
                         connect.banco.query(sql,(e,r)=>{
-                            if(e) throw e 
-        
-                            const sql = `SELECT nomeFila FROM campanhas_filas WHERE id=${idFila}`
-                            connect.banco.query(sql,(e,r)=>{
-                                if(e) throw e
-        
-                                const queue_name = r[0].nomeFila
-                                const queue_interface = `PJSIP/${idAgente}`
-                                const membername = idAgente
-                                const state_interface = ''//`${queue_interface}@megatrunk`
-                                const penalty = 0
-                                Asterisk.addMembroFila(queue_name,queue_interface,membername,state_interface,penalty,callback)
-                            })
+                            if(e) throw e
+
+                            const queue_name = r[0].nomeFila
+                            const queue_interface = `PJSIP/${idAgente}`
+                            const membername = idAgente
+                            const state_interface = ''//`${queue_interface}@megatrunk`
+                            const penalty = 0
+
+                            Asterisk.addMembroFila(queue_name,queue_interface,membername,state_interface,penalty,callback)
                         })
                     })
-                })                
-            }else{
+                })
+            }else{//Caso o agente ja pertenca a fila
                 this.atualizaOrdemAgenteFila(idFila,ordemOrigem,ordem,(e,r)=>{
                     if(e) throw e 
 
@@ -208,24 +237,7 @@ class Campanhas{
         })
     }
 
-    atualizaOrdemAgenteFila(fila,ordemOrigem,ordem,callback){
-        if(ordemOrigem>ordem){
-            const sql = `UPDATE agentes_filas SET ordem=ordem+1 WHERE fila=${fila} AND ordem>=${ordem}`;
-            connect.banco.query(sql,callback)
-        }else{
-            const sql = `UPDATE agentes_filas SET ordem=ordem+1 WHERE fila=${fila} AND ordem>=${ordem} AND ordem <= ${ordemOrigem}`;
-            connect.banco.query(sql,callback)
-        }
-        
-    }
-
-    totalAgentesDisponiveis(callback){
-        const sql = `SELECT distinct ramal FROM agentes_filas AS a JOIN users AS u ON u.id=a.ramal WHERE u.logado=1 AND u.status=1 AND a.estado=1`
-        connect.banco.query(sql,callback)
-    }
-    
-
-    //remove membros da fila
+    ///remove membros da fila
     removeMembroFila(idAgente,idFila,callback){
         const sql = `DELETE FROM agentes_filas WHERE ramal=${idAgente} AND fila=${idFila}`
         connect.banco.query(sql,(e,r)=>{
@@ -239,7 +251,20 @@ class Campanhas{
                 Asterisk.removeMembroFila(nomeFila,idAgente,callback)
             })
         })
+    }   
+   
+
+    
+
+    totalAgentesDisponiveis(callback){
+        const sql = `SELECT distinct ramal FROM agentes_filas AS a JOIN users AS u ON u.id=a.ramal WHERE u.logado=1 AND u.status=1 AND a.estado=1`
+        connect.banco.query(sql,callback)
     }
+    
+
+    
+
+
 
     //verifica se membro pertence a filas
     verificaMembroFila(idAgente,idFila,callback){
@@ -329,10 +354,22 @@ class Campanhas{
     }
 
     //Status dos Mailings por campanha
-    camposConfiguradosDisponiveis(tabela,idCampanha,callback){
+    /*camposConfiguradosDisponiveis(tabela,idCampanha,callback){
         const sql = `SELECT m.id, m.campo, m.apelido, m.tipo ,t.idCampanha FROM mailing_tipo_campo AS m LEFT JOIN campanhas_campos_tela_agente AS t ON m.id = t.idCampo WHERE m.tabela='${tabela}' AND (t.idCampanha=${idCampanha} OR t.idCampanha != ${idCampanha} OR t.idCampanha is null) AND m.conferido=1`
         connect.banco.query(sql,callback)
+    }*/
+
+    //Lista todos os campos que foram configurados do mailing
+    camposConfiguradosDisponiveis(tabela,callback){
+        const sql = `SELECT id,campo,apelido,tipo FROM mailing_tipo_campo WHERE tabela='${tabela}' AND conferido=1`
+        connect.banco.query(sql,callback)
     }
+
+    camposAdicionadosNaTelaAgente(idCampanha,tabela,callback){
+        const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}'`
+        connect.banco.query(sql,callback)
+    }
+
 
     addCampoTelaAgente(idCampanha,tabela,idCampo,callback){
         const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo) VALUES (${idCampanha},'${tabela}',${idCampo})`
@@ -344,8 +381,8 @@ class Campanhas{
         connect.banco.query(sql,callback)
     }
 
-    delCampoTelaAgente(idJoin,callback){
-        const sql = `DELETE FROM campanhas_campos_tela_agente WHERE id=${idJoin}`
+    delCampoTelaAgente(idCampanha,idCampo,callback){
+        const sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
         connect.banco.query(sql,callback)
     }
   

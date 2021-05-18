@@ -33,14 +33,15 @@ class User{
         })        
     }
 
+    totalAgentesLogados(callback){
+        const sql = `SELECT COUNT(id) AS total FROM users WHERE STATUS=1 AND logado=1`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
     logadosPorDia(limit,callback){
         const sql = `SELECT COUNT(DISTINCT(user_id)) AS agentes, DATE_FORMAT (data,'%d/%m/%Y') AS dia FROM registro_logins GROUP BY data ORDER BY data DESC LIMIT ${limit}`
         _dbConnection2.default.banco.query(sql,callback) 
     }
-
-
-
-    
 
     newUser(dados,callback){
         const sql = `SELECT id FROM users WHERE usuario='${dados.usuario}'`;

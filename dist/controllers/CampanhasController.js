@@ -247,20 +247,34 @@ class CampanhasController{
                 }
                 dragDrop_fila+='},'
 
-                _Campanhas2.default.membrosForaFila(idFila,(e,membrosForaFila)=>{
+                _Campanhas2.default.membrosNaFila(idFila,(e,membrosFila)=>{
                     if(e) throw e 
-                    
-                    dragDrop_fila += '"columns":{"foraDaFila":{"id":"foraDaFila","agentesIds":['
 
-                    for(let i=0; i<membrosForaFila.length; i++){
-                        let membro  = `"${membrosForaFila[i].agente}"`
-                        dragDrop_fila+=membro
-                        if((membrosForaFila.length-1)>i){
-                            dragDrop_fila+=','
-                        }                 
+                    console.log(todosUsuarios)
+                    console.log(membrosFila)
+
+                    dragDrop_fila += '"columns":{"foraDaFila":{"id":"foraDaFila","agentesIds":['
+                    //Listando membros disponiveis para a fila
+                    for(let i=0; i<todosUsuarios.length; i++){
+
+                        //Listando membros da fila
+                        let membroFila = false
+                        for(let m=0; m<membrosFila.length; m++){
+                            //Listando membros que nao constam na fila
+                            if(todosUsuarios[i].id === membrosFila[m].ramal){
+                                membroFila = true
+                            }                        
+                        }
+
+                        //caso o membro nao seja localizado, lista o mesmo
+                        if(membroFila == false){
+                            dragDrop_fila  += `"${todosUsuarios[i].id}",`
+                        }                
                     }
+                    dragDrop_fila=dragDrop_fila.slice(0, -1)
+
                     dragDrop_fila+=']},'
-                    
+
                     _Campanhas2.default.membrosNaFila(idFila,(e,membrosFila)=>{
                         if(e) throw e 
 
@@ -273,13 +287,16 @@ class CampanhasController{
                             }                 
                         }
                         dragDrop_fila+=']}}}'
+
                         console.log(dragDrop_fila)
                         //res.json(true)
-                       
+                    
                         const obj = JSON.parse(dragDrop_fila);
                         res.json(obj)
-                    })                    
+                    })
                 })
+                
+                
             })
         }
 
@@ -299,6 +316,11 @@ class CampanhasController{
             //reordena fora da fila
             if((origem == 'foraDaFila')&&(destino == 'foraDaFila')){
                 console.log('nao atualiza')
+                _Campanhas2.default.reordenaMembrosForaFila(idAgente,idFila,posOrigen,posDestino,(e,r)=>{
+                    if(e) throw e
+                                      
+                    res.json(true)
+                })
             }
             //insere na fila
             if((origem == 'foraDaFila')&&(destino == 'dentroDaFila')){
@@ -394,32 +416,81 @@ class CampanhasController{
             _Campanhas2.default.nomeTabela_byIdCampanha(idCampanha,(e,nomeTabela)=>{
                 if(e) throw e
 
-                const tabela= nomeTabela[0].tabela
-                _Campanhas2.default.camposConfiguradosDisponiveis(tabela,idCampanha,(e,campos)=>{
-                    if(e) throw e
-                    let retorno = "["
-                    for(let i=0; i< campos.length; i++){
-                        retorno += "{"
-                        retorno += `"id":"${campos[i].id}",` 
-                        retorno += `"campo":"${campos[i].campo}",` 
-                        retorno += `"apelido":"${campos[i].apelido}",` 
-                        retorno += `"tipo":"${campos[i].tipo}",` 
-                        if(campos[i].idCampanha==idCampanha){
-                            retorno += `"selecionado":true`
-                        }else{
-                            retorno += `"selecionado":false`
-                        }
-                          
-                        if(i==campos.length-1){
-                            retorno += "}"
-                        }else{
-                            retorno += "},"
-                        }                        
-                    }
-                    retorno += "]"
+                if(nomeTabela.length!=0){
 
-                    res.send(JSON.parse(retorno))
-                })
+                    const tabela= nomeTabela[0].tabela
+
+                    _Campanhas2.default.camposConfiguradosDisponiveis(tabela,(e,campos)=>{
+                        if(e) throw e
+
+                        console.log('Campos Disponíveis')
+                        console.log(campos)
+
+                        _Campanhas2.default.camposAdicionadosNaTelaAgente(idCampanha,tabela,(e,camposSelecionados)=>{
+                            if(e) throw e
+                            
+                            //abrindo campos disponiveis 
+                            let camposConf = "["
+                            for(let i=0; i< campos.length; i++){
+                                camposConf += "{"
+                                camposConf += `"id":"${campos[i].id}",` 
+                                camposConf += `"campo":"${campos[i].campo}",` 
+                                camposConf += `"apelido":"${campos[i].apelido}",` 
+                                camposConf += `"tipo":"${campos[i].tipo}",` 
+                                //Verificando se o campo esta adicionado na tela
+                                let sel = false
+                                let idJoin = 0
+                                for(let ii=0; ii< camposSelecionados.length; ii++){
+                                    console.log(`if(${camposSelecionados[ii].idCampo}==${campos[i].id}`)
+                                    if(camposSelecionados[ii].idCampo == campos[i].id){
+                                        sel = true
+                                        idJoin = 10
+                                    }
+                                }
+                                
+                                camposConf += `"idJoin":${idJoin},`
+                                camposConf += `"selecionado":${sel}`
+                            
+                                if(i==campos.length-1){
+                                    camposConf += "}"
+                                }else{
+                                    camposConf += "},"
+                                }                        
+                            }
+                            camposConf += "]"
+
+                            res.json(JSON.parse(camposConf))
+                        })
+                    })
+
+                    /*Campanhas.camposConfiguradosDisponiveis(tabela,idCampanha,(e,campos)=>{
+                        if(e) throw e
+                        let retorno = "["
+                        for(let i=0; i< campos.length; i++){
+                            retorno += "{"
+                            retorno += `"id":"${campos[i].id}",` 
+                            retorno += `"campo":"${campos[i].campo}",` 
+                            retorno += `"apelido":"${campos[i].apelido}",` 
+                            retorno += `"tipo":"${campos[i].tipo}",` 
+                            if(campos[i].idCampanha==idCampanha){
+                                retorno += `"selecionado":true`
+                            }else{
+                                retorno += `"selecionado":false`
+                            }
+                            
+                            if(i==campos.length-1){
+                                retorno += "}"
+                            }else{
+                                retorno += "},"
+                            }                        
+                        }
+                        retorno += "]"
+
+                        res.send(JSON.parse(retorno))
+                    })*/
+                }else{
+                    res.send(JSON.parse('{"erro":"Nenhum mailing encontrado na campanha"}'))
+                }
             })
         }
         
@@ -452,8 +523,9 @@ class CampanhasController{
         }
 
         removeCampo_telaAgente(req,res){
-            const idJoin = parseInt(req.params.idJoin)
-            _Campanhas2.default.delCampoTelaAgente(idJoin,(e,r)=>{
+            const idCampanha = parseInt(req.params.idCampanha)
+            const idCampo = parseInt(req.params.idCampo)
+            _Campanhas2.default.delCampoTelaAgente(idCampanha,idCampo,(e,r)=>{
                 if(e) throw e
 
                 res.send(true)

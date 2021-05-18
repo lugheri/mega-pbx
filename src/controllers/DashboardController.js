@@ -1,10 +1,19 @@
 import User from '../models/User'
 import Campanhas from '../models/Campanhas'
 import Discador from '../models/Discador'
+import User from '../models/User'
 import connect from '../Config/dbConnection'
 
 class DashboardController{
+    usersRealTime(req,res){
+        User.totalAgentesLogados((e,totalLogados)=>{
+            if(e) throw e
 
+            res.json(totalLogados)
+
+        })
+    }
+    
     logadosPorDia(req,res){
         const limit = parseInt(req.params.limit)
         User.logadosPorDia(limit,(e,r)=>{
@@ -123,6 +132,16 @@ class DashboardController{
     }
     
     //Funcoes de informacoes das Campanhas
+    campainsRealTime(req,res){
+        Campanhas.totalCampanhasAtivas((e,campanhasAtivas)=>{
+            if(e) throw e
+
+            res.json(campanhasAtivas)
+        })
+
+
+    }
+    
     campanhasByDay(req,res){
         const limit = parseInt(req.params.limit)
         Campanhas.campanhasByDay(limit,(e,r)=>{

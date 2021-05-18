@@ -44,6 +44,9 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
 
 //DASHBOARD 
     //Usuarios
+        //Usuários em tempo real
+        routes.get('/usersRealTime',DashboardController.usersRealTime)
+
         //Qtd de usuarios dos ultimos dias
         routes.get('/usersByDay/:limit',DashboardController.logadosPorDia)
 
@@ -55,6 +58,9 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
 
 
     //Campanhas
+        //Campanhas em tempo real
+        routes.get('/campainsRealTime',DashboardController.campainsRealTime)
+
         //Qtd de campanhas
         routes.get('/campanhasByDay/:limit',DashboardController.campanhasByDay)
 
@@ -160,7 +166,7 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
         routes.get('/listaCampos_telaAgente/:idCampanha', CampanhasController.listaCampos_telaAgente)
 
         //remove campo da tela do agente
-        routes.delete('/removeCampo_telaAgente/:idJoin', CampanhasController.removeCampo_telaAgente)
+        routes.delete('/removeCampo_telaAgente/:idCampanha/:idCampo', CampanhasController.removeCampo_telaAgente)
 
 
 
@@ -372,6 +378,9 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
 
 
 //REPORTS
+    //Monitoramento de agentes
+    routes.get('/')
+
     //Criar Relatorio
     routes.post('/criarRelatorio', ReportController.criarRelatorio)
 

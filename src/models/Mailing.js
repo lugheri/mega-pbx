@@ -468,7 +468,11 @@ class Mailing{
                             if(erro) throw erro;  
                             //Removendo mailing das campanhas
                             const sql = `DELETE FROM campanhas_mailing WHERE idMailing='${idMailing}'`
-                            connect.banco.query(sql,callback(e,true))
+                            connect.banco.query(sql,(e,r)=>{
+                                //removendo configuracoes da tela do agente
+                                const sql = `DELETE FROM campanhas_campos_tela_agente WHERE tabela='${tabela}'`
+                                connect.banco.query(sql,callback(e,true))
+                            })
                         })
                     })                
                 })
@@ -671,9 +675,8 @@ class Mailing{
     }
 
     confereCampos(tabela,callback){
-        const sql = `SELECT COUNT(id) AS pendentes FROM mailing_tipo_campo WHERE tabela='${tabela}' AND conferido != 1`
+        const sql = `SELECT COUNT(id) AS pendentes FROM mailing_tipo_campo WHERE tabela='${tabela}' AND (conferido=0 OR conferido IS null)`
         connect.banco.query(sql,callback)
-
     }
 
     configuraMailing(tabela,configurado,callback){
@@ -744,19 +747,9 @@ class Mailing{
             if(e) throw e;
 
             const idCampanha = r[0].idCampanha
-            //Removendo registros da tabela de tabulacao
-            const sql = `DELETE FROM campanhas_tabulacao_mailing WHERE idCampanha=${idCampanha}`
-            connect.mailings.query(sql,(e,r)=>{
-                if(e) throw e;
-                //Removendo integracao do mailing com a campanha
-                const sql = `DELETE FROM campanhas_mailing WHERE id=${id}`
-                connect.banco.query(sql,(err,res)=>{
-                    if(err) throw err;
-                    //Removendo o setup de colunas do mailing na campanha
-                    const sql = `DELETE FROM campanhas_selecao_colunas WHERE id_campanha_mailing=${id}`
-                    connect.banco.query(sql,callback)
-                })
-            })
+            //Removendo integracao do mailing com a campanha
+            const sql = `DELETE FROM campanhas_mailing WHERE id=${id}`
+            connect.banco.query(sql,callback)
         })
     }
 }

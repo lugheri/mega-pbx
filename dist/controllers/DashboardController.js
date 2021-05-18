@@ -1,10 +1,19 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
 var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
 var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
+
 var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
 
 class DashboardController{
+    usersRealTime(req,res){
+        _User2.default.totalAgentesLogados((e,totalLogados)=>{
+            if(e) throw e
 
+            res.json(totalLogados)
+
+        })
+    }
+    
     logadosPorDia(req,res){
         const limit = parseInt(req.params.limit)
         _User2.default.logadosPorDia(limit,(e,r)=>{
@@ -123,6 +132,16 @@ class DashboardController{
     }
     
     //Funcoes de informacoes das Campanhas
+    campainsRealTime(req,res){
+        _Campanhas2.default.totalCampanhasAtivas((e,campanhasAtivas)=>{
+            if(e) throw e
+
+            res.json(campanhasAtivas)
+        })
+
+
+    }
+    
     campanhasByDay(req,res){
         const limit = parseInt(req.params.limit)
         _Campanhas2.default.campanhasByDay(limit,(e,r)=>{

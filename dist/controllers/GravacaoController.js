@@ -7,7 +7,36 @@ class GravacaoController{
         _Gravacao2.default.listarGravacoes((e,gravacoes)=>{
             if(e) throw e
 
-            res.json(gravacoes)
+            _Asterisk2.default.getDomain((e,server)=>{
+
+                const servidor = `https://${server[0].ip}/api/`
+
+            let retorno = '['
+            for(let i=0; i<gravacoes.length; ++i){
+                let ouvir = `${servidor}gravacoes/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].ramal_record}_${gravacoes[i].uniqueid}.wav`
+                let baixar = `${servidor}gravacao.php?id=${gravacoes[i].uniqueid}`
+                retorno += '{'
+                retorno += `"idGravacao":"${gravacoes[i].id}",`
+                retorno += `"data":"${gravacoes[i].data}",`
+                retorno += `"protocolo":"${gravacoes[i].protocolo}",`
+                retorno += `"ramal":"${gravacoes[i].ramal}",`
+                retorno += `"usuario":"${gravacoes[i].nome}",`
+                retorno += `"equipe":"${gravacoes[i].equipe}",`
+                retorno += `"numero":"${gravacoes[i].numero}",`
+                retorno += `"ouvir":"${ouvir}",`
+                retorno += `"baixar":"${baixar}",`
+                retorno += `"compartilhar":"${ouvir}"`
+                if(i<gravacoes.length-1){
+                    retorno += '},'
+                }else{
+                    retorno += '}'
+                }
+                
+            }          
+            retorno += ']'
+
+            res.json(JSON.parse(retorno))
+            })
         })
     }
     
