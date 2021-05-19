@@ -29,7 +29,7 @@ class Mailing{
             }
         }
         //console.log(`Campos: ${campos}`)
-        const sql = "CREATE TABLE IF NOT EXISTS `mailings_"+nomeTabela+"` (`id_key_base` INT(11) NOT NULL AUTO_INCREMENT, "+campos+" `ddd_db` INT(2) NULL DEFAULT NULL,`uf_db` CHAR(2) NULL DEFAULT NULL COLLATE 'utf8_general_ci',`tentativas` INT(11) NULL DEFAULT NULL,`status_tabulacao` INT(11) NULL DEFAULT NULL,`contatado` CHAR(2) NULL DEFAULT NULL COLLATE 'utf8_general_ci',`produtivo` INT(11) NULL DEFAULT NULL, PRIMARY KEY (id_key_base) USING BTREE) COLLATE='utf8_general_ci' ENGINE=InnoDB;" 
+        const sql = "CREATE TABLE IF NOT EXISTS `mailings_"+nomeTabela+"` (`id_key_base` INT(11) NOT NULL AUTO_INCREMENT, "+campos+" `ddd_db` INT(2) NULL DEFAULT NULL,`uf_db` CHAR(2) NULL DEFAULT NULL COLLATE 'utf8_general_ci',`tentativas` INT(11) NULL DEFAULT NULL,`status_tabulacao` INT(11) NULL DEFAULT NULL,`contatado` CHAR(2) NULL DEFAULT NULL COLLATE 'utf8_general_ci',`produtivo` INT(11) NULL DEFAULT NULL, PRIMARY KEY (id_key_base) USING BTREE,INDEX `ddd_db` (`ddd_db`),INDEX `uf_db` (`uf_db`),INDEX `produtivo` (`produtivo`),INDEX `contatado` (`contatado`),INDEX `status_tabulacao` (`status_tabulacao`)) COLLATE='utf8_general_ci' ENGINE=InnoDB;" 
         
         _dbConnection2.default.mailings.query(sql,callback)
     }

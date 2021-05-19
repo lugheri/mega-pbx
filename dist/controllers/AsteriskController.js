@@ -70,6 +70,16 @@ class AsteriskController{
                 res.json(r);
             })
         }
+        if(action=='handcall'){//Chamada manual
+            _Asterisk2.default.handcall(dados,(e,r)=>{
+                if(e) throw e
+                console.log('chamada manual')
+                res.json(r);
+            })
+        }
+        if(action=='abandon'){//Quando abandona fila
+
+        } 
         if(action=='fail'){//Quando nao atende
 
         }

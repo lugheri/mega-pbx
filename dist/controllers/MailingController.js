@@ -237,29 +237,29 @@ class MailingController{
     //Saude do mailing
     saudeMailing(req,res){
         const idMailing = parseInt(req.params.idMailing)
-        _Mailing2.default.tabelaMailing(idMailing,(e,nomeTabela)=>{
+        _Mailing2.default.tabelaMailing(idMailing,(e,nomeTabela)=>
+        {
             if(e) throw e
-
            
             if(nomeTabela.length != 0){
-
                 const tabela = nomeTabela[0].tabela
+                console.log(`tabela: ${tabela}`)
 
                 _Mailing2.default.totalRegistros(tabela,(e,nao_Trabalhados)=>{
                     if(e) throw e
                     
                     const totalRegistros = parseInt(nao_Trabalhados[0].total)
-                    //console.log(`totalRegistros ${totalRegistros}`)
+                    console.log(`totalRegistros ${totalRegistros}`)
                     _Mailing2.default.registrosContatados(tabela,(e,ja_contatados)=>{
                         if(e) throw e
 
                         const contatados = parseInt(ja_contatados[0].contatados)
-                    //    console.log(`contatados ${contatados}`)
+                        console.log(`contatados ${contatados}`)
                         _Mailing2.default.registrosNaoContatados(tabela,(e,nao_Contatados)=>{
                             if(e) throw e
 
                             const naoContatados = parseInt(nao_Contatados[0].nao_contatados)
-                    //      console.log(`naoContatados ${naoContatados}`)
+                            console.log(`naoContatados ${naoContatados}`)
 
                             const trabalhados = contatados + naoContatados
                             const naoTrabalhados = totalRegistros-trabalhados
@@ -280,7 +280,7 @@ class MailingController{
                                 retorno += `"contatados": ${perc_contatados},`
                                 retorno += `"nao_contatados": ${perc_naoContatados}`
                                 retorno += '}'                  
-                        // console.log(retorno)
+                            console.log(retorno)
                             
                             retorno = JSON.parse(retorno)                  
 

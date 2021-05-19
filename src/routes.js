@@ -273,6 +273,8 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
     routes.patch('/atualizaTipoCampo/:idCampo',MailingController.atualizaTipoCampo)
 
 //DISCADOR
+    //Chamada atendida
+    routes.get('/modoAtendimento/:ramal',AsteriskController.modoAtendimento)
 
     //Chamada atendida
     routes.get('/atendeChamada/:ramal',AsteriskController.atenderChamada)

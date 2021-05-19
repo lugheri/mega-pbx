@@ -70,6 +70,16 @@ class AsteriskController{
                 res.json(r);
             })
         }
+        if(action=='handcall'){//Chamada manual
+            Asterisk.handcall(dados,(e,r)=>{
+                if(e) throw e
+                console.log('chamada manual')
+                res.json(r);
+            })
+        }
+        if(action=='abandon'){//Quando abandona fila
+
+        } 
         if(action=='fail'){//Quando nao atende
 
         }
@@ -79,6 +89,16 @@ class AsteriskController{
     }
 
     //Acoes do discador
+    modoAtendimento(req,res){
+        const ramal = req.params.ramal
+        Asterisk.modoAtendimento(ramal,(e,modo_atendimento)=>{
+            if(e) throw e
+
+            res.json(modo_atendimento)
+        })
+    }
+
+
     atenderChamada(req,res){
         const ramal = req.params.ramal
         const estado = 3 //Estado do agente de falando

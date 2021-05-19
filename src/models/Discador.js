@@ -158,10 +158,11 @@ class Discador{
         })
     }
 
-    registraChamada(ramal,idCampanha,idMailing,tabela,id_reg,numero,fila,callback){
+    registraChamada(ramal,idCampanha,modoAtendimento,idMailing,tabela,id_reg,numero,fila,callback){
         const hoje = moment().format("YMMDDHHmmss")
         const protocolo = hoje+'0'+ramal
-        const sql = `INSERT INTO campanhas_chamadas_simultaneas (data,ramal,protocolo,id_campanha,id_mailing,tabela_mailing,id_reg,numero,fila) VALUES (now(),'${ramal}','${protocolo}','${idCampanha}','${idMailing}','${tabela}','${id_reg}','0${numero}','${fila}')`
+        const tipo = 'discador'
+        const sql = `INSERT INTO campanhas_chamadas_simultaneas (data,ramal,protocolo,tipo_ligacao,modo_atendimento,id_campanha,id_mailing,tabela_mailing,id_reg,numero,fila) VALUES (now(),'${ramal}','${protocolo}','${tipo}','${modoAtendimento}','${idCampanha}','${idMailing}','${tabela}','${id_reg}','0${numero}','${fila}')`
         connect.banco.query(sql,callback)
 
         /*STATUS DAS CHAMADAS SIMULTANEAS

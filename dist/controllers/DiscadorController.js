@@ -160,6 +160,7 @@ class DiscadorController{
                                 const ordemDiscagem = parametros[0].ordem_discagem
                                 const tipoDiscagem = parametros[0].tipo_discagem
                                 const maxTentativas = parametros[0].tentativas
+                                const modo_atendimento = parametros[0].modo_atendimento
 
                                 //Verificando se a qtd de agentes disponivel eh equivalente as chamadas
                                 if(tipoDiscador=='preditivo'){
@@ -198,7 +199,7 @@ class DiscadorController{
                                                     _Campanhas2.default.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
                                                         if(e) throw e
 
-                                                        this.discar(idCampanha,idMailing,tabela,registroFiltrado[0].idRegistro,fila) 
+                                                        this.discar(idCampanha,modo_atendimento,idMailing,tabela,registroFiltrado[0].idRegistro,fila) 
                                                     })                                                                                               
                                                 }
                                             })//filtrarRegistro   
@@ -223,7 +224,7 @@ class DiscadorController{
     //CLICK TO CALL
     //PREVIEW
     //POWER
-    discar(idCampanha,idMailing,tabela,registroFiltrado,fila){
+    discar(idCampanha,modoAtendimento,idMailing,tabela,registroFiltrado,fila){
         _Discador2.default.pegarTelefone(registroFiltrado,tabela,(e,contato)=>{
             if(e) throw e
 
@@ -234,8 +235,8 @@ class DiscadorController{
                  telefone = contato[0].numero
             }
             //console.log(`Numero do telefone: ${telefone}`)
-        
-            _Discador2.default.registraChamada(0,idCampanha,idMailing,tabela,registroFiltrado,telefone,fila,(e,r)=>{
+            
+            _Discador2.default.registraChamada(0,idCampanha,modoAtendimento,idMailing,tabela,registroFiltrado,telefone,fila,(e,r)=>{
                 if(e) throw e
 
                 _Discador2.default.ligar(0,telefone,(e,ligacao)=>{

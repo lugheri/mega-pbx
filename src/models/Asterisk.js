@@ -143,6 +143,34 @@ class Asterisk{
         connect.banco.query(sql,callback)
     }
 
+    //Chamada Manual
+    handcall(dados,callback){
+        //Dados recebidos pelo AGI
+        if(dados.tipo=="externo"){
+            const uniqueid = dados.uniqueid;
+            const numero = dados.numero;
+            const tipo = dados.tipo;
+            
+            let ch = dados.ramal;
+            ch = ch.split("-");
+            ch = ch[0].split("/")
+            const ramal = ch[1]
+            const hoje = moment().format("Y-MM-DD")
+            const protocolo = hoje+'0'+ramal
+            const modo_atendimento = 'manual'            
+
+            const sql = `INSERT INTO campanhas_chamadas_simultaneas (data,ramal,uniqueid,protocolo,tipo_ligacao,modo_atendimento,numero,falando) VALUES (NOW(),'${ramal}','${uniqueid}','${protocolo}','${tipo}','${modo_atendimento}','${numero}',1)`
+            connect.banco.query(sql,callback)
+        }else{
+            callback(false,true)
+        }
+    }
+
+    //Reccupera o tipo de idAtendimento
+    modoAtendimento(ramal,callback){
+        const sql = `SELECT m.modo_atendimento FROM queue_members AS q JOIN mega_conecta.campanhas_chamadas_simultaneas AS m ON q.queue_name=m.fila WHERE membername=${ramal} AND na_fila=1`
+        connect.asterisk.query(sql,callback)
+    }
 
     
     //Verifica se um numero esta em chamada
