@@ -123,7 +123,7 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
 
         //DISCADOR DA CAMPANHAS
         //configurar discador da campanha
-        routes.post('/configDiscadorCampanha',CampanhasController.configDiscadorCampanha)
+        routes.post('/configDiscadorCampanha',CampanhasController.configDiscadorCampanha)        
 
         //ver configuracoes do discador
         routes.get('/verConfigDiscadorCampanha/:idCampanha',CampanhasController.verConfigDiscadorCampanha)
@@ -273,6 +273,15 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
     routes.patch('/atualizaTipoCampo/:idCampo',MailingController.atualizaTipoCampo)
 
 //DISCADOR
+    //iniciarDiscador
+    routes.get('/iniciarDiscador/:ramal',CampanhasController.iniciarDiscador)
+
+    //Status do ramal
+    routes.get('/statusRamal/:ramal',CampanhasController.statusRamal)
+
+    //pararDiscador
+    routes.get('/pararDiscador/:ramal',CampanhasController.pararDiscador)
+
     //Chamada atendida
     routes.get('/modoAtendimento/:ramal',AsteriskController.modoAtendimento)
 
@@ -309,7 +318,7 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
 
 //GRAVAÇÕES
     //Listar gravacao
-    routes.get('/listarGravacoes', GravacaoController.listarGravacoes)
+    routes.get('/listarGravacoes/:limit/:pag', GravacaoController.listarGravacoes)
 
     //Busca as gravacoes
     routes.get('/compartilharGravacao/:idGravacao',GravacaoController.compartilharGravacao)

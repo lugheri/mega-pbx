@@ -166,6 +166,12 @@ class Asterisk{
         }
     }
 
+    //Reccupera o tipo de idAtendimento
+    modoAtendimento(ramal,callback){
+        const sql = `SELECT m.modo_atendimento FROM queue_members AS q JOIN mega_conecta.campanhas_chamadas_simultaneas AS m ON q.queue_name=m.fila WHERE membername=${ramal} AND na_fila=1`
+        _dbConnection2.default.asterisk.query(sql,callback)
+    }
+
     
     //Verifica se um numero esta em chamada
     verificaChamadaSimultanea(numero,callback){

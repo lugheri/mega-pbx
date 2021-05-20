@@ -3,8 +3,12 @@ var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequi
 var _Gravacao = require('../models/Gravacao'); var _Gravacao2 = _interopRequireDefault(_Gravacao);
 
 class GravacaoController{
-    listarGravacoes(req,res){
-        _Gravacao2.default.listarGravacoes((e,gravacoes)=>{
+    listarGravacoes(req,res){        
+        const pag  = parseInt(req.params.pag-1)       
+        const limit = parseInt(req.params.limit)
+        const inicio = pag*limit
+        console.log(`Pag: ${pag} Inicio: ${inicio} Fim: ${limit}`)
+        _Gravacao2.default.listarGravacoes(inicio,limit,(e,gravacoes)=>{
             if(e) throw e
 
             _Asterisk2.default.getDomain((e,server)=>{

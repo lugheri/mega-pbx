@@ -135,16 +135,16 @@ class Campanhas{
 
     //######################Setup do discador das campanhas######################
     //Configurar discador da campanha
-    configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,tentativas,callback){
+    configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,tentativas,modo_atendimento,callback){
         this.verConfigDiscadorCampanha(idCampanha,(e,r)=>{
             if(e) throw e
 
             if(r.length ===0){
-                const sql = `INSERT INTO campanhas_discador (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,tentativas) VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}',${tentativas})`
+                const sql = `INSERT INTO campanhas_discador (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,tentativas,modo_atendimento) VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}',${tentativas},'${modo_atendimento}')`
                 connect.banco.query(sql,callback)
             }else{
-                const sql = `UPDATE campanhas_discador SET tipo_discador='${tipoDiscador}',agressividade=${agressividade},ordem_discagem='${ordemDiscagem}',tipo_discagem='${tipoDiscagem}',tentativas=${tentativas} WHERE idCampanha = ${idCampanha}`
-                connect.banco.query(sql,callback)    
+                const sql = `UPDATE campanhas_discador SET tipo_discador='${tipoDiscador}',agressividade=${agressividade},ordem_discagem='${ordemDiscagem}',tipo_discagem='${tipoDiscagem}',tentativas=${tentativas},modo_atendimento='${modo_atendimento}' WHERE idCampanha = ${idCampanha}`
+                connect.banco.query(sql,callback)     
             }
         })       
     }
@@ -289,6 +289,22 @@ class Campanhas{
         const sql = `DELETE FROM campanhas_filas WHERE idCampanha='${idCampanha}' AND nomeFila = '${nomeFila}'`
         connect.banco.query(sql,callback)
     }    
+
+    iniciarDiscador(ramal,callback){
+        const sql = `UPDATE agentes_filas SET estado=1 WHERE ramal=${ramal}`
+        connect.banco.query(sql,callback)
+    }
+
+    statusRamal(ramal,callback){
+        const sql = `SELECT estado FROM agentes_filas WHERE ramal=${ramal}`
+        connect.banco.query(sql,callback)
+    }
+
+    
+    pararDiscador(ramal,callback){
+        const sql = `UPDATE agentes_filas SET estado=4 WHERE ramal=${ramal}`
+        connect.banco.query(sql,callback)
+    }  
 
     //Status dos agentes das campanhas
     agentesFalando(callback){

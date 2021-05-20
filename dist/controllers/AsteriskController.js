@@ -89,6 +89,16 @@ class AsteriskController{
     }
 
     //Acoes do discador
+    modoAtendimento(req,res){
+        const ramal = req.params.ramal
+        _Asterisk2.default.modoAtendimento(ramal,(e,modo_atendimento)=>{
+            if(e) throw e         
+
+            res.json(modo_atendimento)
+        })
+    }
+
+
     atenderChamada(req,res){
         const ramal = req.params.ramal
         const estado = 3 //Estado do agente de falando

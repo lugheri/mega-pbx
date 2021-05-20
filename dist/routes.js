@@ -123,7 +123,7 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
 
         //DISCADOR DA CAMPANHAS
         //configurar discador da campanha
-        routes.post('/configDiscadorCampanha',_CampanhasController2.default.configDiscadorCampanha)
+        routes.post('/configDiscadorCampanha',_CampanhasController2.default.configDiscadorCampanha)        
 
         //ver configuracoes do discador
         routes.get('/verConfigDiscadorCampanha/:idCampanha',_CampanhasController2.default.verConfigDiscadorCampanha)
@@ -273,6 +273,17 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
     routes.patch('/atualizaTipoCampo/:idCampo',_MailingController2.default.atualizaTipoCampo)
 
 //DISCADOR
+    //iniciarDiscador
+    routes.get('/iniciarDiscador/:ramal',_CampanhasController2.default.iniciarDiscador)
+
+    //Status do ramal
+    routes.get('/statusRamal/:ramal',_CampanhasController2.default.statusRamal)
+
+    //pararDiscador
+    routes.get('/pararDiscador/:ramal',_CampanhasController2.default.pararDiscador)
+
+    //Chamada atendida
+    routes.get('/modoAtendimento/:ramal',_AsteriskController2.default.modoAtendimento)
 
     //Chamada atendida
     routes.get('/atendeChamada/:ramal',_AsteriskController2.default.atenderChamada)
@@ -307,7 +318,7 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
 
 //GRAVAÇÕES
     //Listar gravacao
-    routes.get('/listarGravacoes', _GravacaoController2.default.listarGravacoes)
+    routes.get('/listarGravacoes/:limit/:pag', _GravacaoController2.default.listarGravacoes)
 
     //Busca as gravacoes
     routes.get('/compartilharGravacao/:idGravacao',_GravacaoController2.default.compartilharGravacao)

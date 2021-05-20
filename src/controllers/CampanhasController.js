@@ -203,6 +203,39 @@ class CampanhasController{
         //INTEGRACOES
 
         //DISCADOR
+        //Inicia discador do agente
+        iniciarDiscador(req,res){
+            const ramal = req.params.ramal
+            Campanhas.iniciarDiscador(ramal,(e,r)=>{
+                if(e) throw e
+
+                res.json(r);
+            })            
+        }
+
+         //Inicia discador do agente
+         statusRamal(req,res){
+            const ramal = req.params.ramal
+            Campanhas.statusRamal(ramal,(e,estadoRamal)=>{
+                if(e) throw e
+
+                const estados=['deslogado','disponivel','em pausa','falando','indisponivel'];
+               
+
+                res.json(JSON.parse(`{"idEstado":"${estadoRamal[0].estado}","estado":"${estados[estadoRamal[0].estado]}"}`));
+            })            
+        }
+
+        //Parando o Discador do agente
+        pararDiscador(req,res){
+            const ramal = req.params.ramal
+            Campanhas.pararDiscador(ramal,(e,r)=>{
+                if(e) throw e
+
+                res.json(r);
+            })            
+        }
+
         //Configurar discador da campanha
         configDiscadorCampanha(req,res){
             const idCampanha = req.body.idCampanha
@@ -211,8 +244,9 @@ class CampanhasController{
             const ordemDiscagem = req.body.ordemDiscagem
             const tipoDiscagem = req.body.tipoDiscagem
             const maxTentativas = req.body.maxTentativas
+            const modo_atendimento = req.body.modo_atendimento
 
-            Campanhas.configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,maxTentativas,(e,r)=>{
+            Campanhas.configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,maxTentativas,modo_atendimento,(e,r)=>{
                 if(e) throw e
 
                 res.json(r);

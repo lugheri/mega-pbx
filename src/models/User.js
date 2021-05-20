@@ -17,7 +17,7 @@ class User{
                 connect.banco.query(sql,(e,r)=>{
                     if(e) throw e
 
-                    const sql = `UPDATE users SET logado=1, ultimo_acesso=NOW() WHERE id=${usuarioId}`
+                    const sql = `UPDATE users SET logado=4, ultimo_acesso=NOW() WHERE id=${usuarioId}`
                     connect.banco.query(sql,callback)
                 })                
             }else{                

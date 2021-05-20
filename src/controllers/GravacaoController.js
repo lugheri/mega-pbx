@@ -3,8 +3,12 @@ import Campanhas from '../models/Campanhas';
 import Gravacao from '../models/Gravacao';
 
 class GravacaoController{
-    listarGravacoes(req,res){
-        Gravacao.listarGravacoes((e,gravacoes)=>{
+    listarGravacoes(req,res){        
+        const pag  = parseInt(req.params.pag-1)       
+        const limit = parseInt(req.params.limit)
+        const inicio = pag*limit
+        console.log(`Pag: ${pag} Inicio: ${inicio} Fim: ${limit}`)
+        Gravacao.listarGravacoes(inicio,limit,(e,gravacoes)=>{
             if(e) throw e
 
             Asterisk.getDomain((e,server)=>{

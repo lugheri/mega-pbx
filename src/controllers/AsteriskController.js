@@ -92,7 +92,7 @@ class AsteriskController{
     modoAtendimento(req,res){
         const ramal = req.params.ramal
         Asterisk.modoAtendimento(ramal,(e,modo_atendimento)=>{
-            if(e) throw e
+            if(e) throw e         
 
             res.json(modo_atendimento)
         })
