@@ -47,5 +47,54 @@ class Tabulacoes{
         _dbConnection2.default.banco.query(sql,idLista,callback)
     }    
 
+    //Lista status de tabulacao de uma campanha
+    statusTabulacaoCampanha(idCampanha,callback){
+        //verifica lista de tabulacao adicionada
+        const sql = `SELECT idListaTabulacao FROM campanhas_listastabulacao_selecionadas WHERE idCampanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e
+
+            if(r.length==0){
+                callback(e,"sem tabulacao")      
+            }else{
+
+                const idLista = r[0].idListaTabulacao
+                const tipo = 'produtivo'
+                const sql = `SELECT * FROM campanhas_status_tabulacao WHERE idLista=${idLista} AND tipo='${tipo}' AND status=1`
+                _dbConnection2.default.banco.query(sql,(e,produtivas)=>{
+                    const tipo = 'improdutivo'
+                    const sql = `SELECT * FROM campanhas_status_tabulacao WHERE idLista=${idLista} AND tipo='${tipo}' AND status=1`
+                    _dbConnection2.default.banco.query(sql,(e,improdutivas)=>{
+                        console.log('teste listar')
+
+                        console.log(`idCampanha ${idCampanha}`)
+                        console.log(`idLista ${idLista}`)
+
+                        let status = `{ "produtivas":[`
+                        for(let i=0; i<produtivas.length; i++){
+                            status += `{"idTabulacao":${produtivas[i].id},"tabulacao":"${produtivas[i].tabulacao}","descricao":"${produtivas[i].descricao}","tipo":"${produtivas[i].tipo}","follow_up":${produtivas[i].followUp}}`
+                            if(i< produtivas.length-1){
+                                status += ', '
+                            }
+                        }
+                        status += `],`
+
+                        status += `"improdutivas":[`
+                        for(let i=0; i<improdutivas.length; i++){
+                            status += `{"idTabulacao":${improdutivas[i].id},"tabulacao":"${improdutivas[i].tabulacao}","descricao":"${improdutivas[i].descricao}","tipo":"${improdutivas[i].tipo}","follow_up":${produtivas[i].followUp}}`
+                            if(i<improdutivas.length-1){
+                                status += ', '
+                            }
+                        }
+                        status += `]}`
+                        callback(e,JSON.parse(status))                    
+
+                    })
+                })
+            }
+        })
+    }
+
+
 }
 exports. default = new Tabulacoes();

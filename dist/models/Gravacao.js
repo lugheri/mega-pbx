@@ -2,7 +2,8 @@
 
 class Gravacao{
     listarGravacoes(inicio,limit,callback){
-        const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data, r.id, r.date_record, r.time_record,r.ramal as ramal_record,r.uniqueid, h.protocolo, c.src AS ramal, c.dst AS numero, u.nome, e.equipe FROM records AS r LEFT JOIN asterisk.cdr AS c ON r.uniqueid = c.uniqueid LEFT JOIN historico_atendimento AS h ON h.uniqueid=r.uniqueid LEFT JOIN users AS u ON c.src=u.id LEFT JOIN users_equipes AS e ON u.equipe=e.id ORDER BY id DESC LIMIT ${inicio},${limit}`
+        //const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data, r.id, r.date_record, r.time_record,r.ramal as ramal_record,r.uniqueid, h.protocolo, c.src AS ramal, c.dst AS numero, u.nome, e.equipe FROM records AS r LEFT JOIN asterisk.cdr AS c ON r.uniqueid = c.uniqueid LEFT JOIN historico_atendimento AS h ON h.uniqueid=r.uniqueid LEFT JOIN users AS u ON c.src=u.id LEFT JOIN users_equipes AS e ON u.equipe=e.id ORDER BY id DESC LIMIT ${inicio},${limit}`
+        const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data, r.id `
         _dbConnection2.default.banco.query(sql,callback)
     }
 

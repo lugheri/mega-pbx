@@ -118,6 +118,8 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
         //Remove lista de tabulacoes
         routes.delete('/removerListaTabulacaoCampanha/:idListaNaCampanha',CampanhasController.removerListaTabulacaoCampanha)
 
+        //Status de tabulacao da campanha
+        routes.get('/statusTabulacaoCampanha/:idCampanha',CampanhasController.statusTabulacaoCampanha)
         //INTEGRACOES
 
 
@@ -287,12 +289,18 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
 
     //Chamada atendida
     routes.get('/atendeChamada/:ramal',AsteriskController.atenderChamada)
+
+    //Chamada atendida
+    routes.get('/dadosChamada/:ramal',AsteriskController.dadosChamada)
     
     //Chamada desligada
     routes.post('/desligarChamada',AsteriskController.desligarChamada)
     
     //Tabular chamada
     routes.post('/tabularChamada',AsteriskController.tabularChamada)
+
+    //Tabular chamada
+    routes.post('/marcarRetorno',AsteriskController.marcarRetorno)
 
     //Historico de Registro
     routes.get('/historicoRegistro/:idRegistro',CampanhasController.historicoRegistro)

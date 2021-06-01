@@ -27,7 +27,8 @@ class Pausas{
     //PAUSAS
     //Criar pausa
     criarPausa(dados,callback){
-        const sql = `INSERT INTO pausas (idLista,nome,descricao,tipo,tempo,status) VALUES ('${dados.idLista}','${dados.nome}','${dados.descricao}','${dados.tipo}','${dados.tempo}',1)`
+        const tipo = 'manual';
+        const sql = `INSERT INTO pausas (idLista,nome,descricao,tipo,tempo,status) VALUES ('${dados.idLista}','${dados.nome}','${dados.descricao}','${tipo}','${dados.tempo}',1)`
         _dbConnection2.default.banco.query(sql,callback)
     }
     //Editar pausa
@@ -45,7 +46,12 @@ class Pausas{
     listarPausas(idLista,callback){
         const sql = 'SELECT * FROM pausas WHERE idLista=? AND status=1'
         _dbConnection2.default.banco.query(sql,idLista,callback)
-    }    
+    }  
+    
+    idPausaByTipo(tipo,callback){
+        const sql = `SELECT id FROM pausas WHERE tipo='${tipo}' AND status=1`
+        _dbConnection2.default.banco.query(sql,callback) 
+    }
 
 }
 exports. default = new Pausas();

@@ -5,10 +5,12 @@ import Mailing from '../models/Mailing';
 import Discador from '../models/Discador';
 import Asterisk from '../models/Asterisk';
 import User from '../models/User';
+import Cronometro from '../models/Cronometro';
 
 import moment from 'moment';
 import connect from '../Config/dbConnection';
 import AsteriskController from './AsteriskController';
+
 
 class CampanhasController{
     //######################CAMPANHAS ######################
@@ -200,6 +202,15 @@ class CampanhasController{
             })
         }
 
+        statusTabulacaoCampanha(req,res){
+            const idCampanha = parseInt(req.params.idCampanha)
+            Tabulacoes.statusTabulacaoCampanha(idCampanha,(e,r)=>{
+                if(e) throw e
+
+                res.json(r);
+            })
+        }
+
         //INTEGRACOES
 
         //DISCADOR
@@ -207,9 +218,11 @@ class CampanhasController{
         iniciarDiscador(req,res){
             const ramal = req.params.ramal
             Campanhas.iniciarDiscador(ramal,(e,r)=>{
-                if(e) throw e
+                Cronometro.iniciaDiscador(ramal,(e,r)=>{
+                    if(e) throw e
 
-                res.json(r);
+                    res.json(r);
+                })                
             })            
         }
 
@@ -230,9 +243,12 @@ class CampanhasController{
         pararDiscador(req,res){
             const ramal = req.params.ramal
             Campanhas.pararDiscador(ramal,(e,r)=>{
-                if(e) throw e
+                Cronometro.pararDiscador(ramal,(e,r)=>{
+                    if(e) throw e
 
-                res.json(r);
+                    res.json(r);
+                })
+               
             })            
         }
 
@@ -984,6 +1000,7 @@ class CampanhasController{
 
             Asterisk.pausarAgente(ramal,idPausa,pausa,descricao,tempo,(e,r)=>{
                 if(e) throw e
+                Cronometro.
 
                 res.send(r)
             })

@@ -5,10 +5,12 @@ var _Mailing = require('../models/Mailing'); var _Mailing2 = _interopRequireDefa
 var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
 var _Asterisk = require('../models/Asterisk'); var _Asterisk2 = _interopRequireDefault(_Asterisk);
 var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
+var _Cronometro = require('../models/Cronometro'); var _Cronometro2 = _interopRequireDefault(_Cronometro);
 
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
 var _AsteriskController = require('./AsteriskController'); var _AsteriskController2 = _interopRequireDefault(_AsteriskController);
+
 
 class CampanhasController{
     //######################CAMPANHAS ######################
@@ -200,6 +202,15 @@ class CampanhasController{
             })
         }
 
+        statusTabulacaoCampanha(req,res){
+            const idCampanha = parseInt(req.params.idCampanha)
+            _Tabulacoes2.default.statusTabulacaoCampanha(idCampanha,(e,r)=>{
+                if(e) throw e
+
+                res.json(r);
+            })
+        }
+
         //INTEGRACOES
 
         //DISCADOR
@@ -207,9 +218,11 @@ class CampanhasController{
         iniciarDiscador(req,res){
             const ramal = req.params.ramal
             _Campanhas2.default.iniciarDiscador(ramal,(e,r)=>{
-                if(e) throw e
+                _Cronometro2.default.iniciaDiscador(ramal,(e,r)=>{
+                    if(e) throw e
 
-                res.json(r);
+                    res.json(r);
+                })                
             })            
         }
 
@@ -230,9 +243,12 @@ class CampanhasController{
         pararDiscador(req,res){
             const ramal = req.params.ramal
             _Campanhas2.default.pararDiscador(ramal,(e,r)=>{
-                if(e) throw e
+                _Cronometro2.default.pararDiscador(ramal,(e,r)=>{
+                    if(e) throw e
 
-                res.json(r);
+                    res.json(r);
+                })
+               
             })            
         }
 
@@ -984,6 +1000,7 @@ class CampanhasController{
 
             _Asterisk2.default.pausarAgente(ramal,idPausa,pausa,descricao,tempo,(e,r)=>{
                 if(e) throw e
+                _Cronometro2.default.
 
                 res.send(r)
             })

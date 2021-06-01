@@ -7,6 +7,7 @@ var _amiio = require('ami-io'); var _amiio2 = _interopRequireDefault(_amiio);
 var _Tabulacoes = require('../models/Tabulacoes'); var _Tabulacoes2 = _interopRequireDefault(_Tabulacoes);
 
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
+var _Campanhas = require('./Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
 
 class Asterisk{
     //######################Configuração das filas######################
@@ -108,6 +109,7 @@ class Asterisk{
                 const idMailing=chamada[0].id_mailing
                 const ramal=chamada[0].ramal
                 const protocolo=chamada[0].protocolo
+                console.log(`protocolo ${protocolo}`)
 
                 //Status de tabulacao referente ao nao atendido
                 const tabulacao = 0
@@ -139,6 +141,10 @@ class Asterisk{
         ch = ch[0].split("/")
         const ramal = ch[1]
 
+        console.log(`RAMAL DO AGENTE: ${ramal}`)
+
+        //dados da campanha
+
         const sql = `UPDATE campanhas_chamadas_simultaneas SET uniqueid='${uniqueid}',ramal='${ramal}', na_fila=0, atendido=1 WHERE numero='${numero}' AND na_fila=1`  
         _dbConnection2.default.banco.query(sql,callback)
     }
@@ -168,7 +174,7 @@ class Asterisk{
 
     //Reccupera o tipo de idAtendimento
     modoAtendimento(ramal,callback){
-        const sql = `SELECT m.modo_atendimento FROM queue_members AS q JOIN mega_conecta.campanhas_chamadas_simultaneas AS m ON q.queue_name=m.fila WHERE membername=${ramal} AND na_fila=1`
+        const sql = `SELECT m.id, m.modo_atendimento, m.id_campanha FROM queue_members AS q JOIN mega_conecta.campanhas_chamadas_simultaneas AS m ON q.queue_name=m.fila WHERE membername=${ramal} AND na_fila=1`
         _dbConnection2.default.asterisk.query(sql,callback)
     }
 
@@ -185,38 +191,13 @@ class Asterisk{
         _dbConnection2.default.banco.query(sql,callback)
     }  
 
-    //Tabula uma chamada apos sua conclusao                        
-    tabulandoContato(tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,callback){
-        let estado
-        let desc_estado
-        
-        if(produtivo==1){
-            estado=4
-            desc_estado='Já Trabalhado'
-        }else{
-            estado=0
-            desc_estado='Disponivel'
-        }        
-        //Grava as informacoes no mailing
-        const sql = `UPDATE ${tabela} SET tentativas=tentativas+1, contatado='${contatado}', status_tabulacao=${status_tabulacao}, produtivo='${produtivo}' WHERE id_key_base = ${idRegistro}`
-        _dbConnection2.default.mailings.query(sql,(e,r)=>{
-            if(e) throw e
-            //Atualiza a tabela da campanha
-            const sql = `UPDATE campanhas_tabulacao_mailing SET numeroDiscado='${numero}', agente='${ramal}', estado='${estado}', desc_estado='${desc_estado}', contatado='${contatado}', tabulacao=${status_tabulacao}, produtivo='${produtivo}', observacao='${observacao}', tentativas=tentativas+1 WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha}`
-            _dbConnection2.default.mailings.query(sql,(e,r)=>{
-                if(e) throw e
-                //Removendo chamada das chamadas simultaneas
-                const sql = `DELETE FROM campanhas_chamadas_simultaneas  WHERE numero='${numero}'`
-                _dbConnection2.default.banco.query(sql,callback)
-            }) 
-        })                        
-    }
+    
     
     //######################Funções do atendente######################
     
     
     //Funcoes do atendimento de ligacao que recupera os dados da ligacao
-    dadosChamada(ramal,callback){
+    atendeChamada(ramal,callback){
         //Separando a campanha que o agente pertence
         const sql = `SELECT id,protocolo,id_reg,id_campanha,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND atendido=1`
         _dbConnection2.default.banco.query(sql,(e,calldata)=>{
@@ -224,7 +205,7 @@ class Asterisk{
 
             if(calldata.length==0){
                 console.log('ERRO: Dados da chamada não localizados')
-                callback(e,JSON.parse('{"erro":"Dados da chamada não localizados"}'))
+                callback(e,false)
             }else{
                 const idAtendimento = calldata[0].id
                 const idReg = calldata[0].id_reg
@@ -239,7 +220,7 @@ class Asterisk{
                     if(e) throw e
                     //Seleciona os campos de acordo com a configuração da tela do agente
                     //CAMPOS DE DADOS
-                    const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_Agente AS s ON c.id=s.idCampo WHERE c.tipo='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
+                    const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_agente AS s ON c.id=s.idCampo WHERE c.tipo='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
                     _dbConnection2.default.banco.query(sql,(e,campos_dados)=>{
                         if(e) throw e
 
@@ -261,7 +242,7 @@ class Asterisk{
                             if(e) throw e
 
                             //CAMPOS DE TELEFONE
-                            const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_Agente AS s ON c.id=s.idCampo WHERE c.tipo!='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
+                            const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_agente AS s ON c.id=s.idCampo WHERE c.tipo!='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
                             _dbConnection2.default.banco.query(sql,(e,campos_numeros)=>{
                                 if(e) throw e
 
@@ -285,10 +266,17 @@ class Asterisk{
                                     let camposRegistro = '{"campos":{"dados":'+JSON.stringify(dados)+',' 
                                         camposRegistro += '"numeros":'+JSON.stringify(numeros)+'},'
                                         //Numero Discado
-                                        camposRegistro += `"numero_discado":{"protocolo":"${protocolo}","telefone":"${numero}","id_atendimento":${idAtendimento}}}`;
+                                        camposRegistro += `"numero_discado":{"protocolo":"${protocolo}","telefone":"${numero}","id_atendimento":${idAtendimento}},`;
                                         
-                                        callback(false,JSON.parse(camposRegistro))
-                                    
+                                                                               
+                                        //Informações da campanha
+                                        _Campanhas2.default.dadosCampanha(idCampanha,(e,dadosCampanha)=>{
+                                            if(e) throw e
+                                            camposRegistro += `"info_campanha":{"idCampanha":"${idCampanha}","nome":"${dadosCampanha[0].nome}","descricao":"${dadosCampanha[0].descricao}"}}`;
+                                            console.log(camposRegistro)
+                                            callback(false,JSON.parse(camposRegistro))
+
+                                        })
                                 })
                             })
                         })
@@ -298,31 +286,270 @@ class Asterisk{
         })
     }
 
-    desligaChamada(idAtendimento,ramal,numero,callback){  
-        if(idAtendimento == ''){
-            console.log(`${ramal} nao atendeu`)
+    //Informacoes da chamada ja atendida
+    infoChamada(ramal,callback){
+        //Separando a campanha que o agente pertence
+        const sql = `SELECT id,protocolo,id_reg,id_campanha,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND falando=1`
+        _dbConnection2.default.banco.query(sql,(e,calldata)=>{
+            if(e) throw e
 
-        }else{
-            //Verifica regra de tabulacao
+            if(calldata.length==0){
+                console.log('ERRO: Dados da chamada não localizados')
+                callback(e,false)
+            }else{
+                const idAtendimento = calldata[0].id
+                const idReg = calldata[0].id_reg
+                const tabela = calldata[0].tabela_mailing
+                const numero = calldata[0].numero
+                const idCampanha = calldata[0].id_campanha
+                const protocolo = calldata[0].protocolo
 
-            //lista status de tabulacao 
+               
+                //Seleciona os campos de acordo com a configuração da tela do agente
+                //CAMPOS DE DADOS
+                const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_agente AS s ON c.id=s.idCampo WHERE c.tipo='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
+                _dbConnection2.default.banco.query(sql,(e,campos_dados)=>{
+                    if(e) throw e
+
+                    //montando a query de busca dos dados
+                    let campos = '';
+                    for(let i=0; i<campos_dados.length; i++){
+                        let apelido=''
+                        if(campos_dados[i].apelido === null){
+                            apelido=campos_dados[i].campo
+                        }else{
+                            apelido=campos_dados[i].apelido
+                        }
+                        campos += `${campos_dados[i].campo} as ${apelido}, `
+                    }
+                    campos += 'id_key_base'
+
+                    const sql = `SELECT ${campos} FROM ${tabela} WHERE id_key_base=${idReg}`
+                    _dbConnection2.default.mailings.query(sql,(e,dados)=>{
+                        if(e) throw e
+
+                        //CAMPOS DE TELEFONE
+                        const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_agente AS s ON c.id=s.idCampo WHERE c.tipo!='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
+                        _dbConnection2.default.banco.query(sql,(e,campos_numeros)=>{
+                            if(e) throw e
+
+                            //montando a query de busca dos numeros
+                            let campos = '';
+                            for(let i=0; i<campos_numeros.length; i++){
+                                let apelido=''
+                                if(campos_numeros[i].apelido === null){
+                                    apelido=campos_numeros[i].campo
+                                }else{
+                                    apelido=campos_numeros[i].apelido
+                                }
+                                campos += `${campos_numeros[i].campo} as ${apelido}, `
+                            }
+                            campos += 'id_key_base'
+        
+                            const sql = `SELECT ${campos} FROM ${tabela} WHERE id_key_base=${idReg}`
+                            _dbConnection2.default.mailings.query(sql,(e,numeros)=>{
+                                if(e) throw e
+                                   
+                                let camposRegistro = '{"campos":{"dados":'+JSON.stringify(dados)+',' 
+                                    camposRegistro += '"numeros":'+JSON.stringify(numeros)+'},'
+                                    //Numero Discado
+                                    camposRegistro += `"numero_discado":{"protocolo":"${protocolo}","telefone":"${numero}","id_atendimento":${idAtendimento}},`;
+                                    
+                                    //Informações da campanha
+                                    _Campanhas2.default.dadosCampanha(idCampanha,(e,dadosCampanha)=>{
+                                        if(e) throw e
+                                        camposRegistro += `"info_campanha":{"idCampanha":"${idCampanha}","nome":"${dadosCampanha[0].nome}","descricao":"${dadosCampanha[0].descricao}"}}`;
+                                        console.log(camposRegistro)
+                                        callback(false,JSON.parse(camposRegistro))
+                                    })
+                            })
+                        })
+                    })
+                })                    
+            }
+        })
+    }
+
+    infoChamada_byIdAtendimento(idAtendimento,callback){
+        //Separando a campanha que o agente pertence
+        const sql = `SELECT id,protocolo,id_reg,id_campanha,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE id='${idAtendimento}'`
+        _dbConnection2.default.banco.query(sql,(e,calldata)=>{
+            if(e) throw e
+
+            if(calldata.length==0){
+                console.log('ERRO: Dados da chamada não localizados')
+                callback(e,false)
+            }else{
+                const idAtendimento = calldata[0].id
+                const idReg = calldata[0].id_reg
+                const tabela = calldata[0].tabela_mailing
+                const numero = calldata[0].numero
+                const idCampanha = calldata[0].id_campanha
+                const protocolo = calldata[0].protocolo
+
+               
+                //Seleciona os campos de acordo com a configuração da tela do agente
+                //CAMPOS DE DADOS
+                const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_agente AS s ON c.id=s.idCampo WHERE c.tipo='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
+                _dbConnection2.default.banco.query(sql,(e,campos_dados)=>{
+                    if(e) throw e
+
+                    //montando a query de busca dos dados
+                    let campos = '';
+                    for(let i=0; i<campos_dados.length; i++){
+                        let apelido=''
+                        if(campos_dados[i].apelido === null){
+                            apelido=campos_dados[i].campo
+                        }else{
+                            apelido=campos_dados[i].apelido
+                        }
+                        campos += `${campos_dados[i].campo} as ${apelido}, `
+                    }
+                    campos += 'id_key_base'
+
+                    const sql = `SELECT ${campos} FROM ${tabela} WHERE id_key_base=${idReg}`
+                    _dbConnection2.default.mailings.query(sql,(e,dados)=>{
+                        if(e) throw e
+
+                        //CAMPOS DE TELEFONE
+                        const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_agente AS s ON c.id=s.idCampo WHERE c.tipo!='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
+                        _dbConnection2.default.banco.query(sql,(e,campos_numeros)=>{
+                            if(e) throw e
+
+                            //montando a query de busca dos numeros
+                            let campos = '';
+                            for(let i=0; i<campos_numeros.length; i++){
+                                let apelido=''
+                                if(campos_numeros[i].apelido === null){
+                                    apelido=campos_numeros[i].campo
+                                }else{
+                                    apelido=campos_numeros[i].apelido
+                                }
+                                campos += `${campos_numeros[i].campo} as ${apelido}, `
+                            }
+                            campos += 'id_key_base'
+        
+                            const sql = `SELECT ${campos} FROM ${tabela} WHERE id_key_base=${idReg}`
+                            _dbConnection2.default.mailings.query(sql,(e,numeros)=>{
+                                if(e) throw e
+                                   
+                                let camposRegistro = '{"campos":{"dados":'+JSON.stringify(dados)+',' 
+                                    camposRegistro += '"numeros":'+JSON.stringify(numeros)+'},'
+                                    //Numero Discado
+                                    camposRegistro += `"numero_discado":{"protocolo":"${protocolo}","telefone":"${numero}","id_atendimento":${idAtendimento}},`;
+                                    
+                                    //Informações da campanha
+                                    _Campanhas2.default.dadosCampanha(idCampanha,(e,dadosCampanha)=>{
+                                        if(e) throw e
+                                        camposRegistro += `"info_campanha":{"idCampanha":"${idCampanha}","nome":"${dadosCampanha[0].nome}","descricao":"${dadosCampanha[0].descricao}"}`;
+                                        console.log(camposRegistro)
+
+                                        callback(false,camposRegistro)
+                                    })
+                            })
+                        })
+                    })
+                })                    
+            }
+        })
+    }
+
+    preparaRegistroParaTabulacao(idAtendimento,callback){
+        //Atualiza Chamada como tabulando 
+        const sql = `UPDATE campanhas_chamadas_simultaneas SET falando=1, tabulando=1, hora_tabulacao=now() WHERE id='${idAtendimento}'`;
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e
+
+            //Retorna id da campanha
             const sql = `SELECT id_campanha FROM campanhas_chamadas_simultaneas WHERE id=${idAtendimento}`
-            _dbConnection2.default.banco.query(sql,(e,r)=>{
+            _dbConnection2.default.banco.query(sql,callback)
+        })
+    }
+
+    //Tabula uma chamada apos sua conclusao                        
+    tabulandoContato(tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,callback){
+        let estado
+        let desc_estado
+        
+        if(produtivo==1){
+            estado=4
+            desc_estado='Já Trabalhado'
+        }else{
+            estado=0
+            desc_estado='Disponivel'
+        }    
+        const estadoAgente = 1//Libera o agente
+        const pausa=0
+        _Campanhas2.default.atualizaEstadoAgente(ramal,estadoAgente,pausa,(e,r)=>{
+            if(e) throw e
+            
+            //Grava as informacoes no mailing
+            const sql = `UPDATE ${tabela} SET tentativas=tentativas+1, contatado='${contatado}', status_tabulacao=${status_tabulacao}, produtivo='${produtivo}' WHERE id_key_base = ${idRegistro}`
+            _dbConnection2.default.mailings.query(sql,(e,r)=>{
+                if(e) throw e
+                
+                //Atualiza a tabela da campanha
+                const sql = `UPDATE campanhas_tabulacao_mailing SET numeroDiscado='${numero}', agente='${ramal}', estado='${estado}', desc_estado='${desc_estado}', contatado='${contatado}', tabulacao=${status_tabulacao}, produtivo='${produtivo}', observacao='${observacao}', tentativas=tentativas+1 WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha}`
+                _dbConnection2.default.mailings.query(sql,(e,r)=>{
+                    if(e) throw e
+
+                    //Removendo chamada das chamadas simultaneas
+                    const sql = `DELETE FROM campanhas_chamadas_simultaneas  WHERE numero='${numero}'`
+                    _dbConnection2.default.banco.query(sql,callback)
+                }) 
+            }) 
+        })                        
+    }    
+
+    dadosAtendimento(idAtendimento, callback){
+        //Separando a campanha que o agente pertence
+        const sql = `SELECT id,protocolo,id_reg,id_campanha,id_mailing,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE id='${idAtendimento}'`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    dadosAtendimento_byNumero(numero, callback){
+        //Separando a campanha que o agente pertence
+        const sql = `SELECT id,protocolo,id_reg,id_campanha,id_mailing,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE numero='${numero}'`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    desligaChamada(idAtendimento,contatado,produtivo,status_tabulacao,observacao,callback){  
+        //Le os dados do registro
+        const sql = `SELECT id_reg,tabela_mailing,id_mailing,id_campanha,ramal,numero FROM campanhas_chamadas_simultaneas WHERE id=${idAtendimento}`
+        _dbConnection2.default.banco.query(sql,(e,atendimento)=>{
+            if(e) throw e
+
+            const idRegistro = atendimento[0].id_reg
+            const tabela = atendimento[0].tabela_mailing
+            const numero = atendimento[0].numero
+            const ramal = atendimento[0].ramal
+            const idMailing = atendimento[0].id_mailing
+            const idCampanha = atendimento[0].id_campanha
+
+            const estado = 1
+            const desc_estado = 'Disponivel'       
+
+            //Atualiza registro com nova tentativa            
+            const sql = `UPDATE ${tabela} SET tentativas=tentativas+1, contatado='${contatado}', status_tabulacao=${status_tabulacao}, produtivo='${produtivo}' WHERE id_key_base = ${idRegistro}`
+            _dbConnection2.default.mailings.query(sql,(e,r)=>{
                 if(e) throw e
 
-                if(r.length>0){
-                    const idCampanha=r[0].id_campanha
+                //Grava historico
+                const sql = `INSERT INTO historico_atendimento (data,hora,campanha,mailing,id_registro,agente,uniqueid,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),${idCampanha},${idMailing},${idRegistro},${ramal},"${uniqueid}","${numero}",${status_tabulacao},"${observacao}","${contatado}") `
+                _dbConnection2.default.banco.query(sql, (e,r)=>{
+                    if(e) throw e
 
-                    //atualiza tempo real como tabulando
-                    const sql = `UPDATE campanhas_chamadas_simultaneas SET falando=0, tabulando=1 WHERE id='${idAtendimento}'`;
-                    _dbConnection2.default.banco.query(sql,(e,r)=>{
+                    //Atualiza a tabela da campanha 
+                    const sql = `UPDATE campanhas_tabulacao_mailing SET numeroDiscado='${numero}', agente='${ramal}', estado='${estado}', desc_estado='${desc_estado}', contatado='${contatado}', tabulacao=${status_tabulacao}, produtivo='${produtivo}', observacao='${observacao}', tentativas=tentativas+1 WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha}`
+                    _dbConnection2.default.mailings.query(sql,(e,r)=>{
                         if(e) throw e
-                        console.log(r)
-                        _Tabulacoes2.default.listarStatusTabulacao(1,callback)
-                    })
-                }
-            })
-        }
+                        //Removendo chamada das chamadas simultaneas
+                        const sql = `DELETE FROM campanhas_chamadas_simultaneas  WHERE id='${idRegistro}'`
+                        _dbConnection2.default.banco.query(sql,callback(e,true))
+                    }) 
+                })
+            }) 
+        })
     }
 
 
@@ -451,39 +678,7 @@ class Asterisk{
 
     
 
-    tabularChamada(dados,callback){
-        const idAtendimento = dados.idAtendimento
-        const ramal = dados.ramal
-        const numero = dados.numero_discado
-        const status_tabulacao = dados.status_tabulacao
-        const obs_tabulacao = dados.obs_tabulacao        
-        const tipo_tabulacao = dados.tipo_tabulacao
-
-        const sql = `SELECT id_campanha, id_mailing, id_reg, uniqueid FROM chamadas_temporeal WHERE id=${idAtendimento}`
-        _dbConnection2.default.banco.query(sql, (e,r)=>{
-            if(e) throw e
-            const id_campanha = r[0].id_campanha
-            const id_mailing = r[0].id_mailing
-            const id_reg = r[0].id_reg
-            const uniqueid= r[0].uniqueid
-            //insere no dial com a tabulacao
-            const sql = `INSERT INTO historico_atendimento (data,hora,campanha,mailing,id_registro,agente,uniqueid,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),${id_campanha},${id_mailing},${id_reg},${ramal},"${uniqueid}","${numero}",${status_tabulacao},"${obs_tabulacao}","${tipo_tabulacao}") `
-            _dbConnection2.default.banco.query(sql, (e,r)=>{
-                if(e) throw e
-
-                //remove chamada do tempo real
-                const sql = `DELETE FROM chamadas_temporeal WHERE id=${idAtendimento}`
-                _dbConnection2.default.banco.query(sql, (e,r)=>{
-                    if(e) throw e
-
-                    //libera agente da pausa
-                    const sql = `UPDATE queue_members SET paused=0 WHERE membername=${ramal}`
-                    _dbConnection2.default.asterisk.query(sql,callback)
-
-                })
-            })
-        })       
-    }
+    
 
 
 

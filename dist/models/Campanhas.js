@@ -315,7 +315,17 @@ class Campanhas{
 
     atualizaEstadoAgente(ramal,estado,idPausa,callback){
         const sql = `UPDATE agentes_filas SET estado=${estado}, idpausa=${idPausa} WHERE ramal=${ramal}`
-        _dbConnection2.default.banco.query(sql,callback)
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e
+
+            if(estado==2){
+                const sql = `UPDATE queue_members SET paused=1 WHERE membername=${ramal}`
+                _dbConnection2.default.asterisk.query(sql,callback)
+            }else{
+                const sql = `UPDATE queue_members SET paused=0 WHERE membername=${ramal}`
+                _dbConnection2.default.asterisk.query(sql,callback)
+            }
+        })
     }
 
     agentesEmPausa(callback){
@@ -545,15 +555,14 @@ class Campanhas{
 
     //Busca a fila da campanha atendida
     getQueueByNumber(numero,callback){
-        const sql = `SELECT id,fila AS Fila FROM campanhas_chamadas_simultaneas WHERE numero = '${numero}' LIMIT 1`
+        const sql = `SELECT id,fila AS Fila FROM campanhas_chamadas_simultaneas WHERE numero='${numero}' ORDER BY id DESC LIMIT 1`
         _dbConnection2.default.banco.query(sql,callback);
     }
 
-    atualizaStatusRegistro(idChamada){
-        const sql = `UPDATE campanhas_chamadas_simultaneas SET na_fila=1 AND tratado=1 WHERE id='${idChamada}'`
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
-            if(e) throw e
-        }) 
+    setaRegistroNaFila(idChamada,callback){
+       
+        const sql = `UPDATE campanhas_chamadas_simultaneas SET na_fila=1, tratado=1 WHERE id='${idChamada}'`
+        _dbConnection2.default.banco.query(sql,callback) 
     }
 
     historicoRegistro(idReg,callback){
