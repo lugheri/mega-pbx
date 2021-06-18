@@ -13,12 +13,17 @@ class User{
 
             if(acao=='login'){
                 //Atualiza em todas as filas estado como 1
-                const sql = `UPDATE agentes_filas SET estado=1 WHERE ramal=${usuarioId}`
+                const sql = `UPDATE agentes_filas SET estado=4 WHERE ramal=${usuarioId}`
                 connect.banco.query(sql,(e,r)=>{
                     if(e) throw e
+                    
+                    const sql = `UPDATE users SET logado=1, ultimo_acesso=NOW() WHERE id=${usuarioId}`
+                    connect.banco.query(sql,(e,r)=>{
+                        if(e) throw e
 
-                    const sql = `UPDATE users SET logado=4, ultimo_acesso=NOW() WHERE id=${usuarioId}`
-                    connect.banco.query(sql,callback)
+                        const sql = `UPDATE user_ramal SET estado=4 WHERE userId=${usuarioId}`
+                        connect.banco.query(sql,callback)
+                    })
                 })                
             }else{                
                 //Atualiza em todas as filas estado como 0
@@ -27,7 +32,12 @@ class User{
                     if(e) throw e
 
                     const sql = `UPDATE users SET logado=0 WHERE id=${usuarioId}`
-                    connect.banco.query(sql,callback)
+                    connect.banco.query(sql,(e,r)=>{
+                        if(e) throw e
+                        
+                        const sql = `UPDATE user_ramal SET estado=0 WHERE userId=${usuarioId}`
+                        connect.banco.query(sql,callback)
+                    })
                 }) 
             } 
         })        
@@ -55,14 +65,14 @@ class User{
                 }
                 callback(e,resp)
             }else{
-                const sql = `INSERT INTO users (criacao,nome,usuario,senha,nivelAcesso,cargo,equipe,reset,logado,status) VALUES (NOW(),'${dados.nome}','${dados.usuario}',md5('${dados.senha}'),'${dados.nivelAcesso}','${dados.cargo}','${dados.equipe}','${dados.reset}',0,'${dados.status}')`
+                const sql = `INSERT INTO users (criacao,nome,usuario,senha,nivelAcesso,cargo,equipe,reset,logado,estado,status) VALUES (NOW(),'${dados.nome}','${dados.usuario}',md5('${dados.senha}'),'${dados.nivelAcesso}','${dados.cargo}','${dados.equipe}','${dados.reset}',0,0,'${dados.status}')`
                 connect.banco.query(sql,(e,r)=>{
                     if(e) throw e
 
                     const userId = r.insertId;
 
                     //Cadastrando ramal
-                    const sql = `INSERT INTO user_ramal (userId,ramal) VALUES ('${userId}','${userId}')`
+                    const sql = `INSERT INTO user_ramal (userId,ramal,estado) VALUES ('${userId}','${userId}',0)`
                     connect.banco.query(sql,(e,r)=>{
                         if(e) throw e
 
@@ -182,6 +192,22 @@ class User{
         const sql = `UPDATE users_niveis SET ? WHERE ?`
         connect.banco.query(sql,[dados,idNivel],callback)
     }
+        
+    //Informacoes dos usuarios
+    todosAgentesEmPausa(callback){
+        //Estado 2 = Em Pausa
+        const sql = `SELECT ramal AS agentes FROM user_ramal WHERE estado=estado=2`
+        connect.banco.query(sql,callback)
+    }
+
+    todosAgentesDisponiveis(callback){
+        //Estado 1 = Disponível
+        //Estado 0 = Deslogado
+        const sql = `SELECT ramal AS agentes FROM user_ramal WHERE estado=1`
+        connect.banco.query(sql,callback)
+    }
+
+
 }
 
 export default new User;

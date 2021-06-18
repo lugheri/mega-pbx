@@ -11,6 +11,8 @@ var _GravacaoController = require('./controllers/GravacaoController'); var _Grav
 var _ReportController = require('./controllers/ReportController'); var _ReportController2 = _interopRequireDefault(_ReportController);
 var _AsteriskController = require('./controllers/AsteriskController'); var _AsteriskController2 = _interopRequireDefault(_AsteriskController);
 
+var _DiscadorController = require('./controllers/DiscadorController'); var _DiscadorController2 = _interopRequireDefault(_DiscadorController);
+
 
 var _auth = require('./middlewares/auth'); var _auth2 = _interopRequireDefault(_auth);
 
@@ -18,6 +20,8 @@ const routes = _express.Router.call(void 0, );
 routes.get('/listaCampos', (req, res) =>{
     res.send('API no ar')
 })
+
+routes.get('/teste/:idCampanha/:idEquipe', _ReportController2.default.monitoramentoAgente);
 
 //AUTENTICAÇÃO
 routes.post('/login', _SessionController2.default.store);
@@ -275,6 +279,9 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
     routes.patch('/atualizaTipoCampo/:idCampo',_MailingController2.default.atualizaTipoCampo)
 
 //DISCADOR
+    //novo Metodo do Discador
+    routes.get('/teste_iniciandoDiscadorSistema',_DiscadorController2.default.iniciandoDiscadorSistema)
+
     //iniciarDiscador
     routes.get('/iniciarDiscador/:ramal',_CampanhasController2.default.iniciarDiscador)
 
@@ -308,6 +315,9 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
     //Historico de Chamadas
     routes.get('/historicoChamadas/:ramal',_CampanhasController2.default.historicoChamadas)
 
+    //Remove chamadas paradas
+    routes.get('/removeChamadasParadas/',_CampanhasController2.default.removeChamadasParadas)
+
 //TELA DE ATENDIMENTO
     //Abrir Listagem de Pausa da Campanha
     routes.get('/pausasDisponiveis',_CampanhasController2.default.listarPausasCampanha)
@@ -338,6 +348,12 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
     routes.get('/baixarGravacao/:idGravacao',_GravacaoController2.default.baixarGravacao)
 
 //RELATORIOS
+    //Lista de Campanhas ativas
+    routes.get('/filtroCampanhas', _ReportController2.default.filtroCampanhas)
+    //Lista de Equipes
+    routes.get('/filtroEquipes/', _ReportController2.default.filtroEquipes)
+    //Relatórios personalizados
+
 
 //ASTERISK
     //FILAS
@@ -499,7 +515,7 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
 
     //dialer
     //routes.post('/dialer/:numero/:ramal', AsteriskController.dialer)
-    //routes.get('/originate/:numero', AsteriskController.testLigacao)
+    routes.get('/originate/:numero', _AsteriskController2.default.testLigacao)
     routes.post('/ligar/:numero', _AsteriskController2.default.testLigacao)
 
 

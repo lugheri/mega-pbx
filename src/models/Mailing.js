@@ -49,8 +49,12 @@ class Mailing{
             //Identificando tipo de campo
             //verifica o nome do campo de
             let tipo = 'dados';
-            if(campoTest=='ddd'){
-                 tipo = 'ddd';                
+            if((campoTest=='nome')||
+               (campoTest=='name')||
+               (campoTest=='titular')){
+                tipo = 'nome'; 
+            }else if(campoTest=='ddd'){
+                tipo = 'ddd';                
             }else if((campoTest=='numero')||
                      (campoTest=='telefone')||
                      (campoTest=='celular')||

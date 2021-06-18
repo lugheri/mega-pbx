@@ -8,7 +8,6 @@ var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User
 var _Cronometro = require('../models/Cronometro'); var _Cronometro2 = _interopRequireDefault(_Cronometro);
 
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
-var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
 var _AsteriskController = require('./AsteriskController'); var _AsteriskController2 = _interopRequireDefault(_AsteriskController);
 
 
@@ -997,14 +996,16 @@ class CampanhasController{
             const pausa = infoPausa[0].nome
             const descricao = infoPausa[0].descricao
             const tempo = infoPausa[0].tempo
-
+            
             _Asterisk2.default.pausarAgente(ramal,idPausa,pausa,descricao,tempo,(e,r)=>{
                 if(e) throw e
-                _Cronometro2.default.
 
-                res.send(r)
+                _Cronometro2.default.entrouEmPausa(idPausa,ramal,(e,tempoPausa)=>{
+                    if(e) throw e
+
+                    res.send(r)
+                })                
             })
-
         })
     }
 
@@ -1084,7 +1085,11 @@ class CampanhasController{
         _Asterisk2.default.removePausaAgente(ramal,(e,r)=>{
             if(e) throw e
 
-            res.send(r)
+            _Cronometro2.default.saiuDaPausa(ramal,(e,tempoPausa)=>{
+                if(e) throw e
+
+                res.send(r)
+            })            
         })
     }
 
@@ -1110,6 +1115,29 @@ class CampanhasController{
 
     }
 
+    //Remove chamadas paradas
+    removeChamadasParadas(req,res){
+        //Le as informacoes da chamada parada
+        _Campanhas2.default.chamadasTravadas((e,travadas)=>{
+            if(e) throw e
+            
+            const idCampanha = travadas[0].id_campanha
+            const idMailing = travadas[0].id_mailing
+            const idRegistro = travadas[0].id_reg
+            const idChamadaSimultanea = travadas[0].id
+            //altera o estado do registo para disponivel
+            _Campanhas2.default.liberaRegisto(idCampanha,idMailing,idRegistro,(e,travadas)=>{
+                //remove a chamada simultanea
+                _Campanhas2.default.removeChamadaSimultanea(idChamadaSimultanea,(e,remove)=>{
+                    if(e) throw e
+
+                    res.json(true)
+                })
+            })
+
+        })
+        
+    }
 
 
     

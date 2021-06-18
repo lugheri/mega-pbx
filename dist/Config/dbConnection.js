@@ -24,4 +24,5 @@ connect.asterisk=_mysql2.default.createConnection({
     database : 'asterisk'
 })
 
+
 exports. default = connect;

@@ -1,8 +1,45 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _Report = require('../models/Report'); var _Report2 = _interopRequireDefault(_Report);
 
-class ReportController{
+class ReportController{  
 
-        criarRelatorio(req,res){
+    monitoramentoAgente(req,res){
+        const idCampanha = parseInt(req.params.idCampanha)
+        const idEquipe = parseInt(req.params.idEquipe)
+        _Report2.default.monitorarAgentes(idCampanha,idEquipe,(e,campanhas)=>{
+            if(e) throw e;
+
+            res.json(campanhas)
+        })
+    }
+
+    filtroCampanhas(req,res){
+        _Report2.default.filtroCampanhas((e,campanhas)=>{
+            if(e) throw e;
+
+            res.json(campanhas)
+        })
+    } 
+    
+    filtroEquipes(req,res){
+        _Report2.default.filtroEquipes((e,equipes)=>{
+            if(e) throw e;
+
+            res.json(equipes)
+        })
+    }
+
+    monitoramentoCampanhas(req,res){
+        const idCampanha = parseInt(req.params.idCampanha)
+        _Report2.default.monitorarCampanhas(idCampanha,(e,campanhas)=>{
+            if(e) throw e;
+
+            res.send(campanhas);
+        })
+    }
+
+    
+    
+    criarRelatorio(req,res){
             const data = req.body
             _Report2.default.criarRelatorio(data,(e,r)=>{
                 if(e) throw e;

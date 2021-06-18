@@ -17,16 +17,29 @@ class GravacaoController{
 
             let retorno = '['
             for(let i=0; i<gravacoes.length; ++i){
-                let ouvir = `${servidor}gravacoes/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].ramal_record}_${gravacoes[i].uniqueid}.wav`
+                let ouvir = `${servidor}gravacoes/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].origem}_${gravacoes[i].uniqueid}.wav`
                 let baixar = `${servidor}gravacao.php?id=${gravacoes[i].uniqueid}`
                 retorno += '{'
                 retorno += `"idGravacao":"${gravacoes[i].id}",`
                 retorno += `"data":"${gravacoes[i].data}",`
+                let duracao = gravacoes[i].duracao
+                
+                let horas = Math.floor(duracao / 3600);
+                let minutos = Math.floor((duracao - (horas * 3600)) / 60);
+                let segundos = Math.floor(duracao % 60);
+                if(horas<=9){horas="0"+horas}
+                if(minutos<=9){minutos="0"+minutos}
+                if(segundos<=9){segundos="0"+segundos}
+                              
+                retorno += `"duracao":"${horas}:${minutos}:${segundos}",`
                 retorno += `"protocolo":"${gravacoes[i].protocolo}",`
                 retorno += `"ramal":"${gravacoes[i].ramal}",`
                 retorno += `"usuario":"${gravacoes[i].nome}",`
                 retorno += `"equipe":"${gravacoes[i].equipe}",`
                 retorno += `"numero":"${gravacoes[i].numero}",`
+                retorno += `"statusTabulacao":"${gravacoes[i].tabulacao}",`
+                retorno += `"tipoTabulacao":"${gravacoes[i].tipo}",`
+                retorno += `"venda":"${gravacoes[i].venda}",`
                 retorno += `"ouvir":"${ouvir}",`
                 retorno += `"baixar":"${baixar}",`
                 retorno += `"compartilhar":"${ouvir}"`
@@ -62,17 +75,58 @@ class GravacaoController{
     }
     
     buscarGravacoes(req,res){
+        const minTime = req.body.minTime
+        const maxTime = req.body.maxTime
         const de = req.body.de
         const ate = req.body.ate
-        const ramal = req.body.ramal
-        const numero = req.body.numero
-        const protocolo = req.body.protocolo
-        _Gravacao2.default.buscarGravacao(de,ate,ramal,numero,protocolo,(e,buscaGravacao)=>{
+        const buscarPor = req.body.buscarPor
+        const parametro = req.body.parametro
+        _Gravacao2.default.buscarGravacao(minTime,maxTime,de,ate,buscarPor,parametro,(e,gravacoes)=>{
             if(e) throw e
 
-            
+            _Asterisk2.default.getDomain((e,server)=>{
 
-            res.json(buscaGravacao)
+                const servidor = `https://${server[0].ip}/api/`
+
+                let retorno = '['
+                for(let i=0; i<gravacoes.length; ++i){
+                    let ouvir = `${servidor}gravacoes/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].origem}_${gravacoes[i].uniqueid}.wav`
+                    let baixar = `${servidor}gravacao.php?id=${gravacoes[i].uniqueid}`
+                    retorno += '{'
+                    retorno += `"idGravacao":"${gravacoes[i].id}",`
+                    retorno += `"data":"${gravacoes[i].data}",`
+                    let duracao = gravacoes[i].duracao
+                    
+                    let horas = Math.floor(duracao / 3600);
+                    let minutos = Math.floor((duracao - (horas * 3600)) / 60);
+                    let segundos = Math.floor(duracao % 60);
+                    if(horas<=9){horas="0"+horas}
+                    if(minutos<=9){minutos="0"+minutos}
+                    if(segundos<=9){segundos="0"+segundos}
+                                
+                    retorno += `"duracao":"${horas}:${minutos}:${segundos}",`
+                    retorno += `"protocolo":"${gravacoes[i].protocolo}",`
+                    retorno += `"ramal":"${gravacoes[i].ramal}",`
+                    retorno += `"usuario":"${gravacoes[i].nome}",`
+                    retorno += `"equipe":"${gravacoes[i].equipe}",`
+                    retorno += `"numero":"${gravacoes[i].numero}",`
+                    retorno += `"statusTabulacao":"${gravacoes[i].tabulacao}",`
+                    retorno += `"tipoTabulacao":"${gravacoes[i].tipo}",`
+                    retorno += `"venda":"${gravacoes[i].venda}",`
+                    retorno += `"ouvir":"${ouvir}",`
+                    retorno += `"baixar":"${baixar}",`
+                    retorno += `"compartilhar":"${ouvir}"`
+                    if(i<gravacoes.length-1){
+                        retorno += '},'
+                    }else{
+                        retorno += '}'
+                    }
+                    
+                }          
+                retorno += ']'
+
+                res.json(JSON.parse(retorno))
+            })
         })
     }
     

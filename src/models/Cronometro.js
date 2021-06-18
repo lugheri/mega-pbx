@@ -54,8 +54,8 @@ class Cronometro{
    
 
     //TEMPO DE ATENDIMENTO  
-    iniciouAtendimento(idCampanha,idMailing,idRegistro,numero,ramal,callback){
-        const sql = `INSERT INTO tempo_ligacao (idCampanha,idMailing,idRegistro,numero,idAgente,entrada) VALUES (${idCampanha},${idMailing},${idRegistro},${numero},${ramal},now())`
+    iniciouAtendimento(idCampanha,idMailing,idRegistro,numero,ramal,uniqueid,callback){
+        const sql = `INSERT INTO tempo_ligacao (idCampanha,idMailing,idRegistro,numero,idAgente,uniqueid,entrada) VALUES (${idCampanha},${idMailing},${idRegistro},${numero},${ramal},${uniqueid},now())`
         connect.banco.query(sql,callback);
     }
 

@@ -116,9 +116,10 @@ class Asterisk{
                 const contatado = 'N'
                 const produtivo = 0
                 const uniqueid=chamada[0].uniqueid
+                const tipo_ligacao=chamada[0].tipo_ligacao
 
                 //Registra histórico de chamada
-                this.registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,uniqueid,numero,tabulacao,observacoes,contatado,(e,r)=>{
+                this.registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado,(e,r)=>{
                     if(e) throw e
                     //Tabula registro
                     this.tabulandoContato(tabela,contatado,tabulacao,observacoes,produtivo,numero,ramal,id_reg,idMailing,idCampanha,callback)
@@ -186,8 +187,8 @@ class Asterisk{
     }
 
     //Registra o histórico de atendimento de uma chamada
-    registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,uniqueid,numero,tabulacao,observacoes,contatado,callback){
-        const sql = `INSERT INTO historico_atendimento (data,hora,protocolo,campanha,mailing,id_registro,agente,uniqueid,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_reg},${ramal},'${uniqueid}','${numero}',${tabulacao},'${observacoes}','${contatado}')`
+    registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado,callback){
+        const sql = `INSERT INTO historico_atendimento (data,hora,protocolo,campanha,mailing,id_registro,agente,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_reg},${ramal},'${uniqueid}','${tipo_ligacao}','${numero}',${tabulacao},'${observacoes}','${contatado}')`
         connect.banco.query(sql,callback)
     }  
 
@@ -495,18 +496,19 @@ class Asterisk{
 
     dadosAtendimento_byNumero(numero, callback){
         //Separando a campanha que o agente pertence
-        const sql = `SELECT id,protocolo,id_reg,id_campanha,id_mailing,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE numero='${numero}'`
+        const sql = `SELECT id,protocolo,uniqueid,id_reg,id_campanha,id_mailing,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE numero='${numero}'`
         connect.banco.query(sql,callback)
     }
                
     desligaChamada(idAtendimento,contatado,produtivo,status_tabulacao,observacao,callback){  
         //Le os dados do registro
-        const sql = `SELECT id_reg,uniqueid,protocolo,tabela_mailing,id_mailing,id_campanha,ramal,numero FROM campanhas_chamadas_simultaneas WHERE id=${idAtendimento}`
+        const sql = `SELECT id_reg,uniqueid,tipo_ligacao,protocolo,tabela_mailing,id_mailing,id_campanha,ramal,numero FROM campanhas_chamadas_simultaneas WHERE id=${idAtendimento}`
         connect.banco.query(sql,(e,atendimento)=>{
             if(e) throw e
 
             const idRegistro = atendimento[0].id_reg
             const uniqueid = atendimento[0].uniqueid
+            const tipo_ligacao = atendimento[0].tipo_ligacao
             const protocolo = atendimento[0].protocolo
             const tabela = atendimento[0].tabela_mailing
             const numero = atendimento[0].numero
@@ -523,12 +525,12 @@ class Asterisk{
                 if(e) throw e
 
                 //Grava historico
-                const sql = `INSERT INTO historico_atendimento (data,hora,campanha,mailing,id_registro,agente,protocolo,uniqueid,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),now(),${idCampanha},${idMailing},${idRegistro},${ramal},"${protocolo}","${uniqueid}","${numero}",${status_tabulacao},"${observacao}","${contatado}") `
+                const sql = `INSERT INTO historico_atendimento (data,hora,campanha,mailing,id_registro,agente,protocolo,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),now(),${idCampanha},${idMailing},${idRegistro},${ramal},"${protocolo}","${uniqueid}","${tipo_ligacao}","${numero}",${status_tabulacao},"${observacao}","${contatado}") `
                 connect.banco.query(sql, (e,r)=>{
                     if(e) throw e
 
                     //Atualiza a tabela da campanha 
-                    const sql = `UPDATE campanhas_tabulacao_mailing SET numeroDiscado='${numero}', agente='${ramal}', estado='${estado}', desc_estado='${desc_estado}', contatado='${contatado}', tabulacao=${status_tabulacao}, produtivo='${produtivo}', observacao='${observacao}', tentativas=tentativas+1 WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha}`
+                    const sql = `UPDATE campanhas_tabulacao_mailing SET data=now(), numeroDiscado='${numero}', agente='${ramal}', estado='${estado}', desc_estado='${desc_estado}', contatado='${contatado}', tabulacao=${status_tabulacao}, produtivo='${produtivo}', observacao='${observacao}', tentativas=tentativas+1 WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha}`
                     connect.mailings.query(sql,(e,r)=>{
                         if(e) throw e
                         //Removendo chamada das chamadas simultaneas
@@ -616,7 +618,7 @@ class Asterisk{
         console.log(`recebendo ligacao ${numero}`)
         console.log(`ramal ${ramal}`)
         ari.connect(server, user, pass, (err,client)=>{
-          if(err) console.log(err)
+          if(err) throw err         
 
           //Extension
           let context
@@ -625,10 +627,11 @@ class Asterisk{
             context = 'dialer'
             endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
           }else{
-            context = 'manual'
-            endpoint = `PJSIP/megatrunk/`
+            context = 'external'
+            endpoint = `PJSIP/megatrunk/` 
           }
-          
+          console.log(`context: ${context}`)
+          console.log(`endpoint: ${endpoint}`)
           console.log(`numero recebido: ${numero}`)
           console.log(`Servidor: ${server}`)
 
@@ -648,6 +651,11 @@ class Asterisk{
           //client.channel
         })  
     }
+
+
+
+
+    
 
 
 
@@ -683,8 +691,56 @@ class Asterisk{
         const sql = `SELECT * FROM asterisk_ari WHERE active=1`; 
         connect.banco.query(sql,(e,res)=>{
             if(e) throw e
-            this.ligar(res[0].server,res[0].user,res[0].pass,ramal,numero,callback)
+            
+            console.log(`${res[0].server}, ${res[0].user}, ${res[0].pass}, ${ramal}, ${numero}`)
+            const modo='discador'
+            this.ligarTeste(res[0].server,res[0].user,res[0].pass,modo,ramal,numero,callback)
         }) 
+    }
+
+    ligarTeste(server,user,pass,modo,ramal,numero,res){
+        console.log(`recebendo ligacao de teste ${numero}`)
+        console.log(`ramal ${ramal}`)
+        console.log(`modo ${modo}`)
+        ari.connect(server, user, pass, (err,client)=>{
+          if(err) throw err         
+          console.log(err)
+
+          console.log(client)
+
+          //Extension
+          let context
+          let endpoint
+          if(modo=='discador'){
+            context = 'dialer'
+            endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
+          }else{
+            context = 'external'
+            endpoint = `PJSIP/megatrunk/` 
+          }
+          console.log(`context: ${context}`)
+          console.log(`endpoint: ${endpoint}`)
+          console.log(`numero recebido: ${numero}`)
+          console.log(`Servidor: ${server}`)
+
+          const options = {            
+            "endpoint"       : `${endpoint}`,
+            "extension"      : `0${numero}`,
+            "context"        : `${context}`,
+            "priority"       : 1,
+            "app"            : "",
+            "appArgs"        : "",
+            "Callerid"       : `0${numero}`,//numero,
+            "timeout"        : -1, 
+            //"channelId"      : '324234', 
+            "otherChannelId" : ""
+          }
+          client.channels.originate(options,(e,r)=>{
+            if(e) throw e
+                res.json(r)
+            })
+          //client.channel
+        })  
     }
     
     /*testLigacao(numero,ramal,callback){

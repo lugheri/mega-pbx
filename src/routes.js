@@ -11,6 +11,8 @@ import GravacaoController from './controllers/GravacaoController';
 import ReportController from './controllers/ReportController';
 import AsteriskController from './controllers/AsteriskController';
 
+import DiscadorController from './controllers/DiscadorController';
+
 
 import authMiddleware from './middlewares/auth';
 
@@ -18,6 +20,8 @@ const routes = Router();
 routes.get('/listaCampos', (req, res) =>{
     res.send('API no ar')
 })
+
+routes.get('/teste/:idCampanha/:idEquipe', ReportController.monitoramentoAgente);
 
 //AUTENTICAÇÃO
 routes.post('/login', SessionController.store);
@@ -275,6 +279,9 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
     routes.patch('/atualizaTipoCampo/:idCampo',MailingController.atualizaTipoCampo)
 
 //DISCADOR
+    //novo Metodo do Discador
+    routes.get('/teste_iniciandoDiscadorSistema',DiscadorController.iniciandoDiscadorSistema)
+
     //iniciarDiscador
     routes.get('/iniciarDiscador/:ramal',CampanhasController.iniciarDiscador)
 
@@ -308,6 +315,9 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
     //Historico de Chamadas
     routes.get('/historicoChamadas/:ramal',CampanhasController.historicoChamadas)
 
+    //Remove chamadas paradas
+    routes.get('/removeChamadasParadas/',CampanhasController.removeChamadasParadas)
+
 //TELA DE ATENDIMENTO
     //Abrir Listagem de Pausa da Campanha
     routes.get('/pausasDisponiveis',CampanhasController.listarPausasCampanha)
@@ -338,6 +348,12 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
     routes.get('/baixarGravacao/:idGravacao',GravacaoController.baixarGravacao)
 
 //RELATORIOS
+    //Lista de Campanhas ativas
+    routes.get('/filtroCampanhas', ReportController.filtroCampanhas)
+    //Lista de Equipes
+    routes.get('/filtroEquipes/', ReportController.filtroEquipes)
+    //Relatórios personalizados
+
 
 //ASTERISK
     //FILAS
@@ -499,7 +515,7 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
 
     //dialer
     //routes.post('/dialer/:numero/:ramal', AsteriskController.dialer)
-    //routes.get('/originate/:numero', AsteriskController.testLigacao)
+    routes.get('/originate/:numero', AsteriskController.testLigacao)
     routes.post('/ligar/:numero', AsteriskController.testLigacao)
 
 

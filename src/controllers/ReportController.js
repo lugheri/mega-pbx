@@ -1,8 +1,45 @@
 import Report from '../models/Report';
 
-class ReportController{
+class ReportController{  
 
-        criarRelatorio(req,res){
+    monitoramentoAgente(req,res){
+        const idCampanha = parseInt(req.params.idCampanha)
+        const idEquipe = parseInt(req.params.idEquipe)
+        Report.monitorarAgentes(idCampanha,idEquipe,(e,campanhas)=>{
+            if(e) throw e;
+
+            res.json(campanhas)
+        })
+    }
+
+    filtroCampanhas(req,res){
+        Report.filtroCampanhas((e,campanhas)=>{
+            if(e) throw e;
+
+            res.json(campanhas)
+        })
+    } 
+    
+    filtroEquipes(req,res){
+        Report.filtroEquipes((e,equipes)=>{
+            if(e) throw e;
+
+            res.json(equipes)
+        })
+    }
+
+    monitoramentoCampanhas(req,res){
+        const idCampanha = parseInt(req.params.idCampanha)
+        Report.monitorarCampanhas(idCampanha,(e,campanhas)=>{
+            if(e) throw e;
+
+            res.send(campanhas);
+        })
+    }
+
+    
+    
+    criarRelatorio(req,res){
             const data = req.body
             Report.criarRelatorio(data,(e,r)=>{
                 if(e) throw e;

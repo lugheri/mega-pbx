@@ -8,7 +8,6 @@ import User from '../models/User';
 import Cronometro from '../models/Cronometro';
 
 import moment from 'moment';
-import connect from '../Config/dbConnection';
 import AsteriskController from './AsteriskController';
 
 
@@ -997,14 +996,16 @@ class CampanhasController{
             const pausa = infoPausa[0].nome
             const descricao = infoPausa[0].descricao
             const tempo = infoPausa[0].tempo
-
+            
             Asterisk.pausarAgente(ramal,idPausa,pausa,descricao,tempo,(e,r)=>{
                 if(e) throw e
-                Cronometro.
 
-                res.send(r)
+                Cronometro.entrouEmPausa(idPausa,ramal,(e,tempoPausa)=>{
+                    if(e) throw e
+
+                    res.send(r)
+                })                
             })
-
         })
     }
 
@@ -1084,7 +1085,11 @@ class CampanhasController{
         Asterisk.removePausaAgente(ramal,(e,r)=>{
             if(e) throw e
 
-            res.send(r)
+            Cronometro.saiuDaPausa(ramal,(e,tempoPausa)=>{
+                if(e) throw e
+
+                res.send(r)
+            })            
         })
     }
 
@@ -1110,6 +1115,29 @@ class CampanhasController{
 
     }
 
+    //Remove chamadas paradas
+    removeChamadasParadas(req,res){
+        //Le as informacoes da chamada parada
+        Campanhas.chamadasTravadas((e,travadas)=>{
+            if(e) throw e
+            
+            const idCampanha = travadas[0].id_campanha
+            const idMailing = travadas[0].id_mailing
+            const idRegistro = travadas[0].id_reg
+            const idChamadaSimultanea = travadas[0].id
+            //altera o estado do registo para disponivel
+            Campanhas.liberaRegisto(idCampanha,idMailing,idRegistro,(e,travadas)=>{
+                //remove a chamada simultanea
+                Campanhas.removeChamadaSimultanea(idChamadaSimultanea,(e,remove)=>{
+                    if(e) throw e
+
+                    res.json(true)
+                })
+            })
+
+        })
+        
+    }
 
 
     

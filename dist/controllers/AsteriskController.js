@@ -98,12 +98,13 @@ class AsteriskController{
                         const idCampanha = dadosAtendimento[0].id_campanha
                         const idMailing = dadosAtendimento[0].id_mailing
                         const idRegistro = dadosAtendimento[0].id_reg  
+                        const uniqueid = dadosAtendimento[0].uniqueid  
                         let ch = dados.ramal;
                         ch = ch.split("-");
                         ch = ch[0].split("/")
                         const ramal = ch[1]                      
                         //iniciou chamada
-                        _Cronometro2.default.iniciouAtendimento(idCampanha,idMailing,idRegistro,dados.numero,ramal,(e,r)=>{
+                        _Cronometro2.default.iniciouAtendimento(idCampanha,idMailing,idRegistro,dados.numero,ramal,uniqueid,(e,r)=>{
                             if(e) throw e
 
                             res.json(true);
@@ -228,33 +229,37 @@ class AsteriskController{
                         _Asterisk2.default.preparaRegistroParaTabulacao(idAtendimento,(e,campanha)=>{
                             if(e) throw e
                             
-                            const idCampanha = campanha[0].id_campanha
-                            //Pega os status de tabulacao da campanha
-                            _Tabulacoes2.default.statusTabulacaoCampanha(idCampanha,(e,statusTabulacao)=>{
-                                if(e) throw e
-
-                                //Finaliza Ligacao e inicia a contagem da tabulacao 
-                                _Cronometro2.default.saiuLigacao(idCampanha,numeroDiscado,ramal,(e,r)=>{
+                            if(campanha.length>0){
+                                const idCampanha = campanha[0].id_campanha
+                                //Pega os status de tabulacao da campanha
+                                _Tabulacoes2.default.statusTabulacaoCampanha(idCampanha,(e,statusTabulacao)=>{
                                     if(e) throw e
 
-
-                                    _Asterisk2.default.dadosAtendimento_byNumero(numeroDiscado, (e,dadosAtendimento)=>{
+                                    //Finaliza Ligacao e inicia a contagem da tabulacao 
+                                    _Cronometro2.default.saiuLigacao(idCampanha,numeroDiscado,ramal,(e,r)=>{
                                         if(e) throw e
-                                       
-                                        const idCampanha = dadosAtendimento[0].id_campanha
-                                        const idMailing = dadosAtendimento[0].id_mailing
-                                        const idRegistro = dadosAtendimento[0].id_reg  
-                                        //Inicia contagem do tempo de tabulacao
-                                        _Cronometro2.default.iniciaTabulacao(idCampanha,idMailing,idRegistro,numeroDiscado,ramal,(e,r)=>{
-                                            if(e) throw e
 
-                                            res.json(statusTabulacao)
+
+                                        _Asterisk2.default.dadosAtendimento_byNumero(numeroDiscado, (e,dadosAtendimento)=>{
+                                            if(e) throw e
+                                        
+                                            const idCampanha = dadosAtendimento[0].id_campanha
+                                            const idMailing = dadosAtendimento[0].id_mailing
+                                            const idRegistro = dadosAtendimento[0].id_reg  
+                                            //Inicia contagem do tempo de tabulacao
+                                            _Cronometro2.default.iniciaTabulacao(idCampanha,idMailing,idRegistro,numeroDiscado,ramal,(e,r)=>{
+                                                if(e) throw e
+
+                                                res.json(statusTabulacao)
+                                            })
                                         })
                                     })
-                                })
 
-                               
-                            })
+                                
+                                })
+                            }else{
+                                res.json(true)
+                            }
                         })
                     })
                 })
@@ -303,16 +308,15 @@ class AsteriskController{
             const idRegistro = atendimento[0].id_reg
             const idMailing = atendimento[0].id_mailing
             const idCampanha = atendimento[0].id_campanha
-            _Asterisk2.default.tabulandoContato(tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,(e,r)=>{
+            _Asterisk2.default.tabulandoContato(idAtendimento,tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,(e,r)=>{
                 if(e) throw e
-
-                _Asterisk2.default.desligaChamada(idAtendimento,contatado,produtivo,status_tabulacao,observacao,(e,r)=>{ 
-                    _Cronometro2.default.encerrouTabulacao(idCampanha,numero,ramal,status_tabulacao,(e,r)=>{
-                        if(e) throw e
+               
+                _Cronometro2.default.encerrouTabulacao(idCampanha,numero,ramal,status_tabulacao,(e,r)=>{
+                    if(e) throw e
     
-                        res.json(r);                        
-                    })
+                    res.json(r);                        
                 })
+               
             })
         })
     }
@@ -482,13 +486,9 @@ class AsteriskController{
     }*//////////
     testLigacao(req,res){
         const numero = parseInt(req.params.numero)
-        const ramal = '9878'
+        const ramal = '1001'
 
-        _Asterisk2.default.testLigacao(numero,ramal,(e,r)=>{
-            if(e) throw e
-
-            res.json(true)
-        })      
+        _Asterisk2.default.testLigacao(numero,ramal,res)      
              
     }
 

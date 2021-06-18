@@ -1,13 +1,68 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
-var _Asterisk = require('../models/Asterisk'); var _Asterisk2 = _interopRequireDefault(_Asterisk);
 var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
-
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 
 class DiscadorController{
+    async iniciandoDiscadorSistema(req,res){
+        
+        console.log('Iniciando Discador')
+
+        //PASSO 1 - VERIFICAÇÃO
+        //#1 Conta as chamadas simultaneas para registrar no log
+        _Discador2.default.registrarChamadasSimultaneas()
+
+        //#2 Verifica possiveis chamadas presas e remove das chamadas simultâneas
+        //#EM CONSTRUÇÃO
+
+        //#3 Verifica se existem campanhas ativas
+        const campanhasAtivas = await _Discador2.default.verifyCampanhasAtivas();
+        if(campanhasAtivas==0){
+            res.json(false)
+            console.log('fim')
+            return false
+        }
+        
+        console.log('campanhas ativas',campanhasAtivas.length)
+        console.log(campanhasAtivas)
+        
+        //#4 Verifica a fila da Campanha
+        //#5 Verifica se existe mailing adicionado
+        //#6 Verifica se o mailing adicionado esta configurado 
+        //#7 Verifica se a campanha possui Agendamento
+        //#8 Verifica se a campanha ativas esta dentro da data de agendamento
+
+        //PASSO 2 - PREPARAÇÃO DO DISCADOR
+        //#1 Verifica se existem agentes na fila
+        //#2 Verificando se os agentes estao logados e disponiveis
+        //#3 Verifica as configurações do discador
+        //#4 Conta chamadas simultaneas e agressividade e compara com os agentes disponiveis
+        //#5 Verifica se existem registros nao trabalhados ou com o nº de tentativas abaixo do limite
+        //#5.1 Filtragem da blacklist e listas de negativação
+        //#6 Separa o registro
+
+        //PASSO 3 - DISCAGEM
+        //#1 Formata numero
+        //#2 Inicia Discagem
+        //#3 Registra chamada simultânea
+        res.json(true)
+    }
+
+    //Funções de VERIFICACAO
+    //#1 Conta as chamadas simultaneas para registrar no log
+    //#2 Verifica possiveis chamadas presas e remove das chamadas simultâneas
+    //#3 Verifica se existem campanhas ativas
+    //#4 Verifica a fila da Campanha
+    //#5 Verifica se existe mailing adicionado
+    //#6 Verifica se o mailing adicionado esta configurado 
+    //#7 Verifica se a campanha possui Agendamento
+    //#8 Verifica se a campanha ativas esta dentro da data de agendamento
+    
+    //Funções de PREPARAÇÃO
+    //Funções de DISCAGEM
 
     checandoCampanhasProntas(req,res){
         //console.log('Discador Automático iniciado')
+        //Grava o total de chamadas simultâneas atuais para o log de chamadas
         _Discador2.default.registrarChamadasSimultaneas()
        
         //Verifica se existem campanhas ativas
@@ -241,11 +296,7 @@ class DiscadorController{
 
                 _Discador2.default.ligar(0,telefone,(e,ligacao)=>{
                     if(e) throw e
-
-
-                    console.log(ligacao)
-                    console.log(telefone)  
-
+                  
                     console.log('Dados registrados')
                 }) //registraChamada              
             })//ligar       

@@ -1,4 +1,3 @@
-import connect from '../Config/dbConnection';
 import User from '../models/User';
 
 class UserController{

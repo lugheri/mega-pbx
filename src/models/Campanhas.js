@@ -261,6 +261,7 @@ class Campanhas{
         connect.banco.query(sql,callback)
     }
     
+    
 
     
 
@@ -318,13 +319,18 @@ class Campanhas{
         connect.banco.query(sql,(e,r)=>{
             if(e) throw e
 
-            if(estado==2){
-                const sql = `UPDATE queue_members SET paused=1 WHERE membername=${ramal}`
-                connect.asterisk.query(sql,callback)
-            }else{
-                const sql = `UPDATE queue_members SET paused=0 WHERE membername=${ramal}`
-                connect.asterisk.query(sql,callback)
-            }
+            const sql = `UPDATE user_ramal SET estado=${estado} WHERE ramal=${ramal}`
+            connect.banco.query(sql,(e,r)=>{
+                if(e) throw e
+
+                if(estado==2){
+                    const sql = `UPDATE queue_members SET paused=1 WHERE membername=${ramal}`
+                    connect.asterisk.query(sql,callback)
+                }else{
+                    const sql = `UPDATE queue_members SET paused=0 WHERE membername=${ramal}`
+                    connect.asterisk.query(sql,callback)
+                }
+            })
         })
     }
 
@@ -341,6 +347,21 @@ class Campanhas{
         connect.banco.query(sql,callback)
     }
 
+    chamadasTravadas(callback){
+        const sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE tratado is null`
+        connect.banco.query(sql,callback)
+    }
+
+    //Atualiza um registro como disponivel na tabulacao mailing
+    liberaRegisto(idCampanha,idMailing,idRegistro,callback){ 
+     const sql = `UPDATE campanhas_tabulacao_mailing SET estado=1, desc_estado='Disponível' WHERE idCampanha=${idCampanha},idMailing=${idMailing},idRegistro=${idRegistro}`
+     connect.mailings.query(sql,callback)
+    }
+
+    removeChamadaSimultanea(idChamadaSimultanea,callback){
+        const sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE id=${idChamadaSimultanea}`
+        connect.banco.query(sql,callback)
+    }
 
     //######################Gestão do Mailing das Campanhas ######################
     mailingCampanha(idCampanha,callback){
@@ -566,12 +587,12 @@ class Campanhas{
     }
 
     historicoRegistro(idReg,callback){
-        const sql = `SELECT agente, u.nome, protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,status_tabulacao,obs_tabulacao FROM historico_atendimento AS h left JOIN users AS u ON u.id=h.agente WHERE id_registro=${idReg} ORDER BY h.id DESC LIMIT 50`
+        const sql = `SELECT agente, u.nome, protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,t.tabulacao,obs_tabulacao FROM historico_atendimento AS h left JOIN users AS u ON u.id=h.agente LEFT JOIN campanhas_status_tabulacao AS t ON t.id=h.status_tabulacao WHERE id_registro=${idReg} ORDER BY h.id DESC LIMIT 50`
         connect.banco.query(sql,callback) 
     }
     
     historicoChamadas(ramal,callback){
-        const sql = `SELECT agente, u.nome, protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,status_tabulacao,obs_tabulacao FROM historico_atendimento AS h JOIN users AS u ON u.id=h.agente WHERE agente='${ramal}' ORDER BY h.id DESC LIMIT 50`
+        const sql = `SELECT agente, u.nome, protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,t.tabulacao,obs_tabulacao FROM historico_atendimento AS h JOIN users AS u ON u.id=h.agente LEFT JOIN campanhas_status_tabulacao AS t ON t.id=h.status_tabulacao WHERE agente='${ramal}' ORDER BY h.id DESC LIMIT 50`
         connect.banco.query(sql,callback) 
     }
 

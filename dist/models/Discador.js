@@ -3,6 +3,36 @@ var _Asterisk = require('./Asterisk'); var _Asterisk2 = _interopRequireDefault(_
 var _Campanhas = require('./Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 class Discador{
+
+    querySync(sql,args){
+        return new Promise ((resolve,reject) =>{
+            _dbConnection2.default.banco.query(sql,args,(err,rows)=>{
+                if(err)
+                    return reject(err);
+               
+                resolve(rows);
+            })
+        })
+    }
+
+    //Funções de verificação
+    verifyCampanhasAtivas(){
+        return new Promise(async(resolve,reject)=>{
+            const sql = `SELECT id FROM campanhas WHERE tipo='a' AND status=1 AND estado=1`
+            const rowCampanhasAtivas = await this.querySync(sql)
+
+            resolve(rowCampanhasAtivas)
+        })
+    }
+
+
+
+
+
+
+
+
+
  
     agentesFila(fila,callback){
         const sql =  `SELECT * FROM queue_members WHERE queue_name='${fila}'`     
@@ -61,7 +91,7 @@ class Discador{
                             
                         })
                     }else{//Caso contrário insere o mesmo
-                        const sql = `INSERT INTO campanhas_tabulacao_mailing (idCampanha,idMailing,idRegistro,estado,desc_estado,tentativas) VALUES (${idCampanha},${idMailing},${idRegistro},1,'Discando',0)`
+                        const sql = `INSERT INTO campanhas_tabulacao_mailing (data,idCampanha,idMailing,idRegistro,estado,desc_estado,tentativas) VALUES (now(),${idCampanha},${idMailing},${idRegistro},1,'Discando',0)`
                         _dbConnection2.default.mailings.query(sql,(e,r)=>{
                             if(e) throw e
                             
@@ -151,10 +181,15 @@ class Discador{
             const modo='discador'
             const server = asterisk_server[0].server
             const user =  asterisk_server[0].user
-            const pass =  asterisk_server[0].pass
+            const pass =  asterisk_server[0].pass            
             
-            _Asterisk2.default.ligar(server,user,pass,modo,ramal,numero,callback)
-            callback(e,true)
+            _Asterisk2.default.ligar(server,user,pass,modo,ramal,numero,(e,call)=>{
+                if(e) throw e
+
+                console.log(call)
+                callback(e,true)
+            })
+            
         })
     }
 

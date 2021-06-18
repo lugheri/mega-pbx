@@ -98,12 +98,13 @@ class AsteriskController{
                         const idCampanha = dadosAtendimento[0].id_campanha
                         const idMailing = dadosAtendimento[0].id_mailing
                         const idRegistro = dadosAtendimento[0].id_reg  
+                        const uniqueid = dadosAtendimento[0].uniqueid  
                         let ch = dados.ramal;
                         ch = ch.split("-");
                         ch = ch[0].split("/")
                         const ramal = ch[1]                      
                         //iniciou chamada
-                        Cronometro.iniciouAtendimento(idCampanha,idMailing,idRegistro,dados.numero,ramal,(e,r)=>{
+                        Cronometro.iniciouAtendimento(idCampanha,idMailing,idRegistro,dados.numero,ramal,uniqueid,(e,r)=>{
                             if(e) throw e
 
                             res.json(true);
@@ -228,33 +229,37 @@ class AsteriskController{
                         Asterisk.preparaRegistroParaTabulacao(idAtendimento,(e,campanha)=>{
                             if(e) throw e
                             
-                            const idCampanha = campanha[0].id_campanha
-                            //Pega os status de tabulacao da campanha
-                            Tabulacoes.statusTabulacaoCampanha(idCampanha,(e,statusTabulacao)=>{
-                                if(e) throw e
-
-                                //Finaliza Ligacao e inicia a contagem da tabulacao 
-                                Cronometro.saiuLigacao(idCampanha,numeroDiscado,ramal,(e,r)=>{
+                            if(campanha.length>0){
+                                const idCampanha = campanha[0].id_campanha
+                                //Pega os status de tabulacao da campanha
+                                Tabulacoes.statusTabulacaoCampanha(idCampanha,(e,statusTabulacao)=>{
                                     if(e) throw e
 
-
-                                    Asterisk.dadosAtendimento_byNumero(numeroDiscado, (e,dadosAtendimento)=>{
+                                    //Finaliza Ligacao e inicia a contagem da tabulacao 
+                                    Cronometro.saiuLigacao(idCampanha,numeroDiscado,ramal,(e,r)=>{
                                         if(e) throw e
-                                       
-                                        const idCampanha = dadosAtendimento[0].id_campanha
-                                        const idMailing = dadosAtendimento[0].id_mailing
-                                        const idRegistro = dadosAtendimento[0].id_reg  
-                                        //Inicia contagem do tempo de tabulacao
-                                        Cronometro.iniciaTabulacao(idCampanha,idMailing,idRegistro,numeroDiscado,ramal,(e,r)=>{
-                                            if(e) throw e
 
-                                            res.json(statusTabulacao)
+
+                                        Asterisk.dadosAtendimento_byNumero(numeroDiscado, (e,dadosAtendimento)=>{
+                                            if(e) throw e
+                                        
+                                            const idCampanha = dadosAtendimento[0].id_campanha
+                                            const idMailing = dadosAtendimento[0].id_mailing
+                                            const idRegistro = dadosAtendimento[0].id_reg  
+                                            //Inicia contagem do tempo de tabulacao
+                                            Cronometro.iniciaTabulacao(idCampanha,idMailing,idRegistro,numeroDiscado,ramal,(e,r)=>{
+                                                if(e) throw e
+
+                                                res.json(statusTabulacao)
+                                            })
                                         })
                                     })
-                                })
 
-                               
-                            })
+                                
+                                })
+                            }else{
+                                res.json(true)
+                            }
                         })
                     })
                 })
@@ -481,13 +486,9 @@ class AsteriskController{
     }*//////////
     testLigacao(req,res){
         const numero = parseInt(req.params.numero)
-        const ramal = '9878'
+        const ramal = '1001'
 
-        Asterisk.testLigacao(numero,ramal,(e,r)=>{
-            if(e) throw e
-
-            res.json(true)
-        })      
+        Asterisk.testLigacao(numero,ramal,res)      
              
     }
 
