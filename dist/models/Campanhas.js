@@ -3,31 +3,6 @@ var _Asterisk = require('./Asterisk'); var _Asterisk2 = _interopRequireDefault(_
 var _User = require('./User'); var _User2 = _interopRequireDefault(_User);
 
 class Campanhas{
-    //INFORMACOES DO STATUS DA CAMPANHA EM TEMPO REAL
-     //Atualizacao de status das campanhas pelo discador
-     atualizaStatus(idCampanha,msg,estado,callback){
-        //verificando se a campanha ja possui status
-        this.statusCampanha(idCampanha,(e,r)=>{
-            if(e) throw e
-            //console.log(`Campanha: ${idCampanha} msg: ${msg}`)
-            if(r.length!=0){
-                //Caso sim atualiza o mesmo
-                const sql = `UPDATE campanhas_status SET data=now(), mensagem='${msg}', estado=${estado} WHERE idCampanha=${idCampanha}`
-                _dbConnection2.default.banco.query(sql,callback)
-            }else{
-                //Caso nao, insere o status
-                const sql = `INSERT INTO campanhas_status (idCampanha,data,mensagem,estado) VALUES (${idCampanha},now(),'${msg}',${estado})`               
-                _dbConnection2.default.banco.query(sql,callback)
-            }
-        })        
-    }
-
-    //Status da campanha
-    statusCampanha(idCampanha,callback){
-        const sql =`SELECT * FROM campanhas_status WHERE idCampanha = ${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback) 
-    }
-
     //total de campanhas que rodaram por dia
     campanhasByDay(limit,callback){
         const sql = `SELECT COUNT(DISTINCT campanha) AS campanhas, DATE_FORMAT (data,'%d/%m/%Y') AS dia FROM historico_atendimento GROUP BY data ORDER BY data DESC LIMIT ${limit}`
@@ -291,22 +266,7 @@ class Campanhas{
         _dbConnection2.default.banco.query(sql,callback)
     }    
 
-    iniciarDiscador(ramal,callback){
-        const sql = `UPDATE agentes_filas SET estado=1 WHERE ramal=${ramal}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    statusRamal(ramal,callback){
-        const sql = `SELECT estado FROM agentes_filas WHERE ramal=${ramal}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
     
-    pararDiscador(ramal,callback){
-        const sql = `UPDATE agentes_filas SET estado=4 WHERE ramal=${ramal}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }  
-
     //Status dos agentes das campanhas
     agentesFalando(callback){
         //Estado 3 = Falando
@@ -432,9 +392,48 @@ class Campanhas{
         const sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
         _dbConnection2.default.banco.query(sql,callback)
     }
+
+
+
+
+
+    totalMailingsCampanha(idCampanha,callback){
+        const sql = `SELECT SUM(totalReg) AS total FROM mailings as m JOIN campanhas_mailing AS cm ON cm.idMailing=m.id WHERE cm.idCampanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    mailingsContatados_porCampanha(idCampanha,callback){
+        const sql = `SELECT count(id) AS contatados FROM campanhas_tabulacao_mailing WHERE contatado='S' AND idCampanha=${idCampanha}`
+        _dbConnection2.default.mailings.query(sql,callback)
+    }
+
+    mailingsNaoContatados_porCampanha(idCampanha,callback){
+        const sql = `SELECT count(id) AS nao_contatados FROM campanhas_tabulacao_mailing WHERE contatado='N' AND idCampanha=${idCampanha}`
+        _dbConnection2.default.mailings.query(sql,callback)
+    }
   
    
     /*
+     //INFORMACOES DO STATUS DA CAMPANHA EM TEMPO REAL
+     //Atualizacao de status das campanhas pelo discador
+     atualizaStatus(idCampanha,msg,estado,callback){
+        //verificando se a campanha ja possui status
+        this.statusCampanha(idCampanha,(e,r)=>{
+            if(e) throw e
+            //console.log(`Campanha: ${idCampanha} msg: ${msg}`)
+            if(r.length!=0){
+                //Caso sim atualiza o mesmo
+                const sql = `UPDATE campanhas_status SET data=now(), mensagem='${msg}', estado=${estado} WHERE idCampanha=${idCampanha}`
+                connect.banco.query(sql,callback)
+            }else{
+                //Caso nao, insere o status
+                const sql = `INSERT INTO campanhas_status (idCampanha,data,mensagem,estado) VALUES (${idCampanha},now(),'${msg}',${estado})`               
+                connect.banco.query(sql,callback)
+            }
+        })        
+    }
+
+
     //Campos Nao Selecionados
     camposNaoSelecionados(idCampanha,tabela,callback){
         const sql = `SELECT DISTINCT m.id AS campo FROM mailing_tipo_campo AS m LEFT OUTER JOIN campanhas_campos_tela_agente AS s ON m.id=s.idCampo WHERE m.tabela='${tabela}' AND conferido=1 AND m.id NOT IN (SELECT idCampo FROM campanhas_campos_tela_agente WHERE tabela='${tabela}' AND idCampanha=${idCampanha})`
@@ -521,21 +520,7 @@ class Campanhas{
 
 
     
-    totalMailingsCampanha(idCampanha,callback){
-        const sql = `SELECT SUM(totalReg) AS total FROM mailings as m JOIN campanhas_mailing AS cm ON cm.idMailing=m.id WHERE cm.idCampanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-
-    mailingsContatados_porCampanha(idCampanha,callback){
-        const sql = `SELECT count(id) AS contatados FROM campanhas_tabulacao_mailing WHERE contatado='S' AND idCampanha=${idCampanha}`
-        _dbConnection2.default.mailings.query(sql,callback)
-    }
-
-    mailingsNaoContatados_porCampanha(idCampanha,callback){
-        const sql = `SELECT count(id) AS nao_contatados FROM campanhas_tabulacao_mailing WHERE contatado='N' AND idCampanha=${idCampanha}`
-        _dbConnection2.default.mailings.query(sql,callback)
-    }
+    
 
     
     //######################Funções para funcionamento do discador######################
@@ -574,27 +559,7 @@ class Campanhas{
         _dbConnection2.default.banco.query(sql,callback)
     }
 
-    //Busca a fila da campanha atendida
-    getQueueByNumber(numero,callback){
-        const sql = `SELECT id,fila AS Fila FROM campanhas_chamadas_simultaneas WHERE numero='${numero}' ORDER BY id DESC LIMIT 1`
-        _dbConnection2.default.banco.query(sql,callback);
-    }
-
-    setaRegistroNaFila(idChamada,callback){
-       
-        const sql = `UPDATE campanhas_chamadas_simultaneas SET na_fila=1, tratado=1 WHERE id='${idChamada}'`
-        _dbConnection2.default.banco.query(sql,callback) 
-    }
-
-    historicoRegistro(idReg,callback){
-        const sql = `SELECT agente, u.nome, protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,t.tabulacao,obs_tabulacao FROM historico_atendimento AS h left JOIN users AS u ON u.id=h.agente LEFT JOIN campanhas_status_tabulacao AS t ON t.id=h.status_tabulacao WHERE id_registro=${idReg} ORDER BY h.id DESC LIMIT 50`
-        _dbConnection2.default.banco.query(sql,callback) 
-    }
-    
-    historicoChamadas(ramal,callback){
-        const sql = `SELECT agente, u.nome, protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,t.tabulacao,obs_tabulacao FROM historico_atendimento AS h JOIN users AS u ON u.id=h.agente LEFT JOIN campanhas_status_tabulacao AS t ON t.id=h.status_tabulacao WHERE agente='${ramal}' ORDER BY h.id DESC LIMIT 50`
-        _dbConnection2.default.banco.query(sql,callback) 
-    }
+   
 
    
 
@@ -621,7 +586,7 @@ class Campanhas{
 
    
 
-
+/*
 
 
     removendoChamadasOciosas(callback){
@@ -629,7 +594,7 @@ class Campanhas{
         let data = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + ' ' + date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds();
         console.log(`Agora eh ${data}`)
         
-    }
+    }*/
 
 
 }

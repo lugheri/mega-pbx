@@ -3,8 +3,13 @@ var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequi
 var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
 
 var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
+var _Dashboard = require('../models/Dashboard'); var _Dashboard2 = _interopRequireDefault(_Dashboard);
 
 class DashboardController{
+    async painel(req,res){
+        res.json(await _Dashboard2.default.painel())
+    }
+    
     usersRealTime(req,res){
         _User2.default.totalAgentesLogados((e,totalLogados)=>{
             if(e) throw e

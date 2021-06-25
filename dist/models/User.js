@@ -1,5 +1,6 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
 var _md5 = require('md5'); var _md52 = _interopRequireDefault(_md5);
+
 class User{
     findUser(usuario,callback){
         const sql = `SELECT * FROM users WHERE usuario='${usuario}' AND status=1`;

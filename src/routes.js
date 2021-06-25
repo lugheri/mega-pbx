@@ -49,6 +49,8 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
 //DASHBOARD 
     //Usuarios
         //Usuários em tempo real
+        routes.get('/painel',DashboardController.painel)
+
         routes.get('/usersRealTime',DashboardController.usersRealTime)
 
         //Qtd de usuarios dos ultimos dias
@@ -283,53 +285,52 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
     routes.get('/teste_iniciandoDiscadorSistema',DiscadorController.iniciandoDiscadorSistema)
 
     //iniciarDiscador
-    routes.get('/iniciarDiscador/:ramal',CampanhasController.iniciarDiscador)
+    routes.get('/iniciarDiscador/:ramal',DiscadorController.iniciarDiscador)
 
     //Status do ramal
-    routes.get('/statusRamal/:ramal',CampanhasController.statusRamal)
+    routes.get('/statusRamal/:ramal',DiscadorController.statusRamal)
 
     //pararDiscador
-    routes.get('/pararDiscador/:ramal',CampanhasController.pararDiscador)
+    routes.get('/pararDiscador/:ramal',DiscadorController.pararDiscador)
 
     //Chamada atendida
-    routes.get('/modoAtendimento/:ramal',AsteriskController.modoAtendimento)
+    routes.get('/modoAtendimento/:ramal',DiscadorController.modoAtendimento)
 
     //Chamada atendida
-    routes.get('/atendeChamada/:ramal',AsteriskController.atenderChamada)
+    routes.get('/atendeChamada/:ramal',DiscadorController.atenderChamada)
 
     //Chamada atendida
-    routes.get('/dadosChamada/:ramal',AsteriskController.dadosChamada)
+    routes.get('/dadosChamada/:ramal',DiscadorController.dadosChamada)
     
     //Chamada desligada
-    routes.post('/desligarChamada',AsteriskController.desligarChamada)
+    routes.post('/desligarChamada',DiscadorController.desligarChamada)
     
     //Tabular chamada
-    routes.post('/tabularChamada',AsteriskController.tabularChamada)
+    routes.post('/tabularChamada',DiscadorController.tabularChamada)
 
     //Tabular chamada
-    routes.post('/marcarRetorno',AsteriskController.marcarRetorno)
+    routes.post('/marcarRetorno',DiscadorController.marcarRetorno)
 
     //Historico de Registro
-    routes.get('/historicoRegistro/:idRegistro',CampanhasController.historicoRegistro)
+    routes.get('/historicoRegistro/:idRegistro',DiscadorController.historicoRegistro)
 
     //Historico de Chamadas
-    routes.get('/historicoChamadas/:ramal',CampanhasController.historicoChamadas)
+    routes.get('/historicoChamadas/:ramal',DiscadorController.historicoChamadas)
 
-    //Remove chamadas paradas
-    routes.get('/removeChamadasParadas/',CampanhasController.removeChamadasParadas)
+    
 
 //TELA DE ATENDIMENTO
     //Abrir Listagem de Pausa da Campanha
-    routes.get('/pausasDisponiveis',CampanhasController.listarPausasCampanha)
+    routes.get('/pausasDisponiveis',DiscadorController.listarPausasCampanha)
 
     //Pausar agente
-    routes.post('/pausarAgente',CampanhasController.pausarAgente)
+    routes.post('/pausarAgente',DiscadorController.pausarAgente)
 
     //Status Pausa Agente
-    routes.get('/statusPausaAgente/:ramal',CampanhasController.statusPausaAgente)
+    routes.get('/statusPausaAgente/:ramal',DiscadorController.statusPausaAgente)
  
     //Retirar Pausa
-    routes.post('/removePausa/',CampanhasController.removePausaAgente)
+    routes.post('/removePausa/',DiscadorController.removePausaAgente)
 
 
 
@@ -353,6 +354,9 @@ routes.post("/posts", multer(multerConfigs).single('file'), (req, res)=>{
     //Lista de Equipes
     routes.get('/filtroEquipes/', ReportController.filtroEquipes)
     //Relatórios personalizados
+
+
+    routes.get('/monitoramentoCampanha/:idCampanha',ReportController.monitoramentoCampanhas)
 
 
 //ASTERISK

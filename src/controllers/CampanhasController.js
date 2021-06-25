@@ -16,7 +16,7 @@ class CampanhasController{
     //Status da campanha em tempo real
     statusCampanha(req,res){
         const idCampanha = parseInt(req.params.id);
-        Campanhas.statusCampanha(idCampanha,(e,r)=>{
+        Discador.statusCampanha(idCampanha,(e,r)=>{
             if(e) throw e
 
             res.json(r)
@@ -214,6 +214,7 @@ class CampanhasController{
 
         //DISCADOR
         //Inicia discador do agente
+        /*
         iniciarDiscador(req,res){
             const ramal = req.params.ramal
             Campanhas.iniciarDiscador(ramal,(e,r)=>{
@@ -250,6 +251,7 @@ class CampanhasController{
                
             })            
         }
+        */
 
         //Configurar discador da campanha
         configDiscadorCampanha(req,res){
@@ -974,170 +976,9 @@ class CampanhasController{
         })
     }
 
-    //######################TELA DO AGENTE ######################
+    
 
-    //PausasListas
-    //Lista as pausas disponíveis para o agente
-    listarPausasCampanha(req,res){
-        const listaPausa = 1
-        Pausas.listarPausas(listaPausa,(e,r)=>{
-            if(e) throw e
-
-            res.send(r)
-        })
-
-    }
-
-    //Pausa o agente com o status selecionado
-    pausarAgente(req,res){
-        const ramal = req.body.ramal
-        const idPausa = parseInt(req.body.idPausa)
-        Pausas.dadosPausa(idPausa,(e,infoPausa)=>{
-            const pausa = infoPausa[0].nome
-            const descricao = infoPausa[0].descricao
-            const tempo = infoPausa[0].tempo
-            
-            Asterisk.pausarAgente(ramal,idPausa,pausa,descricao,tempo,(e,r)=>{
-                if(e) throw e
-
-                Cronometro.entrouEmPausa(idPausa,ramal,(e,tempoPausa)=>{
-                    if(e) throw e
-
-                    res.send(r)
-                })                
-            })
-        })
-    }
-
-    //Exibe o estado e as informacoes da pausa do agente
-    statusPausaAgente(req,res){
-        const ramal = req.params.ramal
-        Asterisk.infoPausaAgente(ramal,(e,infoPausa)=>{
-            console.log(infoPausa.length)
-            if(infoPausa.length==0){
-                let retorno = '{"status":"agente disponivel"}'  
-                res.send(JSON.parse(retorno))
-            }else{
-                const idPausa = infoPausa[0].idPausa            
-                Pausas.dadosPausa(idPausa,(e,dadosPausa)=>{
-                    if(e) throw e
-
-
-                    const inicio = infoPausa[0].inicio
-                    const hoje = moment().format("Y-MM-DD")
-                    const agora = moment().format("HH:mm:ss")
-                    const limite = infoPausa[0].limite
-                    const nome = infoPausa[0].nome
-                    const descricao = infoPausa[0].descricao
-                    const tempo = dadosPausa[0].tempo
-
-                    
-                //Tempo passado
-                    let startTime = moment(`${hoje}T${inicio}`).format();
-                    let endTime = moment(`${hoje}T${agora}`).format();
-                    let duration = moment.duration(moment(endTime).diff(startTime));
-                
-                    let horasPass = duration.hours(); //hours instead of asHours
-                    let minPass = duration.minutes(); //minutes instead of asMinutes
-                    let segPass = duration.seconds(); //minutes instead of asMinutes
-                    
-                    const tempoPassado = horasPass+':'+minPass+':'+segPass
-                    const minutosTotais = (horasPass*60)+minPass+(segPass/60)
-                    const percentual = (minutosTotais/tempo)*100
-
-                    //Tempo restante
-                    let startTime_res = moment(`${hoje}T${agora}`).format();
-                    let endTime_res = moment(`${hoje}T${limite}`).format();
-                    let duration_res = moment.duration(moment(endTime_res).diff(startTime_res));
-                    let horasRes = duration_res.hours(); //hours instead of asHours
-                    let minRes = duration_res.minutes(); //minutes instead of asMinutes
-                    let segRes = duration_res.seconds(); //minutes instead of asMinutes
-                    
-                    const tempoRestante = horasRes+':'+minRes+':'+segRes
-
-
-                    
-                
-
-                    let retorno = '{'
-                        retorno += `"idPausa":${idPausa},`
-                        retorno += `"nome":"${nome}",`
-                        retorno += `"descricao":"${descricao}",`
-                        retorno += `"tempoTotal":${tempo},`
-                        retorno += `"tempoPassado":"${tempoPassado}",`
-                        retorno += `"tempoRestante":"${tempoRestante}",`
-                        retorno += `"porcentagem":${percentual.toFixed(1)}`
-                    retorno += '}'    
-
-                    
-
-
-
-                    res.send(JSON.parse(retorno))
-                })
-            }
-        })
-    }
-
-    //Tira o agente da pausa
-    removePausaAgente(req,res){
-        const ramal = req.body.ramal
-        Asterisk.removePausaAgente(ramal,(e,r)=>{
-            if(e) throw e
-
-            Cronometro.saiuDaPausa(ramal,(e,tempoPausa)=>{
-                if(e) throw e
-
-                res.send(r)
-            })            
-        })
-    }
-
-    //Historico do id do registro
-    historicoRegistro(req,res){
-        const idReg = parseInt(req.params.idRegistro)
-        Campanhas.historicoRegistro(idReg,(e,historico)=>{
-            if(e) throw e
-
-            res.json(historico)
-        })
-
-    }
-
-    //Historico do agente
-    historicoChamadas(req,res){
-        const ramal = req.params.ramal
-        Campanhas.historicoChamadas(ramal,(e,historico)=>{
-            if(e) throw e
-
-            res.json(historico)
-        })
-
-    }
-
-    //Remove chamadas paradas
-    removeChamadasParadas(req,res){
-        //Le as informacoes da chamada parada
-        Campanhas.chamadasTravadas((e,travadas)=>{
-            if(e) throw e
-            
-            const idCampanha = travadas[0].id_campanha
-            const idMailing = travadas[0].id_mailing
-            const idRegistro = travadas[0].id_reg
-            const idChamadaSimultanea = travadas[0].id
-            //altera o estado do registo para disponivel
-            Campanhas.liberaRegisto(idCampanha,idMailing,idRegistro,(e,travadas)=>{
-                //remove a chamada simultanea
-                Campanhas.removeChamadaSimultanea(idChamadaSimultanea,(e,remove)=>{
-                    if(e) throw e
-
-                    res.json(true)
-                })
-            })
-
-        })
-        
-    }
+    
 
 
     
@@ -1154,14 +995,14 @@ class CampanhasController{
 //OLD
 
    
-
+/*
     removendoChamadasOciosas(req,res){
         Campanhas.removendoChamadasOciosas((e,r)=>{
             if(e) throw e
         })
         setTimeout(()=>{this.removendoChamadasOciosas(req,res)},10000)
     }
-
+    
     //verificador das campanhas ativas
     campanhasAtivas(req,res){
         //Verifica campanhas do ativo ativadas
@@ -1309,10 +1150,10 @@ class CampanhasController{
             if(err) throw err
 
             console.log(`Log Campanha=>${result}`)
-        })*/
+        })
         //return next();
-        setTimeout(()=>{this.campanhasAtivas(req,res)},10000)
-    }
+        //setTimeout(()=>{this.campanhasAtivas(req,res)},10000)
+    }*/
 
 
     

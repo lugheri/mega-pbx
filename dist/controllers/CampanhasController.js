@@ -16,7 +16,7 @@ class CampanhasController{
     //Status da campanha em tempo real
     statusCampanha(req,res){
         const idCampanha = parseInt(req.params.id);
-        _Campanhas2.default.statusCampanha(idCampanha,(e,r)=>{
+        _Discador2.default.statusCampanha(idCampanha,(e,r)=>{
             if(e) throw e
 
             res.json(r)
@@ -214,10 +214,11 @@ class CampanhasController{
 
         //DISCADOR
         //Inicia discador do agente
+        /*
         iniciarDiscador(req,res){
             const ramal = req.params.ramal
-            _Campanhas2.default.iniciarDiscador(ramal,(e,r)=>{
-                _Cronometro2.default.iniciaDiscador(ramal,(e,r)=>{
+            Campanhas.iniciarDiscador(ramal,(e,r)=>{
+                Cronometro.iniciaDiscador(ramal,(e,r)=>{
                     if(e) throw e
 
                     res.json(r);
@@ -228,7 +229,7 @@ class CampanhasController{
          //Inicia discador do agente
          statusRamal(req,res){
             const ramal = req.params.ramal
-            _Campanhas2.default.statusRamal(ramal,(e,estadoRamal)=>{
+            Campanhas.statusRamal(ramal,(e,estadoRamal)=>{
                 if(e) throw e
 
                 const estados=['deslogado','disponivel','em pausa','falando','indisponivel'];
@@ -241,8 +242,8 @@ class CampanhasController{
         //Parando o Discador do agente
         pararDiscador(req,res){
             const ramal = req.params.ramal
-            _Campanhas2.default.pararDiscador(ramal,(e,r)=>{
-                _Cronometro2.default.pararDiscador(ramal,(e,r)=>{
+            Campanhas.pararDiscador(ramal,(e,r)=>{
+                Cronometro.pararDiscador(ramal,(e,r)=>{
                     if(e) throw e
 
                     res.json(r);
@@ -250,6 +251,7 @@ class CampanhasController{
                
             })            
         }
+        */
 
         //Configurar discador da campanha
         configDiscadorCampanha(req,res){
@@ -974,170 +976,9 @@ class CampanhasController{
         })
     }
 
-    //######################TELA DO AGENTE ######################
+    
 
-    //PausasListas
-    //Lista as pausas disponíveis para o agente
-    listarPausasCampanha(req,res){
-        const listaPausa = 1
-        _Pausas2.default.listarPausas(listaPausa,(e,r)=>{
-            if(e) throw e
-
-            res.send(r)
-        })
-
-    }
-
-    //Pausa o agente com o status selecionado
-    pausarAgente(req,res){
-        const ramal = req.body.ramal
-        const idPausa = parseInt(req.body.idPausa)
-        _Pausas2.default.dadosPausa(idPausa,(e,infoPausa)=>{
-            const pausa = infoPausa[0].nome
-            const descricao = infoPausa[0].descricao
-            const tempo = infoPausa[0].tempo
-            
-            _Asterisk2.default.pausarAgente(ramal,idPausa,pausa,descricao,tempo,(e,r)=>{
-                if(e) throw e
-
-                _Cronometro2.default.entrouEmPausa(idPausa,ramal,(e,tempoPausa)=>{
-                    if(e) throw e
-
-                    res.send(r)
-                })                
-            })
-        })
-    }
-
-    //Exibe o estado e as informacoes da pausa do agente
-    statusPausaAgente(req,res){
-        const ramal = req.params.ramal
-        _Asterisk2.default.infoPausaAgente(ramal,(e,infoPausa)=>{
-            console.log(infoPausa.length)
-            if(infoPausa.length==0){
-                let retorno = '{"status":"agente disponivel"}'  
-                res.send(JSON.parse(retorno))
-            }else{
-                const idPausa = infoPausa[0].idPausa            
-                _Pausas2.default.dadosPausa(idPausa,(e,dadosPausa)=>{
-                    if(e) throw e
-
-
-                    const inicio = infoPausa[0].inicio
-                    const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
-                    const agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
-                    const limite = infoPausa[0].limite
-                    const nome = infoPausa[0].nome
-                    const descricao = infoPausa[0].descricao
-                    const tempo = dadosPausa[0].tempo
-
-                    
-                //Tempo passado
-                    let startTime = _moment2.default.call(void 0, `${hoje}T${inicio}`).format();
-                    let endTime = _moment2.default.call(void 0, `${hoje}T${agora}`).format();
-                    let duration = _moment2.default.duration(_moment2.default.call(void 0, endTime).diff(startTime));
-                
-                    let horasPass = duration.hours(); //hours instead of asHours
-                    let minPass = duration.minutes(); //minutes instead of asMinutes
-                    let segPass = duration.seconds(); //minutes instead of asMinutes
-                    
-                    const tempoPassado = horasPass+':'+minPass+':'+segPass
-                    const minutosTotais = (horasPass*60)+minPass+(segPass/60)
-                    const percentual = (minutosTotais/tempo)*100
-
-                    //Tempo restante
-                    let startTime_res = _moment2.default.call(void 0, `${hoje}T${agora}`).format();
-                    let endTime_res = _moment2.default.call(void 0, `${hoje}T${limite}`).format();
-                    let duration_res = _moment2.default.duration(_moment2.default.call(void 0, endTime_res).diff(startTime_res));
-                    let horasRes = duration_res.hours(); //hours instead of asHours
-                    let minRes = duration_res.minutes(); //minutes instead of asMinutes
-                    let segRes = duration_res.seconds(); //minutes instead of asMinutes
-                    
-                    const tempoRestante = horasRes+':'+minRes+':'+segRes
-
-
-                    
-                
-
-                    let retorno = '{'
-                        retorno += `"idPausa":${idPausa},`
-                        retorno += `"nome":"${nome}",`
-                        retorno += `"descricao":"${descricao}",`
-                        retorno += `"tempoTotal":${tempo},`
-                        retorno += `"tempoPassado":"${tempoPassado}",`
-                        retorno += `"tempoRestante":"${tempoRestante}",`
-                        retorno += `"porcentagem":${percentual.toFixed(1)}`
-                    retorno += '}'    
-
-                    
-
-
-
-                    res.send(JSON.parse(retorno))
-                })
-            }
-        })
-    }
-
-    //Tira o agente da pausa
-    removePausaAgente(req,res){
-        const ramal = req.body.ramal
-        _Asterisk2.default.removePausaAgente(ramal,(e,r)=>{
-            if(e) throw e
-
-            _Cronometro2.default.saiuDaPausa(ramal,(e,tempoPausa)=>{
-                if(e) throw e
-
-                res.send(r)
-            })            
-        })
-    }
-
-    //Historico do id do registro
-    historicoRegistro(req,res){
-        const idReg = parseInt(req.params.idRegistro)
-        _Campanhas2.default.historicoRegistro(idReg,(e,historico)=>{
-            if(e) throw e
-
-            res.json(historico)
-        })
-
-    }
-
-    //Historico do agente
-    historicoChamadas(req,res){
-        const ramal = req.params.ramal
-        _Campanhas2.default.historicoChamadas(ramal,(e,historico)=>{
-            if(e) throw e
-
-            res.json(historico)
-        })
-
-    }
-
-    //Remove chamadas paradas
-    removeChamadasParadas(req,res){
-        //Le as informacoes da chamada parada
-        _Campanhas2.default.chamadasTravadas((e,travadas)=>{
-            if(e) throw e
-            
-            const idCampanha = travadas[0].id_campanha
-            const idMailing = travadas[0].id_mailing
-            const idRegistro = travadas[0].id_reg
-            const idChamadaSimultanea = travadas[0].id
-            //altera o estado do registo para disponivel
-            _Campanhas2.default.liberaRegisto(idCampanha,idMailing,idRegistro,(e,travadas)=>{
-                //remove a chamada simultanea
-                _Campanhas2.default.removeChamadaSimultanea(idChamadaSimultanea,(e,remove)=>{
-                    if(e) throw e
-
-                    res.json(true)
-                })
-            })
-
-        })
-        
-    }
+    
 
 
     
@@ -1154,18 +995,18 @@ class CampanhasController{
 //OLD
 
    
-
+/*
     removendoChamadasOciosas(req,res){
-        _Campanhas2.default.removendoChamadasOciosas((e,r)=>{
+        Campanhas.removendoChamadasOciosas((e,r)=>{
             if(e) throw e
         })
         setTimeout(()=>{this.removendoChamadasOciosas(req,res)},10000)
     }
-
+    
     //verificador das campanhas ativas
     campanhasAtivas(req,res){
         //Verifica campanhas do ativo ativadas
-        _Campanhas2.default.campanhasAtivasHabilitadas((e,r)=>{
+        Campanhas.campanhasAtivasHabilitadas((e,r)=>{
             if(e) throw e             
             
             if(r){
@@ -1173,13 +1014,13 @@ class CampanhasController{
                     //Verificando se cada campanha possui fila atribuida
                     let idCampanha = r[i].id
                     let nomeCampanha = r[i].nome
-                    _Campanhas2.default.filaCampanha(idCampanha,(e,r)=>{ 
+                    Campanhas.filaCampanha(idCampanha,(e,r)=>{ 
                         if(e) throw e
 
                         if(r.length==0){
                             let msg='Nenhuma fila atribuida na campanha!'
                             let estado = 2
-                            _Campanhas2.default.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                            Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
                                 if(e) throw e
                             })                            
                         }else{
@@ -1187,51 +1028,51 @@ class CampanhasController{
                             let fila = r[0].nomeFila
                            
                             //Verificando Mailing da campanha
-                            _Campanhas2.default.mailingCampanha(idCampanha,(e,r)=>{
+                            Campanhas.mailingCampanha(idCampanha,(e,r)=>{
                                 if(r.length==0){
                                     let msg='Nenhum Mailing atribuido na campanha'
                                     let estado = 2
-                                    _Campanhas2.default.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                                    Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
                                         if(e) throw e
                                     })                                     
                                 }else{
                                     let idMailing = r[0].idMailing
                                     //Verificando se o Mailing esta configuradoo
-                                    _Campanhas2.default.mailingConfigurado(idMailing,(e,r)=>{
+                                    Campanhas.mailingConfigurado(idMailing,(e,r)=>{
                                         if(e) throw e
 
                                         if(r[0].configurado){
                                             //Verificando se a campanha esta no data para iniciar
-                                            const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
-                                            const agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
-                                            _Campanhas2.default.dataCampanha(idCampanha,hoje,(e,r)=>{
+                                            const hoje = moment().format("Y-MM-DD")
+                                            const agora = moment().format("HH:mm:ss")
+                                            Campanhas.dataCampanha(idCampanha,hoje,(e,r)=>{
 
                                                 if(e) throw e
                                                 
                                                 if(r.length>=1){
-                                                    _Campanhas2.default.horarioCampanha(idCampanha,agora,(e,r)=>{ 
+                                                    Campanhas.horarioCampanha(idCampanha,agora,(e,r)=>{ 
                                                         if(e) throw e    
         
                                                         if(r.length>=1){ 
-                                                            _Discador2.default.agentesFila(fila,(e,r)=>{ 
+                                                            Discador.agentesFila(fila,(e,r)=>{ 
                                                                 if(e) throw e  
                                                                 
                                                                 if(r.length ==0){
                                                                     
                                                                     let msg='Nenhum agente na fila'
                                                                     let estado = 2
-                                                                    _Campanhas2.default.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                                                                    Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
                                                                         if(e) throw e
                                                                     }) 
                                                                 }else{
                                                                     //verificando se os agentes estao logados e disponiveis
-                                                                    _Discador2.default.agentesDisponiveis(idFilaCampanha,(e,r)=>{
+                                                                    Discador.agentesDisponiveis(idFilaCampanha,(e,r)=>{
                                                                         if(e) throw e  
 
                                                                         if(r.length ==0){
                                                                             let msg='Nenhum agente disponível'
                                                                             let estado = 2
-                                                                            _Campanhas2.default.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                                                                            Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
                                                                                 if(e) throw e
 
                                                                             }) 
@@ -1246,19 +1087,19 @@ class CampanhasController{
 
                                                                                 //verifica disponibilidade do ramal
 
-                                                                                _Discador2.default.filtrarRegistro(idCampanha,idMailing,ramal,(e,r)=>{
+                                                                                Discador.filtrarRegistro(idCampanha,idMailing,ramal,(e,r)=>{
                                                                                     if(e) throw e  
 
                                                                                     if(r.length!=0){                                                                                       
                                                                                         let msg='Discando'
                                                                                         let estado = 1
-                                                                                        _Campanhas2.default.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                                                                                        Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
                                                                                             if(e) throw e
             
                                                                                         }) 
 
 
-                                                                                        _Discador2.default.discar(idCampanha,idMailing,ramal,fila,r,(e,res)=>{
+                                                                                        Discador.discar(idCampanha,idMailing,ramal,fila,r,(e,res)=>{
                                                                                             
                                                                                         })
                                                                                     }
@@ -1271,7 +1112,7 @@ class CampanhasController{
                                                         }else{
                                                             let msg='Campanha fora do horario de atendimento'
                                                             let estado = 2
-                                                            _Campanhas2.default.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                                                            Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
                                                                 if(e) throw e
                                                             }) 
                                                         }
@@ -1279,7 +1120,7 @@ class CampanhasController{
                                                 }else{
                                                     let msg='Campanha fora da data de atendimento'
                                                     let estado = 2
-                                                    _Campanhas2.default.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                                                    Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
                                                         if(e) throw e
                                                     }) 
                                                 }
@@ -1287,7 +1128,7 @@ class CampanhasController{
                                         }else{
                                             let msg='Mailing não configurado na campanha'
                                             let estado = 2
-                                            _Campanhas2.default.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
+                                            Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
                                                 if(e) throw e
                                             }) 
                                         }
@@ -1309,10 +1150,10 @@ class CampanhasController{
             if(err) throw err
 
             console.log(`Log Campanha=>${result}`)
-        })*/
+        })
         //return next();
-        setTimeout(()=>{this.campanhasAtivas(req,res)},10000)
-    }
+        //setTimeout(()=>{this.campanhasAtivas(req,res)},10000)
+    }*/
 
 
     

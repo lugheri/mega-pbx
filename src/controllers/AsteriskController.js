@@ -1,22 +1,16 @@
 import Asterisk from '../models/Asterisk';
 import util from 'util';
 import fs from 'fs';
-import JsSIP from 'jssip';
-import Campanhas from '../models/Campanhas';
-import Pausas from '../models/Pausas';
-import Tabulacoes from '../models/Tabulacoes';
+import Discador from '../models/Discador';
 import Cronometro from '../models/Cronometro';
 //const asteriskServer = 'http://35.202.102.245:8088'
 //const asteriskServer = 'asterisk'
 //const asteriskServer = 'localhost'
 
 class AsteriskController{
-
     //Funcoes automaticas dialplan do asterisk
-
     agi_test(req,res){
-        const dados = req.body
-        
+        const dados = req.body        
         Asterisk.agi_test(dados,(e,r)=>{
             if(e) throw e
 
@@ -28,8 +22,7 @@ class AsteriskController{
         const data = req.body.date
         const hora = req.body.time
         const ramal = req.body.ramal
-        const uniqueid = req.body.uniqueid
-       
+        const uniqueid = req.body.uniqueid       
         Asterisk.setRecord(data,hora,ramal,uniqueid,(e,server)=>{
             if(e) throw e
 
@@ -40,7 +33,6 @@ class AsteriskController{
     agi(req,res){
         const action = req.params.action
         const dados = req.body
-
         if(action=='machine'){//Quando cai na caixa postal
             Asterisk.machine(dados,(e,r)=>{
                 if(e) throw e
@@ -48,10 +40,11 @@ class AsteriskController{
                 res.json(r);
             })
         }
+
         if(action=='get_queue'){//Quando reconhece a voz humana
             const numero = req.body.numero
             
-            Campanhas.getQueueByNumber(numero,(e,queue)=>{
+            Discador.getQueueByNumber(numero,(e,queue)=>{
                 if(e) throw e
 
                 if(queue.length==0){
@@ -61,12 +54,12 @@ class AsteriskController{
                 
                     const fila = queue[0].Fila
                     const idAtendimento = queue[0].id
-                    Campanhas.setaRegistroNaFila(idAtendimento,(e,r)=>{
+                    Discador.setaRegistroNaFila(idAtendimento,(e,r)=>{
                         if(e) throw e
                         console.log(`1 Com filas ${fila}`)
 
                         //recupera dados da campanhas
-                        Asterisk.dadosAtendimento(idAtendimento, (e,dadosAtendimento)=>{
+                        Discador.dadosAtendimento(idAtendimento, (e,dadosAtendimento)=>{
                             if(e) throw e
                            
                             const idCampanha = dadosAtendimento[0].id_campanha
@@ -92,7 +85,7 @@ class AsteriskController{
                 Cronometro.saiuDaFila(dados.numero,(e,r)=>{
                     console.log('chamada atendida')
                    
-                    Asterisk.dadosAtendimento_byNumero(dados.numero, (e,dadosAtendimento)=>{
+                    Discador.dadosAtendimento_byNumero(dados.numero, (e,dadosAtendimento)=>{
                         if(e) throw e
                        
                         const idCampanha = dadosAtendimento[0].id_campanha
@@ -114,254 +107,70 @@ class AsteriskController{
             })
         }        
         if(action=='handcall'){//Chamada manual
-            Asterisk.handcall(dados,(e,r)=>{
-                if(e) throw e
-                console.log('chamada manual')
-                res.json(r);
-            })
+            
         }
         if(action=='abandon'){//Quando abandona fila
+            const numero = dados.numero
+            Discador.dadosAtendimento_byNumero(numero, (e,chamada)=>{
+                if(e) throw e
+                //Verifica se a chamada esta na fila
+                if(chamada.length==0){
+                    res.json(false);
+                }else{
+                    const fila = chamada[0].na_fila
+                    console.log(numero,fila)
 
+                    if(fila==1){
+                        const idAtendimento =chamada[0].id          
+                        const id_reg=chamada[0].id_reg
+                        const tabela=chamada[0].tabela_mailing
+                        const idCampanha=chamada[0].id_campanha
+                        const idMailing=chamada[0].id_mailing
+                        const ramal=chamada[0].ramal
+                        const protocolo=chamada[0].protocolo
+                        //console.log(`protocolo ${protocolo}`)
+                        //Status de tabulacao referente ao nao atendido
+                        const tabulacao = 0
+                        const contatado = 'N'
+                        const produtivo = 0
+                        const uniqueid=chamada[0].uniqueid
+                        const tipo_ligacao=chamada[0].tipo_ligacao
+                        const observacoes = 'ABANDONOU FILA'
+
+                        //retira da fila e registra como abandonou fila
+                        Cronometro.saiuDaFila(dados.numero,(e,r)=>{
+                            if(e) throw e
+
+                            //Registra histórico de chamada
+                            Discador.registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado,(e,r)=>{
+                                if(e) throw e
+                                //Tabula registro
+                                Discador.tabulandoContato(idAtendimento,tabela,contatado,tabulacao,observacoes,produtivo,numero,ramal,id_reg,idMailing,idCampanha,(e,r)=>{
+                                    if(e) throw e
+                                    
+                                    res.json(true);
+                                })
+                            }) 
+                        })
+                    }else{
+                        res.json(false);
+                    }
+                }
+                              
+            })
         } 
         if(action=='fail'){//Quando nao atende
 
-        }
-        if(action=='abandon'){//Quando abandona fila
-
-        }        
+        }      
     }
 
-    //Acoes do discador
-
-    //retorna as informações da chamada recebida
-
-    modoAtendimento(req,res){
-        const ramal = req.params.ramal
-        Asterisk.modoAtendimento(ramal,(e,dadosChamada)=>{
-            if(e) throw e         
-
-            if(dadosChamada.length==0){
-                let dados = '{"config":{"origem":"telefone","modo_atendimento":"manual"}}'
-                res.json(JSON.parse(dados))
-            }else{
-                const idAtendimento = dadosChamada[0].id
-                const modo_atendimento = dadosChamada[0].modo_atendimento
-               
-                const idCampanha = dadosChamada[0].id_campanha
-                let dados = ""                
-                Asterisk.infoChamada_byIdAtendimento(idAtendimento,(e,infoChamada)=>{
-                    if(e) throw e     
-
-                    dados += infoChamada
-                    dados += `, "config":{"origem":"discador","modo_atendimento":"${modo_atendimento}"}}`
-                    console.log(dados)
-                    res.json(JSON.parse(dados))
-                })
-            }
+    /////////////////////// testes ////////////////////////////////
+    channelDump(req,res){
+        Asterisk.channelDump((e,r)=>{
+        console.log('channel dump')
         })
     }
-
-
-    atenderChamada(req,res){
-        const ramal = req.params.ramal
-        const estado = 3 //Estado do agente de falando
-        const pausa = 0//Status da pausa de ocupado
-        //atualiza para falando
-        Campanhas.atualizaEstadoAgente(ramal,estado,pausa,(e,r)=>{
-            if(e) throw e
-
-            Asterisk.atendeChamada(ramal,(e,calldata)=>{
-                if(e) throw e
-              
-                res.json(calldata);
-            });
-        }) 
-    }
-
-    dadosChamada(req,res){
-        const ramal = req.params.ramal
-        Asterisk.infoChamada(ramal,(e,calldata)=>{
-            if(e) throw e
-              
-            res.json(calldata);
-        }) 
-    }
-
-    desligarChamada(req,res){
-        const idAtendimento =  req.body.idAtendimento
-        if(idAtendimento===false){//Chamada Manual
-           const ramal  =  req.body.ramal
-
-           const estado = 1//Atualiza estado do agente para disponivel
-           const pausa = 0
-           Campanhas.atualizaEstadoAgente(ramal,estado,pausa,(e,r)=>{
-                if(e) throw e
-
-                res.json(true);
-           })
-
-        }else{//Discador
-            const ramal  =  req.body.ramal
-            const numeroDiscado =  req.body.numero_discado
-
-            //Verifica se existe regra de tabulacao obrigatória
-            const tabular=true
-
-            if(tabular==true){
-                const estado = 3//Atualiza estado do agente para pausado 
-                const tipo='tabulacao'
-                //Id de pausa tabulacao
-
-                Pausas.idPausaByTipo(tipo,(e,idPausa)=>{
-                    if(e) throw e
-
-                    let pausaTabulacao
-                    if(idPausa.length==0){
-                        pausaTabulacao = 0
-                    }else{
-                        pausaTabulacao = idPausa[0].id
-                    }                     
-                
-                    Campanhas.atualizaEstadoAgente(ramal,estado,pausaTabulacao,(e,r)=>{
-                        if(e) throw e
-                        
-                        //Atualiza registro como tabulando e retorna id da campanha
-                        Asterisk.preparaRegistroParaTabulacao(idAtendimento,(e,campanha)=>{
-                            if(e) throw e
-                            
-                            if(campanha.length>0){
-                                const idCampanha = campanha[0].id_campanha
-                                //Pega os status de tabulacao da campanha
-                                Tabulacoes.statusTabulacaoCampanha(idCampanha,(e,statusTabulacao)=>{
-                                    if(e) throw e
-
-                                    //Finaliza Ligacao e inicia a contagem da tabulacao 
-                                    Cronometro.saiuLigacao(idCampanha,numeroDiscado,ramal,(e,r)=>{
-                                        if(e) throw e
-
-
-                                        Asterisk.dadosAtendimento_byNumero(numeroDiscado, (e,dadosAtendimento)=>{
-                                            if(e) throw e
-                                        
-                                            const idCampanha = dadosAtendimento[0].id_campanha
-                                            const idMailing = dadosAtendimento[0].id_mailing
-                                            const idRegistro = dadosAtendimento[0].id_reg  
-                                            //Inicia contagem do tempo de tabulacao
-                                            Cronometro.iniciaTabulacao(idCampanha,idMailing,idRegistro,numeroDiscado,ramal,(e,r)=>{
-                                                if(e) throw e
-
-                                                res.json(statusTabulacao)
-                                            })
-                                        })
-                                    })
-
-                                
-                                })
-                            }else{
-                                res.json(true)
-                            }
-                        })
-                    })
-                })
-            }else{
-                //Inclui tentativa no registro e libera o agente
-
-                const estado = 1
-                const pausaTabulacao = 0
-                Campanhas.atualizaEstadoAgente(ramal,estado,pausaTabulacao,(e,r)=>{
-                    if(e) throw e
-
-                    const contatado = 'S'
-                    const produtivo = 0
-                    const status_tabulacao=0
-                    const observacao = ''
-                    //Desligando a chamada
-                    Asterisk.desligaChamada(idAtendimento,contatado,produtivo,status_tabulacao,observacao,(e,r)=>{
-                        if(e) throw e
-                    
-                        res.json(r);
-                    })
-                })
-            }            
-        }
-    }
-
-    tabularChamada(req,res){
-
-        const idAtendimento = req.body.idAtendimento
-        const ramal = req.body.ramal
-        const numero = req.body.numero_discado
-        const status_tabulacao = req.body.status_tabulacao
-        const observacao = req.body.obs_tabulacao
-        const contatado = 'S'
-        let produtivo
-        if(req.body.tipo_tabulacao=='produtivo'){
-            produtivo=1
-        }else{
-            produtivo=0
-        } 
-        const data = req.body.data
-        const hora = req.body.hora
-
-        Asterisk.dadosAtendimento(idAtendimento,(e,atendimento)=>{
-            const tabela = atendimento[0].tabela_mailing
-            const idRegistro = atendimento[0].id_reg
-            const idMailing = atendimento[0].id_mailing
-            const idCampanha = atendimento[0].id_campanha
-            Asterisk.tabulandoContato(idAtendimento,tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,(e,r)=>{
-                if(e) throw e
-               
-                Cronometro.encerrouTabulacao(idCampanha,numero,ramal,status_tabulacao,(e,r)=>{
-                    if(e) throw e
-    
-                    res.json(r);                        
-                })
-               
-            })
-        })
-    }
-
-    marcarRetorno(req,res){
-
-        const idAtendimento = req.body.idAtendimento
-        const ramal = req.body.ramal
-        const numero = req.body.numero_discado
-        const status_tabulacao = req.body.status_tabulacao
-        const data = req.body.data
-        const hora = req.body.hora
-        const observacao = req.body.obs_tabulacao
-        const contatado = 'S'
-        let produtivo
-        if(req.body.tipo_tabulacao=='produtivo'){
-            produtivo=1
-        }else{
-            produtivo=0
-        } 
-
-        Asterisk.dadosAtendimento(idAtendimento,(e,atendimento)=>{
-            const tabela = atendimento[0].tabela_mailing
-            const idRegistro = atendimento[0].id_reg
-            const idMailing = atendimento[0].id_mailing
-            const idCampanha = atendimento[0].id_campanha
-            Asterisk.tabulandoContato(tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,(e,r)=>{
-                if(e) throw e
-              
-                res.json(r);
-            })
-        })
-    }
-
   
-    
-
-
-
-  channelDump(req,res){
-    Asterisk.channelDump((e,r)=>{
-      console.log('channel dump')
-    })
-  }
-  /////////////////////// testes ////////////////////////////////
     criarFila(req,res){
         const name = req.body.name
         const musiconhold = req.body.musiconhold

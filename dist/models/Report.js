@@ -24,78 +24,88 @@ class Report{
         })
     }
 
-    async monitorarAgentes(idCampanha,idEquipe,callback){         
-        try{
-            let filter = ""
-            if(idCampanha){
-                filter += ` AND cf.idCampanha = ${idCampanha} `
+    async monitorarAgentes(idCampanha,idEquipe,idUser,callback){         
+        let filter = ""
+        if(idCampanha){
+            filter += ` AND cf.idCampanha = ${idCampanha} `
+        }
+        if(idEquipe){
+            filter += ` AND ue.id = ${idEquipe} `
+        }
+
+        //Verifica se o usuario eh supervisor de alguma equipe
+
+        
+        const sql1 = `SELECT nivelAcesso FROM users WHERE id=${idUser}` 
+        const rowsVerificaNivel = await this.querySync(sql1)
+        if(rowsVerificaNivel[0].nivelAcesso==2){
+            const sql2 = `SELECT COUNT(id) as equipes FROM users_equipes WHERE supervisor=${idUser}`
+            const rowsVerificaSup = await this.querySync(sql2)
+            if(rowsVerificaSup[0].equipes!=0){
+                filter += ` AND ue.supervisor = ${idUser} `
             }
-            if(idEquipe){
-                filter += ` AND ue.id = ${idEquipe} `
-            }
-            const sql=`SELECT DISTINCT ur.ramal,ea.estado,ur.estado as cod_estado,ue.equipe,us.nome FROM user_ramal AS ur JOIN users AS us ON ur.userId=us.id JOIN users_equipes AS ue ON ue.id=us.equipe LEFT JOIN estadosAgente AS ea ON ur.estado=ea.cod LEFT JOIN agentes_filas AS af ON af.ramal=us.id LEFT JOIN campanhas_filas AS cf ON af.fila=cf.id WHERE 1=1 ${filter}`
-            const rowsAgentes = await this.querySync(sql)            
+        }
+
+        const sql=`SELECT DISTINCT ur.ramal,ea.estado,ur.estado as cod_estado,ue.equipe,us.nome FROM user_ramal AS ur JOIN users AS us ON ur.userId=us.id JOIN users_equipes AS ue ON ue.id=us.equipe LEFT JOIN estadosAgente AS ea ON ur.estado=ea.cod LEFT JOIN agentes_filas AS af ON af.ramal=us.id LEFT JOIN campanhas_filas AS cf ON af.fila=cf.id WHERE 1=1 ${filter}`
+        const rowsAgentes = await this.querySync(sql)            
           
-            for(let k in rowsAgentes) {
-                //QUANTIDADE
-                filter=""
-                if(idCampanha){
-                    filter = ` AND campanha = ${idCampanha} `
-                }
-                let ramal= rowsAgentes[k].ramal
-                let codEstado = rowsAgentes[k].cod_estado
-                rowsAgentes[k]['tempoStatus'] = await this.tempoEstadoAgente(ramal,codEstado)
-                
-                let sql = `SELECT COUNT(id) as total FROM historico_atendimento WHERE agente=${rowsAgentes[k].ramal} ${filter}`
-                const rowsQTD = await this.querySync(sql);
-                rowsAgentes[k]['quantidade']=rowsQTD[0].total
-                
-                //CAMPANHA
-                if(idCampanha){
-                    filter = ` AND h.campanha = ${idCampanha} `
-                }
-                sql = `SELECT h.campanha, c.nome as nomeCampanha FROM historico_atendimento AS h LEFT JOIN campanhas AS c ON c.id=h.campanha WHERE h.agente=${rowsAgentes[k].ramal} ${filter} ORDER BY h.id DESC LIMIT 1`
-                const rowsCampanha = await this.querySync(sql);
-                let nomeCampanha="";
-                if(rowsCampanha.length==1){
-                    nomeCampanha = rowsCampanha[0].nomeCampanha
-                }
-                rowsAgentes[k]['campanha']=nomeCampanha
-                
-                //TMT
-                if(idCampanha){
-                    filter = ` AND idCampanha = ${idCampanha} `
-                }
-                sql=`SELECT AVG(tempo_total) as TMT FROM tempo_tabulacao WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
-                const rowsTMT = await this.querySync(sql)    
-                rowsAgentes[k]['TMT']=await this.converteSeg_tempo(rowsTMT[0].TMT)  
-                
-                //TMA
-                sql=`SELECT AVG(tempo_total) as TMA FROM tempo_ligacao WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
-                const rowsTMA = await this.querySync(sql)    
-                rowsAgentes[k]['TMA']=await this.converteSeg_tempo(rowsTMA[0].TMA)
-                
-                //TMO
-                sql=`SELECT AVG(tempo_total) as TMO FROM tempo_espera WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
-                const rowsTMO = await this.querySync(sql)  
-                rowsAgentes[k]['TMO']=await this.converteSeg_tempo(rowsTMO[0].TMO)
-                
-                //PRODUTIVAS
-                sql=`SELECT COUNT(id) as produtivos FROM mailings.campanhas_tabulacao_mailing WHERE agente=${rowsAgentes[k].ramal} AND produtivo=1 ${filter}`
-                const rowsProdutivos = await this.querySync(sql)  
-                rowsAgentes[k]['produtivos']=rowsProdutivos[0].produtivos
-                
-                //IMPRODUTIVAS
-                sql=`SELECT COUNT(id) as improdutivos FROM mailings.campanhas_tabulacao_mailing WHERE agente=${rowsAgentes[k].ramal} AND produtivo!=1 ${filter}`
-                const rowsImprodutivos = await this.querySync(sql)  
-                rowsAgentes[k]['improdutivos']=rowsImprodutivos[0].improdutivos
-               
+        for(let k in rowsAgentes) {
+            //QUANTIDADE
+            filter=""
+            if(idCampanha){
+                filter = ` AND campanha = ${idCampanha} `
             }
-            callback(null,rowsAgentes)
+            let ramal= rowsAgentes[k].ramal
+            let codEstado = rowsAgentes[k].cod_estado
+            rowsAgentes[k]['tempoStatus'] = await this.tempoEstadoAgente(ramal,codEstado)
+                
+            let sql = `SELECT COUNT(id) as total FROM historico_atendimento WHERE agente=${rowsAgentes[k].ramal} ${filter}`
+            const rowsQTD = await this.querySync(sql);
+            rowsAgentes[k]['quantidade']=rowsQTD[0].total
+              
+            //CAMPANHA
+            if(idCampanha){
+                filter = ` AND h.campanha = ${idCampanha} `
+            }
+            sql = `SELECT h.campanha, c.nome as nomeCampanha FROM historico_atendimento AS h LEFT JOIN campanhas AS c ON c.id=h.campanha WHERE h.agente=${rowsAgentes[k].ramal} ${filter} ORDER BY h.id DESC LIMIT 1`
+            const rowsCampanha = await this.querySync(sql);
+            let nomeCampanha="";
+            if(rowsCampanha.length==1){
+                nomeCampanha = rowsCampanha[0].nomeCampanha
+            }
+            rowsAgentes[k]['campanha']=nomeCampanha
+                
+            //TMT
+            if(idCampanha){
+                filter = ` AND idCampanha = ${idCampanha} `
+            }
+            sql=`SELECT AVG(tempo_total) as TMT FROM tempo_tabulacao WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
+            const rowsTMT = await this.querySync(sql)    
+            rowsAgentes[k]['TMT']=await this.converteSeg_tempo(rowsTMT[0].TMT)  
+                
+            //TMA
+            sql=`SELECT AVG(tempo_total) as TMA FROM tempo_ligacao WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
+            const rowsTMA = await this.querySync(sql)    
+            rowsAgentes[k]['TMA']=await this.converteSeg_tempo(rowsTMA[0].TMA)
+                
+            //TMO
+            sql=`SELECT AVG(tempo_total) as TMO FROM tempo_espera WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
+            const rowsTMO = await this.querySync(sql)  
+            rowsAgentes[k]['TMO']=await this.converteSeg_tempo(rowsTMO[0].TMO)
+                
+            //PRODUTIVAS
+            sql=`SELECT COUNT(id) as produtivos FROM mailings.campanhas_tabulacao_mailing WHERE agente=${rowsAgentes[k].ramal} AND produtivo=1 ${filter}`
+            const rowsProdutivos = await this.querySync(sql)  
+            rowsAgentes[k]['produtivos']=rowsProdutivos[0].produtivos
+                
+            //IMPRODUTIVAS
+            sql=`SELECT COUNT(id) as improdutivos FROM mailings.campanhas_tabulacao_mailing WHERE agente=${rowsAgentes[k].ramal} AND produtivo!=1 ${filter}`
+            const rowsImprodutivos = await this.querySync(sql)  
+            rowsAgentes[k]['improdutivos']=rowsImprodutivos[0].improdutivos
+        }
+        callback(null,rowsAgentes)
             
-        }catch(err){
-            console.log(err)
-        }        
+         
     }  
 
     
@@ -109,23 +119,38 @@ class Report{
     }
 
     async monitoramentoCampanhaGeral(callback){
-        const monitoramentoGeral = {}
+       
         let sql=`SELECT c.id, c.nome, DATE_FORMAT(h.inicio,'%d/%m/%Y') AS dataInicio,DATE_FORMAT(h.hora_inicio,'%H:%i') AS horaInicio , DATE_FORMAT(h.termino,'%d/%m/%Y') AS dataTermino,DATE_FORMAT(h.hora_termino,'%H:%i') AS horaTermino FROM campanhas as c LEFT JOIN campanhas_horarios AS h ON h.id_campanha=c.id WHERE c.estado=1 AND c.status=1`
-        
         const rowsCampanhasAtivas = await this.querySync(sql) 
         const totalCampanhas= rowsCampanhasAtivas.length
         //==>nomeDaCampanha:
-        monitoramentoGeral['nomeDaCampanha']='Todas Ativas'
+        if(totalCampanhas==0){
+            const monitoramentoGeral='Nenhuma campanha ativa'
+            callback(null,monitoramentoGeral)
+            return true
+        } 
         
+        const monitoramentoGeral = {}
+        monitoramentoGeral['nomeDaCampanha']='Todas Ativas'
         //==>datainicial:
         sql = `SELECT DATE_FORMAT (h.inicio,'%d/%m/%Y') AS dataInicio,DATE_FORMAT(h.hora_inicio,'%H:%i') AS horaInicio FROM campanhas as c LEFT JOIN campanhas_horarios AS h ON h.id_campanha=c.id WHERE c.estado=1 AND c.status=1 ORDER BY h.inicio ASC LIMIT 1`
         const rowInicio = await this.querySync(sql)
-        monitoramentoGeral['datainicial']=rowInicio[0].dataInicio
+        if(rowInicio.length==0){
+            monitoramentoGeral['datainicial']=0
+        }else{
+            monitoramentoGeral['datainicial']=rowInicio[0].dataInicio
+        }
+        
         
         //==>datafinal:
         sql = `SELECT DATE_FORMAT(h.termino, '%d/%m/%Y') AS dataTermino, DATE_FORMAT(h.hora_termino,'%H:%i') AS horaTermino FROM campanhas as c LEFT JOIN campanhas_horarios AS h ON h.id_campanha=c.id WHERE c.estado=1 AND c.status=1 ORDER BY h.termino DESC LIMIT 1`
         const rowTermino = await this.querySync(sql)
-        monitoramentoGeral['datafinal']=rowTermino[0].dataTermino
+        if(rowInicio.length==0){
+            monitoramentoGeral['datafinal']=0
+        }else{
+            monitoramentoGeral['datafinal']=rowTermino[0].dataTermino
+        }
+        
         
         //==>porcentagemParaTermino
         let percTermino=0

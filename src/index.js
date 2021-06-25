@@ -7,6 +7,9 @@ const app = customExpress();
 const httpServer = sockets(app)
 
 //Iniciando Discador
-DiscadorController.checandoCampanhasProntas()
+//DiscadorController.checandoCampanhasProntas()
+
+DiscadorController.iniciandoDiscadorSistema()
 
 httpServer.listen(3000,()=>console.log('Servidor de testes online'));
+

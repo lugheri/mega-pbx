@@ -3,8 +3,13 @@ import Campanhas from '../models/Campanhas'
 import Discador from '../models/Discador'
 import User from '../models/User'
 import connect from '../Config/dbConnection'
+import Dashboard from '../models/Dashboard'
 
 class DashboardController{
+    async painel(req,res){
+        res.json(await Dashboard.painel())
+    }
+    
     usersRealTime(req,res){
         User.totalAgentesLogados((e,totalLogados)=>{
             if(e) throw e

@@ -1,5 +1,6 @@
 import connect from '../Config/dbConnection';
 import md5 from 'md5';
+
 class User{
     findUser(usuario,callback){
         const sql = `SELECT * FROM users WHERE usuario='${usuario}' AND status=1`;

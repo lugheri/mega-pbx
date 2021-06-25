@@ -2,9 +2,18 @@ import mysql from 'mysql';
 
 const  connect=()=>{};
 
-const host='mysql'
-//const host='localhost'
-                                                                                                                                                                                                        
+//const host='mysql'
+const host='localhost'
+
+connect.base=((database)=>{
+    return mysql.createConnection({
+        host : host,
+        user : 'root',
+        password : '1234abc@',
+        database : database
+    })   
+})   
+
 connect.banco=mysql.createConnection({
     host : host,
     user : 'root',
@@ -23,6 +32,8 @@ connect.asterisk=mysql.createConnection({
     password : '1234abc@',
     database : 'asterisk'
 })
+
+
 
 
 export default connect;

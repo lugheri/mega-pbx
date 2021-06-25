@@ -4,7 +4,16 @@ const  connect=()=>{};
 
 const host='mysql'
 //const host='localhost'
-                                                                                                                                                                                                        
+
+connect.base=((database)=>{
+    return _mysql2.default.createConnection({
+        host : host,
+        user : 'root',
+        password : '1234abc@',
+        database : database
+    })   
+})   
+
 connect.banco=_mysql2.default.createConnection({
     host : host,
     user : 'root',
@@ -23,6 +32,8 @@ connect.asterisk=_mysql2.default.createConnection({
     password : '1234abc@',
     database : 'asterisk'
 })
+
+
 
 
 exports. default = connect;
