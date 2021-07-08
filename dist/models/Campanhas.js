@@ -3,6 +3,308 @@ var _Asterisk = require('./Asterisk'); var _Asterisk2 = _interopRequireDefault(_
 var _User = require('./User'); var _User2 = _interopRequireDefault(_User);
 
 class Campanhas{
+    querySync(sql,args){
+        return new Promise ((resolve,reject) =>{
+            _dbConnection2.default.banco.query(sql,args,(err,rows)=>{
+                if(err)
+                    return reject(err);
+                resolve(rows);
+            })
+        })
+    }
+    
+    //######################CONFIGURAÇÃO DE CAMPANHA ATIVA################################
+    
+    //######################Operacoes básicas das campanhas (CRUD)######################
+    //Criar Campanha
+    criarCampanha(tipo,nome,descricao,callback){
+        const sql = `INSERT INTO campanhas (dataCriacao,tipo,nome,descricao,estado,status) VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
+        _dbConnection2.default.banco.query(sql,callback)
+    }      
+
+    //Lista campanhas
+    listarCampanhas(callback){
+        const sql = "SELECT * FROM campanhas WHERE status=1 ORDER BY status ASC, id ASC"
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+    listarCampanhasAtivas(callback){
+        const sql = "SELECT * FROM campanhas WHERE estado=1 AND status=1 ORDER BY status ASC, id ASC"
+        _dbConnection2.default.banco.query(sql,callback)        
+    }
+
+    //Retorna Campanha
+    dadosCampanha(idCampanha,callback){
+        const sql = `SELECT * FROM campanhas WHERE id='${idCampanha}' AND status=1`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //Atualiza campanha
+    atualizaCampanha(idCampanha,valores,callback){
+        const sql = 'UPDATE campanhas SET ? WHERE id=?'
+        _dbConnection2.default.banco.query(sql,[valores,idCampanha],callback)
+    }
+    
+    //Remove Campanha
+    //A campanha é removida quando seu status é setado para zero
+
+
+    //TABULACOES
+    //######################Gestão das listas de tabulacao das campanhas######################
+    //Adiciona lista de tabulacao na campanha
+    addListaTabulacaoCampanha(idCampanha,idListaTabulacao,callback){
+        //Removendo listas anteriores
+        const sql = `DELETE FROM campanhas_listastabulacao_selecionadas WHERE idCampanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e
+
+            const sql = `INSERT INTO campanhas_listastabulacao_selecionadas (idCampanha,idListaTabulacao) VALUES (${idCampanha},${idListaTabulacao})`
+            _dbConnection2.default.banco.query(sql,callback)
+        })         
+    }
+
+    //Exibe listas de tabulacao da campanhas
+    listasTabulacaoCampanha(idCampanha,callback){
+        const sql = `SELECT id as idListaNaCampanha, idCampanha, idListaTabulacao FROM campanhas_listastabulacao_selecionadas WHERE idCampanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //Remove listas de tabulacao da campanha
+    removerListaTabulacaoCampanha(idListaNaCampanha,callback){
+        const sql = `DELETE FROM campanhas_listastabulacao_selecionadas WHERE id=${idListaNaCampanha}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //INTEGRAÇÕES
+    //######################Gestão das integrações######################
+    //Cria Integração
+    criarIntegracao(dados,callback){
+        const sql = `INSERT INTO campanhas_integracoes (idCampanha,url,descricao,modoAbertura) VALUES (0,'${dados.url}','${dados.descricao}','${dados.modoAbertura}')`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //Listar integracao
+    listarIntegracoes(callback){
+        const sql = `SELECT * FROM campanhas_integracoes`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //Atualiza Integracao
+    atualizarIntegracao(idIntegracao,dados,callback){
+        const sql = `UPDATE campanhas_integracoes SET url='${dados.url}',descricao='${dados.descricao}',modoAbertura='${dados.modoAbertura}' WHERE id=${idIntegracao}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //Dados integracao
+    dadosIntegracao(idIntegracao,callback){
+        const sql = `SELECT * FROM  campanhas_integracoes WHERE id=${idIntegracao}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //Remove Integracao
+    removerIntegracao(idIntegracao,callback){
+        const sql = `DELETE FROM campanhas_integracoes WHERE id=${idIntegracao}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //Selecionar integracao
+    inserirIntegracaoCampanha(dados,callback){
+        const sql = `UPDATE campanhas_integracoes SET idCampanha='${dados.idCampanha}' WHERE id=${dados.idIntegracao}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //DISCADOR
+    //######################Configuração do discador da campanha######################
+    //Configurar discador da campanha
+    configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,tentativas,modo_atendimento,callback){
+        this.verConfigDiscadorCampanha(idCampanha,(e,r)=>{
+            if(e) throw e
+
+            if(r.length ===0){
+                const sql = `INSERT INTO campanhas_discador (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,tentativas,modo_atendimento) VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}',${tentativas},'${modo_atendimento}')`
+                _dbConnection2.default.banco.query(sql,callback)
+            }else{
+                const sql = `UPDATE campanhas_discador SET tipo_discador='${tipoDiscador}',agressividade=${agressividade},ordem_discagem='${ordemDiscagem}',tipo_discagem='${tipoDiscagem}',tentativas=${tentativas},modo_atendimento='${modo_atendimento}' WHERE idCampanha = ${idCampanha}`
+                _dbConnection2.default.banco.query(sql,callback)     
+            }
+        })       
+    }
+    //Ver configuracoes do discador
+    verConfigDiscadorCampanha(idCampanha,callback){
+        const sql = `SELECT * FROM campanhas_discador WHERE idCampanha = ${idCampanha}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //FILAS
+    //Listar filas da campanha
+    listarFilasCampanha(idCampanha,callback){
+        const sql = `SELECT id as idFila, nomeFila FROM campanhas_filas WHERE idCampanha='${idCampanha}'`
+        _dbConnection2.default.banco.query(sql,callback)
+    }    
+    //Incluir fila a campanhas
+    addFila(idCampanha,nomeFila,callback){
+        const sql = `INSERT INTO campanhas_filas (idCampanha,nomeFila) VALUES (${idCampanha},'${nomeFila}')`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    dadosFila(idFila,callback) {
+        const sql = `SELECT * FROM campanhas_filas WHERE id=${idFila} AND idCampanha=0`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //Remove uma determinada fila da campanha
+    removerFilaCampanha(idCampanha,nomeFila,callback){
+        const sql = `DELETE FROM campanhas_filas WHERE idCampanha=${idCampanha} AND nomeFila='${nomeFila}'`
+        _dbConnection2.default.banco.query(sql,callback)
+    }    
+
+    //MAILING
+    //ADICIONA O MAILING A UMA CAMPANHA
+    addMailingCampanha(idCampanha,idMailing,callback){
+        //verifica se mailing ja existem na campanha
+        const sql = `SELECT id FROM campanhas_mailing WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if (e) throw e;
+
+            if(r.length==0){
+                const sql = `INSERT INTO campanhas_mailing (idCampanha,idMailing) VALUES ('${idCampanha}','${idMailing}')`
+                _dbConnection2.default.banco.query(sql,callback)
+            }            
+        })
+    }
+
+    //Lista os mailings adicionados em uma campanha
+    listarMailingCampanha(idCampanha,callback){
+        const sql = `SELECT * FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //Remove o mailing de uma campanha
+    removeMailingCampanha(id,callback){
+        //Recuperando o id da campanha
+        const sql = `SELECT idCampanha FROM campanhas_mailing WHERE id=${id}`
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e;
+
+            const idCampanha = r[0].idCampanha
+            //Removendo integracao do mailing com a campanha
+            const sql = `DELETE FROM campanhas_mailing WHERE id=${id}`
+            _dbConnection2.default.banco.query(sql,callback)
+        })
+    }
+   
+    //Configuracao da tela do agente
+    //Recupera o nome da tabela pelo id da campanha
+    async nomeTabela_byIdCampanha(idCampanha){
+        const sql = `SELECT m.tabela FROM mailings AS m JOIN campanhas_mailing AS c ON m.id=c.idMailing WHERE c.idCampanha=${idCampanha}`
+        const tabela = await this.querySync(sql)
+        if(tabela.length==0){
+            return false;
+        }
+        return tabela[0].tabela
+    }
+    //Lista todos os campos que foram configurados do mailing
+    async camposConfiguradosDisponiveis(tabela){
+        const sql = `SELECT id,campo,apelido,tipo FROM mailing_tipo_campo WHERE tabela='${tabela}' AND conferido=1`
+        return await this.querySync(sql)
+    }
+    //Verifica se o campo esta selecionado
+    async campoSelecionadoTelaAgente(campo,tabela,idCampanha){
+        const sql = `SELECT COUNT(id) AS total FROM campanhas_campos_tela_agente WHERE idCampo=${campo} AND idCampanha=${idCampanha} AND tabela='${tabela}' ORDER BY ordem ASC`
+        const total = await this.querySync(sql)     
+        if(total[0].total===0){
+            return false;
+        }
+        return true; 
+    }
+    //Campos adicionados na tela do agente
+    async camposAdicionadosNaTelaAgente(idCampanha,tabela){
+        const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}'`
+        return await this.querySync(sql)
+    }
+
+    async addCampoTelaAgente(idCampanha,tabela,idCampo){
+        const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo,ordem) VALUES (${idCampanha},'${tabela}',${idCampo},${idCampo})`
+        return await this.querySync(sql)
+    }
+
+    async camposTelaAgente(idCampanha,tabela){
+        const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo FROM campanhas_campos_tela_agente AS t JOIN mailing_tipo_campo AS m ON m.id=t.idCampo WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
+        return await this.querySync(sql)
+    }
+
+    async delCampoTelaAgente(idCampanha,idCampo){
+        const sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
+        return await this.querySync(sql)
+    }
+
+    //BLACKLIST
+
+    //STATUS DE EVOLUCAO DE CAMPANHA
+    async totalMailingsCampanha(idCampanha){
+        const sql = `SELECT SUM(totalReg) AS total FROM mailings as m JOIN campanhas_mailing AS cm ON cm.idMailing=m.id WHERE cm.idCampanha=${idCampanha}`
+        const total_mailing= await this.querySync(sql)
+        if(total_mailing[0].total == null){
+            return 0
+        }
+        return parseInt(total_mailing[0].total)
+    }
+
+    async mailingsContatadosPorCampanha(idCampanha,status){
+        const sql = `SELECT count(id) AS total FROM mailings.campanhas_tabulacao_mailing WHERE contatado='${status}' AND idCampanha=${idCampanha}`
+        const total_mailing= await this.querySync(sql)
+        return total_mailing[0].total
+    }   
+
+    //AGENDAMENTO DE CAMPANHAS
+    //Agenda campanha
+    agendarCampanha(idCampanha,dI,dT,hI,hT,callback){ 
+        //verifica se a campanha ja possui agendamento
+        this.verAgendaCampanha(idCampanha,(e,r)=>{
+            if(e) throw e            
+
+            if(r.length ===0){
+                const sql = `INSERT INTO campanhas_horarios (id_campanha,inicio,termino,hora_inicio,hora_termino) VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
+                _dbConnection2.default.banco.query(sql,callback)
+            }else{
+                const sql = `UPDATE campanhas_horarios SET inicio='${dI}',termino='${dT}',hora_inicio='${hI}',hora_termino='${hT}' WHERE id_campanha='${idCampanha}'`
+                _dbConnection2.default.banco.query(sql,callback)
+            }
+        })
+    }
+
+    //Ver Agendamento da campanha
+    verAgendaCampanha(idCampanha,callback){
+        const sql = `SELECT * FROM campanhas_horarios WHERE id_campanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+   
+    //#########  F I L A S  ############
+    async novaFila(nomeFila){
+        const sql = `INSERT INTO campanhas_filas (idCampanha,nomeFila) VALUES(0,'${nomeFila}')`
+        await this.querySync(sql)
+        return true
+    }
+
+    async removerFila(nomeFila){
+        const sql = `DELETE FROM campanhas_filas WHERE nomeFila='${nomeFila}'`
+        await this.querySync(sql)
+        return true
+    }
+
+    async listarFilas(){
+        const sql = `SELECT * FROM campanhas_filas where idCampanha=0`
+        return await this.querySync(sql)
+    }   
+
+
+    //#########  B A S E S  ############
+
+    
+
+
+
+    ////////////////////OLD
+
     //total de campanhas que rodaram por dia
     campanhasByDay(limit,callback){
         const sql = `SELECT COUNT(DISTINCT campanha) AS campanhas, DATE_FORMAT (data,'%d/%m/%Y') AS dia FROM historico_atendimento GROUP BY data ORDER BY data DESC LIMIT ${limit}`
@@ -35,100 +337,17 @@ class Campanhas{
 
     
 
-    //######################Operacoes básicas das campanhas (CRUD)######################
-    //Criar Campanha
-    criarCampanha(tipo,nome,descricao,callback){
-        const sql = `INSERT INTO campanhas (dataCriacao,tipo,nome,descricao,estado,status) VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
-        _dbConnection2.default.banco.query(sql,callback)
-    }   
    
-
-    //Lista campanhas
-    listarCampanhas(callback){
-        const sql = "SELECT * FROM campanhas WHERE status=1 ORDER BY status ASC, id ASC"
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    //Retorna Campanha
-    dadosCampanha(idCampanha,callback){
-        const sql = `SELECT * FROM campanhas WHERE id='${idCampanha}' AND status=1`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    //Atualiza campanha
-    atualizaCampanha(idCampanha,valores,callback){
-        const sql = 'UPDATE campanhas SET ? WHERE id=?'
-        _dbConnection2.default.banco.query(sql,[valores,idCampanha],callback)
-    }
-
-    //Remove Campanha
-    //A campanha é removida quando seu status é setado para zero
     
     //######################Operacoes de agendamento das campanhas######################
-    //Agenda campanha
-    agendarCampanha(idCampanha,dI,dT,hI,hT,callback){ 
-        //verifica se a campanha ja possui agendamento
-        this.verAgendaCampanha(idCampanha,(e,r)=>{
-            if(e) throw e            
+    
 
-            if(r.length ===0){
-                const sql = `INSERT INTO campanhas_horarios (id_campanha,inicio,termino,hora_inicio,hora_termino) VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
-                _dbConnection2.default.banco.query(sql,callback)
-            }else{
-                const sql = `UPDATE campanhas_horarios SET inicio='${dI}',termino='${dT}',hora_inicio='${hI}',hora_termino='${hT}' WHERE id_campanha='${idCampanha}'`
-                _dbConnection2.default.banco.query(sql,callback)
-            }
-        })
-    }
-
-    //Ver Agendamento da campanha
-    verAgendaCampanha(idCampanha,callback){
-        const sql = `SELECT * FROM campanhas_horarios WHERE id_campanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    //######################Gestão das listas de tabulacao das campanhas######################
-    //Adiciona lista de tabulacao na campanha
-    addListaTabulacaoCampanha(idCampanha,idListaTabulacao,callback){
-        const sql = `INSERT INTO campanhas_listastabulacao_selecionadas (idCampanha,idListaTabulacao) VALUES (${idCampanha},${idListaTabulacao})`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    //Exibe listas de tabulacao da campanhas
-    listasTabulacaoCampanha(idCampanha,callback){
-        const sql = `SELECT id as idListaNaCampanha, idCampanha, idListaTabulacao FROM campanhas_listastabulacao_selecionadas WHERE idCampanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    //Remove listas de tabulacao da campanha
-    removerListaTabulacaoCampanha(idListaNaCampanha,callback){
-        const sql = `DELETE FROM campanhas_listastabulacao_selecionadas WHERE id=${idListaNaCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+    
 
     //######################Gestão das integrações das campanhas######################
 
     //######################Setup do discador das campanhas######################
-    //Configurar discador da campanha
-    configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,tentativas,modo_atendimento,callback){
-        this.verConfigDiscadorCampanha(idCampanha,(e,r)=>{
-            if(e) throw e
-
-            if(r.length ===0){
-                const sql = `INSERT INTO campanhas_discador (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,tentativas,modo_atendimento) VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}',${tentativas},'${modo_atendimento}')`
-                _dbConnection2.default.banco.query(sql,callback)
-            }else{
-                const sql = `UPDATE campanhas_discador SET tipo_discador='${tipoDiscador}',agressividade=${agressividade},ordem_discagem='${ordemDiscagem}',tipo_discagem='${tipoDiscagem}',tentativas=${tentativas},modo_atendimento='${modo_atendimento}' WHERE idCampanha = ${idCampanha}`
-                _dbConnection2.default.banco.query(sql,callback)     
-            }
-        })       
-    }
-
-    //Ver configuracoes do discador
-    verConfigDiscadorCampanha(idCampanha,callback){
-        const sql = `SELECT * FROM campanhas_discador WHERE idCampanha = ${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+    
 
     //######################Configuração das filas das campanhas######################
     membrosNaFila(idFila,callback){
@@ -136,97 +355,7 @@ class Campanhas{
         _dbConnection2.default.banco.query(sql,callback)
     }
 
-    //Reordena fora da fila
-    reordenaMembrosForaFila(idAgente,idFila,posOrigen,posDestino,callback){
-        //se o destino eh maior que a origem
-        if(posOrigen>posDestino){
-            //aumenta todas as ordens maiores ou iguais ao destino que o destino
-            const sql = `UPDATE users SET ordem=ordem+1 WHERE ordem>=${posDestino}`
-            _dbConnection2.default.banco.query(sql,(e,r)=>{
-                //atualiza o id atual para a ordem correta
-                const sql = `UPDATE users SET ordem=${posDestino} WHERE id=${idAgente}`
-                _dbConnection2.default.banco.query(sql,callback)
-            })
-        }
-
-        //se a origem eh maior que o destino
-        if(posOrigen<posDestino){
-             //diminui todas as ordens menores ou iguais ao destino que o destino
-             const sql = `UPDATE users SET ordem=ordem-1 WHERE ordem<=${posDestino}`
-             _dbConnection2.default.banco.query(sql,(e,r)=>{
-                 //atualiza o id atual para a ordem correta
-                 const sql = `UPDATE users SET ordem=${posDestino} WHERE id=${idAgente}`
-                 _dbConnection2.default.banco.query(sql,callback)
-             })
-        }
-    }   
-    
-    //Reordena dentro fila
-    atualizaOrdemAgenteFila(fila,ordemOrigem,ordem,callback){
-        if(ordemOrigem>ordem){
-            const sql = `UPDATE agentes_filas SET ordem=ordem+1 WHERE fila=${fila} AND ordem>=${ordem}`;
-            _dbConnection2.default.banco.query(sql,callback)
-        }
-        if(ordemOrigem<ordem){
-            const sql = `UPDATE agentes_filas SET ordem=ordem-1 WHERE fila=${fila} AND ordem <= ${ordem}`;
-            _dbConnection2.default.banco.query(sql,callback)
-        }
-        
-    }
-
-    //AddMembro
-    addMembroFila(idAgente,idFila,ordemOrigem,ordem,callback){
-        this.verificaMembroFila(idAgente,idFila,(e,r)=>{
-            if(e) throw e 
-
-            if(r.length === 0){//Caso agente nao exista
-                _User2.default.agenteLogado(idAgente,(e,logado)=>{
-                    if(e) throw e 
-                    const estado = logado[0].logado  
-                    const sql = `INSERT INTO agentes_filas (ramal,fila,estado,ordem) VALUES (${idAgente},${idFila},${estado},${ordem})`
-                    _dbConnection2.default.banco.query(sql,(e,r)=>{   
-                        if(e) throw e 
-                        
-                        const sql = `SELECT nomeFila FROM campanhas_filas WHERE id=${idFila}`
-                        _dbConnection2.default.banco.query(sql,(e,r)=>{
-                            if(e) throw e
-
-                            const queue_name = r[0].nomeFila
-                            const queue_interface = `PJSIP/${idAgente}`
-                            const membername = idAgente
-                            const state_interface = ''//`${queue_interface}@megatrunk`
-                            const penalty = 0
-
-                            _Asterisk2.default.addMembroFila(queue_name,queue_interface,membername,state_interface,penalty,callback)
-                        })
-                    })
-                })
-            }else{//Caso o agente ja pertenca a fila
-                this.atualizaOrdemAgenteFila(idFila,ordemOrigem,ordem,(e,r)=>{
-                    if(e) throw e 
-
-                    const sql = `UPDATE agentes_filas SET ordem=${ordem} WHERE ramal=${idAgente} AND fila=${idFila}`
-                    _dbConnection2.default.banco.query(sql,callback)
-                })
-            }
-        })
-    }
-
-    ///remove membros da fila
-    removeMembroFila(idAgente,idFila,callback){
-        const sql = `DELETE FROM agentes_filas WHERE ramal=${idAgente} AND fila=${idFila}`
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
-            if(e) throw e
-
-            const sql = `SELECT nomeFila FROM campanhas_filas WHERE id=${idFila}`
-            _dbConnection2.default.banco.query(sql,(e,r)=>{
-                if(e) throw e
-
-                const nomeFila = r[0].nomeFila
-                _Asterisk2.default.removeMembroFila(nomeFila,idAgente,callback)
-            })
-        })
-    }   
+      
    
 
     
@@ -242,29 +371,9 @@ class Campanhas{
 
 
 
-    //verifica se membro pertence a filas
-    verificaMembroFila(idAgente,idFila,callback){
-        const sql = `SELECT * FROM agentes_filas WHERE ramal=${idAgente} AND fila=${idFila}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+    
 
-    //Incluir fila a campanhas
-     addFila(idCampanha,nomeFila,callback){
-        const sql = `INSERT INTO  campanhas_filas (idCampanha,nomeFila) VALUES ('${idCampanha}','${nomeFila}')`
-        _dbConnection2.default.banco.query(sql,callback)
-    }    
-
-    //Listar filas da campanha
-    listarFilasCampanha(idCampanha,callback){
-        const sql = `SELECT id as idFila, nomeFila FROM campanhas_filas WHERE idCampanha='${idCampanha}'`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    //Remove uma determinada fila da campanha
-    delFilaCampanha(idCampanha,nomeFila,callback){
-        const sql = `DELETE FROM campanhas_filas WHERE idCampanha='${idCampanha}' AND nomeFila = '${nomeFila}'`
-        _dbConnection2.default.banco.query(sql,callback)
-    }    
+    
 
     
     //Status dos agentes das campanhas
@@ -334,11 +443,7 @@ class Campanhas{
         _dbConnection2.default.banco.query(sql,callback)
     }
 
-    //Recupera o nome da tabela pelo id da campanha
-    nomeTabela_byIdCampanha(idCampanha,callback){
-        const sql = `SELECT m.tabela FROM mailings AS m JOIN campanhas_mailing AS c ON m.id=c.idMailing WHERE c.idCampanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+    
 
      //Status dos Mailings das campanhas ativas
     /*mailingsNaoTrabalhados(callback){
@@ -364,56 +469,8 @@ class Campanhas{
     /*camposConfiguradosDisponiveis(tabela,idCampanha,callback){
         const sql = `SELECT m.id, m.campo, m.apelido, m.tipo ,t.idCampanha FROM mailing_tipo_campo AS m LEFT JOIN campanhas_campos_tela_agente AS t ON m.id = t.idCampo WHERE m.tabela='${tabela}' AND (t.idCampanha=${idCampanha} OR t.idCampanha != ${idCampanha} OR t.idCampanha is null) AND m.conferido=1`
         connect.banco.query(sql,callback)
-    }*/
-
-    //Lista todos os campos que foram configurados do mailing
-    camposConfiguradosDisponiveis(tabela,callback){
-        const sql = `SELECT id,campo,apelido,tipo FROM mailing_tipo_campo WHERE tabela='${tabela}' AND conferido=1`
-        _dbConnection2.default.banco.query(sql,callback)
     }
-
-    camposAdicionadosNaTelaAgente(idCampanha,tabela,callback){
-        const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}'`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-
-    addCampoTelaAgente(idCampanha,tabela,idCampo,callback){
-        const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo) VALUES (${idCampanha},'${tabela}',${idCampo})`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    camposTelaAgente(idCampanha,tabela,callback){
-        const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo FROM campanhas_campos_tela_agente AS t JOIN mailing_tipo_campo AS m ON m.id=t.idCampo WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    delCampoTelaAgente(idCampanha,idCampo,callback){
-        const sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-
-
-
-
-    totalMailingsCampanha(idCampanha,callback){
-        const sql = `SELECT SUM(totalReg) AS total FROM mailings as m JOIN campanhas_mailing AS cm ON cm.idMailing=m.id WHERE cm.idCampanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    mailingsContatados_porCampanha(idCampanha,callback){
-        const sql = `SELECT count(id) AS contatados FROM campanhas_tabulacao_mailing WHERE contatado='S' AND idCampanha=${idCampanha}`
-        _dbConnection2.default.mailings.query(sql,callback)
-    }
-
-    mailingsNaoContatados_porCampanha(idCampanha,callback){
-        const sql = `SELECT count(id) AS nao_contatados FROM campanhas_tabulacao_mailing WHERE contatado='N' AND idCampanha=${idCampanha}`
-        _dbConnection2.default.mailings.query(sql,callback)
-    }
-  
-   
-    /*
+    
      //INFORMACOES DO STATUS DA CAMPANHA EM TEMPO REAL
      //Atualizacao de status das campanhas pelo discador
      atualizaStatus(idCampanha,msg,estado,callback){
@@ -560,42 +617,5 @@ class Campanhas{
     }
 
    
-
-   
-
-
-
-
-
-
-    //Old
-   
-      
-   
-
-    
-
-  
-
-    
-    
-    
-    
-
-    
-
-   
-
-/*
-
-
-    removendoChamadasOciosas(callback){
-        let date = new Date();
-        let data = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + ' ' + date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds();
-        console.log(`Agora eh ${data}`)
-        
-    }*/
-
-
 }
 exports. default = new Campanhas();

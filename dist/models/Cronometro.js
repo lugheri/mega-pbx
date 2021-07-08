@@ -3,12 +3,12 @@
 class Cronometro{
     //LOGIN CAMPANHA
     iniciaDiscador(ramal,callback){
-        const sql = `INSERT INTO tempo_login (idAgente,entrada) VALUES (${ramal},now())`
+        const sql = `INSERT INTO tempo_espera (idAgente,entrada) VALUES (${ramal},now())`
         _dbConnection2.default.banco.query(sql,callback);
     }
 
     pararDiscador(ramal,callback){
-        const sql = `UPDATE tempo_login SET saida=NOW(), tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW()) WHERE idAgente=${ramal} AND saida is null`
+        const sql = `UPDATE tempo_espera SET saida=NOW(), tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW()) WHERE idAgente=${ramal} AND saida is null`
         _dbConnection2.default.banco.query(sql,callback);
     }
 
@@ -25,7 +25,7 @@ class Cronometro{
 
     //TEMPO DE PAUSA (Ociosidade)
     entrouEmPausa(idPausa,idAgente,callback){
-        const sql = `INSERT INTO tempo_pausa (idAgente,idPausa,entrada) VALUES (${idPausa},${idAgente},now())`
+        const sql = `INSERT INTO tempo_pausa (idAgente,idPausa,entrada) VALUES (${idAgente},${idPausa},now())`
         _dbConnection2.default.banco.query(sql,callback);
     }
 

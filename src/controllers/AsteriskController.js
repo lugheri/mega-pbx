@@ -169,59 +169,8 @@ class AsteriskController{
         Asterisk.channelDump((e,r)=>{
         console.log('channel dump')
         })
-    }
-  
-    criarFila(req,res){
-        const name = req.body.name
-        const musiconhold = req.body.musiconhold
-        const strategy = req.body.strategy
-        const timeout = req.body.timeout
-        const retry = req.body.retry
-        const autopause = req.body.autopause
-        const maxlen = req.body.maxlen
-        
-        Asterisk.criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,(err,result)=>{
-            if(err) throw err;
-
-            res.json(result)
-        })
-    }
-    
-    removerFila(req,res){
-        const nomeFila = req.params.nomeFila
-        Asterisk.removerFila(nomeFila,(err,result)=>{
-            if(err) throw err;
-
-            res.json(true)
-        })
-    }
-
-    dadosFila(req,res){
-        const nomeFila = req.params.nomeFila
-        Asterisk.dadosFila(nomeFila,(err,result)=>{
-            if(err) throw err;
-
-            res.json(result)
-        })
-    }
-
-    listarFilas(req,res){
-        Asterisk.listarFilas((err,result)=>{
-            if(err) throw err;
-
-            res.json(result)
-        })
-    }
-
-    editarFila(req,res){
-        const nomeFila = req.params.nomeFila
-        const dados = req.body;
-        Asterisk.editarFila(nomeFila,dados,(err,result)=>{
-            if(err) throw err;
-
-            res.json(result)
-        })
-    }
+    } 
+   
 
     addMembroFila(req,res){      
         const dados = req.body;

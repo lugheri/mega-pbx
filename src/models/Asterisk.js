@@ -10,38 +10,17 @@ import Campanhas from './Campanhas';
 import Discador from './Discador';
 
 class Asterisk{
-    //######################Configuração das filas######################
-    //Criar nova filas
-    criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat,callback){
-        const sql = `INSERT INTO queues (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
-        connect.asterisk.query(sql,callback)
-    }
-    //Remove a fila
-    removerFila(nomeFila,callback){
-        const sql = `DELETE FROM queues WHERE name='${nomeFila}'`
-        connect.asterisk.query(sql,(err,result)=>{
-            if(err) throw err
-            
-            const sql = `DELETE FROM queue_members WHERE queue_name='${nomeFila}'`
-            connect.asterisk.query(sql,callback)
-        })
+    querySync(sql,base){
+        return new Promise((resolve,reject) =>{
+            connect.base(base).query(sql,(e,r)=>{
+                if(e) reject(e);
 
+                resolve(r)
+            })
+        })
     }
-    //Lista as filas cadastradas
-    listarFilas(callback){
-        const sql = `SELECT * FROM queues`
-        connect.asterisk.query(sql,callback)
-    }
-    //Exibe os dads da fila
-    dadosFila(nomeFila,callback){
-        const sql = `SELECT * FROM queues WHERE name='${nomeFila}'`
-        connect.asterisk.query(sql,callback)
-    }
-    //Edita os dados da fila
-    editarFila(nomeFila,dados,callback){
-        const sql = 'UPDATE queues SET ? WHERE name=?'
-        connect.asterisk.query(sql,[dados,nomeFila],callback)
-    }
+    //######################Configuração das filas######################
+    
     //Adiciona membros na fila
     addMembroFila(queue_name,queue_interface,membername,state_interface,penalty,callback){
         const sql = `INSERT INTO queue_members (queue_name,interface,membername,state_interface,penalty) VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`

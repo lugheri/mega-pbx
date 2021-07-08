@@ -692,70 +692,11 @@ class Mailing{
 
 
 
-    //ADICIONA O MAILING A UMA CAMPANHA
-    addMailingCampanha(idCampanha,idMailing,callback){
-        //verifica se mailing ja existem
-        const sql = `SELECT id FROM campanhas_mailing WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
-            if (e) throw e;
-
-            if(r.length==0){
-                const sql = `INSERT INTO campanhas_mailing (idCampanha,idMailing) VALUES ('${idCampanha}','${idMailing}')`
-                _dbConnection2.default.banco.query(sql,callback)
-
-            }
-
-            /*this.tabelaTabulacaoMailing(idMailing,idCampanha,(e,r)=>{            
-            connect.banco.query(sql,(e,r)=>{ 
-                    if (e) throw e;
     
-                })
-            })*/
-        })
-    }
 
-    //Criando banco de tabulacao do mailing
-    tabelaTabulacaoMailing(idMailing,idCampanha,callback){
-        //recuperando o nome da tabela do mailing
-        const sql = `SELECT tabela FROM mailings WHERE id=${idMailing}`
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
-            if (e) throw e;
-            const tabela = r[0].tabela
-            //abre o mailing e insere todos os ids no mesmo com o id da campanha na tabela de tabulacao
-            const sql = `SELECT id_key_base FROM ${tabela}`
-            _dbConnection2.default.mailings.query(sql,(e,reg)=>{
-                if (e) throw e;
-                console.log(`${reg.length} registros`)
-                for(let i=0; i<reg.length; i++){
-                    const sql = `INSERT INTO campanhas_tabulacao_mailing (idCampanha,idMailing,idRegistro,estado,desc_estado,tentativas) VALUES (${idCampanha},${idMailing},${reg[i].id_key_base},0,'Disponivel',0)`
-                    _dbConnection2.default.banco.query(sql,(e,r)=>{
-                        if (e) throw e;
-                    })
-                }
-            })
-        })
-        callback(false,true)
-    }
+   
 
-    //Lista os mailings adicionados em uma campanha
-    listarMailingCampanha(idCampanha,callback){
-        const sql = `SELECT * FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
-
-    //Remove o mailing de uma campanha
-    removeMailingCampanha(id,callback){
-        //Recuperando o id da campanha
-        const sql = `SELECT idCampanha FROM campanhas_mailing WHERE id=${id}`
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
-            if(e) throw e;
-
-            const idCampanha = r[0].idCampanha
-            //Removendo integracao do mailing com a campanha
-            const sql = `DELETE FROM campanhas_mailing WHERE id=${id}`
-            _dbConnection2.default.banco.query(sql,callback)
-        })
-    }
+    
 }
 exports. default = new Mailing();
 

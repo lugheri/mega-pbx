@@ -2,6 +2,7 @@
 var _http = require('http'); var _http2 = _interopRequireDefault(_http);
 
 var _Dashboard = require('../models/Dashboard'); var _Dashboard2 = _interopRequireDefault(_Dashboard);
+var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
 var _Report = require('../models/Report'); var _Report2 = _interopRequireDefault(_Report);
 
 module.exports = (app) => {
@@ -13,15 +14,27 @@ module.exports = (app) => {
             const dados = await _Dashboard2.default.painel()
             //console.log(`cliente conectado no namespace /reports client ${socket.id}`)
             socket.emit('painel',dados)
-            setTimeout(()=>{painel()},5000)
+            //setTimeout(()=>{painel()},5000)
         }
         painel()
+    })
+
+    //Campanhas
+    io.of('/campanhas').on('connection',(socket)=>{
+        socket.on('statusCampanha',(dados)=>{
+            const idCampanha = parseInt(dados.idCampanha)
+            _Discador2.default.statusCampanha(idCampanha,(e,info)=>{
+                if(e) throw e       
+            
+                socket.emit('statusCampanha',info)
+            })
+        })
     })
 
     
     //Reports
     io.of('/reports').on('connection',(socket)=>{
-        console.log(`cliente conectado no namespace /reports client ${socket.id}`)
+        //console.log(`cliente conectado no namespace /reports client ${socket.id}`)
         socket.on("monitoramentoAgente",(dados)=>{       
             console.log(`Ouvindo /reports client ${socket.id}`)     
             const idCampanha = parseInt(dados.idCampanha)

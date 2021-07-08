@@ -1,5 +1,5 @@
 "use strict"; function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _express = require('express'); var _express2 = _interopRequireDefault(_express);
-var _routes = require('../routes'); var _routes2 = _interopRequireDefault(_routes);
+var _routes = require('../routes/routes'); var _routes2 = _interopRequireDefault(_routes);
 var _morgan = require('morgan'); var _morgan2 = _interopRequireDefault(_morgan);
 var _cors = require('cors'); var _cors2 = _interopRequireDefault(_cors);
  

@@ -308,6 +308,53 @@ class DashboardController{
             })
         })
     }
+
+    fraseologia(req,res){
+        const all = req.params.all
+        
+        const frases=[]
+        frases.push('Quando o difunto morre')
+        frases.push('Controle remoto sem fio')
+        frases.push('Se você olhar você vai ver')
+        frases.push('Voltou de volta')
+        frases.push('Vai ficar louco agora doido')
+        frases.push('Estamos adiando o adiavél')
+        frases.push('Antes estava desligado tá ligado!')
+        frases.push('Nunca use, senão você vai virar usuário')
+        frases.push('Parece Parecido')
+        frases.push('Se eu fosse eu')
+        frases.push('Essa é uma questão de configuração que temos que configurar')
+        frases.push('Querendo ou não, este atraso atrasou')
+        frases.push('Caiu vento no meu olho')
+        frases.push('Agora vou mexer agora')
+        frases.push('Falsa ilusão')
+        frases.push('Desistiu por desistência')
+        frases.push('No caso se faz necessário a necessidade')
+        frases.push('Comprar um violão para aprender a tocar violão')
+        frases.push('Só nao esquece para nao esquecer')
+        frases.push('Esse barulho faz um barulho')
+        frases.push('Você não vai ter onde ter')
+        frases.push('Pensando pra pensar')
+        frases.push('Se eu fosse escrever não escreveria palavras')
+        frases.push('As pessoas estavam reunidas separadamente')
+        frases.push('É só abrir que ele reabre')
+        frases.push('Tem um nome na quimíca que fala o nome')
+        frases.push('Tudo que você tem que fazer é pegar uma bola redonda')
+        let numero
+        if(parseInt(all)>=1){            
+            numero=all-1
+        }else{
+            numero = Math.floor(Math.random() * (frases.length - 0 + 1)) + 0;
+        }
+
+        if(all=="all"){
+            res.json(frases)
+        }else{
+            res.json(frases[numero])
+        }
+        
+
+    }
 }
 
 export default new DashboardController();

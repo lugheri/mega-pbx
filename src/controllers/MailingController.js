@@ -65,14 +65,9 @@ class MailingController{
     //Lista os mailings importados
     listarMailings(req,res){
         Mailing.listaMailing((erro,result)=>{
-            if(erro){
-                res.json(erro)
-            }else{      
-                if(erro) throw erro;
+            if(erro) throw erro
         
-                res.json(result);          
-              
-            }
+            res.json(result);          
         })
     }
 

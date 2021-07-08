@@ -7,8 +7,8 @@ import moment from 'moment';
 
 class DiscadorController{ 
     
-    debug(title="",msg=""){
-        const debug=0
+    async debug(title="",msg=""){
+        const debug= await Discador.mode()        
         if(debug==1){
             console.log(`${title}`,msg)
         }
@@ -525,7 +525,7 @@ class DiscadorController{
     statusPausaAgente(req,res){
         const ramal = req.params.ramal
         Discador.infoPausaAgente(ramal,(e,infoPausa)=>{
-            this.debug(infoPausa.length)
+            console.log(infoPausa.length)
             if(infoPausa.length==0){
                 let retorno = '{"status":"agente disponivel"}'  
                 res.send(JSON.parse(retorno))

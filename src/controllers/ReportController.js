@@ -1,16 +1,27 @@
 import Report from '../models/Report';
 
 class ReportController{  
-
     monitoramentoAgente(req,res){
         const idCampanha = parseInt(req.params.idCampanha)
         const idEquipe = parseInt(req.params.idEquipe)
-        Report.monitorarAgentes(idCampanha,idEquipe,(e,campanhas)=>{
+        const idUser = parseInt(req.params.idUser)
+        Report.monitorarAgentes(idCampanha,idEquipe,idUser,(e,agentes)=>{
             if(e) throw e;
 
-            res.json(campanhas)
+            res.json(agentes)
         })
     }
+
+    monitoramentoCampanhas(req,res){
+        const idCampanha = parseInt(req.params.idCampanha)
+        Report.monitorarCampanhas(idCampanha,(e,campanhas)=>{
+            if(e) throw e;
+
+            res.send(campanhas);
+        })
+    }
+
+
 
     filtroCampanhas(req,res){
         Report.filtroCampanhas((e,campanhas)=>{
@@ -28,14 +39,7 @@ class ReportController{
         })
     }
 
-    monitoramentoCampanhas(req,res){
-        const idCampanha = parseInt(req.params.idCampanha)
-        Report.monitorarCampanhas(idCampanha,(e,campanhas)=>{
-            if(e) throw e;
-
-            res.send(campanhas);
-        })
-    }
+    
 
     
     

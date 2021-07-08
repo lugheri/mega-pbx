@@ -6,6 +6,8 @@ var _DashboardController = require('./controllers/DashboardController'); var _Da
 var _UserController = require('./controllers/UserController'); var _UserController2 = _interopRequireDefault(_UserController);
 var _SessionController = require('./controllers/SessionController'); var _SessionController2 = _interopRequireDefault(_SessionController);
 var _CampanhasController = require('./controllers/CampanhasController'); var _CampanhasController2 = _interopRequireDefault(_CampanhasController); 
+var _TabulacaoController = require('./controllers/TabulacaoController'); var _TabulacaoController2 = _interopRequireDefault(_TabulacaoController); 
+var _FilasController = require('./controllers/FilasController'); var _FilasController2 = _interopRequireDefault(_FilasController);
 var _MailingController = require('./controllers/MailingController'); var _MailingController2 = _interopRequireDefault(_MailingController);
 var _GravacaoController = require('./controllers/GravacaoController'); var _GravacaoController2 = _interopRequireDefault(_GravacaoController);
 var _ReportController = require('./controllers/ReportController'); var _ReportController2 = _interopRequireDefault(_ReportController);
@@ -107,6 +109,26 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
         //Atualiza campanha
         routes.patch('/atualizaCampanha/:id',_CampanhasController2.default.atualizaCampanha)
 
+        //INTEGRACOES
+        //criarIntegracao
+        routes.post('/criarIntegracao',_CampanhasController2.default.criarIntegracao)
+        
+        //listarIntegracoes
+        routes.get('/listarIntegracoes',_CampanhasController2.default.listarIntegracoes)
+        
+        //dadosIntegracao
+        routes.get('/dadosIntegracao/:idIntegracao',_CampanhasController2.default.dadosIntegracao)
+        
+        //atualizarIntegracao
+        routes.patch('/atualizarIntegracao/:idIntegracao',_CampanhasController2.default.atualizarIntegracao)
+        
+        //removerIntegracao
+        routes.delete('/removerIntegracao/:idIntegracao',_CampanhasController2.default.removerIntegracao)
+        
+        //inserirIntegracaoCampanha
+        routes.post('/inserirIntegracaoCampanha/',_CampanhasController2.default.inserirIntegracaoCampanha)
+
+        
         //AGENDAMENTO DA CAMPANHA
         //Agenda Campanha campanha
         routes.post('/agendarCampanha',_CampanhasController2.default.agendarCampanha)
@@ -139,12 +161,6 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
 
 
         //CONFIGURACAO DAS FILAS
-        //getMembers
-        routes.get('/getMembersFila/:idFila',_CampanhasController2.default.getMembersFila)
-
-        //update getMembers
-        routes.patch('/updateMemberFila/:idFila',_CampanhasController2.default.updateMemberFila)
-
         //Listar fila da campanha
         routes.get('/listarFilasCampanha/:idCampanha/',_CampanhasController2.default.listarFilasCampanha)
 
@@ -188,23 +204,29 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
     //TABULACOES
         //LISTA DE TABULACOES     
         //Criar Lista de Tabulacaoes
-        routes.post('/criarListaTabulacao',_CampanhasController2.default.criarListaTabulacao)
+        routes.post('/criarListaTabulacao',_TabulacaoController2.default.criarListaTabulacao)
         //Editar Lista de Tabulacaoes
-        routes.patch('/editarListaTabulacao/:id',_CampanhasController2.default.editarListaTabulacao)
+        routes.patch('/editarListaTabulacao/:id',_TabulacaoController2.default.editarListaTabulacao)
         //Dados da Lista de Tabulacaoes
-        routes.get('/dadosListaTabulacao/:id',_CampanhasController2.default.dadosListaTabulacao)
+        routes.get('/dadosListaTabulacao/:id',_TabulacaoController2.default.dadosListaTabulacao)
         //Listar listas de tabulacoes
-        routes.get('/listasTabulacao',_CampanhasController2.default.listasTabulacao)
+        routes.get('/listasTabulacao',_TabulacaoController2.default.listasTabulacao)
 
         //STATUS DE TABULACOES
         //Criar Status
-        routes.post('/criarStatusTabulacao',_CampanhasController2.default.criarStatusTabulacao)
+        routes.post('/criarStatusTabulacao',_TabulacaoController2.default.criarStatusTabulacao)
         //Editar status
-        routes.patch('/editarStatusTabulacao/:id',_CampanhasController2.default.editarStatusTabulacao)
+        routes.patch('/editarStatusTabulacao/:id',_TabulacaoController2.default.editarStatusTabulacao)
         //Ver status
-        routes.get('/statusTabulacao/:id',_CampanhasController2.default.statusTabulacao)
+        routes.get('/statusTabulacao/:id',_TabulacaoController2.default.statusTabulacao)
         //Listar Status
-        routes.get('/listarStatusTabulacao/:idLista',_CampanhasController2.default.listarStatusTabulacao)
+        // routes.get('/listarStatusTabulacao/:idLista',TabulacaoController.listarStatusTabulacao)
+
+        //getListaTabulacao
+        routes.get('/getStatusTabulacao/:idLista',_TabulacaoController2.default.getStatus)
+
+        //update tipo status
+        routes.patch('/updateStatusTabulacao/:idLista',_TabulacaoController2.default.updateTipoStatus)
 
 
      //PAUSAS
@@ -229,7 +251,11 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
         routes.get('/listarPausas/:idLista',_CampanhasController2.default.listarPausas)
 
     //FILAS
-  
+    //getMembers
+    routes.get('/getMembersFila/:idFila',_FilasController2.default.getMembersFila)
+
+    //update getMembers
+    routes.patch('/updateMemberFila/:idFila',_FilasController2.default.updateMemberFila)
 
 
 
@@ -524,7 +550,8 @@ routes.post("/posts", _multer2.default.call(void 0, _multer4.default).single('fi
 
 
 
-
+    //easteregg
+    routes.get('/fraseologia/:all',_DashboardController2.default.fraseologia)
 
 
     

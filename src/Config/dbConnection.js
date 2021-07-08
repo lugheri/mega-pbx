@@ -1,38 +1,59 @@
 import mysql from 'mysql';
+const dev = 'localhost'
 
-const  connect=()=>{};
+const host = dev
+//const host = 'mysql'
+    
+const user = []
+user['name'] = 'root'
+user['pass'] = '1234abc@'
 
-//const host='mysql'
-const host='localhost'
+/*function testHost(hst){
+    return new Promise((resolve, reject)=>{
+        const conexao = mysql.createConnection({
+                        host : hst,
+                        user : 'root',
+                        password : '1234abc@'
+                    })
+        conexao.query('use mega_conecta;',(e,r)=>{
+            if(e) resolve('mysql')
+            
+            resolve(hst)
+        })             
+    })
+}*/
+
+
+const connect=()=>{};
 
 connect.base=((database)=>{
-    return mysql.createConnection({
+    return mysql.createConnection({        
         host : host,
-        user : 'root',
-        password : '1234abc@',
+        user : user['name'],
+        password : user['pass'],
         database : database
     })   
 })   
 
 connect.banco=mysql.createConnection({
     host : host,
-    user : 'root',
-    password : '1234abc@',
+    user : user['name'],
+    password : user['pass'],
     database : 'mega_conecta'
 })
+
 connect.mailings=mysql.createConnection({
     host : host,
-    user : 'root',
-    password : '1234abc@',
+    user : user['name'],
+    password : user['pass'],
     database : 'mailings'
 })
-connect.asterisk=mysql.createConnection({
+connect.asterisk=mysql.createConnection({    
     host : host,
-    user : 'root',
-    password : '1234abc@',
+    user : user['name'],
+    password : user['pass'],
     database : 'asterisk'
 })
-
 
 
 

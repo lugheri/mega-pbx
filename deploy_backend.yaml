@@ -73,11 +73,10 @@ spec:
     spec:
       containers:
       - name: api
-        image: megaconecta/api-central:v0.0.30
+        image: megaconecta/api-central:v0.0.59
         env:
         - name: TZ
           value: America/Sao_Paulo
-
 ---
 #Mysql
 #Mysql service
@@ -144,6 +143,10 @@ spec:
         env:
         - name: MYSQL_ROOT_PASSWORD
           value: 1234abc@
+        - name: MYSQL_USER
+          value: MainUser
+        - name: MYSQL_PASSWORD
+          value: megaPass@2021
         - name: TZ
           value: America/Sao_Paulo
         livenessProbe:
@@ -193,102 +196,102 @@ spec:
 #        tier: asterisk
 #    type: LoadBalancer
 #---
-kind: Service
-apiVersion: v1
-metadata:
-    name: asterisk-pjsip
-    namespace: megadev-v1
-    annotations:
-      service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
-    labels:
-        app: central
-spec:
-    ports:         
-      - name: pjsip
-        protocol: UDP
-        port: 65060      
-        targetPort: 5060  
-      - name: rtp0
-        protocol: UDP
-        port: 10000
-      - name: rtp1
-        protocol: UDP
-        port: 10001
-      - name: rtp2
-        protocol: UDP
-        port: 10002
-      - name: rtp3
-        protocol: UDP
-        port: 10003
-      - name: rtp4
-        protocol: UDP
-        port: 10004      
-    selector:
-        app: central
-        tier: asterisk
-    type: LoadBalancer
----  
-#Service PJSIP/IAX
-kind: Service
-apiVersion: v1
-metadata:
-    name: asterisk-iax
-    namespace: megadev-v1
-    labels:
-        app: central
-spec:
-    ports:      
-      - name: iax
-        protocol: UDP
-        port: 64569
-        targetPort: 4569      
-    selector:
-        app: central
-        tier: asterisk
-    type: ClusterIP
----
-#SERVICE HTTP
-kind: Service
-apiVersion: v1
-metadata:
-    name: asterisk-http
-    namespace: megadev-v1
-    labels:
-        app: central
-spec:
-    ports:
-      - name: http
-        protocol: TCP
-        port: 8088
-        targetPort: 8088
-      #
-      #- name: manager
-      #  protocol: TCP
-      #  port: 5038
-      #  targetPort: 5038  
-    selector:
-        app: central
-        tier: asterisk
-    type: ClusterIP
----
-#SERVICE HTTPS
-kind: Service
-apiVersion: v1
-metadata:
-    name: asterisk-https
-    namespace: megadev-v1
-    labels:
-        app: central
-spec:
-    ports:     
-      - name: https
-        protocol: TCP
-        port: 8089
-        targetPort: 8089      
-    selector:
-        app: central
-        tier: asterisk
-    type: ClusterIP
+###kind: Service
+###apiVersion: v1
+###metadata:
+###    name: asterisk-pjsip
+###    namespace: megadev-v1
+###    annotations:
+###      service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+###    labels:
+###        app: central
+###spec:
+###    ports:         
+###      - name: pjsip
+###        protocol: UDP
+###        port: 65060      
+###        targetPort: 5060  
+###      - name: rtp0
+###        protocol: UDP
+###        port: 10000
+###      - name: rtp1
+###        protocol: UDP
+###        port: 10001
+###      - name: rtp2
+###        protocol: UDP
+###        port: 10002
+###      - name: rtp3
+###        protocol: UDP
+###        port: 10003
+###      - name: rtp4
+###        protocol: UDP
+###        port: 10004      
+###    selector:
+###        app: central
+###        tier: asterisk
+###    type: LoadBalancer
+###---  
+####Service PJSIP/IAX
+###kind: Service
+###apiVersion: v1
+###metadata:
+###    name: asterisk-iax
+###    namespace: megadev-v1
+###    labels:
+###        app: central
+###spec:
+###    ports:      
+###      - name: iax
+###        protocol: UDP
+###        port: 64569
+###        targetPort: 4569      
+###    selector:
+###        app: central
+###        tier: asterisk
+###    type: ClusterIP
+###---
+####SERVICE HTTP
+###kind: Service
+###apiVersion: v1
+###metadata:
+###    name: asterisk-http
+###    namespace: megadev-v1
+###    labels:
+###        app: central
+###spec:
+###    ports:
+###      - name: http
+###        protocol: TCP
+###        port: 8088
+###        targetPort: 8088
+###      #
+###      #- name: manager
+###      #  protocol: TCP
+###      #  port: 5038
+###      #  targetPort: 5038  
+###    selector:
+###        app: central
+###        tier: asterisk
+###    type: ClusterIP
+###---
+####SERVICE HTTPS
+###kind: Service
+###apiVersion: v1
+###metadata:
+###    name: asterisk-https
+###    namespace: megadev-v1
+###    labels:
+###        app: central
+###spec:
+###    ports:     
+###      - name: https
+###        protocol: TCP
+###        port: 8089
+###        targetPort: 8089      
+###    selector:
+###        app: central
+###        tier: asterisk
+###    type: ClusterIP
 ---
 #DISK RECORDS
 kind: PersistentVolumeClaim
@@ -304,89 +307,89 @@ spec:
     resources:
         requests:
             storage: 5Gi
----
-#DEPLOY
-kind: Deployment
-apiVersion: apps/v1
-metadata:
-    name: asterisk
-    namespace: megadev-v1
-    labels:
-        app: central
-spec:
-    selector:
-        matchLabels:
-            app: central
-            tier: asterisk
-    template:
-        metadata:
-            labels:
-                app: central
-                tier: asterisk
-        spec:
-            volumes:
-              #Teste com ssl
-              #- name: asterisk-pem
-              #  emptyDir: {}
-              - name: asterisk-tls
-                secret:
-                  secretName: mega-pbx-tls
-                  items:
-                    - key: tls.key
-                      path: asterisk.key
-                    - key: tls.crt
-                      path: asterisk.crt
-              #- name: confs
-              #  persistentVolumeClaim:
-              #      claimName: asterisk-pv-claim
-              - name: records
-                persistentVolumeClaim:
-                    claimName: records-pv-claim
-            containers:              
-              - name: asterisk
-                #image: lugheri/mega_asterisk:v0.0.14
-                image: lugheri/asterisk-test:native-opus11
-                env:
-                 - name: CLOUD
-                   value: gcp
-                volumeMounts:
-                  #Teste com ssl
-                  #- name: asterisk-pem
-                  #  mountPath: /etc/asterisk/keys/pem
-                  - name: asterisk-tls
-                    mountPath: /etc/asterisk/keys                   
-                  #- name: confs
-                  #  mountPath: /etc/asterisk
-                  - name: records
-                    mountPath: /var/spool/asterisk/monitor  
-                ports:
-                  - containerPort: 10000
-                    protocol: UDP
-                  - containerPort: 10001
-                    protocol: UDP
-                  - containerPort: 10002
-                    protocol: UDP
-                  - containerPort: 10003
-                    protocol: UDP
-                  - containerPort: 10004
-                    protocol: UDP
-                  - containerPort: 5060
-                    protocol: UDP
-                  - containerPort: 4220
-                    protocol: UDP
-                  - containerPort: 4569
-                    protocol: UDP
-                  - containerPort: 8088
-                    protocol: TCP
-                  - containerPort: 8089
-                    protocol: TCP
-                  - containerPort: 5038
-                    protocol: TCP     
-                #Criacao de arquivo .pem
-                #lifecycle:
-                #    postStart:
-                #        exec:
-                #            command: ["/bin/sh", "-c", "cat /etc/asterisk/keys/asterisk.key /etc/asterisk/keys/asterisk.crt > /etc/asterisk/keys/pem/asterisk.pem"]
+###---
+####DEPLOY
+###kind: Deployment
+###apiVersion: apps/v1
+###metadata:
+###    name: asterisk
+###    namespace: megadev-v1
+###    labels:
+###        app: central
+###spec:
+###    selector:
+###        matchLabels:
+###            app: central
+###            tier: asterisk
+###    template:
+###        metadata:
+###            labels:
+###                app: central
+###                tier: asterisk
+###        spec:
+###            volumes:
+###              #Teste com ssl
+###              #- name: asterisk-pem
+###              #  emptyDir: {}
+###              - name: asterisk-tls
+###                secret:
+###                  secretName: mega-pbx-tls
+###                  items:
+###                    - key: tls.key
+###                      path: asterisk.key
+###                    - key: tls.crt
+###                      path: asterisk.crt
+###              #- name: confs
+###              #  persistentVolumeClaim:
+###              #      claimName: asterisk-pv-claim
+###              - name: records
+###                persistentVolumeClaim:
+###                    claimName: records-pv-claim
+###            containers:              
+###              - name: asterisk
+###                #image: lugheri/mega_asterisk:v0.0.14
+###                image: lugheri/asterisk-test:native-opus11
+###                env:
+###                 - name: CLOUD
+###                   value: gcp
+###                volumeMounts:
+###                  #Teste com ssl
+###                  #- name: asterisk-pem
+###                  #  mountPath: /etc/asterisk/keys/pem
+###                  - name: asterisk-tls
+###                    mountPath: /etc/asterisk/keys                   
+###                  #- name: confs
+###                  #  mountPath: /etc/asterisk
+###                  - name: records
+###                    mountPath: /var/spool/asterisk/monitor  
+###                ports:
+###                  - containerPort: 10000
+###                    protocol: UDP
+###                  - containerPort: 10001
+###                    protocol: UDP
+###                  - containerPort: 10002
+###                    protocol: UDP
+###                  - containerPort: 10003
+###                    protocol: UDP
+###                  - containerPort: 10004
+###                    protocol: UDP
+###                  - containerPort: 5060
+###                    protocol: UDP
+###                  - containerPort: 4220
+###                    protocol: UDP
+###                  - containerPort: 4569
+###                    protocol: UDP
+###                  - containerPort: 8088
+###                    protocol: TCP
+###                  - containerPort: 8089
+###                    protocol: TCP
+###                  - containerPort: 5038
+###                    protocol: TCP     
+###                #Criacao de arquivo .pem
+###                #lifecycle:
+###                #    postStart:
+###                #        exec:
+###                #            command: ["/bin/sh", "-c", "cat /etc/asterisk/keys/asterisk.key /etc/asterisk/keys/asterisk.crt > /etc/asterisk/keys/pem/asterisk.pem"]
 ---
 
 #Frontend
@@ -467,9 +470,9 @@ spec:
   - hosts:
     - mega-pbx.megaconecta.tec.br
     - mega-api.megaconecta.tec.br
-    - mega-ari.megaconecta.tec.br
-    - mega-sip.megaconecta.tec.br
-    - mega-wss.megaconecta.tec.br
+###    - mega-ari.megaconecta.tec.br
+###    - mega-sip.megaconecta.tec.br
+###    - mega-wss.megaconecta.tec.br
     secretName: mega-pbx-tls
   rules: 
     - host: mega-api.megaconecta.tec.br
@@ -486,31 +489,32 @@ spec:
             backend: 
                 serviceName: front-srv
                 servicePort: 80
-    - host: mega-sip.megaconecta.tec.br
-      http: 
-        paths: 
-          - path: /
-            backend: 
-              serviceName: asterisk-sip
-              servicePort: 5060
-    - host: mega-ari.megaconecta.tec.br
-      http: 
-        paths: 
-          - path: /
-            backend: 
-              serviceName: asterisk-http
-              servicePort: 8088  
-    - host: mega-wss.megaconecta.tec.br
-      http: 
-        paths: 
-          - path: /
-            backend: 
-              serviceName: asterisk-https
-              servicePort: 8089          
-    - host: mega-pbx.megaconecta.tec.br
-      http: 
-        paths: 
-          - path: /
-            backend: 
-              serviceName: asterisk-http
-              servicePort: 5038 
+###    - host: mega-sip.megaconecta.tec.br
+###      http: 
+###        paths: 
+###          - path: /
+###            backend: 
+###              serviceName: asterisk-sip
+###              servicePort: 5060
+###    - host: mega-ari.megaconecta.tec.br
+###      http: 
+###        paths: 
+###          - path: /
+###            backend: 
+###              serviceName: asterisk-http
+###              servicePort: 8088  
+###    - host: mega-wss.megaconecta.tec.br
+###      http: 
+###        paths: 
+###          - path: /
+###            backend: 
+###              serviceName: asterisk-https
+###              servicePort: 8089          
+###    - host: mega-pbx.megaconecta.tec.br
+###      http: 
+###        paths: 
+###          - path: /
+###            backend: 
+###              serviceName: asterisk-http
+###              servicePort: 5038 
+###

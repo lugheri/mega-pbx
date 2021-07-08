@@ -14,7 +14,7 @@ module.exports = (app) => {
             const dados = await Dashboard.painel()
             //console.log(`cliente conectado no namespace /reports client ${socket.id}`)
             socket.emit('painel',dados)
-            setTimeout(()=>{painel()},5000)
+            //setTimeout(()=>{painel()},5000)
         }
         painel()
     })

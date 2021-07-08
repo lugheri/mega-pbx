@@ -1,10 +1,12 @@
 import customExpress from './Config/customExpress';
+import http from 'http';
 import sockets from './Config/sockets'
 
 import DiscadorController from './controllers/DiscadorController';
 
 const app = customExpress();
-const httpServer = sockets(app)
+//const httpServer = sockets(app)
+const httpServer = http.createServer(app);
 
 //Iniciando Discador
 //DiscadorController.checandoCampanhasProntas()

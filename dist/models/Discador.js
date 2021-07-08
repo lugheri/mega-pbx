@@ -5,6 +5,22 @@ var _Cronometro = require('./Cronometro'); var _Cronometro2 = _interopRequireDef
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 var _Constants = require('jssip/lib/Constants');
 class Discador{
+    async debug(title="",msg=""){
+        const debug=await this.mode()       
+        if(debug==1){
+            console.log(`${title}`,msg)
+        }
+    }
+
+    async mode(){
+        const sql = `SELECT debug FROM asterisk_ari WHERE active=1`
+        const mode = await this.querySync(sql);
+        return mode[0].debug
+    }
+    
+
+
+
     querySync(sql,args){
         return new Promise ((resolve,reject) =>{
             _dbConnection2.default.banco.query(sql,args,(err,rows)=>{
@@ -29,9 +45,9 @@ class Discador{
                 if(e) 
                     return reject(e)
             
-                console.log(` [!] `)
-                console.log(` Campanha: ${idCampanha} msg: ${msg} `)
-                console.log(` [!] `)
+                this.debug('[!]','')
+                this.debug('[!]',`Campanha: ${idCampanha} msg: ${msg} `)
+                this.debug('[!]','')
                 if(r.length!=0){
                 
                     //Caso sim atualiza o mesmo
