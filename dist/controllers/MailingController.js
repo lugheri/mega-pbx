@@ -1,307 +1,293 @@
-"use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-/*import csv from 'csvtojson';*/
+"use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }/*import csv from 'csvtojson';*/
 var _Mailing = require('../models/Mailing'); var _Mailing2 = _interopRequireDefault(_Mailing);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 var _md5 = require('md5'); var _md52 = _interopRequireDefault(_md5);
 
 
 class MailingController{
-    //Importa nova base para o mailing
     importarBase(req,res){
+        //Recebendo o arquivo
+        const path=`tmp/files/`
+        const filename=req.file.filename
+        const file=path+filename
+        const delimitador = req.body.delimitador 
+        const header = req.body.header
+        const nome = req.body.nome
+        const transferRate = req.body.taxaTransferencia
+      
+        //Abrindo o Arquivo
+        _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{
+            //Separa as chaves para serem os campos da tabela
+
+            //Criando tabela do novo mailing   
+            const hoje = _moment2.default.call(void 0, ).format("YMMDDHHmmss")
+            const nomeTabela = hoje   
+            const keys = Object.keys(jsonFile[0])     
+            const infoMailing=await _Mailing2.default.criarTabelaMailing(keys,nome,nomeTabela,header,filename,delimitador)
+            
+            res.json(infoMailing)
+        })        
+    }
+
+    async iniciarConfigBase(req,res){
+        const idBase = req.params.idBase
+        const infoMailing=await _Mailing2.default.infoMailing(idBase)
+        const path=`tmp/files/`
+        const filename = infoMailing[0].arquivo
+        const header = infoMailing[0].header
+        const delimitador = infoMailing[0].delimitador
+        const file=path+filename
+
+        //Abre arquivo
+        _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{
+            const title = Object.keys(jsonFile[0]) 
+
+            const campos=[]
+            for(let i=0; i<title.length; i++){
+                let item={}
+                item['titulo']=title[i].replace(/�/gi, "ç").replace(" ", "_")
+                item['ordem']=i+1
+                let data=[]
+                for(let d=0; d<10; d++){
+                    if(d<=(jsonFile.length-1)){
+                        let value=jsonFile[d][title[i]]                                              
+                        data.push(value)
+                    }                    
+                }
+
+                let typeField=await _Mailing2.default.verificaTipoCampo(header,title[i],jsonFile[1][title[i]]) 
+
+                item['tipoSugerido']=typeField
+                item['previewData']={data}
+
+                campos.push(item)
+                
+            }
+            res.json(campos) 
+        })       
+    }
+
+    async concluirConfigBase(req,res){
+        const idBase = req.body.idBase
+        const tipoCampos = req.body.fields
+        const infoMailing=await _Mailing2.default.infoMailing(idBase)
+        const path=`tmp/files/`
+        const filename = infoMailing[0].arquivo
+        const header = infoMailing[0].header
+        const delimitador = infoMailing[0].delimitador
+        const file=path+filename
+
+        const tabData=infoMailing[0].tabela_dados
+        const tabNumbers=infoMailing[0].tabela_numeros
+
+        await _Mailing2.default.configuraTipoCampos(idBase,header,tipoCampos)//Configura os tipos de campos
+        _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
+            await _Mailing2.default.importaDadosBase(idBase,jsonFile,file,header,tabData)//Importa dados na base
+            
+            await _Mailing2.default.separarNumeros(idBase)
+
+            res.json(true)
+        }) 
+    }
+    
+    //Lista os mailings importados
+    async listarMailings(req,res){
+        const r = await _Mailing2.default.listaMailing()
+        res.json(r);
+    }
+
+    //Abre um mailing
+    async abrirMailing(req,res){
+        const idMailing = parseInt(req.params.idMailing)
+        const pag = parseInt(req.params.pag)
+        const reg = parseInt(req.params.reg)
+        const registros = await _Mailing2.default.abrirMailing(idMailing,pag,reg)
+        res.json(registros)
+    }
+
+    //remove um mailing
+    async removerMailing(req,res){
+        const idMailing = parseInt(req.params.idMailing);
+        const r = await _Mailing2.default.removerMailing(idMailing)
+        res.json(r)
+    }
+
+    //Exporta os registros de um mailing
+    async exportarMailing(req,res){
+        const idMailing = parseInt(req.params.idMailing)        
+        await _Mailing2.default.exportarMailing(idMailing,res)       
+        //res.json(false)
+    }
+
+    //Status do Mailing
+    async statusMailing(req,res){
+        const idMailing = req.params.idMailing
+        const statusMailing = await _Mailing2.default.statusMailing(idMailing)
+        const result={}
+        result['pronto']=false
+        if(statusMailing.length==0){
+            result['status']="Mailing não encontrado"
+            res.json(result)
+            return false
+        }
+        if(statusMailing[0].status==0){
+            result['status']="Mailing Inativo"
+            res.json(result)
+            return false
+        }
+        //Verifica se o mailing esta importado
+        if(statusMailing[0].pronto==0){            
+            result['status']="Importação não concluída"
+            res.json(result)
+            return false
+        }
+        result['pronto']=true
+        result['status']="Pronto"
+        result['Reg.']=statusMailing[0].totalReg
+        result['Numeros']=statusMailing[0].totalNumeros
+        res.json(result)
+        return false
+    }    
+    //Exibe os ufs de um mailing
+    async ufsMailing(req,res){
+        const idMailing = req.params.idMailing
+        const r = await _Mailing2.default.ufsMailing(idMailing)
+        res.json(r)
+    }
+    //DDDs por uf do mailing
+    async dddsUfMailing(req,res){
+        const idMailing = (req.params.idMailing)
+        const UF = req.params.uf
+        const infoTabela= await _Mailing2.default.tabelaMailing(idMailing)
+        const tabela = infoTabela[0].tabela_numeros
+        
+        const ddds = await _Mailing2.default.dddsUfMailing(tabela,UF)
+        const retorno={}
+              retorno['dados']=[]
+            for(let i=0; i<ddds.length;i++){
+              retorno['dados'].push(ddds[i].total)
+            }
+            retorno['categoria']=[]
+            for(let i=0; i<ddds.length;i++){                       
+                retorno['categoria'].push(`ddd ${ddds[i].ddd}`)
+            }                              
+         res.json(retorno)      
+    }
+    //Resumo por ddd
+    async totalRegUF(req,res){
+        const idMailing = req.params.idMailing
+        const infoTabela= await _Mailing2.default.tabelaMailing(idMailing)
+        const tabela = infoTabela[0].tabela_numeros
+        const registros = await _Mailing2.default.totalRegUF(tabela)
+        res.json(registros)
+    }
+    //Saude do mailing
+    async saudeMailing(req,res){
+        const idMailing = req.params.idMailing
+        const infoTabela= await _Mailing2.default.tabelaMailing(idMailing)
+        if(infoTabela.length != 0){
+            const tabela = infoTabela[0].tabela_numeros
+            const totalRegistros = await _Mailing2.default.totalRegistros(tabela);
+            const contatados = await _Mailing2.default.registrosContatados(tabela)
+            const naoContatados = await _Mailing2.default.registrosNaoContatados(tabela)
+            
+            const trabalhados = contatados + naoContatados
+            const naoTrabalhados = totalRegistros-trabalhados
+            let perc_naotrabalhados = 0
+            let perc_contatados = 0
+            let perc_naoContatados = 0
+            
+
+            if(totalRegistros!=0){
+                perc_naotrabalhados = parseFloat((naoTrabalhados / totalRegistros)*100).toFixed(1)
+                perc_contatados = parseFloat((contatados / totalRegistros)*100).toFixed(1)
+                perc_naoContatados = parseFloat((naoContatados / totalRegistros)*100).toFixed(1)                            
+            } 
+                
+            const retorno={}
+                  retorno['nao_trabalhados']=perc_naotrabalhados
+                  retorno['contatados']=perc_contatados
+                  retorno['nao_contatados']=perc_naoContatados
+                  res.json(retorno)
+            return false
+        }
+        res.json(false)
+    }
+    
+}
+
+exports. default = new MailingController();     
+
+
+
+
+
+
+
+    //Aguardando testes para remoção
+
+    //////OLD____________________________________________________________________________________________
+    /*
+
+    //Importa nova base para o mailing
+    importarBaseV1(req,res){
+       
         const path = `tmp/files/${req.file.filename}`;
        // console.log('Passo 1 - Abrindo csv')
         const delimitador = req.body.delimitador 
-        _Mailing2.default.abreCsv(path,delimitador,async (jsonFile)=>{
+        Mailing.abreCsv(path,delimitador,async (jsonFile)=>{
             //console.log('Passo 1 . . . . . . . . . . . . . . . . ok')
             // console.log(jsonFile[0])
             //console.log('Passo 2 - Criando Base')
-            const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD HH:mm:ss")
+            const hoje = moment().format("Y-MM-DD HH:mm:ss")
             const nome = req.body.nome
-            const nomeTabela = _md52.default.call(void 0, nome+hoje)
+            const nomeTabela = md5(nome+hoje)
             const header = req.body.header
-            _Mailing2.default.criarBase(jsonFile[0],nomeTabela,header,(erro,result)=>{
+            Mailing.criarBase(jsonFile[0],nomeTabela,header,(erro,result)=>{
                 if(erro) throw erro
                 //console.log('Passo 2 . . . . . . . . . . . . . . . . ok')
-
                 res.json(true);
-
                 //console.log('Passo 3 - Setando tipos de campos')
-                _Mailing2.default.setaTipoCampo(jsonFile[0],nomeTabela,(erro,result)=>{
+                Mailing.setaTipoCampo(jsonFile[0],nomeTabela,(erro,result)=>{
                     if(erro) throw erro
                     //console.log('Passo 3 . . . . . . . . . . . . . . . . ok')
-                    
                     //console.log('Passo 4 - Registrando informações do mailing')
                     const filename = req.file.filename.split('-');
-                    _Mailing2.default.addMailing(nome,nomeTabela,filename,(erro,result)=>{
+                    Mailing.addMailing(nome,nomeTabela,filename,(erro,result)=>{
                         if(erro) throw erro
-                        //console.log('Passo 4 . . . . . . . . . . . . . . . . ok')
-                    
+                        //console.log('Passo 4 . . . . . . . . . . . . . . . . ok')                    
                         const base_id=result['insertId']
-
                         //console.log('Passo 5 - Separando Colunas') 
-                        _Mailing2.default.separarColunas(jsonFile[0],nomeTabela,header,(nomeTabela,campos,campoDDD)=>{
+                        Mailing.separarColunas(jsonFile[0],nomeTabela,header,(nomeTabela,campos,campoDDD)=>{
                             //console.log(campoDDD)
                             const base = Object.entries(jsonFile)     
-                           
-                            
                             //console.log('Passo 5 . . . . . . . . . . . . . . . . ok')
-
                             //console.log('Passo 6 - importanto dados') 
-                            _Mailing2.default.importaDados(base,nomeTabela,campos,base_id,campoDDD,(erro,result)=>{
+                            Mailing.importaDados(base,nomeTabela,campos,base_id,campoDDD,(erro,result)=>{
                                 if(erro) throw erro
-
                                 //console.log('Passo 6 . . . . . . . . . . . . . . . . ok')
                                 //console.log('Importado com sucesso!')
-
                             })                       
                         })
                         
                     })
                 })
             })
-        })          
+        })     
+          
     }   
-    
-    //Lista os mailings importados
-    listarMailings(req,res){
-        _Mailing2.default.listaMailing((erro,result)=>{
-            if(erro) throw erro
-        
-            res.json(result);          
-        })
-    }
-
-    //remove um mailing
-    removerMailing(req,res){
-        _Mailing2.default.removerMailing(req,(erro,result)=>{
-            if(erro) throw erro
-            res.json(result)
-        })
-    }
-
-    //Agre um mailing
-    abrirMailing(req,res){
-        const idMailing = parseInt(req.params.idMailing)
-        const pag = parseInt(req.params.pag)
-        const reg = parseInt(req.params.reg)
-        _Mailing2.default.abrirMailing(idMailing,pag,reg,(erro, result)=>{
-            if(erro){
-                res.json(erro)
-            }else{
-                res.json(result)
-            }
-        })
-    }
-
-    //Exporta os registros de um mailing
-    exportarMailing(req,res){
-        const idMailing = parseInt(req.params.idMailing)        
-        _Mailing2.default.exportarMailing(idMailing,res,(erro,response)=>{
-            if(erro){
-                res.json(erro)
-            }else{
-                res.json(response)
-           }
-        })
-
-    }
+      
 
     //CONFIGURACOES DO MAILING
-    //Status do Mailing
-    statusMailing(req,res){
-        const idMailing = parseInt(req.params.idMailing)
-        _Mailing2.default.statusMailing(idMailing,(e,statusMailing)=>{
-            if(e) throw e
-            if(statusMailing.length==0){
-                res.json(JSON.parse('{"pronto":false,"status":"Mailing não encontrado"}'))
-            }else{
-                if(statusMailing[0].status==0){
-                    //Verifica se o mailing esta ativo
-                    res.json(JSON.parse('{"pronto":false,"status":"Mailing Inativo"}'))
-                }else{
-                    //Verifica se o mailing esta importado
-                    if(statusMailing[0].pronto==0){
-                        res.json(JSON.parse('{"pronto":false,"status":"Importação não concluída"}'))
-                    }else{
-                        //Verifica se o mailing esta configurado
-                        if(statusMailing[0].configurado==0){
-                            res.json(JSON.parse('{"pronto":false,"status":"Pendente de configuração"}'))
-                        }else{
-                            res.json(JSON.parse(`{"pronto":true,"status":"Pronto","Reg.":${statusMailing[0].totalReg}}`))
-                        }
-                    }
-                }
-            }
-        })
-        
-        
-        
-        //retorna o total de registros
-    }
-    //Prévia dos dados
-    previewMailing(req,res){
-        const idMailing = parseInt(req.params.idMailing)
-        _Mailing2.default.tabelaMailing(idMailing,(e,nomeTabela)=>{
-            if(e) throw e
-
-            if(nomeTabela.length>0){
-                const tabela = nomeTabela[0].tabela
-                const limit = 1
-                _Mailing2.default.previaMailing(tabela,limit,(e,previaMailing)=>{
-                    if(e) throw e
-
-                    delete previaMailing[0]['id_key_base']
-                    delete previaMailing[0]['ddd_db']
-                    delete previaMailing[0]['uf_db']
-                    delete previaMailing[0]['tentativas']
-                    delete previaMailing[0]['contatado']
-                    delete previaMailing[0]['produtivo']
-                    delete previaMailing[0]['status_tabulacao']
-
-                    res.json(previaMailing)
-                })
-            }else{
-                res.json('{"erro":"Tabela não encontrada, verifique o id do mailing enviado!"}')
-            }
-        })        
-    }
-    
-    
-
-    //Exibe os ufs de um mailing
-    ufsMailing(req,res){
-        const idMailing = parseInt(req.params.idMailing)
-        _Mailing2.default.ufsMailing(idMailing,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
-    }
-
-    //DDDs por uf do mailing
-    dddsUfMailing(req,res){
-        const idMailing = parseInt(req.params.idMailing)
-        const UF = req.params.uf
-        _Mailing2.default.tabelaMailing(idMailing,(e,nomeTabela)=>{
-            if(e) throw e
-
-            const tabela = nomeTabela[0].tabela
-            _Mailing2.default.dddsUfMailing(tabela,UF,(e,ddds)=>{
-                if(e) throw e
-
-                //Montagem do json
-                let retorno = '{'
-                    retorno += '"dados":['
-                    for(let i=0; i<ddds.length;i++){
-                        retorno += ddds[i].total
-                        if(i<ddds.length-1){
-                            retorno +=', '  
-                        }
-                    }
-                    retorno +='],'
-                    retorno += '"categoria":['
-                    for(let i=0; i<ddds.length;i++){                       
-                        retorno += `"ddd ${ddds[i].ddd}"`
-                        if(i<ddds.length-1){
-                            retorno +=', '  
-                        }
-                    }
-                    retorno +=']'
-                    retorno += '}'                               
-                
-                res.json(JSON.parse(retorno))
-            })
-        })
-    }
-
-    //Resumo por ddd
-    totalRegUF(req,res){
-        const idMailing = parseInt(req.params.idMailing)
-        _Mailing2.default.tabelaMailing(idMailing,(e,nomeTabela)=>{
-            if(e) throw e
-
-            const tabela = nomeTabela[0].tabela
-            _Mailing2.default.totalRegUF(tabela,(e,registros)=>{
-                if(e) throw e 
-                
-                res.json(registros)
-            })
-        })
-    }
-
-    //Saude do mailing
-    saudeMailing(req,res){
-        const idMailing = parseInt(req.params.idMailing)
-        _Mailing2.default.tabelaMailing(idMailing,(e,nomeTabela)=>
-        {
-            if(e) throw e
-           
-            if(nomeTabela.length != 0){
-                const tabela = nomeTabela[0].tabela
-                console.log(`tabela: ${tabela}`)
-
-                _Mailing2.default.totalRegistros(tabela,(e,nao_Trabalhados)=>{
-                    if(e) throw e
-                    
-                    const totalRegistros = parseInt(nao_Trabalhados[0].total)
-                    console.log(`totalRegistros ${totalRegistros}`)
-                    _Mailing2.default.registrosContatados(tabela,(e,ja_contatados)=>{
-                        if(e) throw e
-
-                        const contatados = parseInt(ja_contatados[0].contatados)
-                        console.log(`contatados ${contatados}`)
-                        _Mailing2.default.registrosNaoContatados(tabela,(e,nao_Contatados)=>{
-                            if(e) throw e
-
-                            const naoContatados = parseInt(nao_Contatados[0].nao_contatados)
-                            console.log(`naoContatados ${naoContatados}`)
-
-                            const trabalhados = contatados + naoContatados
-                            const naoTrabalhados = totalRegistros-trabalhados
-
-                            let perc_naotrabalhados = 0
-                            let perc_contatados = 0
-                            let perc_naoContatados = 0
-
-                            if(totalRegistros!=0){
-                                perc_naotrabalhados = parseFloat((naoTrabalhados / totalRegistros)*100).toFixed(1)
-                                perc_contatados = parseFloat((contatados / totalRegistros)*100).toFixed(1)
-                                perc_naoContatados = parseFloat((naoContatados / totalRegistros)*100).toFixed(1)                            
-                            }             
-                            
-
-                            let retorno = '{'
-                                retorno += `"nao_trabalhados": ${perc_naotrabalhados},`
-                                retorno += `"contatados": ${perc_contatados},`
-                                retorno += `"nao_contatados": ${perc_naoContatados}`
-                                retorno += '}'                  
-                            console.log(retorno)
-                            
-                            retorno = JSON.parse(retorno)                  
-
-                            res.json(retorno)
-
-                        })
-                    })
-                })
-            }else{
-                res.json(false)
-            }
-        })
-       
-
-    }
-
-
-    //Campos do Mailing e seu tipo
+       //Campos do Mailing e seu tipo
     camposVsTipo(req,res){
         const idMailing = parseInt(req.params.idMailing)
 
-        _Mailing2.default.tabelaMailing(idMailing,(e,nomeTabela)=>{
+        Mailing.tabelaMailing(idMailing,(e,nomeTabela)=>{
             if(e) throw e
 
             const tabela = nomeTabela[0].tabela
-            _Mailing2.default.camposVsTipo(tabela,(e,campos)=>{
+            Mailing.camposVsTipo(tabela,(e,campos)=>{
                 if(e) throw e
 
                 res.json(campos)
@@ -315,18 +301,18 @@ class MailingController{
         const idCampo = parseInt(req.params.idCampo)
         const novoTipo = req.body.tipo
         const apelido = req.body.apelido
-        _Mailing2.default.atualizaTipoCampo(idCampo,apelido,novoTipo,(e,r)=>{
+        Mailing.atualizaTipoCampo(idCampo,apelido,novoTipo,(e,r)=>{
             if(e) throw e
 
             //retornando nome da tabela
-            _Mailing2.default.nomeTabela_byidCampo(idCampo,(e,nomeTabela)=>{
+            Mailing.nomeTabela_byidCampo(idCampo,(e,nomeTabela)=>{
                 if(e) throw e
                
                 const tabela = nomeTabela[0].tabela
                 //console.log(`Tabela.................${tabela}`)
 
                 //verifica se todos campos ja estao conferidos
-                _Mailing2.default.confereCampos(tabela,(e,pendentes)=>{
+                Mailing.confereCampos(tabela,(e,pendentes)=>{
                     if(e) throw e
 
                     //console.log(`Pendentes.................${pendentes[0].pendentes}`)
@@ -334,7 +320,7 @@ class MailingController{
                         //atualiza o status do mailing para configurado
                         const configurado = 1
                         //console.log(`STATUS................. configurado`)
-                        _Mailing2.default.configuraMailing(tabela,configurado,(e,r)=>{
+                        Mailing.configuraMailing(tabela,configurado,(e,r)=>{
                             if(e) throw e
 
                             res.json(true)
@@ -343,7 +329,7 @@ class MailingController{
                         //atualiza o status do mailing para nao configurado
                         const configurado = 0
                         //console.log(`STATUS................. pendente`)
-                        _Mailing2.default.configuraMailing(tabela,configurado,(e,r)=>{
+                        Mailing.configuraMailing(tabela,configurado,(e,r)=>{
                             if(e) throw e
 
                             res.json(true)
@@ -358,23 +344,17 @@ class MailingController{
     confCamposMailing(req,res){
         const idMailing = parseInt(req.params.idMailing)
         console.log(`Id Mailing: ${idMailing}`)
-        _Mailing2.default.tabelaMailing(idMailing,(e,r)=>{
+        Mailing.tabelaMailing(idMailing,(e,r)=>{
             if(e) throw e
 
             const tabela = r[0].tabela
             console.log(`Tabela: ${tabela}`)
         
 
-            _Mailing2.default.confCamposMailing(tabela,(e,r)=>{
+            Mailing.confCamposMailing(tabela,(e,r)=>{
                 if(e) throw e
 
                 res.json(r)
             })
         })
-    }
-
-    
-    
-}
-
-exports. default = new MailingController();     
+    }*/

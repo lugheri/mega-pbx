@@ -1,8 +1,8 @@
 import connect from '../Config/dbConnection';
 class Tabulacoes{
-    querySync(sql,database){
+    querySync(sql){
         return new Promise((resolve,reject)=>{
-            connect.base(database).query(sql,(e,rows)=>{
+            connect.pool.query(sql,(e,rows)=>{
                 if(e) reject(e);
 
                 resolve(rows)
@@ -11,95 +11,137 @@ class Tabulacoes{
     }
     //LISTA DE TABULACOES 
     //Criar Lista de Tabulacaoes
-    novaLista(dados,callback){
-        const sql = `INSERT INTO campanhas_listas_tabulacoes (data,nome,descricao,status) VALUES (now(),'${dados.nome}','${dados.descricao}',1)`
-        connect.banco.query(sql,dados,callback);
+    async novaLista(dados){
+        const sql = `INSERT INTO tabulacoes_listas (data,nome,descricao,status) VALUES (now(),'${dados.nome}','${dados.descricao}',1)`
+        return await this.querySync(sql);
     }
-
-    //Editar Lista de Tabulacaoes
-    editarListaTabulacao(idLista,valores,callback) {
-        const sql = 'UPDATE campanhas_listas_tabulacoes SET ? WHERE id = ?'
-        connect.banco.query(sql,[valores,idLista],callback);
-    }
-    
-    //Dados da Lista de Tabulacaoes
-    dadosListaTabulacao(idLista,callback) {
-        const sql = 'SELECT * FROM campanhas_listas_tabulacoes WHERE id=?'
-        connect.banco.query(sql,idLista,callback);
-    }
-    
     //Listar listas de tabulacoes
-    listasTabulacao(callback){
-        const sql = 'SELECT * FROM campanhas_listas_tabulacoes WHERE status = 1'
-        connect.banco.query(sql,callback);
+    async listasTabulacao(){
+        const sql = `SELECT id,DATE_FORMAT(data,'%d/%m/%Y') as data,nome,descricao,status FROM tabulacoes_listas WHERE status = 1`
+        return await this.querySync(sql);
     }
-
+    //Dados da Lista de Tabulacaoes
+    async dadosListaTabulacao(idLista) {
+        const sql = `SELECT id,DATE_FORMAT(data,'%d/%m/%Y') as data,nome,descricao,status FROM tabulacoes_listas WHERE id=${idLista}`
+        return await this.querySync(sql);
+    }
+    //Editar Lista de Tabulacaoes
+    async editarListaTabulacao(idLista,valores) {
+        const nome = valores.nome
+        const descricao = valores.descricao
+        const status = valores.status
+        const sql = `UPDATE tabulacoes_listas SET nome='${nome}',descricao='${descricao}',status=${status} WHERE id=${idLista}`
+        return await this.querySync(sql);
+    }
     //STATUS DE TABULACOES
     //Criar Status
-    criarStatusTabulacao(dados,callback){
-        const sql=`SELECT ordem FROM campanhas_status_tabulacao WHERE idLista=${dados.idLista} ORDER BY ordem DESC LIMIT 1`
-        connect.banco.query(sql,(e,r)=>{
-            if(e) throw e
-            const ordem=r[0].ordem+1
-            const sql=`INSERT INTO campanhas_status_tabulacao (idLista,tabulacao,descricao,tipo,venda,followUp,ordem,status) VALUES ('${dados.idLista}','${dados.tabulacao}','${dados.descricao}','${dados.tipo}',${dados.venda},${dados.followUp},${ordem},1)`
-            connect.banco.query(sql,callback)
-        })        
+    async criarStatusTabulacao(dados){
+        let sql=`SELECT id FROM tabulacoes_status WHERE idLista=${dados.idLista} ORDER BY ordem DESC LIMIT 1`
+        const r =  await this.querySync(sql);
+        const ordem=r.length+1
+        sql=`INSERT INTO tabulacoes_status (idLista,tabulacao,descricao,tipo,venda,followUp,ordem,maxTentativas,tempoRetorno,status) VALUES ('${dados.idLista}','${dados.tabulacao}','${dados.descricao}','${dados.tipo}',${dados.venda},${dados.followUp},${ordem},${dados.maxTentativas},${dados.tempoRetorno},1)`
+        const result = await this.querySync(sql);
+        await this.reordenaStatus(dados.idLista)
+        if(result.affectedRows==1){
+            return result;
+        }
+        return false
+    }   
+    //Listar Status
+    async listarStatusTabulacao(idLista){
+        const sql = `SELECT * FROM tabulacoes_status WHERE idLista=${idLista} AND status=1 ORDER BY ordem ASC`
+        return await this.querySync(sql);
     }
-    //Editar status
-    editarStatusTabulacao(id,valores,callback){
-        const sql = 'UPDATE campanhas_status_tabulacao SET ? WHERE id=?'
-        connect.banco.query(sql,[valores,id],callback)
+    //Lista status por tipo
+    async statusPorTipo(idLista,tipo){
+        const sql = `SELECT id FROM tabulacoes_status WHERE idLista=${idLista} AND tipo='${tipo}' AND status=1 ORDER BY ordem ASC`
+        return await this.querySync(sql);
     }
     //Ver status
-    statusTabulacao(id,callback){
-        const sql = 'SELECT * FROM campanhas_status_tabulacao WHERE id=?'
-        connect.banco.query(sql,id,callback)
+    async infoStatus(idStatus){
+        const sql = `SELECT * FROM tabulacoes_status WHERE id=${idStatus}`
+        return await this.querySync(sql);
     }
-
-    //Listar Status
-    listarStatusTabulacao(idLista){
-        return new Promise((resolve,reject) =>{
-            const sql = `SELECT id,tabulacao,followUp,venda FROM campanhas_status_tabulacao WHERE idLista=${idLista} AND status=1 ORDER BY ordem ASC`
-            connect.banco.query(sql,(e,rows)=>{
-                if(e) reject(e);
-
-                resolve(rows)
-            })
-        })
-    }
-
-    listarStatusTabulacaoPorTipo(idLista,tipo){
-        return new Promise((resolve,reject) =>{
-            const sql = `SELECT id FROM campanhas_status_tabulacao WHERE idLista=${idLista} AND tipo="${tipo}" AND status=1 ORDER BY ordem ASC`
-            connect.banco.query(sql,(e,rows)=>{
-                if(e) reject(e);
-
-                resolve(rows)
-            })
-        })
-    }
-
-    //updateStatusTabulacao
-    updateTipoStatus(idStatus,idLista,destino,posOrigem,posDestino,callback){
-        //caso a origem seja menor que o destino
-        if(posOrigem<posDestino){
-            const sql = `UPDATE campanhas_status_tabulacao SET ordem=ordem-1 WHERE idLista=${idLista} AND ordem<=${posDestino} AND ordem>${posOrigem}`
-            connect.banco.query(sql,(e,r)=>{
-                if(e) throw e
-
-                const sql=`UPDATE campanhas_status_tabulacao SET ordem=${posDestino}, tipo="${destino}" WHERE id=${idStatus}`
-                connect.banco.query(sql,callback)
-            })
-        }else{
-            const sql = `UPDATE campanhas_status_tabulacao SET ordem=ordem+1 WHERE idLista=${idLista} AND ordem>=${posDestino} AND ordem<${posOrigem}`
-            connect.banco.query(sql,(e,r)=>{
-                if(e) throw e
-
-                const sql=`UPDATE campanhas_status_tabulacao SET ordem=${posDestino}, tipo="${destino}" WHERE id=${idStatus}`
-                connect.banco.query(sql,callback)
-            })
+    //Editar status
+    async editarStatusTabulacao(idStatus,valores){
+        const idLista = valores.idLista
+        const tabulacao = valores.tabulacao
+        const descricao = valores.descricao
+        const tipo = valores.tipo
+        const venda = valores.venda
+        const followUp = valores.followUp
+        const tempoRetorno = valores.tempoRetorno
+        const maxTentativas = valores.maxTentativas
+        const sql = `UPDATE tabulacoes_status 
+                        SET idLista=${idLista},
+                            tabulacao='${tabulacao}',
+                            descricao='${descricao}',
+                            tipo='${tipo}',
+                            venda=${venda},
+                            followUp=${followUp},
+                            tempoRetorno=${tempoRetorno},
+                            maxTentativas=${maxTentativas}
+                      WHERE id=${idStatus}`
+        const r = await this.querySync(sql);
+        if(r.affectedRows==1){
+            return true
         }
-    }   
+        return false
+    }
+    //Remove status de tabulacao
+    async removeStatusTabulacao(idStatus){
+        const sql = `UPDATE tabulacoes_status SET status=0 WHERE id=${idStatus}`
+        const r = await this.querySync(sql);
+        if(r.affectedRows==1){
+            return true
+        }
+        return false
+    }
+
+    //Normaliza ordem
+    async reordenaStatus(idLista){
+        //Desativados
+        let sql = `UPDATE tabulacoes_status SET ordem=-1 WHERE status=0`
+        await this.querySync(sql);
+        //Produtivos
+        const statusProd = await this.statusPorTipo(idLista,'produtivo')
+        for(let i = 0; i < statusProd.length; i++){
+            let sql = `UPDATE tabulacoes_status SET ordem=${i} WHERE id=${statusProd[i].id}`
+            console.log(`produtivo ${i}`,sql)
+            await this.querySync(sql);
+        }
+        //Improdutivos
+        const statusImprod = await this.statusPorTipo(idLista,'improdutivo')
+         for(let i = 0; i < statusImprod.length; i++){
+             let sql = `UPDATE tabulacoes_status SET ordem=${i} WHERE id=${statusImprod[i].id}`
+             console.log(`Improdutivo ${i}`,sql)
+             await this.querySync(sql);
+         }
+        return true
+    }
+
+    async reordenarTipoStatus(idLista,idStatus,origem,posOrigem,posDestino){
+        let sql
+        if(posOrigem>posDestino){
+            sql = `UPDATE tabulacoes_status SET ordem=ordem+1 WHERE ordem>=${posDestino} AND ordem<${posOrigem} AND idLista=${idLista} AND tipo='${origem}' AND status=1`
+            await this.querySync(sql);
+        }else{
+            sql = `UPDATE tabulacoes_status SET ordem=ordem-1 WHERE ordem >${posOrigem} AND ordem<=${posDestino} AND idLista=${idLista} AND tipo='${origem}' AND status=1`
+            await this.querySync(sql);
+        }
+        sql = `UPDATE tabulacoes_status SET ordem=${posDestino} WHERE id=${idStatus}`
+        await this.querySync(sql);
+        return true
+    }
+
+    async alterarTipoStatus(idLista,idStatus,origem,destino,posDestino){
+        let sql = `UPDATE tabulacoes_status SET ordem=ordem+1 WHERE ordem>=${posDestino} AND idLista=${idLista} AND tipo='${destino}' AND status=1`
+        await this.querySync(sql);
+         sql = `UPDATE tabulacoes_status SET ordem=${posDestino} AND tipo='${destino}' WHERE id=${idStatus}`
+        await this.querySync(sql);
+        return true
+    }
+
 
 }
 export default new Tabulacoes();

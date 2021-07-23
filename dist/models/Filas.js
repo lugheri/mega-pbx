@@ -4,9 +4,9 @@ var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User
 var _Asterisk = require('../models/Asterisk'); var _Asterisk2 = _interopRequireDefault(_Asterisk);
 
 class Filas{
-    querySync(sql,database){
+    querySync(sql){
         return new Promise((resolve,reject)=>{
-            _dbConnection2.default.base(database).query(sql,(e,rows)=>{
+            _dbConnection2.default.pool.query(sql,(e,rows)=>{
                 if(e) reject(e);
 
                 resolve(rows)
@@ -17,31 +17,38 @@ class Filas{
     //CRUD FILAS
     //Criar nova filas
     async criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat){
-        const sql = `INSERT INTO queues (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
-        await this.querySync(sql,'asterisk')
+        const sql = `INSERT INTO asterisk.queues (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
+        await this.querySync(sql)
         return true
     }
-    //Remove a fila
-    async removerFila(nomeFila){
-        const sql = `DELETE FROM queues WHERE name='${nomeFila}'`
-        await this.querySync(sql,'asterisk')
-        const sql2 = `DELETE FROM queue_members WHERE queue_name='${nomeFila}'`
-        await this.querySync(sql2,'asterisk')
-    }
+   
     //Exibe os dads da fila
     async dadosFila(nomeFila){
-        const sql = `SELECT * FROM queues WHERE name='${nomeFila}'`
-        return await this.querySync(sql,'asterisk')
+        const sql = `SELECT * FROM asterisk.queues WHERE name='${nomeFila}'`
+        return await this.querySync(sql)
     }
     //Listar Filas
     async listar(){
-        const sql = `SELECT * FROM queues`
-        return await this.querySync(sql,'asterisk')
+        const sql = `SELECT * FROM asterisk.queues`
+        return await this.querySync(sql)
     }   
     //Edita os dados da fila
     async editarFila(nomeFila,dados){
-        const sql = `UPDATE queues SET name='${dados.name}',musiconhold='${dados.musiconhold}',strategy='${dados.strategy}',timeout='${dados.timeout}',retry='${dados.retry}',autopause='${dados.autopause}',maxlen='${dados.maxlen}' WHERE name='${nomeFila}'`
-        return await this.querySync(sql,'asterisk')
+        const sql = `UPDATE asterisk.queues SET musiconhold='${dados.musiconhold}',strategy='${dados.strategy}',timeout='${dados.timeout}',retry='${dados.retry}',autopause='${dados.autopause}',maxlen='${dados.maxlen}' WHERE name='${nomeFila}'`
+        return await this.querySync(sql)
+    }
+
+    async editarNomeFila(nomeFilaAtual,name){
+        const sql = `UPDATE asterisk.queues SET name='${name}' WHERE name='${nomeFilaAtual}'`
+        return await this.querySync(sql)
+    }
+
+     //Remove a fila
+     async removerFila(nomeFila){
+        const sql = `DELETE FROM asterisk.queues WHERE name='${nomeFila}'`
+        await this.querySync(sql)
+        const sql2 = `DELETE FROM asterisk.queue_members WHERE queue_name='${nomeFila}'`
+        await this.querySync(sql2)
     }
 
 
@@ -78,11 +85,22 @@ class Filas{
         })        
     }
 
+    membrosForaFila(idFila){
+        return new Promise((resolve,reject)=>{
+            const sql = `SELECT u.id as ramal FROM users AS u LEFT OUTER JOIN agentes_filas AS f ON u.id=f.ramal WHERE status=1 AND (fila IS null OR fila !=${idFila}) ORDER BY u.ordem ASC;`
+            _dbConnection2.default.banco.query(sql,(e,r)=>{
+                if(e) reject(e)
+
+                resolve(r)
+            })
+        })        
+    }
+
     //Reordena fora da fila
     reordenaMembrosForaFila(idAgente,idFila,posOrigem,posDestino,callback){
          //caso a origem seja menor que o destino
          if(posOrigem<posDestino){
-            const sql = `UPDATE users SET ordem=ordem-1 WHERE ordem<=${posDestino} AND ordem>${posOrigem}`
+            const sql = `UPDATE users SET ordem=ordem-1 WHERE ordem>${posOrigem} AND ordem<=${posDestino}`
             _dbConnection2.default.banco.query(sql,(e,r)=>{
                 if(e) throw e
 
@@ -103,20 +121,26 @@ class Filas{
     //Reordena dentro fila    
     reordenaMembrosDentroFila(idAgente,fila,ordemOrigem,ordem,callback){
         //caso a origem seja menor que o destino
+        console.log('idAgente',idAgente)
+        console.log('fila',fila)
+        console.log('ordemOrigem',ordemOrigem)
+        console.log('ordem',ordem)
         if(ordemOrigem<ordem){
-            const sql = `UPDATE agentes_filas SET ordem=ordem-1 WHERE fila=${fila} AND ordem<=${ordem} AND ordem>${ordemOrigem}`
+            console.log('aumenta ordem')
+            const sql = `UPDATE agentes_filas SET ordem=ordem-1 WHERE fila=${fila} AND ordem>${ordemOrigem} AND ordem<=${ordem}`
             _dbConnection2.default.banco.query(sql,(e,r)=>{
                 if(e) throw e
 
-                const sql=`UPDATE agentes_filas SET ordem=${ordem} WHERE id=${idAgente}`
+                const sql=`UPDATE agentes_filas SET ordem=${ordem} WHERE ramal=${idAgente} AND fila=${fila}`
                 _dbConnection2.default.banco.query(sql,callback)
             })
         }else{
+            console.log('diminui ordem')
             const sql = `UPDATE agentes_filas SET ordem=ordem+1 WHERE fila=${fila} AND ordem>=${ordem} AND ordem<${ordemOrigem}`
             _dbConnection2.default.banco.query(sql,(e,r)=>{
                 if(e) throw e
 
-                const sql=`UPDATE agentes_filas SET ordem=${ordem} WHERE id=${idAgente}`
+                const sql=`UPDATE agentes_filas SET ordem=${ordem} WHERE ramal=${idAgente} AND fila=${fila}`
                 _dbConnection2.default.banco.query(sql,callback)
             })
         }      
@@ -125,13 +149,13 @@ class Filas{
 
     //AddMembro
     addMembroFila(idAgente,idFila,ordemOrigem,ordem,callback){
-        console.log('addMembro',`idAgente: ${idAgente},idFila: ${idFila},ordemOrigem: ${ordemOrigem},ordem: ${ordem}`)
+        //console.log('addMembro',`idAgente: ${idAgente},idFila: ${idFila},ordemOrigem: ${ordemOrigem},ordem: ${ordem}`)
         this.verificaMembroFila(idAgente,idFila,(e,r)=>{
             if(e) throw e 
 
             if(r.length === 0){//Caso agente nao exista
                 //aumenta ordem dos agentes com ordenacao maior
-                const sql = `UPDATE agentes_filas SET ordem=ordem+1 WHERE ordem>= ${ordem} AND id=${idFila}`
+                const sql = `UPDATE agentes_filas SET ordem=ordem+1 WHERE ordem>${ordemOrigem} AND ordem<=${ordem} AND id=${idFila}`
                 _dbConnection2.default.banco.query(sql,async (e,r)=>{  
                     if(e) throw e      
                     const estado = await this.estadoRamal(idAgente)
@@ -140,11 +164,11 @@ class Filas{
                     _dbConnection2.default.banco.query(sql,(e,r)=>{   
                         if(e) throw e     
 
-                        const sql = `SELECT nomeFila FROM campanhas_filas WHERE id=${idFila}`
+                        const sql = `SELECT nome FROM filas WHERE id=${idFila}`
                         _dbConnection2.default.banco.query(sql,(e,r)=>{
                             if(e) throw e
 
-                            const queue_name = r[0].nomeFila
+                            const queue_name = r[0].nome
                             const queue_interface = `PJSIP/${idAgente}`
                             const membername = idAgente
                             const state_interface = ''//`${queue_interface}@megatrunk`
@@ -155,12 +179,7 @@ class Filas{
                     })  
                 })              
             }else{//Caso o agente ja pertenca a fila
-                this.atualizaOrdemAgenteFila(idFila,ordemOrigem,ordem,(e,r)=>{
-                    if(e) throw e 
-
-                    const sql = `UPDATE agentes_filas SET ordem=${ordem} WHERE ramal=${idAgente} AND fila=${idFila}`
-                    _dbConnection2.default.banco.query(sql,callback)
-                })
+                this.reordenaMembrosDentroFila(idAgente,idFila,ordemOrigem,ordem,callback)
             }
         })
     }
@@ -175,11 +194,11 @@ class Filas{
             _dbConnection2.default.banco.query(sql,(e,r)=>{
                 if(e) throw e
 
-                const sql = `SELECT nomeFila FROM campanhas_filas WHERE id=${idFila}`
+                const sql = `SELECT nome FROM filas WHERE id=${idFila}`
                 _dbConnection2.default.banco.query(sql,(e,r)=>{
                     if(e) throw e
 
-                    const nomeFila = r[0].nomeFila
+                    const nomeFila = r[0].nome
                     _Asterisk2.default.removeMembroFila(nomeFila,idAgente,callback)
                 })
             })
@@ -199,16 +218,16 @@ class Filas{
 
             for(let i=0; i<rowsFila.length; i++){
                 const sql = `UPDATE agentes_filas SET ordem=${i} WHERE id=${rowsFila[i].id}`
-                await this.querySync(sql,'mega_conecta')
+                await this.querySync(sql)
             }
 
-            const sql = `SELECT id FROM users WHERE status=1 ORDER BY ordem ASC`
+            const sql = `SELECT u.id FROM users AS u LEFT OUTER JOIN agentes_filas AS f ON u.id=f.ramal WHERE status=1 AND (fila IS null OR fila !=${idFila}) ORDER BY u.ordem ASC;`
             _dbConnection2.default.banco.query(sql,async (e,rowsFila)=>{
                 if(e) throw e
 
                 for(let i=0; i<rowsFila.length; i++){
                     const sql = `UPDATE users SET ordem=${i} WHERE id=${rowsFila[i].id}`
-                    await this.querySync(sql,'mega_conecta')
+                    await this.querySync(sql)
                 }
             })
         })

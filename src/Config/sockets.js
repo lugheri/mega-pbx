@@ -9,7 +9,7 @@ module.exports = (app) => {
     const httpServer = http.createServer(app);
     const io = socket(httpServer)
     //Dashbord
-    io.of('/dashboard').on('connection',async (socket)=>{
+    /*io.of('/dashboard').on('connection',async (socket)=>{
         async function painel(){
             const dados = await Dashboard.painel()
             //console.log(`cliente conectado no namespace /reports client ${socket.id}`)
@@ -17,7 +17,7 @@ module.exports = (app) => {
             //setTimeout(()=>{painel()},5000)
         }
         painel()
-    })
+    })*/
 
     //Campanhas
     io.of('/campanhas').on('connection',(socket)=>{
@@ -31,7 +31,7 @@ module.exports = (app) => {
         })
     })
 
-    
+    /*
     //Reports
     io.of('/reports').on('connection',(socket)=>{
         //console.log(`cliente conectado no namespace /reports client ${socket.id}`)
@@ -56,6 +56,6 @@ module.exports = (app) => {
             })
         })
     })
-
+*/
     return httpServer
 }

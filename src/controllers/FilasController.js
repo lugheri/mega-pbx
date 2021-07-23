@@ -37,13 +37,18 @@ class FilasController{
             naFila[i] = agentesNaFila[i].ramal
         }   
 
-        const foraDaFila=[]
-        for(let i=0; i<agentes.length; i++){
+        const agentesForaFila = await Filas.membrosForaFila(idFila)
+        const foraDaFila=[] 
+        for(let i=0; i<agentesForaFila.length; i++) {
+            foraDaFila[i] = agentesForaFila[i].ramal
+        }         
+        
+        /*for(let i=0; i<agentes.length; i++){
             if(naFila.indexOf(agentes[i].id)<0){
                 foraDaFila.push(agentes[i].id)
             }
             console.log(agentes[i].id,naFila.indexOf(agentes[i].id))
-        }  
+        }  */
 
         membros['columns']['foraDaFila']={}
         membros['columns']['foraDaFila']['id']='foraDaFila'

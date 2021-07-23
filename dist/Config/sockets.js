@@ -9,15 +9,15 @@ module.exports = (app) => {
     const httpServer = _http2.default.createServer(app);
     const io = _socketio2.default.call(void 0, httpServer)
     //Dashbord
-    io.of('/dashboard').on('connection',async (socket)=>{
+    /*io.of('/dashboard').on('connection',async (socket)=>{
         async function painel(){
-            const dados = await _Dashboard2.default.painel()
+            const dados = await Dashboard.painel()
             //console.log(`cliente conectado no namespace /reports client ${socket.id}`)
             socket.emit('painel',dados)
             //setTimeout(()=>{painel()},5000)
         }
         painel()
-    })
+    })*/
 
     //Campanhas
     io.of('/campanhas').on('connection',(socket)=>{
@@ -31,7 +31,7 @@ module.exports = (app) => {
         })
     })
 
-    
+    /*
     //Reports
     io.of('/reports').on('connection',(socket)=>{
         //console.log(`cliente conectado no namespace /reports client ${socket.id}`)
@@ -40,7 +40,7 @@ module.exports = (app) => {
             const idCampanha = parseInt(dados.idCampanha)
             const idEquipe = parseInt(dados.idEquipe)
             const idUser = parseInt(dados.idUser)
-            _Report2.default.monitorarAgentes(idCampanha,idEquipe,idUser,(e,monitoramento)=>{
+            Report.monitorarAgentes(idCampanha,idEquipe,idUser,(e,monitoramento)=>{
                 if(e) throw e       
                     
                 socket.emit('monitoramentoAgente',monitoramento) 
@@ -49,13 +49,13 @@ module.exports = (app) => {
         })
 
         socket.on("monitoramentoCampanha",(dados)=>{
-            _Report2.default.monitorarCampanhas(dados.idCampanha,(e,monitoramento)=>{
+            Report.monitorarCampanhas(dados.idCampanha,(e,monitoramento)=>{
                 if(e) throw e       
             
                 socket.emit('monitoramentoCampanha',monitoramento)
             })
         })
     })
-
+*/
     return httpServer
 }

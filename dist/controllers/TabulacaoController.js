@@ -3,159 +3,126 @@
 class TabulacaoController{
     //GRUPOS DE TABULAÇAO
     //Criar lista de tabulacao
-    criarListaTabulacao(req,res){
+    async criarListaTabulacao(req,res){
         const dados = req.body
-        _Tabulacoes2.default.novaLista(dados,(erro,result)=>{
-            if(erro){
-                res.json(erro)
-            }else{
-                res.json(result)
-            }
-        })
+        const result = await _Tabulacoes2.default.novaLista(dados)
+        res.json(result)
     }
-
-    //Editar lista de tabulacao
-    editarListaTabulacao(req,res){
-        const idLista = parseInt(req.params.id);
-        const valores = req.body
-        _Tabulacoes2.default.editarListaTabulacao(idLista,valores,(erro,result)=>{
-            if(erro){
-                res.json(erro)
-            }else{
-                res.json(result)
-            }
-        })
-
-    }
-
-    //Ver dados da lista de tabulacao
-    dadosListaTabulacao(req,res){
-        const idLista = parseInt(req.params.id);
-        _Tabulacoes2.default.dadosListaTabulacao(idLista,(erro,result)=>{
-            if(erro){
-                res.json(erro)
-            }else{
-                res.json(result)
-            }
-        })
-
-    }
-
     //Ver todas as listas de tabulacao
-    listasTabulacao(req,res){
-        _Tabulacoes2.default.listasTabulacao((erro,result)=>{
-            if(erro){
-                res.json(erro)
-            }else{
-                res.json(result)
-            }
-        })
+    async listasTabulacao(req,res){
+        const result = await _Tabulacoes2.default.listasTabulacao()
+        res.json(result)
+    }
+    //Ver dados da lista de tabulacao
+    async dadosListaTabulacao(req,res){
+        const idLista = req.params.idLista;
+        const result = await _Tabulacoes2.default.dadosListaTabulacao(idLista)
+        res.json(result)
+    }
+    //Editar lista de tabulacao
+    async editarListaTabulacao(req,res){
+        const idLista = req.params.idLista;
+        const valores = req.body
+        const result = await _Tabulacoes2.default.editarListaTabulacao(idLista,valores)
+        res.json(result)
     }
     
     //STATUS DE TABULAÇAO
-
     //Criar novo status de tabulacao
-    criarStatusTabulacao(req,res){
+    async criarStatusTabulacao(req,res){
         const dados = req.body
-
-        _Tabulacoes2.default.criarStatusTabulacao(dados,(erro,result)=>{
-            if(erro){
-                res.json(erro)
-            }else{
-                res.json(result)
-            }
-        })
+        const result = await _Tabulacoes2.default.criarStatusTabulacao(dados)
+        res.json(result)
     }
-
-    //Editar status de tabulacao
-    editarStatusTabulacao(req,res){
-        const id = parseInt(req.params.id);
-        const valores = req.body
-        _Tabulacoes2.default.editarStatusTabulacao(id,valores,(erro,result)=>{
-            if(erro){
-                res.json(erro)
-            }else{
-                res.json(result)
-            }
-        })
-
-    }
-
-    //ver status de tabulacao
-    statusTabulacao(req,res){
-        const id = parseInt(req.params.id);
-        _Tabulacoes2.default.statusTabulacao(id,(erro,result)=>{
-            if(erro){
-                res.json(erro)
-            }else{
-                res.json(result)
-            }
-        })
-    }
-
     //ver todos status de tabulacao de uma lista
-   /* listarStatusTabulacao(req,res){
-        const idLista = parseInt(req.params.idLista)
-        Tabulacoes.listarStatusTabulacao(idLista,(erro,result)=>{
-            if(erro){
-                res.json(erro)
-            }else{
-                res.json(result)
-            }
-        })
-    } */
-
-    //get status
-    async getStatus(req,res){
-        const idLista = parseInt(req.params.idLista)     
-        const status = await _Tabulacoes2.default.listarStatusTabulacao(idLista)
-        const statusTabulacao = {}
-              statusTabulacao['status']={}
-
-        for(let i=0; i<status.length; i++){
-            statusTabulacao['status'][`${status[i].id}`]={}
-            statusTabulacao['status'][`${status[i].id}`]['id']=`${status[i].id}`
-            statusTabulacao['status'][`${status[i].id}`]['tabulacao']=status[i].tabulacao
-            statusTabulacao['status'][`${status[i].id}`]['followUp']=status[i].followUp
-            statusTabulacao['status'][`${status[i].id}`]['venda']=status[i].venda
-        } 
-
-        statusTabulacao['columns']={}
-        //Produtivas
-        statusTabulacao['columns']['produtivas']={}
-        statusTabulacao['columns']['produtivas']['id']="produtivas"
-        const produtivas = await _Tabulacoes2.default.listarStatusTabulacaoPorTipo(idLista,'produtivo')
-        statusTabulacao['columns']['produtivas']['statusIds']=[]
-        for(let i=0; i<produtivas.length; i++) {
-            statusTabulacao['columns']['produtivas']['statusIds'][i] = produtivas[i].id
-        }
-        //Improdutivas
-        statusTabulacao['columns']['improdutivas']={}
-        statusTabulacao['columns']['improdutivas']['id']="improdutivas"
-        const improdutivas = await _Tabulacoes2.default.listarStatusTabulacaoPorTipo(idLista,'improdutivo')
-        statusTabulacao['columns']['improdutivas']['statusIds']=[]
-        for(let i=0; i<improdutivas.length; i++) {
-            statusTabulacao['columns']['improdutivas']['statusIds'][i] = improdutivas[i].id
-        }       
-
-        res.json(statusTabulacao)
-        
+    async listarStatusTabulacao(req,res){
+        const idLista = req.params.idLista
+        const result = await _Tabulacoes2.default.listarStatusTabulacao(idLista)
+        res.json(result)
+    }
+    //ver status de tabulacao
+    async infoStatus(req,res){
+        const idStatus = req.params.idStatus;
+        const result = await _Tabulacoes2.default.infoStatus(idStatus)
+        res.json(result)
+    }
+    //Editar status de tabulacao
+    async editarStatusTabulacao(req,res){
+        const idStatus = req.params.idStatus;
+        const valores = req.body
+        const r = await _Tabulacoes2.default.editarStatusTabulacao(idStatus,valores)
+        res.json(r)
+    }
+    //Remove status de tabulacao
+    async removerStatus(req,res){
+        const idStatus = req.params.idStatus;
+        const r = await _Tabulacoes2.default.removeStatusTabulacao(idStatus)
+        res.json(r)
+    }
+    //Reordena os status de tabulacao de uma lista
+    async reordenarStatus(req,res){
+        const idLista = req.params.idLista;
+        console.log('idLista',idLista)
+        const r = await _Tabulacoes2.default.reordenaStatus(idLista)
+        res.json(r)
     }
 
-    updateTipoStatus(req,res){
-        const idLista = parseInt(req.params.idLista)
+    //Ordenacao de listagen e tipos (Rotas do DragDrop)
+    async getStatusTabulacao(req,res){
+        const idLista = req.params.idLista
+        const tabs={}
+              tabs['statusTab']={}
+              const status = await _Tabulacoes2.default.listarStatusTabulacao(idLista)
+              for(let i = 0; i < status.length; i++){
+                  tabs['statusTab'][status[i].id]={}
+                  tabs['statusTab'][status[i].id]['id']=status[i].id
+                  tabs['statusTab'][status[i].id]['content']=status[i].tabulacao
+              }
+
+              tabs['columns']={}
+              tabs['columns']['produtivas']={}
+              tabs['columns']['produtivas']['id']="produtivas"
+              tabs['columns']['produtivas']['statusIds']=[]
+              const produtivos = await _Tabulacoes2.default.statusPorTipo(idLista,'produtivo')
+              for(let i = 0; i < produtivos.length; i++){
+                tabs['columns']['produtivas']['statusIds'].push(produtivos[i].id)
+              }
+
+              tabs['columns']['improdutivas']={}
+              tabs['columns']['improdutivas']['id']="improdutivas"
+              tabs['columns']['improdutivas']['statusIds']=[]
+              const improdutivos = await _Tabulacoes2.default.statusPorTipo(idLista,'improdutivo')
+              for(let i = 0; i < improdutivos.length; i++){
+                tabs['columns']['improdutivas']['statusIds'].push(improdutivos[i].id)
+              }
+        res.json(tabs)
+    }
+
+    async updateTipoStatus(req,res){
+        const idLista = req.params.idLista
         const idStatus = req.body.idStatus
         const origem = req.body.origem.columName
         const posOrigem = req.body.origem.posicao
         const destino =  req.body.destino.columName
         const posDestino = req.body.destino.posicao
 
-        _Tabulacoes2.default.updateTipoStatus(idStatus,idLista,destino,posOrigem,posDestino,(e,r)=>{
-            if(e) throw e
-                                      
-            res.json(true)
-        })             
+        if(origem==destino){
+            //reordena
+            await _Tabulacoes2.default.reordenarTipoStatus(idLista,idStatus,origem,posOrigem,posDestino)
+        }else{
+            await _Tabulacoes2.default.alterarTipoStatus(idLista,idStatus,origem,destino,posOrigem,posDestino)
+        }
+
+        //Normaliza ordenacao
+        await _Tabulacoes2.default.reordenaStatus(idLista)
+        res.json(true)
     }
+
+
+
+
+
+    
 }
 
 exports. default = new TabulacaoController()

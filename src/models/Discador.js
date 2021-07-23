@@ -3,7 +3,7 @@ import Asterisk from './Asterisk';
 import Campanhas from './Campanhas';
 import Cronometro from './Cronometro';
 import moment from 'moment';
-import { CONNECTION_RECOVERY_MAX_INTERVAL } from 'jssip/lib/Constants';
+
 class Discador{
     async debug(title="",msg=""){
         const debug=await this.mode()       
@@ -18,16 +18,12 @@ class Discador{
         return mode[0].debug
     }
     
+    querySync(sql){
+        return new Promise((resolve,reject)=>{
+            connect.pool.query(sql,(e,rows)=>{
+                if(e) reject(e);
 
-
-
-    querySync(sql,args){
-        return new Promise ((resolve,reject) =>{
-            connect.banco.query(sql,args,(err,rows)=>{
-                if(err)
-                    return reject(err);
-               
-                resolve(rows);
+                resolve(rows)
             })
         })
     }
@@ -178,7 +174,7 @@ class Discador{
     filasCampanha(idCampanha){
         return new Promise(async(resolve,reject)=>{
             //Listar filas da campanha
-            const sql = `SELECT id as idFila, nomeFila FROM campanhas_filas WHERE idCampanha='${idCampanha}'`
+            const sql = `SELECT idFila, nomeFila FROM campanhas_filas WHERE idCampanha='${idCampanha}'`
             connect.banco.query(sql,(e,r)=>{
                 if(e)
                     return reject(e)

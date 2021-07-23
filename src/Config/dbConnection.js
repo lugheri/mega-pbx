@@ -1,8 +1,8 @@
-import mysql from 'mysql';
+import mysql from 'mysql2';
 const dev = 'localhost'
 
-const host = dev
-//const host = 'mysql'
+//const host = dev
+const host = 'mysql'
     
 const user = []
 user['name'] = 'root'
@@ -25,6 +25,16 @@ user['pass'] = '1234abc@'
 
 
 const connect=()=>{};
+
+connect.pool=mysql.createPool({
+    host:host,
+    user : user['name'],
+    password : user['pass'],
+    database : 'mega_conecta',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+})
 
 connect.base=((database)=>{
     return mysql.createConnection({        

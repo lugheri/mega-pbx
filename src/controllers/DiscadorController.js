@@ -121,6 +121,7 @@ class DiscadorController{
 
         //#1 Verifica se existem agentes na fila    
         this.debug(' . . . . . .  . PASSO 2.1 - Verificando se existem agentes na fila')   
+        
         const agentes = await Discador.agentesNaFila(idFila)
         if(agentes.length ==0){            
             const msg = "Nenhum agente na fila"
@@ -130,6 +131,7 @@ class DiscadorController{
         
             //#2 Verificando se os agentes estao logados e disponiveis
             this.debug(' . . . . . . . . PASSO 2.2 - Verificando se os agentes estao logados e disponiveis')
+            
             const agentesDisponiveis = await Discador.agentesDisponiveis(idFila)
 
             if(agentesDisponiveis.length === 0){   

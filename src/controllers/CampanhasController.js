@@ -95,42 +95,26 @@ class CampanhasController{
     //TABULAÇÕES
      //Lista de Tabulaçoes da campanha
         //Add lista na campanha
-        addListaTabulacaoCampanha(req,res){
+        async addListaTabulacaoCampanha(req,res){
             const idCampanha = req.body.idCampanha
             const idListaTabulacao = req.body.idListaTabulacao
-            Campanhas.addListaTabulacaoCampanha(idCampanha,idListaTabulacao,(e,r)=>{
-                if(e) throw e
-
-                res.json(r);
-            })
-
+            const r = await Campanhas.addListaTabulacaoCampanha(idCampanha,idListaTabulacao)
+            res.json(r);
         }
         //Exibe as listas de tabulacao da Campanha
-        listasTabulacaoCampanha(req,res){
-            const idCampanha = parseInt(req.params.idCampanha);
-            
-            Campanhas.listasTabulacaoCampanha(idCampanha,(e,r)=>{
-                if(e) throw e
-
-                res.json(r);
-            })
+        async listasTabulacaoCampanha(req,res){
+            const idCampanha = req.params.idCampanha;
+            const r = await Campanhas.listasTabulacaoCampanha(idCampanha)
+            res.json(r);
         }
         //remove Lista tabulacao da campanha
         removerListaTabulacaoCampanha(req,res){
-            const idListaNaCampanha = parseInt(req.params.idListaNaCampanha)
-            Campanhas.removerListaTabulacaoCampanha(idListaNaCampanha,(e,r)=>{
-                if(e) throw e
-
-                res.json(r);
-            })
+            const idListaNaCampanha = req.params.idListaNaCampanha
+            const r = Campanhas.removerListaTabulacaoCampanha(idListaNaCampanha)
+            res.json(r);
         }
         statusTabulacaoCampanha(req,res){
-            const idCampanha = parseInt(req.params.idCampanha)
-            Tabulacoes.statusTabulacaoCampanha(idCampanha,(e,r)=>{
-                if(e) throw e
-
-                res.json(r);
-            })
+            res.json(false);
         }
 
 
@@ -140,7 +124,7 @@ class CampanhasController{
         Campanhas.criarIntegracao(dados,(e,r)=>{
             if(e) throw e
 
-            res.json(r);
+            res.json(true);
         })
     }    
     listarIntegracoes(req,res){
@@ -165,7 +149,7 @@ class CampanhasController{
         Campanhas.atualizarIntegracao(idIntegracao,dados,(e,r)=>{
             if(e) throw e
 
-            res.json(r);
+            res.json(true);
         })
     }
     removerIntegracao(req,res){
@@ -173,7 +157,7 @@ class CampanhasController{
         Campanhas.removerIntegracao(idIntegracao,(e,r)=>{
             if(e) throw e
 
-            res.json(r);
+            res.json(true);
         })
     }
     inserirIntegracaoCampanha(req,res){
@@ -181,9 +165,27 @@ class CampanhasController{
         Campanhas.inserirIntegracaoCampanha(dados,(e,r)=>{
             if(e) throw e
 
-            res.json(r);
+            res.json(true);
         })
     } 
+    listaIntegracaoCampanha(req,res){
+        const idCampanha = parseInt(req.params.idCampanha)
+        Campanhas.listaIntegracaoCampanha(idCampanha,(e,r)=>{
+            if(e) throw e
+
+            res.json(r);
+        })
+    }
+
+    removerIntegracaoCampanha(req,res){
+        const idCampanha = parseInt(req.params.idCampanha)
+        const idIntegracao = parseInt(req.params.idIntegracao)
+        Campanhas.removerIntegracaoCampanha(idCampanha,idIntegracao,(e,r)=>{
+            if(e) throw e
+
+            res.json(true);
+        })
+    }
 
     //DISCADOR
     //Configurar discador da campanha
@@ -217,7 +219,6 @@ class CampanhasController{
     //Lista as filas disponiveis
     async listarFilasDisponiveis(req,res){
         const filas = await Campanhas.listarFilas()
-        //const filas = await Filas.listar()
         res.json(filas)
     }
     //Lista filas da campanha        
@@ -230,34 +231,31 @@ class CampanhasController{
         })
     }
     //Adiciona a fila na campanha
-    addFilaCampanha(req,res){
+    async addFilaCampanha(req,res){
         const idCampanha = req.body.idCampanha
         const idFila = req.body.idFila
-        Campanhas.dadosFila(idFila,(e,infoFila)=>{
-            if(e) throw e
-
-            if(infoFila.length>0){
-                const nomeFila=infoFila[0].nomeFila
-                Campanhas.addFila(idCampanha,nomeFila,(e,result)=>{
-                    if(e) throw e
+        const infoFila=await Campanhas.dadosFila(idFila)
         
-                    if(result.affectedRows==0){
-                        res.json(false)
-                        return false
-                    }
-                    res.json(true)
-                })
-                return false
-            }
-            res.json(true)    
-        })
-       
+        if(infoFila.length>0){
+            const nomeFila=infoFila[0].nome
+            Campanhas.addFila(idCampanha,idFila,nomeFila,(e,result)=>{
+                if(e) throw e
+        
+                if(result.affectedRows==0){
+                    res.json(false)
+                    return false
+                }
+                res.json(true)
+            })
+            return false
+        }
+        res.json(true)    
     }
     //remove a fila da campanha
     removerFilaCampanha(req,res){
         const idCampanha = req.body.idCampanha
-        const nomeFila = req.body.nomeFila
-        Campanhas.removerFilaCampanha(idCampanha,nomeFila,(err,result)=>{
+        const idFila = req.body.idFila
+        Campanhas.removerFilaCampanha(idCampanha,idFila,(err,result)=>{
             if(err) throw err
 
             if(result.affectedRows==0){
@@ -271,15 +269,12 @@ class CampanhasController{
 
     //MAILING
     //Add mailing na campanha
-    addMailingCampanha(req,res){
+    async addMailingCampanha(req,res){
         const idCampanha = req.body.idCampanha
         const idMailing = req.body.idMailing
 
-        Campanhas.addMailingCampanha(idCampanha,idMailing,(e,r)=>{
-            if(e) throw e
-    
-            res.json(r)
-        })
+        const r = await Campanhas.addMailingCampanha(idCampanha,idMailing)
+        res.json(r)
     }        
     //Lista mailing da campanha
     listarMailingCampanha(req,res){
@@ -291,25 +286,100 @@ class CampanhasController{
         })
     }        
     //remove mailing da campanha
-    removeMailingCampanha(req,res){
-        const id = parseInt(req.params.id)
-        Campanhas.removeMailingCampanha(id,(erro,result)=>{
-            if(erro) throw erro
-    
-            res.json(result)
-        })
+    async removeMailingCampanha(req,res){
+        const idCampanha = parseInt(req.params.idCampanha)
+        const r = await Campanhas.removeMailingCampanha(idCampanha)
+        res.json(r)
+    }
+
+    //Filtra os registros do mailing
+    async filtrarDiscagem(req,res){
+        const parametros =  req.body
+        const r = await Campanhas.filtrarRegistrosCampanha(parametros) 
+        res.json(r)
+    }
+
+    //Exibe o status dos filtros
+    async filtrosDiscagem(req,res){
+        const idCampanha = req.params.idCampanha
+        const UF = req.params.uf
+
+        const infoMailing = await Campanhas.infoMailingCampanha(idCampanha)
+        if(infoMailing.length==0){
+            res.json(false) 
+            return false
+        }
+        const idMailing = infoMailing[0].id
+        const tabelaNumero=infoMailing[0].tabela_numeros
+        
+        //Total de Registros do uf
+        const filters = {}
+              filters['totalNumeros']=await Campanhas.totalNumeros(tabelaNumero,UF)
+              filters['regFiltrados']=await Campanhas.numerosFiltrados(tabelaNumero,idCampanha,UF)
+        if(UF!=0){ 
+            //Verificando filtros pelo DDD
+            filters['DDD']=[]
+            const listDDDs = await Campanhas.dddsMailings(tabelaNumero,UF)
+            for(let i=0;i<listDDDs.length;i++){
+                const ddd = {}
+                      ddd['ddd']=listDDDs[i].ddd
+                      ddd['numeros']=await Campanhas.totalNumeros(tabelaNumero,UF,listDDDs[i].ddd)
+                      ddd['filtered']=await Campanhas.checkTypeFilter(idCampanha,'ddd',listDDDs[i].ddd,UF)
+                filters['DDD'].push(ddd)               
+            }
+
+            //Verificando filtros pelo Tipo de Número
+            filters['TIPO']=[]
+            const celular = {}
+                  celular['tipo']='celular'
+                  celular['numeros']=await Campanhas.totalNumeros_porTipo(tabelaNumero,UF,'celular')
+                  celular['filtered']=await Campanhas.checkTypeFilter(idCampanha,'tipo','celular',UF)
+            filters['TIPO'].push(celular)  
+                 
+            const fixo = {}
+                  fixo['tipo']='fixo'
+                  fixo['numeros']=await Campanhas.totalNumeros_porTipo(tabelaNumero,UF,'fixo')
+                  fixo['filtered']=await Campanhas.checkTypeFilter(idCampanha,'tipo','fixo',UF)
+            filters['TIPO'].push(fixo)  
+
+            //Verificando filtros pelo UF
+            filters['UF']=[]
+            const ufs = {}
+                  ufs['uf']=UF
+                  ufs['numeros']=await Campanhas.totalNumeros(tabelaNumero,UF)
+                  ufs['filtered']=await Campanhas.checkTypeFilter(idCampanha,'uf',UF,UF)
+            filters['UF'].push(ufs) 
+                  
+        }else{
+            filters['TIPO']=[]
+            const celular = {}
+                  celular['tipo']='celular'
+                  celular['numeros']=await Campanhas.totalNumeros_porTipo(tabelaNumero,UF,'celular')
+                  celular['filtered']=await Campanhas.checkTypeFilter(idCampanha,'tipo','celular',"")
+            filters['TIPO'].push(celular)  
+                 
+            const fixo = {}
+                  fixo['tipo']='fixo'
+                  fixo['numeros']=await Campanhas.totalNumeros_porTipo(tabelaNumero,UF,'fixo')
+                  fixo['filtered']=await Campanhas.checkTypeFilter(idCampanha,'tipo','fixo',"")
+            filters['TIPO'].push(fixo)  
+        }
+        res.json(filters) 
     }
 
     //MAILING=>CONFIGURAR TELA DO AGENTE
-    //Listar campos disponiveis que foram configurados no mailing
+    //Listar campos disponiveis que foram configurados no mailing  
     async listarCamposConfigurados(req,res){
         const idCampanha = parseInt(req.params.idCampanha)
-        const tabela = await Campanhas.nomeTabela_byIdCampanha(idCampanha)
-        if(tabela===false){
+        const infoMailing = await Campanhas.infoMailingCampanha(idCampanha)
+        if(infoMailing.length==0){
             res.send(JSON.parse('{"erro":"Nenhum mailing encontrado na campanha"}'))
             return false
         }
-        const campos = await Campanhas.camposConfiguradosDisponiveis(tabela)      
+        const idMailing = infoMailing[0].id
+        const tabela = infoMailing[0].tabela_dados
+        
+        const campos = await Campanhas.camposConfiguradosDisponiveis(idMailing)      
         const camposConf=[]
         for(let i=0; i< campos.length; i++){
             camposConf[i]={}
@@ -330,25 +400,41 @@ class CampanhasController{
     async adicionaCampo_telaAgente(req,res){
         const idCampanha = req.body.idCampanha 
         const idCampo = req.body.idCampo
-        const tabela = await Campanhas.nomeTabela_byIdCampanha(idCampanha)
-        await Campanhas.addCampoTelaAgente(idCampanha,tabela,idCampo)
-        res.send(true)
+        const infoMailing = await Campanhas.infoMailingCampanha(idCampanha)
+        const tabela =infoMailing[0].tabela_dados
+        if(await Campanhas.campoSelecionadoTelaAgente(idCampo,tabela,idCampanha)===false){
+            await Campanhas.addCampoTelaAgente(idCampanha,tabela,idCampo)
+            res.send(true)
+        }        
+        res.send(false)
     }
-
     //Lista apenas os campos selecionados
     async listaCampos_telaAgente(req,res){
         const idCampanha = parseInt(req.params.idCampanha)
-        const tabela = await Campanhas.nomeTabela_byIdCampanha(idCampanha)
+        const infoMailing = await Campanhas.infoMailingCampanha(idCampanha)
+        if(infoMailing.length==0){
+            res.send(false)
+            return false
+        }
+        const tabela = infoMailing[0].tabela_dados
         const campos = await Campanhas.camposTelaAgente(idCampanha,tabela)
         res.send(campos)
     }
-    //Desmarca o campo atual
-    async removeCampo_telaAgente(req,res){
+     //Desmarca o campo atual
+     async removeCampo_telaAgente(req,res){
         const idCampanha = parseInt(req.params.idCampanha)
         const idCampo = parseInt(req.params.idCampo)
         await Campanhas.delCampoTelaAgente(idCampanha,idCampo)
         res.send(true)
     }
+
+
+
+
+    
+
+    
+   
 
     //BLACKLIST
     //Bloqueio por DDDs
@@ -366,7 +452,7 @@ class CampanhasController{
     //GRAFICO CAMPANHA
     //Status da evolucao do mailing na campanha
     async statusEvolucaoCampanha(req,res){
-        const idCampanha = parseInt(req.params.idCampanha)
+       /* const idCampanha = parseInt(req.params.idCampanha)
         console.log(`idCampanha ${idCampanha}`)
         const total = await Campanhas.totalMailingsCampanha(idCampanha)
         const contatados = await Campanhas.mailingsContatadosPorCampanha(idCampanha,'S')
@@ -380,11 +466,11 @@ class CampanhasController{
             perc_trabalhados = parseFloat((trabalhados / total)*100).toFixed(1)
             perc_contatados = parseFloat((contatados / total)*100).toFixed(1)
             perc_naoContatados = parseFloat((naoContatados / total)*100).toFixed(1)                        
-        }           
+        }    */       
         const retorno={}
-              retorno['trabalhado']=parseFloat(perc_trabalhados)
-              retorno['contatados']=parseFloat(perc_contatados)
-              retorno['nao_contatados']=parseFloat(perc_naoContatados)
+              retorno['trabalhado']=0//parseFloat(perc_trabalhados)
+              retorno['contatados']=0//parseFloat(perc_contatados)
+              retorno['nao_contatados']=0//parseFloat(perc_naoContatados)
               console.log(retorno)                    
         res.json(retorno)
     }
@@ -431,7 +517,7 @@ class CampanhasController{
     editarListaPausa(req,res){
         const idLista = parseInt(req.params.id);
         const valores = req.body
-        Pausas.editarListaPausa(idLista,valores,(erro,result)=>{
+        Pausas.editarListaPausa(idLista,valores,(e,result)=>{
             if(e) throw e
             
             res.json(result)
@@ -441,7 +527,7 @@ class CampanhasController{
     //Ver dados da lista de pausas
     dadosListaPausa(req,res){
         const idLista = parseInt(req.params.id);
-        Pausas.dadosListaPausa(idLista,(erro,result)=>{
+        Pausas.dadosListaPausa(idLista,(e,result)=>{
             if(e) throw e
             
             res.json(result)
@@ -450,7 +536,7 @@ class CampanhasController{
 
     //Ver todas as listas de pausas
     listasPausa(req,res){
-        Pausas.listasPausa((erro,result)=>{
+        Pausas.listasPausa((e,result)=>{
             if(e) throw e
             
             res.json(result)
@@ -460,7 +546,7 @@ class CampanhasController{
     //Criar nova pausa
     criarPausa(req,res){
         const dados = req.body
-        Pausas.criarPausa(dados,(erro,result)=>{
+        Pausas.criarPausa(dados,(e,result)=>{
             if(e) throw e
             
             res.json(result)
@@ -471,7 +557,7 @@ class CampanhasController{
     editarPausa(req,res){
         const id = parseInt(req.params.id);
         const valores = req.body
-        Pausas.editarPausa(id,valores,(erro,result)=>{
+        Pausas.editarPausa(id,valores,(e,result)=>{
             if(e) throw e
             
             res.json(result)
@@ -481,7 +567,7 @@ class CampanhasController{
     //ver pausa
     dadosPausa(req,res){
         const id = parseInt(req.params.id);
-        Pausas.dadosPausa(id,(erro,result)=>{
+        Pausas.dadosPausa(id,(e,result)=>{
             if(e) throw e
             
             res.json(result)
@@ -491,7 +577,7 @@ class CampanhasController{
     //ver todas pausas de uma lista
     listarPausas(req,res){
         const idLista = parseInt(req.params.idLista)
-        Pausas.listarPausas(idLista,(erro,result)=>{
+        Pausas.listarPausas(idLista,(e,result)=>{
             if(e) throw e
             
             res.json(result)
@@ -501,6 +587,7 @@ class CampanhasController{
     //#########  F I L A S            ############
     async criarFila(req,res){
         const name = req.body.name
+        const description = req.body.description
         const musiconhold = req.body.musiconhold
         const strategy = req.body.strategy
         const timeout = req.body.timeout
@@ -509,22 +596,9 @@ class CampanhasController{
         const maxlen = req.body.maxlen
         const monitorType = 'mixmonitor'
         const monitorFormat = 'wav'
-        await Campanhas.novaFila(name)
+        await Campanhas.novaFila(name,description)
         await Filas.criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat)
         res.send(true)
-    }
-
-    async removerFila(req,res){
-        const nomeFila = req.params.nomeFila
-        await Campanhas.removerFila(nomeFila)
-        await Filas.removerFila(nomeFila)
-        res.send(true)
-    }
-
-    async dadosFila(req,res){
-        const nomeFila = req.params.nomeFila
-        const dadosFila = await Filas.dadosFila(nomeFila)
-        res.json(dadosFila)
     }
 
     async listarFilas(req,res){
@@ -532,12 +606,52 @@ class CampanhasController{
         res.json(filas)
     }
 
+    async dadosFila(req,res){
+        const idFila = req.params.idFila
+        const dadosFila = await Campanhas.dadosFila(idFila)
+        res.json(dadosFila)
+    }
+
+    async configuracoesFila(req,res){const idFila = req.params.idFila
+        const dadosFila = await Campanhas.dadosFila(idFila)
+        const nomeFila=dadosFila[0].nome
+        const configFila=await Filas.dadosFila(nomeFila)
+        res.json(configFila)
+    }
+
     async editarFila(req,res){
-        const nomeFila = req.params.nomeFila
-        const dados = req.body;
-        await Filas.editarFila(nomeFila,dados)
+        const idFila = req.params.idFila
+        const dadosFila = await Campanhas.dadosFila(idFila)
+        const nomeFilaAtual=dadosFila[0].nome
+        const dados = req.body
+        await Campanhas.editarFila(idFila,dados)
+        await Filas.editarNomeFila(nomeFilaAtual,dados.name)
         res.json(true)
     }
+
+    async configurarFila(req,res){
+        const idFila = req.params.idFila
+        const dadosFila = await Campanhas.dadosFila(idFila)
+        const nomeFila=dadosFila[0].nome
+        const configs = req.body
+        await Filas.editarFila(nomeFila,configs)
+        res.json(true)
+    }
+
+    async removerFila(req,res){
+        const idFila = req.params.idFila
+        const dadosFila = await Campanhas.dadosFila(idFila)
+        const nomeFila=dadosFila[0].nome
+        await Campanhas.removerFila(idFila)
+        await Filas.removerFila(nomeFila)
+        res.send(true)
+    }
+
+    
+
+    
+
+    
     
     
     //#########  B A S E S            ############

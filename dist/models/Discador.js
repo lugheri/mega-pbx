@@ -3,7 +3,7 @@ var _Asterisk = require('./Asterisk'); var _Asterisk2 = _interopRequireDefault(_
 var _Campanhas = require('./Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
 var _Cronometro = require('./Cronometro'); var _Cronometro2 = _interopRequireDefault(_Cronometro);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
-var _Constants = require('jssip/lib/Constants');
+
 class Discador{
     async debug(title="",msg=""){
         const debug=await this.mode()       
@@ -18,16 +18,12 @@ class Discador{
         return mode[0].debug
     }
     
+    querySync(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.pool.query(sql,(e,rows)=>{
+                if(e) reject(e);
 
-
-
-    querySync(sql,args){
-        return new Promise ((resolve,reject) =>{
-            _dbConnection2.default.banco.query(sql,args,(err,rows)=>{
-                if(err)
-                    return reject(err);
-               
-                resolve(rows);
+                resolve(rows)
             })
         })
     }
@@ -178,7 +174,7 @@ class Discador{
     filasCampanha(idCampanha){
         return new Promise(async(resolve,reject)=>{
             //Listar filas da campanha
-            const sql = `SELECT id as idFila, nomeFila FROM campanhas_filas WHERE idCampanha='${idCampanha}'`
+            const sql = `SELECT idFila, nomeFila FROM campanhas_filas WHERE idCampanha='${idCampanha}'`
             _dbConnection2.default.banco.query(sql,(e,r)=>{
                 if(e)
                     return reject(e)

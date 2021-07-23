@@ -1,14 +1,13 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
-var _Asterisk = require('./Asterisk'); var _Asterisk2 = _interopRequireDefault(_Asterisk);
-var _User = require('./User'); var _User2 = _interopRequireDefault(_User);
+var _Mailing = require('./Mailing'); var _Mailing2 = _interopRequireDefault(_Mailing);
 
-class Campanhas{
-    querySync(sql,args){
-        return new Promise ((resolve,reject) =>{
-            _dbConnection2.default.banco.query(sql,args,(err,rows)=>{
-                if(err)
-                    return reject(err);
-                resolve(rows);
+class Campanhas{   
+    querySync(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.pool.query(sql,(e,rows)=>{
+                if(e) reject(e);
+
+                resolve(rows)
             })
         })
     }
@@ -51,64 +50,88 @@ class Campanhas{
     //TABULACOES
     //######################Gestão das listas de tabulacao das campanhas######################
     //Adiciona lista de tabulacao na campanha
-    addListaTabulacaoCampanha(idCampanha,idListaTabulacao,callback){
+    async addListaTabulacaoCampanha(idCampanha,idListaTabulacao,callback){
         //Removendo listas anteriores
-        const sql = `DELETE FROM campanhas_listastabulacao_selecionadas WHERE idCampanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
-            if(e) throw e
-
-            const sql = `INSERT INTO campanhas_listastabulacao_selecionadas (idCampanha,idListaTabulacao) VALUES (${idCampanha},${idListaTabulacao})`
-            _dbConnection2.default.banco.query(sql,callback)
-        })         
+        let sql = `DELETE FROM campanhas_listastabulacao WHERE idCampanha=${idCampanha}`
+        await this.querySync(sql)
+        
+        sql = `INSERT INTO campanhas_listastabulacao (idCampanha,idListaTabulacao) VALUES (${idCampanha},${idListaTabulacao})`
+        await this.querySync(sql)         
     }
 
     //Exibe listas de tabulacao da campanhas
-    listasTabulacaoCampanha(idCampanha,callback){
-        const sql = `SELECT id as idListaNaCampanha, idCampanha, idListaTabulacao FROM campanhas_listastabulacao_selecionadas WHERE idCampanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
+    async listasTabulacaoCampanha(idCampanha){
+        const sql = `SELECT id as idListaNaCampanha, idCampanha, idListaTabulacao FROM campanhas_listastabulacao WHERE idCampanha=${idCampanha}`
+        await this.querySync(sql)  
     }
 
     //Remove listas de tabulacao da campanha
-    removerListaTabulacaoCampanha(idListaNaCampanha,callback){
-        const sql = `DELETE FROM campanhas_listastabulacao_selecionadas WHERE id=${idListaNaCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
+    async removerListaTabulacaoCampanha(idListaNaCampanha){
+        const sql = `DELETE FROM campanhas_listastabulacao WHERE id=${idListaNaCampanha}`
+        await this.querySync(sql)  
     }
 
     //INTEGRAÇÕES
     //######################Gestão das integrações######################
     //Cria Integração
     criarIntegracao(dados,callback){
-        const sql = `INSERT INTO campanhas_integracoes (idCampanha,url,descricao,modoAbertura) VALUES (0,'${dados.url}','${dados.descricao}','${dados.modoAbertura}')`
+        const sql = `INSERT INTO campanhas_integracoes_disponiveis (url,descricao,modoAbertura) VALUES ('${dados.url}','${dados.descricao}','${dados.modoAbertura}')`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
     //Listar integracao
     listarIntegracoes(callback){
-        const sql = `SELECT * FROM campanhas_integracoes`
+        const sql = `SELECT * FROM campanhas_integracoes_disponiveis`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
     //Atualiza Integracao
     atualizarIntegracao(idIntegracao,dados,callback){
-        const sql = `UPDATE campanhas_integracoes SET url='${dados.url}',descricao='${dados.descricao}',modoAbertura='${dados.modoAbertura}' WHERE id=${idIntegracao}`
+        const sql = `UPDATE campanhas_integracoes_disponiveis SET url='${dados.url}',descricao='${dados.descricao}',modoAbertura='${dados.modoAbertura}' WHERE id=${idIntegracao}`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
     //Dados integracao
     dadosIntegracao(idIntegracao,callback){
-        const sql = `SELECT * FROM  campanhas_integracoes WHERE id=${idIntegracao}`
+        const sql = `SELECT * FROM  campanhas_integracoes_disponiveis WHERE id=${idIntegracao}`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
     //Remove Integracao
     removerIntegracao(idIntegracao,callback){
-        const sql = `DELETE FROM campanhas_integracoes WHERE id=${idIntegracao}`
-        _dbConnection2.default.banco.query(sql,callback)
+        const sql = `DELETE FROM campanhas_integracoes_disponiveis WHERE id=${idIntegracao}`
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e
+
+            const sql = `DELETE FROM campanhas_integracoes WHERE idIntegracao=${idIntegracao}`
+            _dbConnection2.default.banco.query(sql,callback)
+        })
     }
 
     //Selecionar integracao
     inserirIntegracaoCampanha(dados,callback){
-        const sql = `UPDATE campanhas_integracoes SET idCampanha='${dados.idCampanha}' WHERE id=${dados.idIntegracao}`
+        const sql = `SELECT id FROM campanhas_integracoes WHERE idCampanha=${dados.idCampanha}`
+        _dbConnection2.default.banco.query(sql,(e,rows)=>{
+            if(e) throw e
+
+            if(rows.length>=1){
+                callback(false,false)
+                return false;
+            }
+            const sql = `INSERT INTO campanhas_integracoes (idCampanha,idIntegracao) VALUES (${dados.idCampanha},${dados.idIntegracao})`
+            _dbConnection2.default.banco.query(sql,callback)
+        })        
+    }
+
+    //Listar Integracoes de uma campanhas
+    listaIntegracaoCampanha(idCampanha,callback){
+        const sql = `SELECT i.* FROM  campanhas_integracoes AS c JOIN campanhas_integracoes_disponiveis AS i ON i.id=c.idIntegracao WHERE c.idCampanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    //remove integracao campannha
+    removerIntegracaoCampanha(idCampanha,idIntegracao,callback){
+        const sql = `DELETE FROM campanhas_integracoes WHERE idCampanha=${idCampanha} AND idIntegracao=${idIntegracao}`
         _dbConnection2.default.banco.query(sql,callback)
     }
 
@@ -137,39 +160,61 @@ class Campanhas{
     //FILAS
     //Listar filas da campanha
     listarFilasCampanha(idCampanha,callback){
-        const sql = `SELECT id as idFila, nomeFila FROM campanhas_filas WHERE idCampanha='${idCampanha}'`
+        const sql = `SELECT idFila, nomeFila FROM campanhas_filas WHERE idCampanha='${idCampanha}'`
         _dbConnection2.default.banco.query(sql,callback)
     }    
     //Incluir fila a campanhas
-    addFila(idCampanha,nomeFila,callback){
-        const sql = `INSERT INTO campanhas_filas (idCampanha,nomeFila) VALUES (${idCampanha},'${nomeFila}')`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+    addFila(idCampanha,idFila,nomeFila,callback){
+        const sql = `DELETE FROM campanhas_filas WHERE idCampanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,(e,r)=>{
+            if(e) throw e
 
-    dadosFila(idFila,callback) {
-        const sql = `SELECT * FROM campanhas_filas WHERE id=${idFila} AND idCampanha=0`
-        _dbConnection2.default.banco.query(sql,callback)
+            const sql = `INSERT INTO campanhas_filas (idCampanha,idFila,nomeFila) VALUES (${idCampanha},${idFila},'${nomeFila}')`
+            _dbConnection2.default.banco.query(sql,callback)
+        })
     }
 
     //Remove uma determinada fila da campanha
-    removerFilaCampanha(idCampanha,nomeFila,callback){
-        const sql = `DELETE FROM campanhas_filas WHERE idCampanha=${idCampanha} AND nomeFila='${nomeFila}'`
+    removerFilaCampanha(idCampanha,idFila,callback){
+        const sql = `DELETE FROM campanhas_filas WHERE idCampanha=${idCampanha} AND idFila='${idFila}'`
         _dbConnection2.default.banco.query(sql,callback)
     }    
 
     //MAILING
     //ADICIONA O MAILING A UMA CAMPANHA
-    addMailingCampanha(idCampanha,idMailing,callback){
+    async addMailingCampanha(idCampanha,idMailing){
+        const infoMailing = await _Mailing2.default.infoMailing(idMailing)
+        const tabelaDados = infoMailing[0].tabela_dados
+        const tabelaNumeros = infoMailing[0].tabela_numeros
         //verifica se mailing ja existem na campanha
-        const sql = `SELECT id FROM campanhas_mailing WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
-            if (e) throw e;
-
-            if(r.length==0){
-                const sql = `INSERT INTO campanhas_mailing (idCampanha,idMailing) VALUES ('${idCampanha}','${idMailing}')`
-                _dbConnection2.default.banco.query(sql,callback)
-            }            
-        })
+        let sql = `SELECT id FROM campanhas_mailing WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
+        const r = await this.querySync(sql)
+        if(r.length==1){
+            return false
+        }
+        //Inserindo coluna da campanha na tabela de numeros
+        sql = `ALTER TABLE mailings.${tabelaNumeros} 
+               ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT NULL AFTER produtivo,
+               ADD INDEX campanha_${idCampanha} (campanha_${idCampanha})`
+        await this.querySync(sql)
+        //Atualiza os registros como disponíveis (1)
+        sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`
+        await this.querySync(sql)
+        //Inserindo informacao do id do mailing na campanha 
+        sql = `INSERT INTO campanhas_mailing (idCampanha,idMailing) VALUES ('${idCampanha}','${idMailing}')`
+        await this.querySync(sql)
+        //Inserindo campos do mailing
+        sql = `SELECT * FROM mailing_tipo_campo WHERE idMailing=${idMailing}`
+        const campos =  await this.querySync(sql)
+        sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,idMailing,tabela,idCampo,ordem) VALUES ` 
+        for(let i=0; i<campos.length; i++){
+            sql += `(${idCampanha},${idMailing},'${tabelaDados}',${campos[i].id},${i})`
+            if((i+1)<campos.length){ sql +=', '}
+            
+        }
+        console.log(sql)
+        await this.querySync(sql)
+        return true
     }
 
     //Lista os mailings adicionados em uma campanha
@@ -179,32 +224,193 @@ class Campanhas{
     }
 
     //Remove o mailing de uma campanha
-    removeMailingCampanha(id,callback){
-        //Recuperando o id da campanha
-        const sql = `SELECT idCampanha FROM campanhas_mailing WHERE id=${id}`
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
-            if(e) throw e;
+    async removeMailingCampanha(idCampanha){
+        const infoMailing = await this.infoMailingCampanha(idCampanha)
 
-            const idCampanha = r[0].idCampanha
-            //Removendo integracao do mailing com a campanha
-            const sql = `DELETE FROM campanhas_mailing WHERE id=${id}`
-            _dbConnection2.default.banco.query(sql,callback)
-        })
+        //Recuperando o id da campanha
+        let sql = `SELECT idCampanha FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
+        const r = await this.querySync(sql)
+        if(r.length==0){
+            return false
+        }
+        //Removendo coluna da campanha no mailing
+        sql = `ALTER TABLE mailings.${infoMailing[0].tabela_numeros} DROP COLUMN campanha_${idCampanha}`
+        await this.querySync(sql)
+        //Removendo informacao do mailing da campanha
+        sql = `DELETE FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
+        await this.querySync(sql)
+        //Removendo filtros do mailing na campanha
+        sql = `DELETE FROM campanhas_mailing_filtros WHERE idCampanha=${idCampanha}`
+        await this.querySync(sql)
+        //removendo campos do mailing na campanha
+        sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha}` 
+        await this.querySync(sql)
+        return true
     }
-   
-    //Configuracao da tela do agente
-    //Recupera o nome da tabela pelo id da campanha
-    async nomeTabela_byIdCampanha(idCampanha){
-        const sql = `SELECT m.tabela FROM mailings AS m JOIN campanhas_mailing AS c ON m.id=c.idMailing WHERE c.idCampanha=${idCampanha}`
-        const tabela = await this.querySync(sql)
-        if(tabela.length==0){
+
+    //FILTROS DE DISCAGEM ##################################################################################
+    //Aplica/remove um filtro de discagem
+    async filtrarRegistrosCampanha(parametros){     
+        const idCampanha = parametros.idCampanha;
+        const infoMailing = await this.infoMailingCampanha(idCampanha)//informacoes do mailing
+        const idMailing = infoMailing[0].id;
+        const tabelaNumeros = infoMailing[0].tabela_numeros;
+        const tipo = parametros.tipo;
+        const valor = parametros.valor
+        const regiao = parametros.regiao 
+
+        
+        if(infoMailing.length==0){
+            //console.log('Mailing nao encontrado')
+            return false
+        }
+        const checkFilter = await this.checkFilter(idCampanha,idMailing,tipo,valor,regiao)//Verificando se ja existe filtro aplicado
+        
+        //verifica se filtro ja esta aplicado
+        if(checkFilter===true){
+            //console.log('checkFilter true')
+            let sql=""
+            if(regiao==""){//remo
+                //console.log(`Removendo filtro ${tipo}=${valor}`)
+                sql=`DELETE FROM campanhas_mailing_filtros 
+                     WHERE idCampanha=${idCampanha}
+                       AND idMailing=${idMailing}
+                       AND tipo='${tipo}'
+                       AND valor='${valor}'`
+            }else{
+                //console.log(`Removendo filtros ${tipo}=${valor}`)
+                sql=`DELETE FROM campanhas_mailing_filtros 
+                           WHERE idCampanha=${idCampanha}
+                             AND idMailing=${idMailing}
+                             AND tipo='${tipo}'
+                             AND valor='${valor}'
+                             AND regiao='${regiao}'`
+            }
+            //console.log(`Removendo filtros sql`,sql)   
+           
+            await this.querySync(sql)      
+            this.delFilterDial(tabelaNumeros,idCampanha,tipo,valor,regiao)
+            //Listar filtros restantes
+            sql = `SELECT * FROM campanhas_mailing_filtros WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
+            const fr = await this.querySync(sql)//Filtros Restantes
+            
+            if(fr.length>=1){
+                for (let i = 0; i < fr.length; i++) {
+                    this.addFilterDial(tabelaNumeros,idCampanha,fr[i].tipo,fr[i].valor,fr[i].regiao)
+                }
+            }
+            return true
+        }
+        let sql=`INSERT INTO campanhas_mailing_filtros 
+                         (idCampanha,idMailing,tipo,valor,regiao)
+                  VALUES (${idCampanha},${idMailing},'${tipo}','${valor}','${regiao}')`
+                  //console.log(`last sql`,sql)          
+        await this.querySync(sql)
+        this.addFilterDial(tabelaNumeros,idCampanha,tipo,valor,regiao)
+        return true
+    }
+
+
+    //Retorna todas as informações de um mailing que esta atribuido em uma campanha
+    async infoMailingCampanha(idCampanha){
+        const sql =`SELECT m.* FROM mailings AS m
+                    JOIN campanhas_mailing AS c
+                    ON c.idMailing=m.id
+                    WHERE idCampanha=${idCampanha}`
+        return await this.querySync(sql)
+    }
+    //Checa se já existe algum filtro aplicado com os parametros informados
+    async checkFilter(idCampanha,idMailing,tipo,valor,regiao){
+        const sql =`SELECT id FROM campanhas_mailing_filtros 
+                     WHERE idCampanha=${idCampanha}
+                       AND idMailing=${idMailing}
+                       AND tipo='${tipo}'
+                       AND valor='${valor}'
+                       AND regiao='${regiao}'`
+        const r = await this.querySync(sql)
+        if(r.length==0){
             return false;
         }
-        return tabela[0].tabela
+        return true;
     }
-    //Lista todos os campos que foram configurados do mailing
-    async camposConfiguradosDisponiveis(tabela){
-        const sql = `SELECT id,campo,apelido,tipo FROM mailing_tipo_campo WHERE tabela='${tabela}' AND conferido=1`
+    //Remove um filtro de uma tabela
+    async delFilterDial(tabela,idCampanha,tipo,valor,regiao){
+        console.log(`delFilterDial ${tipo}=${valor}`)
+        let filter=""
+        filter+=`${tipo}='${valor}'`
+        if(regiao!=0){ filter+=` AND uf='${regiao}'`}
+       
+        let sql = `UPDATE mailings.${tabela} SET campanha_${idCampanha}=1 WHERE ${filter}`       
+        console.log(`delFilter sql`,sql)
+        await this.querySync(sql)
+        return true
+    }
+    //Aplica um filtro a uma tabela
+    async addFilterDial(tabela,idCampanha,tipo,valor,regiao){
+        console.log(`addFilterDial ${tipo}=${valor}`)
+        let filter=""
+        filter+=`${tipo}='${valor}'`
+        if(regiao!=0){ filter+=` AND uf='${regiao}'`}       
+        let sql = `UPDATE mailings.${tabela} SET campanha_${idCampanha}=0 WHERE ${filter}`          
+        await this.querySync(sql)
+        return true
+    }
+
+    //Conta o total de numeros de uma tabela pelo UF, ou DDD
+    async totalNumeros(tabela,uf,ddd){
+        let filter=""
+        if(uf!=0){ filter += ` AND uf="${uf}"` }
+        if(ddd!=undefined){ filter += ` AND ddd=${ddd}`}
+        const sql = `SELECT COUNT(id) AS total FROM mailings.${tabela} WHERE valido=1 ${filter}` 
+        console.log('sql',sql)      
+        const r = await this.querySync(sql)
+        return r[0].total
+    }
+    async totalNumeros_porTipo(tabela,uf,tipo){
+        let filter=""
+        if(uf!=0){ filter += ` AND uf="${uf}"` }
+        if(tipo!=undefined){ filter += ` AND tipo='${tipo}'`}
+        const sql = `SELECT COUNT(id) AS total FROM mailings.${tabela} WHERE valido=1 ${filter}`       
+        const r = await this.querySync(sql)
+        return r[0].total
+    }
+    //Conta o total de registros filtrados de uma tabela pelo us
+    async numerosFiltrados(tabela,idCampanha,uf){
+        let filter=""
+        if(uf!=0){ filter += ` AND uf="${uf}"` }
+        const sql = `SELECT COUNT(id) AS total FROM mailings.${tabela} WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
+        const r = await this.querySync(sql)
+        return r[0].total
+    }
+    //Retorna os DDDS de uma tabela de numeros
+    async dddsMailings(tabela,uf){
+        let filter=""
+        if(uf!=0){ filter = `WHERE uf='${uf}'` }
+        let sql = `SELECT DISTINCT ddd FROM mailings.${tabela} ${filter}`
+        return await this.querySync(sql)
+    }
+    //Checa se existe algum filtro de DDD aplicado
+    async checkTypeFilter(idCampanha,tipo,valor,uf){     
+        let filter  =""
+         if(tipo!='uf'){
+             filter=` AND regiao = "${uf}"`
+         }
+        const sql =`SELECT id FROM campanhas_mailing_filtros 
+                     WHERE idCampanha=${idCampanha}
+                       AND tipo='${tipo}' AND valor='${valor}'
+                       ${filter}`
+                       console.log('sql filtro',sql)
+        const r = await this.querySync(sql)
+        if(r.length==0){
+            return false;
+        }
+        return true;
+    }
+
+    //CONFIGURAR TELA DO AGENTE    
+     //Lista todos os campos que foram configurados do mailing
+     async camposConfiguradosDisponiveis(idMailing){
+        const sql = `SELECT id,campo,apelido,tipo FROM mailing_tipo_campo WHERE idMailing='${idMailing}' AND conferido=1`
         return await this.querySync(sql)
     }
     //Verifica se o campo esta selecionado
@@ -216,26 +422,56 @@ class Campanhas{
         }
         return true; 
     }
-    //Campos adicionados na tela do agente
-    async camposAdicionadosNaTelaAgente(idCampanha,tabela){
-        const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}'`
-        return await this.querySync(sql)
-    }
-
+    //Adiciona campo na tela do agente
     async addCampoTelaAgente(idCampanha,tabela,idCampo){
-        const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo,ordem) VALUES (${idCampanha},'${tabela}',${idCampo},${idCampo})`
+        const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo,ordem) VALUES (${idCampanha},'${tabela}',${idCampo},0)`
         return await this.querySync(sql)
     }
-
     async camposTelaAgente(idCampanha,tabela){
         const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo FROM campanhas_campos_tela_agente AS t JOIN mailing_tipo_campo AS m ON m.id=t.idCampo WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
         return await this.querySync(sql)
     }
-
+    //Remove campo da campanha
     async delCampoTelaAgente(idCampanha,idCampo){
         const sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
         return await this.querySync(sql)
     }
+
+
+    //Campos adicionados na tela do agente
+    /*async camposAdicionadosNaTelaAgente(idCampanha,tabela){
+        const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}'`
+        return await this.querySync(sql)
+    }*/
+
+
+
+    
+
+    
+
+   
+
+    
+
+    
+
+   
+    
+    
+    
+    
+
+
+
+   
+   
+   
+    
+
+   
+
+    
 
     //BLACKLIST
 
@@ -279,22 +515,34 @@ class Campanhas{
     }
    
     //#########  F I L A S  ############
-    async novaFila(nomeFila){
-        const sql = `INSERT INTO campanhas_filas (idCampanha,nomeFila) VALUES(0,'${nomeFila}')`
-        await this.querySync(sql)
-        return true
-    }
-
-    async removerFila(nomeFila){
-        const sql = `DELETE FROM campanhas_filas WHERE nomeFila='${nomeFila}'`
+    async novaFila(nomeFila,descricao){
+        const sql = `INSERT INTO filas (nome,descricao) VALUES('${nomeFila}','${descricao}')`
         await this.querySync(sql)
         return true
     }
 
     async listarFilas(){
-        const sql = `SELECT * FROM campanhas_filas where idCampanha=0`
+        const sql = `SELECT * FROM filas`
         return await this.querySync(sql)
-    }   
+    } 
+
+    async dadosFila(idFila){
+        const sql = `SELECT * FROM filas WHERE id=${idFila}`
+        return await this.querySync(sql)
+    } 
+
+    async editarFila(idFila,dados){
+        const sql = `UPDATE filas SET nome='${dados.name}',descricao='${dados.description}' WHERE id='${idFila}'`
+        return await this.querySync(sql)
+    }
+
+    async removerFila(idFila){
+        const sql = `DELETE FROM filas WHERE id='${idFila}'`
+        await this.querySync(sql)
+        return true
+    }
+
+     
 
 
     //#########  B A S E S  ############
@@ -439,7 +687,7 @@ class Campanhas{
     }
 
     mailingConfigurado(idMailing,callback){
-        const sql = `SELECT tabela FROM mailings WHERE id=${idMailing} AND configurado=1`
+        const sql = `SELECT tabela_dados FROM mailings WHERE id=${idMailing} AND configurado=1`
         _dbConnection2.default.banco.query(sql,callback)
     }
 

@@ -3,15 +3,16 @@ import connect from '../Config/dbConnection';
 
 
 class Report{
-    querySync(sql,args){
-        return new Promise ((resolve,reject) =>{
-            connect.banco.query(sql,args,(err,rows)=>{
-                if(err)
-                    return reject(err);
-                resolve(rows);
+    querySync(sql){
+        return new Promise((resolve,reject)=>{
+            connect.pool.query(sql,(e,rows)=>{
+                if(e) reject(e);
+
+                resolve(rows)
             })
         })
     }
+
 
     async monitorarAgentes(idCampanha,idEquipe,idUser,callback){         
         let filter = ""

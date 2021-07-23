@@ -3,15 +3,16 @@
 
 
 class Report{
-    querySync(sql,args){
-        return new Promise ((resolve,reject) =>{
-            _dbConnection2.default.banco.query(sql,args,(err,rows)=>{
-                if(err)
-                    return reject(err);
-                resolve(rows);
+    querySync(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.pool.query(sql,(e,rows)=>{
+                if(e) reject(e);
+
+                resolve(rows)
             })
         })
     }
+
 
     async monitorarAgentes(idCampanha,idEquipe,idUser,callback){         
         let filter = ""
