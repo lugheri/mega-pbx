@@ -99,19 +99,20 @@ class CampanhasController{
             const idCampanha = req.body.idCampanha
             const idListaTabulacao = req.body.idListaTabulacao
             const r = await _Campanhas2.default.addListaTabulacaoCampanha(idCampanha,idListaTabulacao)
-            res.json(r);
+            res.json(true);
         }
         //Exibe as listas de tabulacao da Campanha
         async listasTabulacaoCampanha(req,res){
             const idCampanha = req.params.idCampanha;
             const r = await _Campanhas2.default.listasTabulacaoCampanha(idCampanha)
+            console.log('retorno',r)
             res.json(r);
         }
         //remove Lista tabulacao da campanha
         removerListaTabulacaoCampanha(req,res){
             const idListaNaCampanha = req.params.idListaNaCampanha
             const r = _Campanhas2.default.removerListaTabulacaoCampanha(idListaNaCampanha)
-            res.json(r);
+            res.json(true);
         }
         statusTabulacaoCampanha(req,res){
             res.json(false);

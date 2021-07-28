@@ -62,7 +62,7 @@ class Campanhas{
     //Exibe listas de tabulacao da campanhas
     async listasTabulacaoCampanha(idCampanha){
         const sql = `SELECT id as idListaNaCampanha, idCampanha, idListaTabulacao FROM campanhas_listastabulacao WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql)  
+        return await this.querySync(sql)  
     }
 
     //Remove listas de tabulacao da campanha

@@ -9,7 +9,6 @@ class FilasController{
             res.json(filas)
         })
     }
-
     //Listar Filas
     listarFilas(req,res){
         _Filas2.default.listar((e,filas)=>{
@@ -18,98 +17,70 @@ class FilasController{
             res.json(filas)
         })
     }
-
-    //get member fila
-    async getMembersFila(req,res){
-        const idFila = req.params.idFila
-        const agentes = await _Filas2.default.agentesAtivos()
-        const membros = {}
-              membros['agentes']={}
-        for(let i=0; i<agentes.length; i++){
-            membros['agentes'][`${agentes[i].id}`]={}
-            membros['agentes'][`${agentes[i].id}`]['id']=`${agentes[i].id}`
-            membros['agentes'][`${agentes[i].id}`]['content']=agentes[i].nome
-        }  
-        membros['columns']={}
-        const agentesNaFila = await _Filas2.default.membrosNaFila(idFila)
-        const naFila=[]
-        for(let i=0; i<agentesNaFila.length; i++) {
-            naFila[i] = agentesNaFila[i].ramal
-        }   
+    //agentesFila
+    async agentesFila(req,res){
+        const idFila = req.params.idFila            
+        const agentes = {}
 
         const agentesForaFila = await _Filas2.default.membrosForaFila(idFila)
-        const foraDaFila=[] 
-        for(let i=0; i<agentesForaFila.length; i++) {
-            foraDaFila[i] = agentesForaFila[i].ramal
-        }         
-        
-        /*for(let i=0; i<agentes.length; i++){
-            if(naFila.indexOf(agentes[i].id)<0){
-                foraDaFila.push(agentes[i].id)
-            }
-            console.log(agentes[i].id,naFila.indexOf(agentes[i].id))
-        }  */
+              agentes['agentesForaDaFila']=[]
+              for(let i=0; i<agentesForaFila.length; i++){              
+                let agente={}
+                    agente['ramal']=agentesForaFila[i].ramal
+                    agente['nome']=agentesForaFila[i].nome
+                    agente['destino']='D'
+                    agentes['agentesForaDaFila'].push(agente)
+              }
 
-        membros['columns']['foraDaFila']={}
-        membros['columns']['foraDaFila']['id']='foraDaFila'
-        membros['columns']['foraDaFila']['agentesIds']=foraDaFila
-        
-        membros['columns']['dentroDaFila']={}
-        membros['columns']['dentroDaFila']['id']='dentroDaFila'
-        membros['columns']['dentroDaFila']['agentesIds']=naFila
-           
-        res.json(membros)
+        const agentesNaFila = await _Filas2.default.membrosNaFila(idFila)    
+              agentes['agentesNaFila']=[]
+              for(let i=0; i<agentesNaFila.length; i++){
+                let agente={}
+                agente['ramal']=agentesNaFila[i].ramal
+                agente['nome']=agentesNaFila[i].nome
+                agente['destino']='F'
+                agentes['agentesNaFila'].push(agente)
+            }
+
+        res.json(agentes)
+    }  
+    //Atualizar membros da campanha
+    async updateMemberFila(req,res){
+        const idFila = parseInt(req.params.idFila)
+        const ramal = req.body.ramal
+        const destino =  req.body.destino
+
+        if(destino=="D"){//Adiciona membro a fila
+            const r = await _Filas2.default.addMembroFila(ramal,idFila)
+            res.json(r)  
+            return false;          
+        }
+        if(destino=="F"){//Remove membro da fila caso destino nao seja 'D'
+            const r = _Filas2.default.removeMembroFila(ramal,idFila)
+            res.json(true)
+            return false;          
+        }     
+        res.json(false)   
     }
 
-    //Atualizar membros da campanha
-    updateMemberFila(req,res){
-        const idFila = parseInt(req.params.idFila)
-        const idAgente = req.body.idAgente
-        const origem = req.body.origem.columName
-        const posOrigem = req.body.origem.posicao
-        const destino =  req.body.destino.columName
-        const posDestino = req.body.destino.posicao
-
-        console.log('IdFila',idFila)
-       
-        //reordena fora da fila
-        if((origem == 'foraDaFila')&&(destino == 'foraDaFila')){           
-            _Filas2.default.reordenaMembrosForaFila(idAgente,idFila,posOrigem,posDestino,(e,r)=>{
-                if(e) throw e
+    async moveAllMembers(req, res){
+        const idFila = req.params.idFila
+        const destino = req.params.destino
+        if(destino=="D"){
+            const agentesForaFila = await _Filas2.default.membrosForaFila(idFila)
+            for(let i=0; i<agentesForaFila.length; i++){
+                await _Filas2.default.addMembroFila(agentesForaFila[i].ramal,idFila)
+            }
+        }
+        if(destino=="F"){
+            const agentesNaFila = await _Filas2.default.membrosNaFila(idFila) 
+            for(let i=0; i<agentesNaFila.length; i++){
+                await _Filas2.default.removeMembroFila(agentesNaFila[i].ramal,idFila)
                 
-                _Filas2.default.normalizaOrdem(idFila)
-                res.json(true)
-            })
+            }   
         }
-        //insere na fila
-        if((origem == 'foraDaFila')&&(destino == 'dentroDaFila')){
-            _Filas2.default.addMembroFila(idAgente,idFila,posOrigem,posDestino,(e,r)=>{
-                if(e) throw e
+        res.json(true) 
 
-                _Filas2.default.normalizaOrdem(idFila)  
-                res.json(true)
-            })
-        }
-
-        //reordena dentro da fila
-        if((origem == 'dentroDaFila')&&(destino == 'dentroDaFila')){                
-            _Filas2.default.reordenaMembrosDentroFila(idAgente,idFila,posOrigem,posDestino,(e,r)=>{
-                if(e) throw e
-                
-                _Filas2.default.normalizaOrdem(idFila)                
-                res.json(true)
-            })
-        }
-
-        //remove da fila
-        if((origem == 'dentroDaFila')&&(destino == 'foraDaFila')){
-            _Filas2.default.removeMembroFila(idAgente,posOrigem,idFila,(e,r)=>{
-                if(e) throw e
-
-                _Filas2.default.normalizaOrdem(idFila)
-                res.json(true)
-            })
-        }        
     }
 }
 exports. default = new FilasController();

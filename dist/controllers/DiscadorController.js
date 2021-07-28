@@ -5,20 +5,27 @@ var _Tabulacoes = require('../models/Tabulacoes'); var _Tabulacoes2 = _interopRe
 var _Cronometro = require('../models/Cronometro'); var _Cronometro2 = _interopRequireDefault(_Cronometro);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 
-class DiscadorController{ 
-    
+class DiscadorController{     
     async debug(title="",msg=""){
         const debug= await _Discador2.default.mode()        
         if(debug==1){
             console.log(`${title}`,msg)
         }
     }
+
+
+    async dial(req,res){
+        
+    }
+
+
+
+
     async iniciandoDiscadorSistema(req,res){
         
         this.debug('','Iniciando Discador')
         //PASSO 1 - VERIFICAÇÃO
         this.debug('PASSO 1 - VERIFICAÇÃO')
-
         
         //#1 Conta as chamadas simultaneas para registrar no log
         this.debug(' . PASSO 1.1','Registrando chamadas simultaneas')
@@ -50,8 +57,7 @@ class DiscadorController{
                 const nomeFila = filasCampanha[0].nomeFila
                 //#5 Verifica se existe mailing adicionado
                 this.debug(' . . . PASSO 1.5',`Verifica se existe mailing adicionado`)
-                const idMailing = await _Discador2.default.verificaMailing(idCampanha)
-               
+                const idMailing = await _Discador2.default.verificaMailing(idCampanha)               
 
                 if(idMailing.length === 0){
                     //Atualiza o novo status da campanha

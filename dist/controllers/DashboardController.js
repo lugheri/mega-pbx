@@ -342,6 +342,8 @@ class DashboardController{
         frases.push('Tudo que você tem que fazer é pegar uma bola redonda')
         frases.push('Essa função que le o arquivo do arquivo!')
         frases.push('Com Python você deve conseguir conseguir')
+        frases.push('O problema do problema tá no método...')
+        frases.push('Sr. o seu inglês é de brasileiro!')
         let numero
         if(parseInt(all)>=1){            
             numero=all-1

@@ -76,7 +76,10 @@ class Filas{
 
     membrosNaFila(idFila){
         return new Promise((resolve,reject)=>{
-            const sql = `SELECT ramal FROM agentes_filas WHERE fila=${idFila} ORDER BY ordem ASC;`
+            const sql = `SELECT u.nome, f.ramal FROM agentes_filas AS f 
+                           JOIN users AS u ON f.ramal=u.id 
+                          WHERE fila=${idFila}  
+                       ORDER BY f.id ASC;`
             connect.banco.query(sql,(e,r)=>{
                 if(e) reject(e)
 
@@ -87,7 +90,7 @@ class Filas{
 
     membrosForaFila(idFila){
         return new Promise((resolve,reject)=>{
-            const sql = `SELECT u.id as ramal FROM users AS u LEFT OUTER JOIN agentes_filas AS f ON u.id=f.ramal WHERE status=1 AND (fila IS null OR fila !=${idFila}) ORDER BY u.ordem ASC;`
+            const sql = `SELECT u.id as ramal, u.nome FROM users AS u LEFT OUTER JOIN agentes_filas AS f ON u.id=f.ramal WHERE status=1 AND (fila IS null OR fila !=${idFila}) ORDER BY u.ordem ASC;`
             connect.banco.query(sql,(e,r)=>{
                 if(e) reject(e)
 
@@ -96,113 +99,32 @@ class Filas{
         })        
     }
 
-    //Reordena fora da fila
-    reordenaMembrosForaFila(idAgente,idFila,posOrigem,posDestino,callback){
-         //caso a origem seja menor que o destino
-         if(posOrigem<posDestino){
-            const sql = `UPDATE users SET ordem=ordem-1 WHERE ordem>${posOrigem} AND ordem<=${posDestino}`
-            connect.banco.query(sql,(e,r)=>{
-                if(e) throw e
-
-                const sql=`UPDATE users SET ordem=${posDestino} WHERE id=${idAgente}`
-                connect.banco.query(sql,callback)
-            })
-         }else{
-            const sql = `UPDATE users SET ordem=ordem+1 WHERE ordem>=${posDestino} AND ordem<${posOrigem}`
-            connect.banco.query(sql,(e,r)=>{
-                if(e) throw e
-
-                const sql=`UPDATE users SET ordem=${posDestino} WHERE id=${idAgente}`
-                connect.banco.query(sql,callback)
-            })
-        }
-    }   
     
-    //Reordena dentro fila    
-    reordenaMembrosDentroFila(idAgente,fila,ordemOrigem,ordem,callback){
-        //caso a origem seja menor que o destino
-        console.log('idAgente',idAgente)
-        console.log('fila',fila)
-        console.log('ordemOrigem',ordemOrigem)
-        console.log('ordem',ordem)
-        if(ordemOrigem<ordem){
-            console.log('aumenta ordem')
-            const sql = `UPDATE agentes_filas SET ordem=ordem-1 WHERE fila=${fila} AND ordem>${ordemOrigem} AND ordem<=${ordem}`
-            connect.banco.query(sql,(e,r)=>{
-                if(e) throw e
-
-                const sql=`UPDATE agentes_filas SET ordem=${ordem} WHERE ramal=${idAgente} AND fila=${fila}`
-                connect.banco.query(sql,callback)
-            })
-        }else{
-            console.log('diminui ordem')
-            const sql = `UPDATE agentes_filas SET ordem=ordem+1 WHERE fila=${fila} AND ordem>=${ordem} AND ordem<${ordemOrigem}`
-            connect.banco.query(sql,(e,r)=>{
-                if(e) throw e
-
-                const sql=`UPDATE agentes_filas SET ordem=${ordem} WHERE ramal=${idAgente} AND fila=${fila}`
-                connect.banco.query(sql,callback)
-            })
-        }      
-        
-    }
 
     //AddMembro
-    addMembroFila(idAgente,idFila,ordemOrigem,ordem,callback){
-        //console.log('addMembro',`idAgente: ${idAgente},idFila: ${idFila},ordemOrigem: ${ordemOrigem},ordem: ${ordem}`)
-        this.verificaMembroFila(idAgente,idFila,(e,r)=>{
-            if(e) throw e 
-
-            if(r.length === 0){//Caso agente nao exista
-                //aumenta ordem dos agentes com ordenacao maior
-                const sql = `UPDATE agentes_filas SET ordem=ordem+1 WHERE ordem>${ordemOrigem} AND ordem<=${ordem} AND id=${idFila}`
-                connect.banco.query(sql,async (e,r)=>{  
-                    if(e) throw e      
-                    const estado = await this.estadoRamal(idAgente)
-                    console.log('estado',estado[0].estado)
-                    const sql = `INSERT INTO agentes_filas (ramal,fila,estado,ordem) VALUES (${idAgente},${idFila},${estado[0].estado},${ordem})`
-                    connect.banco.query(sql,(e,r)=>{   
-                        if(e) throw e     
-
-                        const sql = `SELECT nome FROM filas WHERE id=${idFila}`
-                        connect.banco.query(sql,(e,r)=>{
-                            if(e) throw e
-
-                            const queue_name = r[0].nome
-                            const queue_interface = `PJSIP/${idAgente}`
-                            const membername = idAgente
-                            const state_interface = ''//`${queue_interface}@megatrunk`
-                            const penalty = 0
-
-                            Asterisk.addMembroFila(queue_name,queue_interface,membername,state_interface,penalty,callback)
-                        })
-                    })  
-                })              
-            }else{//Caso o agente ja pertenca a fila
-                this.reordenaMembrosDentroFila(idAgente,idFila,ordemOrigem,ordem,callback)
-            }
-        })
+    async addMembroFila(ramal,idFila){
+        const estado = await this.estadoRamal(ramal)
+        let sql = `INSERT INTO agentes_filas (ramal,fila,estado,ordem) VALUES (${ramal},${idFila},${estado[0].estado},0)`
+        await this.querySync(sql)
+        sql = `SELECT nome FROM filas WHERE id=${idFila}`
+        const fila = await this.querySync(sql)
+        const queue_name = fila[0].nome
+        const queue_interface = `PJSIP/${ramal}`
+        const membername = ramal
+        const state_interface = ''//`${queue_interface}@megatrunk`
+        const penalty = 0
+        return await Asterisk.addMembroFila(queue_name,queue_interface,membername,state_interface,penalty)
     }
-
+    
     ///remove membros da fila
-    removeMembroFila(idAgente,posOrigem,idFila,callback){
-        //diminui ordem dos agentes com ordenacao maior
-        const sql = `UPDATE agentes_filas SET ordem=ordem-1 WHERE ordem>= ${posOrigem}`
-        connect.banco.query(sql,async (e,r)=>{  
-
-            const sql = `DELETE FROM agentes_filas WHERE ramal=${idAgente} AND fila=${idFila}`
-            connect.banco.query(sql,(e,r)=>{
-                if(e) throw e
-
-                const sql = `SELECT nome FROM filas WHERE id=${idFila}`
-                connect.banco.query(sql,(e,r)=>{
-                    if(e) throw e
-
-                    const nomeFila = r[0].nome
-                    Asterisk.removeMembroFila(nomeFila,idAgente,callback)
-                })
-            })
-        })
+    async removeMembroFila(ramal,idFila){
+        let sql = `DELETE FROM agentes_filas WHERE ramal=${ramal} AND fila=${idFila}`
+        await this.querySync(sql)
+        
+        sql = `SELECT nome FROM filas WHERE id=${idFila}`
+        const fila = await this.querySync(sql)
+        const nomeFila = fila[0].nome
+        return await Asterisk.removeMembroFila(nomeFila,ramal)
     } 
 
     //verifica se membro pertence a filas
@@ -211,27 +133,7 @@ class Filas{
         connect.banco.query(sql,callback)
     }
 
-    normalizaOrdem(idFila){
-        const sql = `SELECT id FROM agentes_filas WHERE fila=${idFila} ORDER BY ordem ASC`
-        connect.banco.query(sql,async (e,rowsFila)=>{
-            if(e) throw e
-
-            for(let i=0; i<rowsFila.length; i++){
-                const sql = `UPDATE agentes_filas SET ordem=${i} WHERE id=${rowsFila[i].id}`
-                await this.querySync(sql)
-            }
-
-            const sql = `SELECT u.id FROM users AS u LEFT OUTER JOIN agentes_filas AS f ON u.id=f.ramal WHERE status=1 AND (fila IS null OR fila !=${idFila}) ORDER BY u.ordem ASC;`
-            connect.banco.query(sql,async (e,rowsFila)=>{
-                if(e) throw e
-
-                for(let i=0; i<rowsFila.length; i++){
-                    const sql = `UPDATE users SET ordem=${i} WHERE id=${rowsFila[i].id}`
-                    await this.querySync(sql)
-                }
-            })
-        })
-    }
+   
 
 
 

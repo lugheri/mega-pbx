@@ -104,10 +104,11 @@ module.exports = (routes) => {
     routes.get('/configuracoesFila/:idFila',_CampanhasController2.default.configuracoesFila)//configuracoesFila
     routes.patch('/editarFila/:idFila',_CampanhasController2.default.editarFila)//editarFila
     routes.patch('/configurarFila/:idFila',_CampanhasController2.default.configurarFila)//configurarFila
-    routes.delete('/removerFila/:nomeFila',_CampanhasController2.default.removerFila)//removerFila
+    routes.delete('/removerFila/:idFila',_CampanhasController2.default.removerFila)//removerFila
     //MembrosFilas    
-    routes.get('/getMembersFila/:idFila',_FilasController2.default.getMembersFila)//getMembers
+    routes.get('/getMembersFila/:idFila',_FilasController2.default.agentesFila)//getMembers
     routes.patch('/updateMemberFila/:idFila',_FilasController2.default.updateMemberFila)//update getMembers
+    routes.get('/moveAllMembers/:idFila/:destino',_FilasController2.default.moveAllMembers)//update getMembers
 
     //#########  B A S E S  ############
     routes.post('/enviarArquivo',_multer2.default.call(void 0, _multerDataFiles2.default).single('file'), _MailingController2.default.importarBase)//Importar Arquivo

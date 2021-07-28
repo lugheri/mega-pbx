@@ -9,7 +9,6 @@ class FilasController{
             res.json(filas)
         })
     }
-
     //Listar Filas
     listarFilas(req,res){
         Filas.listar((e,filas)=>{
@@ -18,98 +17,70 @@ class FilasController{
             res.json(filas)
         })
     }
-
-    //get member fila
-    async getMembersFila(req,res){
-        const idFila = req.params.idFila
-        const agentes = await Filas.agentesAtivos()
-        const membros = {}
-              membros['agentes']={}
-        for(let i=0; i<agentes.length; i++){
-            membros['agentes'][`${agentes[i].id}`]={}
-            membros['agentes'][`${agentes[i].id}`]['id']=`${agentes[i].id}`
-            membros['agentes'][`${agentes[i].id}`]['content']=agentes[i].nome
-        }  
-        membros['columns']={}
-        const agentesNaFila = await Filas.membrosNaFila(idFila)
-        const naFila=[]
-        for(let i=0; i<agentesNaFila.length; i++) {
-            naFila[i] = agentesNaFila[i].ramal
-        }   
+    //agentesFila
+    async agentesFila(req,res){
+        const idFila = req.params.idFila            
+        const agentes = {}
 
         const agentesForaFila = await Filas.membrosForaFila(idFila)
-        const foraDaFila=[] 
-        for(let i=0; i<agentesForaFila.length; i++) {
-            foraDaFila[i] = agentesForaFila[i].ramal
-        }         
-        
-        /*for(let i=0; i<agentes.length; i++){
-            if(naFila.indexOf(agentes[i].id)<0){
-                foraDaFila.push(agentes[i].id)
-            }
-            console.log(agentes[i].id,naFila.indexOf(agentes[i].id))
-        }  */
+              agentes['agentesForaDaFila']=[]
+              for(let i=0; i<agentesForaFila.length; i++){              
+                let agente={}
+                    agente['ramal']=agentesForaFila[i].ramal
+                    agente['nome']=agentesForaFila[i].nome
+                    agente['destino']='D'
+                    agentes['agentesForaDaFila'].push(agente)
+              }
 
-        membros['columns']['foraDaFila']={}
-        membros['columns']['foraDaFila']['id']='foraDaFila'
-        membros['columns']['foraDaFila']['agentesIds']=foraDaFila
-        
-        membros['columns']['dentroDaFila']={}
-        membros['columns']['dentroDaFila']['id']='dentroDaFila'
-        membros['columns']['dentroDaFila']['agentesIds']=naFila
-           
-        res.json(membros)
+        const agentesNaFila = await Filas.membrosNaFila(idFila)    
+              agentes['agentesNaFila']=[]
+              for(let i=0; i<agentesNaFila.length; i++){
+                let agente={}
+                agente['ramal']=agentesNaFila[i].ramal
+                agente['nome']=agentesNaFila[i].nome
+                agente['destino']='F'
+                agentes['agentesNaFila'].push(agente)
+            }
+
+        res.json(agentes)
+    }  
+    //Atualizar membros da campanha
+    async updateMemberFila(req,res){
+        const idFila = parseInt(req.params.idFila)
+        const ramal = req.body.ramal
+        const destino =  req.body.destino
+
+        if(destino=="D"){//Adiciona membro a fila
+            const r = await Filas.addMembroFila(ramal,idFila)
+            res.json(r)  
+            return false;          
+        }
+        if(destino=="F"){//Remove membro da fila caso destino nao seja 'D'
+            const r = Filas.removeMembroFila(ramal,idFila)
+            res.json(true)
+            return false;          
+        }     
+        res.json(false)   
     }
 
-    //Atualizar membros da campanha
-    updateMemberFila(req,res){
-        const idFila = parseInt(req.params.idFila)
-        const idAgente = req.body.idAgente
-        const origem = req.body.origem.columName
-        const posOrigem = req.body.origem.posicao
-        const destino =  req.body.destino.columName
-        const posDestino = req.body.destino.posicao
-
-        console.log('IdFila',idFila)
-       
-        //reordena fora da fila
-        if((origem == 'foraDaFila')&&(destino == 'foraDaFila')){           
-            Filas.reordenaMembrosForaFila(idAgente,idFila,posOrigem,posDestino,(e,r)=>{
-                if(e) throw e
+    async moveAllMembers(req, res){
+        const idFila = req.params.idFila
+        const destino = req.params.destino
+        if(destino=="D"){
+            const agentesForaFila = await Filas.membrosForaFila(idFila)
+            for(let i=0; i<agentesForaFila.length; i++){
+                await Filas.addMembroFila(agentesForaFila[i].ramal,idFila)
+            }
+        }
+        if(destino=="F"){
+            const agentesNaFila = await Filas.membrosNaFila(idFila) 
+            for(let i=0; i<agentesNaFila.length; i++){
+                await Filas.removeMembroFila(agentesNaFila[i].ramal,idFila)
                 
-                Filas.normalizaOrdem(idFila)
-                res.json(true)
-            })
+            }   
         }
-        //insere na fila
-        if((origem == 'foraDaFila')&&(destino == 'dentroDaFila')){
-            Filas.addMembroFila(idAgente,idFila,posOrigem,posDestino,(e,r)=>{
-                if(e) throw e
+        res.json(true) 
 
-                Filas.normalizaOrdem(idFila)  
-                res.json(true)
-            })
-        }
-
-        //reordena dentro da fila
-        if((origem == 'dentroDaFila')&&(destino == 'dentroDaFila')){                
-            Filas.reordenaMembrosDentroFila(idAgente,idFila,posOrigem,posDestino,(e,r)=>{
-                if(e) throw e
-                
-                Filas.normalizaOrdem(idFila)                
-                res.json(true)
-            })
-        }
-
-        //remove da fila
-        if((origem == 'dentroDaFila')&&(destino == 'foraDaFila')){
-            Filas.removeMembroFila(idAgente,posOrigem,idFila,(e,r)=>{
-                if(e) throw e
-
-                Filas.normalizaOrdem(idFila)
-                res.json(true)
-            })
-        }        
     }
 }
 export default new FilasController();

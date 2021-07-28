@@ -541,7 +541,7 @@ class Mailing{
     }
 
     async totalNumerosFiltrados(tabela,campanha,uf){
-        const sql = `SELECT COUNT(id) AS numeros FROM mailings.${tabela} WHERE campanha_${campanha}=1 AND uf='${uf}' AND valido=1 `
+        const sql = `SELECT COUNT(id) AS numeros FROM mailings.${tabela} WHERE campanha_${campanha}=0 AND uf='${uf}' AND valido=1 `
         const r = await this.querySync(sql)
         return r[0].numeros
     }
@@ -612,13 +612,13 @@ class Mailing{
     //Conta os ufs do mailing
     async ufsMailing(idCampanha){
         const infoMailing = await _Campanhas2.default.infoMailingCampanha(idCampanha)
+        if(infoMailing.length==0){
+            return false
+        }
         const idMailing = infoMailing[0].id
         const tabela = infoMailing[0].tabela_numeros
 
-       
-
-
-        let sql = `SELECT COUNT(uf) AS total, uf FROM mailings.${tabela} GROUP BY uf`
+        let sql = `SELECT COUNT(uf) AS total, uf FROM mailings.${tabela} WHERE valido=1 GROUP BY uf`
         const r = await  this.querySync(sql)     
         const estados=[
             //Centro-Oeste       
@@ -657,14 +657,18 @@ class Mailing{
         const ufs={}
         for(let i=0; i<r.length; i++){
             let fill = "#185979"
+            let totalNumeros=r[i].total
             let numerosFiltrados = await this.totalNumerosFiltrados(tabela,idCampanha,r[i].uf)
-            if(numerosFiltrados==0){
+            let disponiveis = totalNumeros-numerosFiltrados
+           
+            if(disponiveis==0){
                 fill="#f74c4c"
             }
             ufs[`${r[i].uf}`]={}
             ufs[`${r[i].uf}`]['fill']=fill
-            ufs[`${r[i].uf}`]['total']=r[i].total
-            ufs[`${r[i].uf}`]['filtrados']=numerosFiltrados
+            ufs[`${r[i].uf}`]['total']=totalNumeros
+            ufs[`${r[i].uf}`]['filtrados']=numerosFiltrados,
+            ufs[`${r[i].uf}`]['disponiveis']=disponiveis
             const filter = estados.find(estado => estado.uf == r[i].uf)
             ufs[`${r[i].uf}`]['name']=`${filter.estado}`
         }

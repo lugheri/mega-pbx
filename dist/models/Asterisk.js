@@ -10,21 +10,22 @@ var _Campanhas = require('./Campanhas'); var _Campanhas2 = _interopRequireDefaul
 var _Discador = require('./Discador'); var _Discador2 = _interopRequireDefault(_Discador);
 
 class Asterisk{
-    querySync(sql,base){
-        return new Promise((resolve,reject) =>{
-            _dbConnection2.default.base(base).query(sql,(e,r)=>{
+    querySync(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.pool.query(sql,(e,rows)=>{
                 if(e) reject(e);
 
-                resolve(r)
+                resolve(rows)
             })
         })
     }
     //######################Configuração das filas######################
     
     //Adiciona membros na fila
-    addMembroFila(queue_name,queue_interface,membername,state_interface,penalty,callback){
-        const sql = `INSERT INTO queue_members (queue_name,interface,membername,state_interface,penalty) VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
-        _dbConnection2.default.asterisk.query(sql,callback)
+    async addMembroFila(queue_name,queue_interface,membername,state_interface,penalty){
+        const sql = `INSERT INTO asterisk.queue_members (queue_name,interface,membername,state_interface,penalty) VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
+        await this.querySync(sql)
+        return true
     }
     //Lista os membros da fila
     listarMembrosFila(nomeFila,callback){
@@ -32,9 +33,10 @@ class Asterisk{
         _dbConnection2.default.asterisk.query(sql,nomeFila,callback)
     }
     //Remove os membros da fila
-    removeMembroFila(nomeFila,membro,callback){
-        const sql = `DELETE FROM queue_members WHERE queue_name='${nomeFila}' AND membername='${membro}'`
-        _dbConnection2.default.asterisk.query(sql,nomeFila,callback)
+    async removeMembroFila(nomeFila,membro){
+        const sql = `DELETE FROM asterisk.queue_members WHERE queue_name='${nomeFila}' AND membername='${membro}'`
+        await this.querySync(sql)
+        return true
     }
 
    /* delMembroFila(uniqueid,callback){

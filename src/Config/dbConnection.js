@@ -1,8 +1,8 @@
 import mysql from 'mysql2';
 const dev = 'localhost'
 
-//const host = dev
-const host = 'mysql'
+const host = dev
+//const host = 'mysql'
     
 const user = []
 user['name'] = 'root'
