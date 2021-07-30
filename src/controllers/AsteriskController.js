@@ -30,134 +30,81 @@ class AsteriskController{
         })
     }
 
-    agi(req,res){
+    async agi(req,res){
         const action = req.params.action
         const dados = req.body
         if(action=='machine'){//Quando cai na caixa postal
-            Asterisk.machine(dados,(e,r)=>{
-                if(e) throw e
-                
-                res.json(r);
-            })
+            const r = await Asterisk.machine(dados)
+            res.json(r);
         }
-
         if(action=='get_queue'){//Quando reconhece a voz humana
             const numero = req.body.numero
-            
-            Discador.getQueueByNumber(numero,(e,queue)=>{
-                if(e) throw e
-
-                if(queue.length==0){
-                    console.log('Sem filas disponivel')
-                    res.json("")
-                }else{
-                
-                    const fila = queue[0].Fila
-                    const idAtendimento = queue[0].id
-                    Discador.setaRegistroNaFila(idAtendimento,(e,r)=>{
-                        if(e) throw e
-                        console.log(`1 Com filas ${fila}`)
-
-                        //recupera dados da campanhas
-                        Discador.dadosAtendimento(idAtendimento, (e,dadosAtendimento)=>{
-                            if(e) throw e
-                           
-                            const idCampanha = dadosAtendimento[0].id_campanha
-                            const idMailing = dadosAtendimento[0].id_mailing
-                            const idRegistro = dadosAtendimento[0].id_reg
-
-                            Cronometro.entrouNaFila(idCampanha,idMailing,idRegistro,numero,(e,r)=>{
-                                if(e) throw e
-                                //inicia contagem do tempo da fila
-
-                                console.log(`idAtendimento ${idAtendimento}`)
-                                res.json(fila)
-                            })                            
-                        })                        
-                    })                   
-                }
-            })
+            const queue = await Discador.getQueueByNumber(numero)
+            if(queue.length==0){
+                res.json("")
+                return false
+            }
+            const fila = queue[0].Fila
+            const idAtendimento = queue[0].id
+            console.log('idAtendimento',idAtendimento)
+            await Discador.setaRegistroNaFila(idAtendimento)
+            //recupera dados da campanhas
+            const dadosAtendimento = await Discador.dadosAtendimento(idAtendimento)
+            console.log('dadosAtendimento',dadosAtendimento)
+            const idCampanha = dadosAtendimento[0].id_campanha
+            const idMailing = dadosAtendimento[0].id_mailing
+            const idRegistro = dadosAtendimento[0].id_registro
+            await Cronometro.entrouNaFila(idCampanha,idMailing,idRegistro,numero)
+            res.json(fila)            
         }
         if(action=='answer'){//Quando ligacao eh atendida pelo agente
-            Asterisk.answer(dados,(e,r)=>{
-                if(e) throw e
-
-                Cronometro.saiuDaFila(dados.numero,(e,r)=>{
-                    console.log('chamada atendida')
-                   
-                    Discador.dadosAtendimento_byNumero(dados.numero, (e,dadosAtendimento)=>{
-                        if(e) throw e
-                       
-                        const idCampanha = dadosAtendimento[0].id_campanha
-                        const idMailing = dadosAtendimento[0].id_mailing
-                        const idRegistro = dadosAtendimento[0].id_reg  
-                        const uniqueid = dadosAtendimento[0].uniqueid  
-                        let ch = dados.ramal;
-                        ch = ch.split("-");
-                        ch = ch[0].split("/")
-                        const ramal = ch[1]                      
-                        //iniciou chamada
-                        Cronometro.iniciouAtendimento(idCampanha,idMailing,idRegistro,dados.numero,ramal,uniqueid,(e,r)=>{
-                            if(e) throw e
-
-                            res.json(true);
-                        })
-                    })
-                })  
-            })
-        }        
-        if(action=='handcall'){//Chamada manual
-            
-        }
+            const r = await Asterisk.answer(dados)
+            await Cronometro.saiuDaFila(dados.numero)
+            const dadosAtendimento = await Discador.dadosAtendimento_byNumero(dados.numero)
+            const idCampanha = dadosAtendimento[0].id_campanha
+            const idMailing = dadosAtendimento[0].id_mailing
+            const idRegistro = dadosAtendimento[0].id_registro 
+            const uniqueid = dadosAtendimento[0].uniqueid  
+            let ch = dados.ramal;
+                ch = ch.split("-");
+                ch = ch[0].split("/")
+            const ramal = ch[1]                      
+            //iniciou chamada
+            await Cronometro.iniciouAtendimento(idCampanha,idMailing,idRegistro,dados.numero,ramal,uniqueid)
+            res.json(true);
+        } 
+        
         if(action=='abandon'){//Quando abandona fila
             const numero = dados.numero
-            Discador.dadosAtendimento_byNumero(numero, (e,chamada)=>{
-                if(e) throw e
-                //Verifica se a chamada esta na fila
-                if(chamada.length==0){
-                    res.json(false);
-                }else{
-                    const fila = chamada[0].na_fila
-                    console.log(numero,fila)
+            const chamada = await Discador.dadosAtendimento_byNumero(dados.numero)
+            if(chamada.length==0){
+                res.json(false);
+                return false    
+            }
+            const fila = chamada[0].na_fila
+            if(fila==1){
+                const idAtendimento =chamada[0].id          
+                const idRegistro=chamada[0].id_registro
+                const idNumero=chamada[0].id_numero
+                const idCampanha=chamada[0].id_campanha
+                const idMailing=chamada[0].id_mailing
+                const ramal=chamada[0].ramal
+                const protocolo=chamada[0].protocolo
+                const tabulacao = 0
+                const contatado = 'N'
+                const produtivo = 0
+                const uniqueid=chamada[0].uniqueid
+                const tipo_ligacao=chamada[0].tipo_ligacao
+                const observacoes = 'Abandonou Fila'
 
-                    if(fila==1){
-                        const idAtendimento =chamada[0].id          
-                        const id_reg=chamada[0].id_reg
-                        const tabela=chamada[0].tabela_mailing
-                        const idCampanha=chamada[0].id_campanha
-                        const idMailing=chamada[0].id_mailing
-                        const ramal=chamada[0].ramal
-                        const protocolo=chamada[0].protocolo
-                        //console.log(`protocolo ${protocolo}`)
-                        //Status de tabulacao referente ao nao atendido
-                        const tabulacao = 0
-                        const contatado = 'N'
-                        const produtivo = 0
-                        const uniqueid=chamada[0].uniqueid
-                        const tipo_ligacao=chamada[0].tipo_ligacao
-                        const observacoes = 'ABANDONOU FILA'
-
-                        //retira da fila e registra como abandonou fila
-                        Cronometro.saiuDaFila(dados.numero,(e,r)=>{
-                            if(e) throw e
-
-                            //Registra histórico de chamada
-                            Discador.registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado,(e,r)=>{
-                                if(e) throw e
-                                //Tabula registro
-                                Discador.tabulandoContato(idAtendimento,tabela,contatado,tabulacao,observacoes,produtivo,numero,ramal,id_reg,idMailing,idCampanha,(e,r)=>{
-                                    if(e) throw e
-                                    
-                                    res.json(true);
-                                })
-                            }) 
-                        })
-                    }else{
-                        res.json(false);
-                    }
-                }
-                              
-            })
+                //retira da fila e registra como abandonou fila
+                await Cronometro.saiuDaFila(dados.numero)
+                //Registra histórico de chamada
+                await Discador.registraHistoricoAtendimento(protocolo,idCampanha,idMailing,idRegistro,idNumero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado)
+                //Tabula registro
+                await Discador.tabulandoContato(idAtendimento,contatado,tabulacao,observacoes,produtivo,ramal)
+                res.json(true);
+            }
         } 
         if(action=='fail'){//Quando nao atende
 

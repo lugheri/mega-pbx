@@ -13,7 +13,7 @@ class DiscadorController{
         }
     }
 
-
+    //Discador
     async dial(req,res){
         this.debug('','Iniciando Discador')
         
@@ -91,7 +91,7 @@ class DiscadorController{
             }//endfor campanhas ativas
         }//endif verificacao campanhas ativas
         //Reiniciando execução
-        setTimeout(()=>{this.dial(req,res)},5000)
+        setTimeout(()=>{this.dial(req,res)},15000)
     }
 
     async iniciaPreparacaoDiscador(idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing){
@@ -121,12 +121,18 @@ class DiscadorController{
                     await Discador.atualizaStatus(idCampanha,msg,estado)
                 }else{  
                     const tipoDiscador = parametrosDiscador[0].tipo_discador
-                    const agressividade = parametrosDiscador[0].agressividade
+                    let agressividade = parametrosDiscador[0].agressividade
+                    if((tipoDiscador=="clicktocall")||(tipoDiscador=="preview")){
+                        //Caso o discador seja clicktocall ou preview a agressividade eh sempre 1
+                        agressividade=1
+                    }                    
                     const ordemDiscagem = parametrosDiscador[0].ordem_discagem
                     const tipoDiscagem = parametrosDiscador[0].tipo_discagem
                     const modo_atendimento = parametrosDiscador[0].modo_atendimento  
                     if(tipoDiscador=='preditivo'){
-                        this.debug(` . . . . . . . . . !! Discador ${tipoDiscador} não configurado!`)
+                        let msg="O Discador Preditivo ainda não está disponível!";
+                        let estado = 2
+                        await Discador.atualizaStatus(idCampanha,msg,estado)
                     }else{
                         //#4 Conta chamadas simultaneas e agressividade e compara com os agentes disponiveis
                         this.debug(' . . . . . . . . . . PASSO 2.4 - Calculando chamadas simultaneas x agentes disponiveis')
@@ -155,8 +161,7 @@ class DiscadorController{
                         }  
                     }                    
                 }
-            }
-            
+            }            
         }
         this.debug(' ')
         this.debug(' . . . . . . PASSO 2 CONCLUÍDO')        
@@ -188,28 +193,22 @@ class DiscadorController{
         this.debug('discador',tipoDiscador)
         if((tipoDiscador=="clicktocall")||(tipoDiscador=="preview")){
             //Seleciona agente disponivel a mais tempoPassado
+           
+            const tratado=1
+            const atendido=1
+            await Discador.registraChamada(agenteDisponivel,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,tratado,atendido)
             const agenteDisponivel = await Discador.agenteDisponivel(idFila)
             await Discador.alterarEstadoAgente(agenteDisponivel,3,0)
-            const tratado=1
-            await Discador.registraChamada(0,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,tratado)
-            
             //Registra chamada simultânea
         }else if(tipoDiscador=="power"){
             //Registra chamada simultânea                                   
             const tratado=0
-            await Discador.registraChamada(0,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,tratado)
-            
-            //Discar
-            this.debug(' . . . . . . . . . . . . . . PASSO 3.4 - Discando')
-            
+            const atendido=0
+            await Discador.registraChamada(0,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,tratado,atendido)
             /*
-             * INICIAR Discagem
-            
+             * INICIAR Discagem */           
             const dataCall=await Discador.discar(0,numero)
-            this.debug('datacall',dataCall)           
-            */
-            console.log('Ligando...',`Modo: ${parametrosDiscador[0].tipo_discagem} idReg:${idRegistro} Numero: ${numero}`)
-            
+            //console.log('Ligando...',`Modo: ${parametrosDiscador[0].tipo_discagem} idReg:${idRegistro} Numero: ${numero}`)
         }        
         this.debug(' ')
         this.debug(' . . . . . . . . . . . . . PASSO 3 CONCLUÍDO')
@@ -217,57 +216,97 @@ class DiscadorController{
                                   
     
       
-       
-    
 
 
-    //DISCADOR DO AGENTE
-    //ESTADO DO AGENTE
-    statusRamal(req,res){
-        const ramal = req.params.ramal
-        Discador.statusRamal(ramal,(e,estadoRamal)=>{
-            if(e) throw e
-    
-            const estados=['deslogado','disponivel','em pausa','falando','indisponivel'];
-            res.json(JSON.parse(`{"idEstado":"${estadoRamal[0].estado}","estado":"${estados[estadoRamal[0].estado]}"}`));
-        })            
-    }
-
-
+    /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    * FUNCOES DA TELA DO AGENTE
+    * <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    */
     //Inicia discador do agente
     async iniciarDiscador(req,res){
         const ramal = req.params.ramal
-        await Discador.alterarEstadoAgente(ramal,1,0)
-        Cronometro.iniciaDiscador(ramal,(e,r)=>{
-            if(e) throw e
-
-            res.json(r);
-        })            
+        //Verifica estado atual
+        if(await Discador.statusRamal(ramal)==1){
+            const rt={}
+                  rt['error']=true
+                  rt['message']=`O agente ${ramal} já esta disponível!'`
+            res.send(rt)
+            return false 
+        }
+        const estado = 1//Estado do Agente: 1=Disponível;2=Em Pausa;3=Falando;4=Indisponível;
+        const pausa = 0//Caso o estado do agente seja igual a 2 informa o cod da pausa 
+        await Discador.alterarEstadoAgente(ramal,estado,pausa)
+        await Cronometro.iniciaDiscador(ramal)
+        res.json(true);
     }
-
+    //Retorna o estado atual do agente
+    async statusRamal(req,res){
+        const ramal = req.params.ramal
+        const estadoRamal = await Discador.statusRamal(ramal)
+        const estados=['deslogado','disponivel','em pausa','falando','indisponivel'];
+        const status = {}
+              status['idEstado']=estadoRamal
+              status['estado']=estados[estadoRamal]
+        res.json(status);
+    }
     //Parando o Discador do agente
     async pararDiscador(req,res){
         const ramal = req.params.ramal
-        await Discador.alterarEstadoAgente(ramal,4,0)
-        Cronometro.pararDiscador(ramal,(e,r)=>{
-            if(e) throw e
-
-            res.json(r);               
-        })            
+        const estado = 4//Estado do Agente: 1=Disponível;2=Em Pausa;3=Falando;4=Indisponível;
+        const pausa = 0//Caso o estado do agente seja igual a 2 informa o cod da pausa 
+        await Discador.alterarEstadoAgente(ramal,estado,pausa)
+        await Cronometro.pararDiscador(ramal)
+        res.json(true);               
     }
-
+    //Verifica o modo de atendimento assim que uma nova chamada eh recebida 
+    async modoAtendimento(req,res){
+        const ramal = req.params.ramal
+        const dadosChamada = await Discador.modoAtendimento(ramal)
+        if(dadosChamada.length==0){
+            const mode={}
+                  mode['config'] = {}
+                  mode['config']['origem']="interna"
+                  mode['config']['modo_atendimento']="manual"
+            res.json(mode)
+            return false;
+        }else{
+            const idAtendimento = dadosChamada[0].id
+            const modo_atendimento = dadosChamada[0].modo_atendimento
+            const infoChamada = await Discador.infoChamada_byIdAtendimento(idAtendimento)
+            const mode={}
+                  mode['dados']=infoChamada
+                  mode['config'] = {}
+                  mode['config']['origem']="discador"
+                  mode['config']['modo_atendimento']=modo_atendimento
+            res.json(mode)
+        }        
+    }
+    //Atende chamada, e muda o estado do agente para falando
     async atenderChamada(req,res){
         const ramal = req.params.ramal
         const estado = 3 //Estado do agente de falando
         const pausa = 0//Status da pausa de ocupado
         //atualiza para falando
         await Discador.alterarEstadoAgente(ramal,estado,pausa)
-        Discador.atendeChamada(ramal,(e,calldata)=>{
-            if(e) throw e
-              
-            res.json(calldata);
-        }) 
+        const dados = await Discador.atendeChamada(ramal)
+        res.json(dados); 
     }
+    
+
+
+       
+    
+
+
+    //DISCADOR DO AGENTE
+    //ESTADO DO AGENTE
+    
+
+    
+
+    
+
+    
 
     dadosChamada(req,res){
         const ramal = req.params.ramal
@@ -312,26 +351,20 @@ class DiscadorController{
                         if(campanha.length>0){
                             const idCampanha = campanha[0].id_campanha
                             //Pega os status de tabulacao da campanha
-                            Tabulacoes.statusTabulacaoCampanha(idCampanha,(e,statusTabulacao)=>{
+                            Tabulacoes.statusTabulacaoCampanha(idCampanha,async (e,statusTabulacao)=>{
                                 if(e) throw e
 
                                 //Finaliza Ligacao e inicia a contagem da tabulacao 
-                                Cronometro.saiuLigacao(idCampanha,numeroDiscado,ramal,(e,r)=>{
+                                await Cronometro.saiuLigacao(idCampanha,numeroDiscado,ramal)
+                                Discador.dadosAtendimento_byNumero(numeroDiscado,async (e,dadosAtendimento)=>{
                                     if(e) throw e
-
-                                    Discador.dadosAtendimento_byNumero(numeroDiscado, (e,dadosAtendimento)=>{
-                                        if(e) throw e
                                         
-                                        const idCampanha = dadosAtendimento[0].id_campanha
-                                        const idMailing = dadosAtendimento[0].id_mailing
-                                        const idRegistro = dadosAtendimento[0].id_reg  
-                                        //Inicia contagem do tempo de tabulacao
-                                        Cronometro.iniciaTabulacao(idCampanha,idMailing,idRegistro,numeroDiscado,ramal,(e,r)=>{
-                                            if(e) throw e
-
-                                            res.json(statusTabulacao)
-                                        })
-                                    })
+                                    const idCampanha = dadosAtendimento[0].id_campanha
+                                    const idMailing = dadosAtendimento[0].id_mailing
+                                    const idRegistro = dadosAtendimento[0].id_reg  
+                                    //Inicia contagem do tempo de tabulacao
+                                    await Cronometro.iniciaTabulacao(idCampanha,idMailing,idRegistro,numeroDiscado,ramal)
+                                    res.json(statusTabulacao)
                                 })
                             })
                         }else{
@@ -380,15 +413,11 @@ class DiscadorController{
             const idRegistro = atendimento[0].id_reg
             const idMailing = atendimento[0].id_mailing
             const idCampanha = atendimento[0].id_campanha
-            Discador.tabulandoContato(idAtendimento,tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,(e,r)=>{
+            Discador.tabulandoContato(idAtendimento,tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,async(e,r)=>{
                 if(e) throw e
                
-                Cronometro.encerrouTabulacao(idCampanha,numero,ramal,status_tabulacao,(e,r)=>{
-                    if(e) throw e
-    
-                    res.json(r);                        
-                })
-               
+                await Cronometro.encerrouTabulacao(idCampanha,numero,ramal,status_tabulacao)
+                res.json(r);                        
             })
         })
     }
@@ -426,32 +455,7 @@ class DiscadorController{
 
 
     //TELA DO ATENDIMENTO DO AGENTE
-    //retorna as informações da chamada recebida
-    modoAtendimento(req,res){
-        const ramal = req.params.ramal
-        Discador.modoAtendimento(ramal,(e,dadosChamada)=>{
-            if(e) throw e         
-
-            if(dadosChamada.length==0){
-                let dados = '{"config":{"origem":"telefone","modo_atendimento":"manual"}}'
-                res.json(JSON.parse(dados))
-            }else{
-                const idAtendimento = dadosChamada[0].id
-                const modo_atendimento = dadosChamada[0].modo_atendimento
-            
-                const idCampanha = dadosChamada[0].id_campanha
-                let dados = ""                
-                Discador.infoChamada_byIdAtendimento(idAtendimento,(e,infoChamada)=>{
-                    if(e) throw e     
-
-                    dados += infoChamada
-                    dados += `, "config":{"origem":"discador","modo_atendimento":"${modo_atendimento}"}}`
-                    this.debug(dados)
-                    res.json(JSON.parse(dados))
-                })
-            }
-        })
-    }
+    
 
     //######################TELA DO AGENTE ######################
 
@@ -477,11 +481,8 @@ class DiscadorController{
             const tempo = infoPausa[0].tempo
             
             await Discador.alterarEstadoAgente(ramal,2,idPausa)
-            Cronometro.entrouEmPausa(idPausa,ramal,(e,tempoPausa)=>{
-                if(e) throw e
-
-                res.send(tempoPausa)
-            })
+            const tempoPausa = await Cronometro.entrouEmPausa(idPausa,ramal)
+            res.send(tempoPausa)
         })
     }
 
@@ -560,11 +561,8 @@ class DiscadorController{
         const ramal = req.body.ramal
 
         await Discador.alterarEstadoAgente(ramal,1,0)
-        Cronometro.saiuDaPausa(ramal,(e,tempoPausa)=>{
-            if(e) throw e
-
-            res.send(tempoPausa)
-        })
+        const tempoPausa = await Cronometro.saiuDaPausa(ramal)
+        res.send(tempoPausa)
     }
 
     //Historico do id do registro

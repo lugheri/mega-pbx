@@ -597,9 +597,16 @@ class CampanhasController{
         const maxlen = req.body.maxlen
         const monitorType = 'mixmonitor'
         const monitorFormat = 'wav'
-        await Campanhas.novaFila(name,description)
-        await Filas.criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat)
-        res.send(true)
+        const r = await Campanhas.novaFila(name,description)
+        if(r==false){
+            const rt={}
+            rt['error']=true
+            rt['message']=`Já esiste uma fila criada com o nome '${name}'`
+            res.send(rt)
+            return false            
+        }
+        const asterisk = await Filas.criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat)
+        res.send(asterisk)
     }
 
     async listarFilas(req,res){

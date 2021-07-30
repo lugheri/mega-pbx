@@ -70,47 +70,40 @@ class Asterisk{
 
     //######################Funções de suporte ao AGI do Asterisk######################
     //Trata a ligação em caso de Máquina ou Não Atendida    
-    machine(dados,callback){
+    async machine(dados){
         //Dados recebidos pelo AGI do asterisk
         const numero = dados.numero
         const observacoes = dados.status
 
         //Verificando se o numero ja consta em alguma chamada simultanea
-        Discador.dadosAtendimento_byNumero(numero,(e,chamada)=>{
-            if(e) throw e
-
-            if(chamada.length!=0){     
-                const idAtendimento =chamada[0].id          
-                const id_reg=chamada[0].id_reg
-                const tabela=chamada[0].tabela_mailing
-                const idCampanha=chamada[0].id_campanha
-                const idMailing=chamada[0].id_mailing
-                const ramal=chamada[0].ramal
-                const protocolo=chamada[0].protocolo
-                //console.log(`protocolo ${protocolo}`)
-                //Status de tabulacao referente ao nao atendido
-                const tabulacao = 0
-                const contatado = 'N'
-                const produtivo = 0
-                const uniqueid=chamada[0].uniqueid
-                const tipo_ligacao=chamada[0].tipo_ligacao
-
-                //Registra histórico de chamada
-                Discador.registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_reg,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado,(e,r)=>{
-                    if(e) throw e
-                    //Tabula registro
-                    Discador.tabulandoContato(idAtendimento,tabela,contatado,tabulacao,observacoes,produtivo,numero,ramal,id_reg,idMailing,idCampanha,callback)
-                    //Discador.tabulandoContato(tabela,contatado,tabulacao,observacoes,produtivo,numero,ramal,id_reg,idMailing,idCampanha,callback)
-                })
-            }else{
-                console.log('Nao encontrado')
-                callback(false,false)
-            }
-        })        
+        const chamada = await Discador.dadosAtendimento_byNumero(numero)
+        
+        if(chamada.length!=0){     
+            const idAtendimento =chamada[0].id          
+            const id_registro=chamada[0].id_registro
+            const id_numero=chamada[0].id_numero
+            const tabela_dados=chamada[0].tabela_dados
+            const tabela_numeros=chamada[0].tabela_numeros
+            const idCampanha=chamada[0].id_campanha
+            const idMailing=chamada[0].id_mailing
+            const ramal=chamada[0].ramal
+            const protocolo=chamada[0].protocolo
+            //Status de tabulacao referente ao nao atendido
+            const tabulacao = 0
+            const contatado = 'N'
+            const produtivo = 0
+            const uniqueid=chamada[0].uniqueid
+            const tipo_ligacao=chamada[0].tipo_ligacao
+            //Tabula registro
+            const status_tabulacao = 0
+            await Discador.tabulandoContato(idAtendimento,contatado,status_tabulacao,observacoes,produtivo,ramal)
+            return true
+        }
+        return false
     }
 
     //Atendente atendeu chamada da fila
-    answer(dados,callback){
+    async answer(dados){
         //Dados recebidos pelo AGI
         const uniqueid = dados.uniqueid;
         const numero = dados.numero;
@@ -120,8 +113,10 @@ class Asterisk{
         const ramal = ch[1]
         //console.log(`RAMAL DO AGENTE: ${ramal}`)
         //dados da campanha
-        const sql = `UPDATE campanhas_chamadas_simultaneas SET uniqueid='${uniqueid}',ramal='${ramal}', na_fila=0, atendido=1 WHERE numero='${numero}' AND na_fila=1`  
-        connect.banco.query(sql,callback)
+        const sql = `UPDATE campanhas_chamadas_simultaneas 
+                        SET uniqueid='${uniqueid}',ramal='${ramal}', na_fila=0, atendido=1
+                      WHERE numero='${numero}' AND na_fila=1`  
+        return await this.querySync(sql)
     }
 
     //Chamada Manual

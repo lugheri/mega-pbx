@@ -9,9 +9,9 @@ const app = _customExpress2.default.call(void 0, );
 const httpServer = _http2.default.createServer(app);
 
 //Iniciando Discador
-//DiscadorController.checandoCampanhasProntas()
+_DiscadorController2.default.dial()
 
-_DiscadorController2.default.iniciandoDiscadorSistema()
+//DiscadorController.iniciandoDiscadorSistema()
 
 httpServer.listen(3000,()=>console.log('Servidor de testes online'));
 

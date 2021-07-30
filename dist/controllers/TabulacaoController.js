@@ -105,12 +105,15 @@ class TabulacaoController{
         const posOrigem = req.body.origem.posicao
         const destino =  req.body.destino.columName
         const posDestino = req.body.destino.posicao
-
+        console.log('origem',origem)
+        console.log('posOrigem',posOrigem)
+        console.log('destino',destino)
+        console.log('posDestino',posDestino)
         if(origem==destino){
             //reordena
             await _Tabulacoes2.default.reordenarTipoStatus(idLista,idStatus,origem,posOrigem,posDestino)
         }else{
-            await _Tabulacoes2.default.alterarTipoStatus(idLista,idStatus,origem,destino,posOrigem,posDestino)
+            await _Tabulacoes2.default.alterarTipoStatus(idLista,idStatus,origem,destino,posDestino)
         }
 
         //Normaliza ordenacao

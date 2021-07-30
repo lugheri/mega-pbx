@@ -70,6 +70,11 @@ class TabulacaoController{
     //Ordenacao de listagen e tipos (Rotas do DragDrop)
     async getStatusTabulacao(req,res){
         const idLista = req.params.idLista
+        const st = await Tabulacoes.dadosListaTabulacao(idLista)
+        if(st.length==0){
+            res.json(tabs)
+            return false
+        }
         const tabs={}
               tabs['statusTab']={}
               const status = await Tabulacoes.listarStatusTabulacao(idLista)
@@ -105,12 +110,15 @@ class TabulacaoController{
         const posOrigem = req.body.origem.posicao
         const destino =  req.body.destino.columName
         const posDestino = req.body.destino.posicao
-
+        console.log('origem',origem)
+        console.log('posOrigem',posOrigem)
+        console.log('destino',destino)
+        console.log('posDestino',posDestino)
         if(origem==destino){
             //reordena
             await Tabulacoes.reordenarTipoStatus(idLista,idStatus,origem,posOrigem,posDestino)
         }else{
-            await Tabulacoes.alterarTipoStatus(idLista,idStatus,origem,destino,posOrigem,posDestino)
+            await Tabulacoes.alterarTipoStatus(idLista,idStatus,origem,destino,posDestino)
         }
 
         //Normaliza ordenacao

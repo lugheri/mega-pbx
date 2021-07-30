@@ -13,7 +13,7 @@ class MailingController{
         const delimitador = req.body.delimitador 
         const header = req.body.header
         const nome = req.body.nome
-        const transferRate = req.body.taxaTransferencia
+        //const transferRate = req.body.taxaTransferencia
       
         //Abrindo o Arquivo
         Mailing.abreCsv(file,delimitador,async (jsonFile)=>{

@@ -524,7 +524,12 @@ class Campanhas{
    
     //#########  F I L A S  ############
     async novaFila(nomeFila,descricao){
-        const sql = `INSERT INTO filas (nome,descricao) VALUES('${nomeFila}','${descricao}')`
+        let sql = `SELECT id FROM filas WHERE nome='${nomeFila}'`
+        const r = await this.querySync(sql)
+        if(r.length>=1){
+            return false
+        }
+        sql = `INSERT INTO filas (nome,descricao) VALUES('${nomeFila}','${descricao}')`
         await this.querySync(sql)
         return true
     }

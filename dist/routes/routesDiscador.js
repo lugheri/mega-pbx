@@ -4,7 +4,7 @@ module.exports = (routes) => {
 
     //DISCADOR
     //novo Metodo do Discador
-    routes.get('/teste_iniciandoDiscadorSistema',_DiscadorController2.default.iniciandoDiscadorSistema)
+    routes.get('/teste_iniciandoDiscadorSistema',_DiscadorController2.default.dial)
 
     //iniciarDiscador
     routes.get('/iniciarDiscador/:ramal',_DiscadorController2.default.iniciarDiscador)

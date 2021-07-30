@@ -195,10 +195,15 @@ class Campanhas{
         //Inserindo coluna da campanha na tabela de numeros
         sql = `ALTER TABLE mailings.${tabelaNumeros} 
                ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT NULL AFTER produtivo,
-               ADD INDEX campanha_${idCampanha} (campanha_${idCampanha})`
+               ADD COLUMN discando_${idCampanha} TINYINT NULL DEFAULT NULL AFTER produtivo,
+               ADD INDEX campanha_${idCampanha} (campanha_${idCampanha}),
+               ADD INDEX discando_${idCampanha} (discando_${idCampanha})`
         await this.querySync(sql)
         //Atualiza os registros como disponíveis (1)
         sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`
+        await this.querySync(sql)
+        //Atualiza os registros como nao discando
+        sql = `UPDATE mailings.${tabelaNumeros} SET discando_${idCampanha}=0`
         await this.querySync(sql)
         //Inserindo informacao do id do mailing na campanha 
         sql = `INSERT INTO campanhas_mailing (idCampanha,idMailing) VALUES ('${idCampanha}','${idMailing}')`
@@ -235,6 +240,9 @@ class Campanhas{
         }
         //Removendo coluna da campanha no mailing
         sql = `ALTER TABLE mailings.${infoMailing[0].tabela_numeros} DROP COLUMN campanha_${idCampanha}`
+        await this.querySync(sql)
+        //removendo campos da discagen na campanha
+        sql = `ALTER TABLE mailings.${infoMailing[0].tabela_numeros} DROP COLUMN discando_${idCampanha}`
         await this.querySync(sql)
         //Removendo informacao do mailing da campanha
         sql = `DELETE FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
@@ -516,7 +524,12 @@ class Campanhas{
    
     //#########  F I L A S  ############
     async novaFila(nomeFila,descricao){
-        const sql = `INSERT INTO filas (nome,descricao) VALUES('${nomeFila}','${descricao}')`
+        let sql = `SELECT id FROM filas WHERE nome='${nomeFila}'`
+        const r = await this.querySync(sql)
+        if(r.length>=1){
+            return false
+        }
+        sql = `INSERT INTO filas (nome,descricao) VALUES('${nomeFila}','${descricao}')`
         await this.querySync(sql)
         return true
     }
