@@ -2,6 +2,7 @@
 var _Mailing = require('../models/Mailing'); var _Mailing2 = _interopRequireDefault(_Mailing);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 var _md5 = require('md5'); var _md52 = _interopRequireDefault(_md5);
+var _express = require('express');
 
 
 class MailingController{
@@ -13,7 +14,7 @@ class MailingController{
         const delimitador = req.body.delimitador 
         const header = req.body.header
         const nome = req.body.nome
-        const transferRate = req.body.taxaTransferencia
+        //const transferRate = req.body.taxaTransferencia
       
         //Abrindo o Arquivo
         _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{
@@ -45,7 +46,7 @@ class MailingController{
             const campos=[]
             for(let i=0; i<title.length; i++){
                 let item={}
-                item['titulo']=title[i].replace(/�/gi, "ç").replace(" ", "_")
+                item['titulo']=title[i]//.replace(/�/gi, "ç").replace(" ", "_")
                 item['ordem']=i+1
                 let data=[]
                 for(let d=0; d<10; d++){
@@ -82,17 +83,47 @@ class MailingController{
 
         await _Mailing2.default.configuraTipoCampos(idBase,header,tipoCampos)//Configura os tipos de campos
         _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
-            await _Mailing2.default.importaDadosBase(idBase,jsonFile,file,header,tabData)//Importa dados na base
-            
-            await _Mailing2.default.separarNumeros(idBase)
-
             res.json(true)
+            let idKey = 1
+            let transferRate=1
+            await _Mailing2.default.importaDados_e_NumerosBase(idBase,jsonFile,file,header,tabData,tabNumbers,idKey,transferRate)
+
+           
         }) 
     }
     
     //Lista os mailings importados
     async listarMailings(req,res){
         const r = await _Mailing2.default.listaMailing()
+        
+        for(let i=0; i<r.length;i++){
+            const idMailing = r[i].id
+            const infoTabela= await _Mailing2.default.tabelaMailing(idMailing)
+            if(infoTabela.length != 0){
+                const tabela = infoTabela[0].tabela_numeros
+                const totalRegistros = await _Mailing2.default.totalRegistros(tabela);
+                const contatados = await _Mailing2.default.registrosContatados(tabela)
+                const naoContatados = await _Mailing2.default.registrosNaoContatados(tabela)
+            
+                const trabalhados = contatados + naoContatados
+                const naoTrabalhados = totalRegistros-trabalhados
+                let perc_naotrabalhados = 0
+                let perc_contatados = 0
+                let perc_naoContatados = 0            
+
+                if(totalRegistros!=0){
+                    perc_naotrabalhados = parseFloat((naoTrabalhados / totalRegistros)*100).toFixed(1)
+                    perc_contatados = parseFloat((contatados / totalRegistros)*100).toFixed(1)
+                    perc_naoContatados = parseFloat((naoContatados / totalRegistros)*100).toFixed(1)                            
+                }                 
+                const saude={}
+                saude['nao_trabalhados']=perc_naotrabalhados
+                saude['contatados']=perc_contatados
+                saude['nao_contatados']=perc_naoContatados                
+                r[i]['saude']=[]
+                r[i]['saude'].push(saude);
+            }
+        }       
         res.json(r);
     }
 
@@ -178,7 +209,16 @@ class MailingController{
         const idMailing = req.params.idMailing
         const infoTabela= await _Mailing2.default.tabelaMailing(idMailing)
         const tabela = infoTabela[0].tabela_numeros
-        const registros = await _Mailing2.default.totalRegUF(tabela)
+        const r = await _Mailing2.default.totalRegUF(tabela)
+        const registros=[]
+        for(let i=0; i<r.length;i++){
+            let reg={}
+                reg['fill']='#185979'
+                reg['UF']=r[i].UF
+                reg['registros']=r[i].registros
+                reg['numeros']=r[i].numeros
+            registros.push(reg)
+        }
         res.json(registros)
     }
     //Saude do mailing

@@ -1,14 +1,12 @@
 import mysql from 'mysql2';
 const dev = 'localhost'
 
-const host = dev
-//const host = 'mysql'
+//const host = dev
+const host = 'mysql'
     
 const user = []
 user['name'] = 'root'
 user['pass'] = '1234abc@'
-
-
 
 /*function testHost(hst){
     return new Promise((resolve, reject)=>{
@@ -25,9 +23,7 @@ user['pass'] = '1234abc@'
     })
 }*/
 
-
 const connect=()=>{};
-
 
 connect.pool=mysql.createPool({
     host:host,

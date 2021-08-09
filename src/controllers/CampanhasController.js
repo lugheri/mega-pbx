@@ -9,13 +9,12 @@ import Filas from '../models/Filas';
 class CampanhasController{
     //######################  C A M P A N H A S   A T I V A S  ######################
     //Status da campanha em tempo real
-    statusCampanha(req,res){
+    async statusCampanha(req,res){
         const idCampanha = parseInt(req.params.id);
-        Discador.statusCampanha(idCampanha,(e,r)=>{
-            if(e) throw e
+        const r = await Discador.statusCampanha(idCampanha)
 
-            res.json(r)
-        })
+        res.json(r)
+        
     }
 
     //######################Operacoes básicas das campanhas (CRUD)
@@ -196,10 +195,9 @@ class CampanhasController{
         const agressividade = req.body.agressividade
         const ordemDiscagem = req.body.ordemDiscagem
         const tipoDiscagem = req.body.tipoDiscagem
-        const maxTentativas = req.body.maxTentativas
         const modo_atendimento = req.body.modo_atendimento
 
-        Campanhas.configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,maxTentativas,modo_atendimento,(e,r)=>{
+        Campanhas.configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,modo_atendimento,(e,r)=>{
             if(e) throw e
 
             res.json(r);
@@ -316,7 +314,7 @@ class CampanhasController{
         //Total de Registros do uf
         const filters = {}
               filters['totalNumeros']=await Campanhas.totalNumeros(tabelaNumero,UF)
-              filters['regFiltrados']=await Campanhas.numerosFiltrados(tabelaNumero,idCampanha,UF)
+              filters['regFiltrados']=await Campanhas.numerosFiltrados(idMailing,tabelaNumero,idCampanha,UF)
         if(UF!=0){ 
             //Verificando filtros pelo DDD
             filters['DDD']=[]

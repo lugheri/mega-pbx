@@ -90,7 +90,10 @@ class Filas{
 
     membrosForaFila(idFila){
         return new Promise((resolve,reject)=>{
-            const sql = `SELECT u.id as ramal, u.nome FROM users AS u LEFT OUTER JOIN agentes_filas AS f ON u.id=f.ramal WHERE status=1 AND (fila IS null OR fila !=${idFila}) ORDER BY u.ordem ASC;`
+            const sql = `SELECT u.id as ramal, u.nome 
+                           FROM users AS u 
+                          WHERE status=1  
+                          ORDER BY u.ordem ASC;`
             _dbConnection2.default.banco.query(sql,(e,r)=>{
                 if(e) reject(e)
 
@@ -103,6 +106,10 @@ class Filas{
 
     //AddMembro
     async addMembroFila(ramal,idFila){
+        const check = await this.verificaMembroFila(ramal,idFila)
+        if(check){
+            return false
+        }
         const estado = await this.estadoRamal(ramal)
         let sql = `INSERT INTO agentes_filas (ramal,fila,estado,ordem) VALUES (${ramal},${idFila},${estado[0].estado},0)`
         await this.querySync(sql)
@@ -128,9 +135,10 @@ class Filas{
     } 
 
     //verifica se membro pertence a filas
-    verificaMembroFila(idAgente,idFila,callback){
+    async verificaMembroFila(idAgente,idFila){
         const sql = `SELECT * FROM agentes_filas WHERE ramal=${idAgente} AND fila=${idFila}`
-        _dbConnection2.default.banco.query(sql,callback)
+        const r = await this.querySync(sql)
+        return r.length
     }
 
    

@@ -1,5 +1,14 @@
 import connect from '../Config/dbConnection';
 class Pausas{
+    querySync(sql){
+        return new Promise((resolve,reject)=>{
+            connect.pool.query(sql,(e,rows)=>{
+                if(e) reject(e);
+
+                resolve(rows)
+            })
+        })
+    }
     //LISTA DE PAUSAS 
     
     //Criar Lista de Pausas
@@ -48,9 +57,9 @@ class Pausas{
         connect.banco.query(sql,idLista,callback)
     }  
     
-    idPausaByTipo(tipo,callback){
+    async idPausaByTipo(tipo){
         const sql = `SELECT id FROM pausas WHERE tipo='${tipo}' AND status=1`
-        connect.banco.query(sql,callback) 
+        return await this.querySync(sql)
     }
 
 }

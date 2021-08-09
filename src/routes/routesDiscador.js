@@ -22,7 +22,7 @@ module.exports = (routes) => {
     routes.get('/atendeChamada/:ramal',DiscadorController.atenderChamada)
 
     //Chamada atendida
-    routes.get('/dadosChamada/:ramal',DiscadorController.dadosChamada)
+    //routes.get('/dadosChamada/:ramal',DiscadorController.dadosChamada)
     
     //Chamada desligada
     routes.post('/desligarChamada',DiscadorController.desligarChamada)
@@ -34,7 +34,7 @@ module.exports = (routes) => {
     routes.post('/marcarRetorno',DiscadorController.marcarRetorno)
 
     //Historico de Registro
-    routes.get('/historicoRegistro/:idRegistro',DiscadorController.historicoRegistro)
+    routes.get('/historicoRegistro/:idMailing/:idRegistro',DiscadorController.historicoRegistro)
 
     //Historico de Chamadas
     routes.get('/historicoChamadas/:ramal',DiscadorController.historicoChamadas)

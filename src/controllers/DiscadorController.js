@@ -196,8 +196,10 @@ class DiscadorController{
            
             const tratado=1
             const atendido=1
-            await Discador.registraChamada(agenteDisponivel,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,tratado,atendido)
             const agenteDisponivel = await Discador.agenteDisponivel(idFila)
+
+            await Discador.registraChamada(agenteDisponivel,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,tratado,atendido)
+            
             await Discador.alterarEstadoAgente(agenteDisponivel,3,0)
             //Registra chamada simultânea
         }else if(tipoDiscador=="power"){
@@ -287,16 +289,155 @@ class DiscadorController{
         const estado = 3 //Estado do agente de falando
         const pausa = 0//Status da pausa de ocupado
         //atualiza para falando
+        const estadoAnterior = await Discador.infoEstadoAgente(ramal)
+        if(estadoAnterior==3){
+            const dados = await Discador.infoChamada_byRamal(ramal)
+            res.json(dados); 
+            return false
+        }
+
         await Discador.alterarEstadoAgente(ramal,estado,pausa)
         const dados = await Discador.atendeChamada(ramal)
         res.json(dados); 
+    }
+    //Historico do id do registro
+    async historicoRegistro(req,res){
+        const idReg = req.params.idRegistro
+        const idMailing = req.params.idMailing
+        const historico = await Discador.historicoRegistro(idMailing,idReg)
+        const historicoRegistro=[]
+        for(let i = 0; i < historico.length; i++){
+            let registro={}
+                registro['dadosAtendimento']={}
+                registro['dadosAtendimento']['protocolo']=historico[i].protocolo
+                registro['dadosAtendimento']['data']=historico[i].dia
+                registro['dadosAtendimento']['hora']=historico[i].horario
+                registro['dadosAtendimento']['contatado']=historico[i].contatado
+                registro['dadosAtendimento']['tabulacao']=historico[i].tabulacao
+                registro['dadosAtendimento']['observacoes']=historico[i].obs_tabulacao
+                
+                
+                const agente = await Discador.infoAgente(historico[i].agente)
+                registro['informacoesAtendente']={}
+                registro['informacoesAtendente'] = agente[0]
+
+                const infoReg = await Discador.infoRegistro(idMailing,idReg)
+                registro['dadosRegistro']={}
+                registro['dadosRegistro']=infoReg
+            historicoRegistro.push(registro)
+        }
+        res.json(historicoRegistro)
+    }
+    //Historico do agente
+    async historicoChamadas(req,res){
+        const ramal = req.params.ramal
+        const historico = await Discador.historicoChamadas(ramal)
+        const historicoRegistro=[]
+        for(let i = 0; i < historico.length; i++){
+            let registro={}
+                registro['dadosAtendimento']={}
+                registro['dadosAtendimento']['protocolo']=historico[i].protocolo
+                registro['dadosAtendimento']['data']=historico[i].dia
+                registro['dadosAtendimento']['hora']=historico[i].horario
+                registro['dadosAtendimento']['contatado']=historico[i].contatado
+                registro['dadosAtendimento']['tabulacao']=historico[i].tabulacao
+                registro['dadosAtendimento']['observacoes']=historico[i].obs_tabulacao                
+                
+                const agente = await Discador.infoAgente(ramal)
+                registro['informacoesAtendente']={}
+                registro['informacoesAtendente'] = agente[0]
+
+                const infoReg = await Discador.infoRegistro(historico[i].mailing,historico[i].id_registro)
+                registro['dadosRegistro']={}
+                registro['dadosRegistro']=infoReg
+            historicoRegistro.push(registro)
+        }
+        res.json(historicoRegistro)
+    }
+    //Desligando Chamada
+    async desligarChamada(req,res){
+        const ramal =  req.body.ramal
+        //Verifica se o ramal esta em chamada
+        const dadosAtendimento = await Discador.dadosChamada(ramal)
+        if(dadosAtendimento.length!=0){//Chamada interna
+            const idAtendimento = dadosAtendimento[0].id
+            const idCampanha = dadosAtendimento[0].id_campanha
+            const numeroDiscado = dadosAtendimento[0].numero
+            const idMailing = dadosAtendimento[0].id_mailing
+            const idRegistro = dadosAtendimento[0].id_registro
+            const tabulacoesCampanha = await Discador.tabulacoesCampanha(idCampanha)
+            //Verificando status de tabulacao da campanha
+            if(tabulacoesCampanha!==false){
+                //Pausando agente com a pausa de tabulacao
+                const estado = 3//Atualiza estado do agente para pausado 
+                const tipo='tabulacao'
+                let pausaTabulacao = 0           
+                const idPausa = await Pausas.idPausaByTipo(tipo)//Id de pausa tabulacao
+                if(idPausa.length!=0){//Pausa o agente com a pausa de tabulacao
+                    pausaTabulacao = idPausa[0].id
+                    await Discador.alterarEstadoAgente(ramal,estado,pausaTabulacao)
+                }
+                //Atualiza registro como tabulando e retorna id da campanha
+                await Discador.preparaRegistroParaTabulacao(idAtendimento)
+                
+                //Finaliza Ligacao e inicia a contagem da tabulacao 
+                await Cronometro.saiuLigacao(idCampanha,numeroDiscado,ramal)
+                await Cronometro.iniciaTabulacao(idCampanha,idMailing,idRegistro,numeroDiscado,ramal)
+
+                //Pega os status de tabulacao da campanha
+                res.json(tabulacoesCampanha)
+
+                return true
+            }     
+            //Finaliza Ligacao
+            const contatado = 'S'
+            const produtivo = 0
+            const status_tabulacao=0
+            const observacao = ''
+            //Desligando a chamada
+            await Discador.desligaChamada(idAtendimento,estado,contatado,produtivo,status_tabulacao,observacao)
+           
+        }
+        const estado = 1//Atualiza estado do agente para disponivel
+        const pausa = 0
+        await Discador.alterarEstadoAgente(ramal,estado,pausa)
+        res.json(false);
+        return false
+    }
+    //Tabula a ligação
+    tabularChamada(req,res){
+        const idAtendimento = req.body.idAtendimento
+        const ramal = req.body.ramal
+        const status_tabulacao = req.body.status_tabulacao
+        const observacao = req.body.obs_tabulacao
+        const contatado = 'S'
+        let produtivo
+        if(req.body.tipo_tabulacao=='produtivo'){
+            produtivo=1
+        }else{
+            produtivo=0
+        } 
+        
+        Discador.dadosAtendimento(idAtendimento,(e,atendimento)=>{
+            const tabela = atendimento[0].tabela_mailing
+            const idRegistro = atendimento[0].id_reg
+            const idMailing = atendimento[0].id_mailing
+            const idCampanha = atendimento[0].id_campanha
+            const numero = atendimento[0].numero
+            Discador.tabulandoContato(idAtendimento,tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,async(e,r)=>{
+                if(e) throw e
+               
+                await Cronometro.encerrouTabulacao(idCampanha,numero,ramal,status_tabulacao)
+                res.json(r);                        
+            })
+        })
     }
     
 
 
        
     
-
+//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD
 
     //DISCADOR DO AGENTE
     //ESTADO DO AGENTE
@@ -308,119 +449,9 @@ class DiscadorController{
 
     
 
-    dadosChamada(req,res){
-        const ramal = req.params.ramal
-        Discador.dadosChamada(ramal,(e,calldata)=>{
-            if(e) throw e
-              
-            res.json(calldata);
-        }) 
-    }
+    
 
-    async desligarChamada(req,res){
-        const idAtendimento =  req.body.idAtendimento
-        if(idAtendimento===false){//Chamada Manual
-           const ramal  =  req.body.ramal
-           const estado = 1//Atualiza estado do agente para disponivel
-           const pausa = 0
-           await Discador.alterarEstadoAgente(ramal,estado,pausa)
-        }else{//Discador
-            const ramal  =  req.body.ramal
-            const numeroDiscado =  req.body.numero_discado
-            //Verifica se existe regra de tabulacao obrigatória
-            const tabular=true
-            if(tabular==true){
-                const estado = 3//Atualiza estado do agente para pausado 
-                const tipo='tabulacao'
-                //Id de pausa tabulacao
-                Pausas.idPausaByTipo(tipo,async (e,idPausa)=>{
-                    if(e) throw e
-
-                    let pausaTabulacao
-                    if(idPausa.length==0){
-                        pausaTabulacao = 0
-                    }else{
-                        pausaTabulacao = idPausa[0].id
-                    }  
-                    
-                    await Discador.alterarEstadoAgente(ramal,estado,pausaTabulacao)
-                    //Atualiza registro como tabulando e retorna id da campanha
-                    Discador.preparaRegistroParaTabulacao(idAtendimento,(e,campanha)=>{
-                        if(e) throw e
-                            
-                        if(campanha.length>0){
-                            const idCampanha = campanha[0].id_campanha
-                            //Pega os status de tabulacao da campanha
-                            Tabulacoes.statusTabulacaoCampanha(idCampanha,async (e,statusTabulacao)=>{
-                                if(e) throw e
-
-                                //Finaliza Ligacao e inicia a contagem da tabulacao 
-                                await Cronometro.saiuLigacao(idCampanha,numeroDiscado,ramal)
-                                Discador.dadosAtendimento_byNumero(numeroDiscado,async (e,dadosAtendimento)=>{
-                                    if(e) throw e
-                                        
-                                    const idCampanha = dadosAtendimento[0].id_campanha
-                                    const idMailing = dadosAtendimento[0].id_mailing
-                                    const idRegistro = dadosAtendimento[0].id_reg  
-                                    //Inicia contagem do tempo de tabulacao
-                                    await Cronometro.iniciaTabulacao(idCampanha,idMailing,idRegistro,numeroDiscado,ramal)
-                                    res.json(statusTabulacao)
-                                })
-                            })
-                        }else{
-                            res.json(true)
-                        }
-                    })
-                })
-            }else{
-                //Inclui tentativa no registro e libera o agente
-                const estado = 1
-                const pausaTabulacao = 0
-                await Discador.alterarEstadoAgente(ramal,estado,pausaTabulacao)
-                
-                const contatado = 'S'
-                const produtivo = 0
-                const status_tabulacao=0
-                const observacao = ''
-                //Desligando a chamada
-                Discador.desligaChamada(idAtendimento,0,contatado,produtivo,status_tabulacao,observacao,(e,r)=>{
-                    if(e) throw e
-                    
-                    res.json(r);
-                })
-            }            
-        }
-    }
-
-    tabularChamada(req,res){
-        const idAtendimento = req.body.idAtendimento
-        const ramal = req.body.ramal
-        const numero = req.body.numero_discado
-        const status_tabulacao = req.body.status_tabulacao
-        const observacao = req.body.obs_tabulacao
-        const contatado = 'S'
-        let produtivo
-        if(req.body.tipo_tabulacao=='produtivo'){
-            produtivo=1
-        }else{
-            produtivo=0
-        } 
-        const data = req.body.data
-        const hora = req.body.hora
-
-        Discador.dadosAtendimento(idAtendimento,(e,atendimento)=>{
-            const tabela = atendimento[0].tabela_mailing
-            const idRegistro = atendimento[0].id_reg
-            const idMailing = atendimento[0].id_mailing
-            const idCampanha = atendimento[0].id_campanha
-            Discador.tabulandoContato(idAtendimento,tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,async(e,r)=>{
-                if(e) throw e
-               
-                await Cronometro.encerrouTabulacao(idCampanha,numero,ramal,status_tabulacao)
-                res.json(r);                        
-            })
-        })
-    }
+    
 
     marcarRetorno(req,res){
         const idAtendimento = req.body.idAtendimento
@@ -532,8 +563,6 @@ class DiscadorController{
                     
                     const tempoRestante = horasRes+':'+minRes+':'+segRes
 
-
-                    
                 
 
                     let retorno = '{'
@@ -564,275 +593,7 @@ class DiscadorController{
         const tempoPausa = await Cronometro.saiuDaPausa(ramal)
         res.send(tempoPausa)
     }
-
-    //Historico do id do registro
-    historicoRegistro(req,res){
-        const idReg = parseInt(req.params.idRegistro)
-        Discador.historicoRegistro(idReg,(e,historico)=>{
-            if(e) throw e
-
-            res.json(historico)
-        })
-
-    }
-
-    //Historico do agente
-    historicoChamadas(req,res){
-        const ramal = req.params.ramal
-        Discador.historicoChamadas(ramal,(e,historico)=>{
-            if(e) throw e
-
-            res.json(historico)
-        })
-
-    }
     
-    
-
-    /*OLD
-    checandoCampanhasProntas(req,res){
-        //this.debug('Discador Automático iniciado')
-        //Grava o total de chamadas simultâneas atuais para o log de chamadas
-        Discador.registrarChamadasSimultaneas()
-       
-        //Verifica se existem campanhas ativas
-        Campanhas.campanhasAtivasHabilitadas((e,campanhasAtivas)=>{
-            if(e) throw e
-
-            if(campanhasAtivas.length != 0 ){
-                //this.debug(`${campanhasAtivas.length} campanhas ativas`)
-
-                //Percorrendo todas as campanhas ativas
-                for(let i=0; i<campanhasAtivas.length; i++){
-                    //Verifica se a campanha possui uma fila atribuida
-                    let idCampanha = campanhasAtivas[i].id
-                    let nomeCampanha = campanhasAtivas[i].nome
-
-                    Campanhas.listarFilasCampanha(idCampanha,(e,filas)=>{
-                        if(e) throw e 
-
-                        if(filas.length === 0){
-                            //Atualiza o novo status da campanha
-                            const msg = "Nenhuma fila de atendimento atribuída a esta campanha!"
-                            const estado = 2
-                            Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                if(e) throw e 
-                            })
-                        }else{
-                            let idFila = filas[0].idFila
-                            let fila = filas[0].nomeFila
-                            //Verifica se existe mailing adicionado 
-                            Campanhas.mailingCampanha(idCampanha,(e,mailing)=>{
-                                if(e) throw e
-
-                                if(mailing.length === 0){
-                                    //Atualiza o novo status da campanha
-                                    const msg = "Nenhum mailing foi atribuido na campanha!"
-                                    const estado = 2
-                                    Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                        if(e) throw e 
-                                    })
-                                }else{
-                                    //Verifica se o mailing adicionado esta configurado
-                                    let idMailing = mailing[0].idMailing
-                                    //Verificando se o Mailing esta configuradoo
-                                    Campanhas.mailingConfigurado(idMailing,(e,mailingConfigurado)=>{
-                                        if(e) throw e                  
-
-                                        if(mailingConfigurado.length === 0){
-                                            //Atualiza o novo status da campanha
-                                            const msg = "O mailing adicionado nesta campanha não teve seus campos configurados!"
-                                            const estado = 2
-                                            Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                                if(e) throw e 
-                                            })
-                                        }else{ 
-                                            const tabela = mailingConfigurado[0].tabela   
-
-                                            //Verifica se a campanha possui Agendamento
-                                            Campanhas.agendamentoCampanha(idCampanha,(e,agendamento)=>{
-                                                if(e) throw e
-
-                                                if(agendamento.length === 0){
-                                                    //Dados da campamha verificados, iniciando discador
-                                                    this.discadorAutomatico(idCampanha,idFila,fila,idMailing,tabela)
-                                                }else{
-                                                    const hoje = moment().format("Y-MM-DD")
-                                                    const agora = moment().format("HH:mm:ss")
-                                                    //Verifica se a campanha ativas esta dentro da data de agendamento
-                                                    Campanhas.dataCampanha(idCampanha,hoje,(e,dataAgendamento)=>{
-                                                        if(e) throw e
-
-                                                        if(dataAgendamento.length === 0){
-                                                            //Atualiza o novo status da campanha
-                                                            const msg = "Esta campanha esta fora da sua data de agendamento"
-                                                            const estado = 2                                                    
-                                                            Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                                                if(e) throw e 
-                                                            })
-                                                        }else{
-                                                            //Verifica se a campanha ativas esta dentro do horario de agendamento
-                                                            Campanhas.horarioCampanha(idCampanha,agora,(e,horarioAgendamento)=>{ 
-                                                                if(e) throw e  
-
-                                                                if(horarioAgendamento.length === 0){
-                                                                    //Atualiza o novo status da campanha
-                                                                    const msg = "Esta campanha esta fora do horário de agendamento"
-                                                                    const estado = 2                                                    
-                                                                    Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                                                        if(e) throw e 
-                                                                    })
-                                                                }else{        
-                                                                    //Dados da campamha verificados, iniciando discador                                                          
-                                                                    this.discadorAutomatico(idCampanha,idFila,fila,idMailing,tabela)
-                                                                }
-                                                            })//horarioCampanha
-                                                        }
-                                                    })//dataCampanha
-                                                }
-                                            })//agendamentoCampanha                                            
-                                        }
-                                    })  //mailingConfigurado                       
-                                }                                
-                            })// mailingCampanha                           
-                        }
-                    })//listarFilasCampanha
-                }               
-            }            
-        })//campanhasAtivasHabilitadas
-
-        setTimeout(()=>{this.checandoCampanhasProntas(req,res)},5000)
-    }
-    */
-    /*
-    discadorAutomatico(idCampanha,idFila,fila,idMailing,tabela){
-       //verifica se existem agentes na fila
-       
-        Discador.agentesFila(fila,(e,agentes)=>{
-            if(e) throw e  
-
-            if(agentes.length ==0){                                                                    
-                let msg='Nenhum agente na fila'
-                let estado = 2
-                Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                    if(e) throw e
-                }) 
-            }else{
-                //verificando se os agentes estao logados e disponiveis
-                Discador.agentesDisponiveis(idFila,(e,agentesDisponiveis)=>{
-                    if(e) throw e
-
-                    if(agentesDisponiveis.length ==0){   
-                        let msg='Nenhum agente disponível'
-                        let estado = 2
-                        Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                            if(e) throw e
-                        })
-                    }else{ 
-                        const totalAgentesDisponiveis = agentesDisponiveis.length
-
-                        Discador.parametrosDiscador(idCampanha,(e,parametros)=>{
-                            if(e) throw e
-
-                            if(parametros==0){
-                                let msg='Configure o discador da campanha'
-                                let estado = 2
-                                Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                    if(e) throw e
-                                })
-                            }else{
-                                const tipoDiscador = parametros[0].tipo_discador
-                                const agressividade = parametros[0].agressividade
-                                const ordemDiscagem = parametros[0].ordem_discagem
-                                const tipoDiscagem = parametros[0].tipo_discagem
-                                const maxTentativas = parametros[0].tentativas
-                                const modo_atendimento = parametros[0].modo_atendimento
-
-                                //Verificando se a qtd de agentes disponivel eh equivalente as chamadas
-                                if(tipoDiscador=='preditivo'){
-                                    this.debug(`Discador ${tipoDiscador} não configurado!`)
-                                    
-                                }
-                                if(tipoDiscador=='clicktocall'){
-                                    this.debug(`Discador ${tipoDiscador} não configurado!`)
-                                    
-                                }
-                                if(tipoDiscador=='preview'){
-                                    this.debug(`Discador ${tipoDiscador} não configurado!`)
-
-                                }    
-                                if(tipoDiscador=='power'){                                    
-                                    Discador.chamadasSimultaneas(idCampanha,(e,chamadasSimultaneas)=>{
-                                        if(e) throw e
-
-                                        const totalDisponivel = totalAgentesDisponiveis * agressividade                                        
-                                        if(chamadasSimultaneas.length < totalDisponivel){
-                                            //Filtragem do registro para discagem
-                                                                
-                                            Discador.filtrarRegistro(idCampanha,tabela,idMailing,maxTentativas,ordemDiscagem,(e,registroFiltrado)=>{
-                                                if(e) throw e
-                                                    
-                                                if(registroFiltrado.length ==0){
-                                                    let msg='Nenhum registro disponível'
-                                                    let estado = 3
-                                                    Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                                        if(e) throw e
-                                                    })                               
-                                                }else{
-                                                    //Envia registro para discagem
-                                                    let msg='Campanha discando'
-                                                    let estado = 1
-                                                    Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                                        if(e) throw e
-
-                                                        this.discar(idCampanha,modo_atendimento,idMailing,tabela,registroFiltrado[0].idRegistro,fila) 
-                                                    })                                                                                               
-                                                }
-                                            })//filtrarRegistro   
-                                        }else{
-                                            let msg='Limite de chamadas simultâneas atingido, aumente a agressividade ou aguarde os agentes ficarem disponíveis'
-                                            let estado = 2
-                                            Campanhas.atualizaStatus(idCampanha,msg,estado,(e,r)=>{
-                                                if(e) throw e
-                                            })
-                                        }
-                                    })//chamadasSimultaneas 
-                                }                                   
-                            }
-                        })//parametrosDiscador                            
-                    }
-                })//agentesDisponiveis
-            }
-        })//agentesFila        
-    }
-
-    //PREDITIVO
-    //CLICK TO CALL
-    //PREVIEW
-    //POWER
-    discar(idCampanha,modoAtendimento,idMailing,tabela,registroFiltrado,fila){
-        Discador.pegarTelefone(registroFiltrado,tabela,(e,contato)=>{
-            if(e) throw e
-
-            let telefone
-            if(contato[0].ddd){
-                 telefone = contato[0].ddd+contato[0].numero
-            }else{
-                 telefone = contato[0].numero
-            }
-            //this.debug(`Numero do telefone: ${telefone}`)
-            
-            Discador.registraChamada(0,idCampanha,modoAtendimento,idMailing,tabela,registroFiltrado,telefone,fila,(e,r)=>{
-                if(e) throw e
-
-                Discador.ligar(0,telefone,(e,ligacao)=>{
-                    if(e) throw e
-                  
-                    this.debug('Dados registrados')
-                }) //registraChamada              
-            })//ligar       
-        })//pegarTelefone
-    }*/
 }
 
 export default new DiscadorController()

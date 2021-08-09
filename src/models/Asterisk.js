@@ -23,6 +23,10 @@ class Asterisk{
     
     //Adiciona membros na fila
     async addMembroFila(queue_name,queue_interface,membername,state_interface,penalty){
+        const check = await this.checkAgenteFila(queue_name,membername)
+        if(check){
+            return false;
+        }
         const sql = `INSERT INTO asterisk.queue_members (queue_name,interface,membername,state_interface,penalty) VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
         await this.querySync(sql)
         return true
@@ -37,6 +41,11 @@ class Asterisk{
         const sql = `DELETE FROM asterisk.queue_members WHERE queue_name='${nomeFila}' AND membername='${membro}'`
         await this.querySync(sql)
         return true
+    }
+    async checkAgenteFila(queue_name,membername){
+        const sql = `SELECT uniqueid FROM asterisk.queue_members WHERE queue_name='${queue_name}' AND membername='${membername}'`
+        const r = await this.querySync(sql)
+        return r.length
     }
 
    /* delMembroFila(uniqueid,callback){

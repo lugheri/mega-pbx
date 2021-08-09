@@ -1,5 +1,14 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
 class Pausas{
+    querySync(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.pool.query(sql,(e,rows)=>{
+                if(e) reject(e);
+
+                resolve(rows)
+            })
+        })
+    }
     //LISTA DE PAUSAS 
     
     //Criar Lista de Pausas
@@ -48,9 +57,9 @@ class Pausas{
         _dbConnection2.default.banco.query(sql,idLista,callback)
     }  
     
-    idPausaByTipo(tipo,callback){
+    async idPausaByTipo(tipo){
         const sql = `SELECT id FROM pausas WHERE tipo='${tipo}' AND status=1`
-        _dbConnection2.default.banco.query(sql,callback) 
+        return await this.querySync(sql)
     }
 
 }

@@ -66,7 +66,8 @@ class User{
                 }
                 callback(e,resp)
             }else{
-                const sql = `INSERT INTO users (criacao,nome,usuario,senha,nivelAcesso,cargo,equipe,reset,logado,estado,status) VALUES (NOW(),'${dados.nome}','${dados.usuario}',md5('${dados.senha}'),'${dados.nivelAcesso}','${dados.cargo}','${dados.equipe}','${dados.reset}',0,0,'${dados.status}')`
+                const sql = `INSERT INTO users (criacao,nome,usuario,senha,nivelAcesso,cargo,equipe,reset,logado,status)
+                                        VALUES (NOW(),'${dados.nome}','${dados.usuario}',md5('${dados.senha}'),'${dados.nivelAcesso}','${dados.cargo}','${dados.equipe}','${dados.reset}',0,'${dados.status}')`
                 connect.banco.query(sql,(e,r)=>{
                     if(e) throw e
 

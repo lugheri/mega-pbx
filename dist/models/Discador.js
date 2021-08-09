@@ -64,9 +64,10 @@ class Discador{
     //Remove Chamadas presas nas chamadas simultaneas
     async clearCalls(){
         this.debug(' . PASSO 1.2','Removendo chamadas presas')
-        const limitTime = 0 //tempo limite para aguardar atendimento (em segundos)
+        const limitTime = 30 //tempo limite para aguardar atendimento (em segundos)
         let sql = `SELECT id,id_campanha,id_mailing,id_registro,id_numero,numero FROM campanhas_chamadas_simultaneas 
-                    WHERE tratado=0 AND TIMESTAMPDIFF(SECOND,data,NOW())>${limitTime} LIMIT 1`
+                    WHERE tipo_discador='power' AND tratado=0 AND TIMESTAMPDIFF(SECOND,data,NOW())>${limitTime} 
+                    LIMIT 1`
         const r = await this.querySync(sql)
         if(r.length==0){
             return false;
@@ -97,7 +98,7 @@ class Discador{
         await this.registraHistoricoAtendimento(0,idCampanha,idMailing,idRegistro,id_numero,0,0,tipo_ligacao,numero,tabulacao,observacoes,contatado)
         
         //Marcando numero na tabela de numeros como disponivel
-        sql = `UPDATE mailings.${tabela_numeros} SET discando_${idCampanha}=0 WHERE id_registro=${idRegistro}`
+        sql = `UPDATE mailings.${tabela_numeros} SET discando=0 WHERE id_registro=${idRegistro}`
         await this.querySync(sql)
         //removendo chamada simultanea
         sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE id=${idChamada}`
@@ -190,6 +191,9 @@ class Discador{
         //2 - Na Fila
         //3 - Atendido
         //4 - Já Trabalhado 
+        //filtrando
+        let filtro = await this.filtrosDiscagem(idCampanha,idMailing)   
+        
         let sql 
         if(tipoDiscagem=="horizontal"){
             //modo horizontal considera a tabela de numeros
@@ -197,9 +201,9 @@ class Discador{
                      LEFT OUTER JOIN mailings.campanhas_tabulacao_mailing AS t ON n.id=t.idNumero
                     WHERE (t.idMailing=${idMailing} AND t.idCampanha=${idCampanha} AND estado=0
                       AND t.tentativas <= t.max_tent_status
-                       OR t.idMailing IS NULL AND idCampanha IS NULL)
-                      AND n.valido=1 AND n.discando_${idCampanha}=0 AND n.campanha_${idCampanha}=1
-                 ORDER BY t.tentativas ${ordemDiscagem} LIMIT 1`
+                       OR t.idMailing IS NULL AND t.idCampanha IS NULL)
+                      AND n.valido=1 AND n.discando=0 AND n.campanha_${idCampanha}=1
+                 ORDER BY t.tentativas ${ordemDiscagem} LIMIT 1`    
             return await this.querySync(sql)
         }else{
             //modo vertical considera a tabela de dados
@@ -218,10 +222,18 @@ class Discador{
                      LEFT OUTER JOIN mailings.campanhas_tabulacao_mailing AS t ON n.id=t.idNumero
                     WHERE (t.idMailing=${idMailing} AND t.idCampanha=${idCampanha} AND estado=0
                        OR t.idMailing IS NULL AND idCampanha IS NULL)
-                      AND n.id_registro=${idr[0].idRegistro} AND n.valido=1 AND n.discando_${idCampanha}=0 AND n.campanha_${idCampanha}=1
+                      AND n.id_registro=${idr[0].idRegistro} AND n.valido=1 AND n.discando=0 AND n.campanha_${idCampanha}=1
                  ORDER BY t.tentativas ${ordemDiscagem} LIMIT 1`
             return await this.querySync(sql)
         }
+    }
+
+    async filtrosDiscagem(idCampanha,idMailing){
+        let sql = `SELECT tipo,valor,regiao
+                     FROM campanhas_mailing_filtros 
+                    WHERE idCampanha=${idCampanha} 
+                      AND idMailing=${idMailing}`;
+        return await this.querySync(sql)        
     }
 
     /** 
@@ -230,7 +242,8 @@ class Discador{
 
     async registraNumero(idCampanha,idMailing,idRegistro,idNumero,numero,tabela_numeros){
         let sql = `SELECT id FROM mailings.campanhas_tabulacao_mailing
-                    WHERE idMailing=${idMailing} AND idCampanha=${idCampanha} AND idRegistro=${idRegistro} AND idNumero=${idNumero} LIMIT 1`
+                    WHERE idMailing=${idMailing} AND idCampanha=${idCampanha} 
+                      AND idRegistro=${idRegistro} AND idNumero=${idNumero} LIMIT 1`
         const r = await this.querySync(sql)
         if(r.length > 0){  
             const id = r[0].id
@@ -246,7 +259,7 @@ class Discador{
         await this.querySync(sql)  
 
         //atualiza como discando 
-        sql = `UPDATE mailings.${tabela_numeros} SET discando_${idCampanha}=1 WHERE id_registro=${idRegistro}`
+        sql = `UPDATE mailings.${tabela_numeros} SET discando=1 WHERE id_registro=${idRegistro}`
         await this.querySync(sql)  
         return true 
     }
@@ -260,13 +273,13 @@ class Discador{
     }
 
     //Registra chamada simultanea
-    async registraChamada(ramal,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila,tratado){
+    async registraChamada(ramal,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila,tratado,atendido){
         const hoje = _moment2.default.call(void 0, ).format("YMMDDHHmmss")
         const protocolo = hoje+'0'+ramal
         const tipo = 'discador'
         const sql = `INSERT INTO campanhas_chamadas_simultaneas 
                                 (data,ramal,protocolo,tipo_ligacao,tipo_discador,modo_atendimento,id_campanha,id_mailing,tabela_dados,tabela_numeros,id_registro,id_numero,numero,fila,tratado,atendido,na_fila,falando) 
-                         VALUES (now(),'${ramal}','${protocolo}','${tipo}','${tipoDiscador}','${modoAtendimento}','${idCampanha}','${idMailing}','${tabela_dados}','${tabela_numeros}',${id_reg},${id_numero},'0${numero}','${fila}',${tratado},0,0,0)`
+                         VALUES (now(),'${ramal}','${protocolo}','${tipo}','${tipoDiscador}','${modoAtendimento}','${idCampanha}','${idMailing}','${tabela_dados}','${tabela_numeros}',${id_reg},${id_numero},'0${numero}','${fila}',${tratado},${atendido},0,0)`
         await this.querySync(sql)  
         return true
     }
@@ -281,8 +294,7 @@ class Discador{
         this.debug('[!]','')
         this.debug('[!]',`Campanha: ${idCampanha} msg: ${msg} `)
         this.debug('[!]','')
-
-        
+        console.log('[!]',msg)        
 
         if(statusCampanha.length==0){
             //Caso nao, insere o status
@@ -310,74 +322,465 @@ class Discador{
         return await this.querySync(sql)          
     }
 
+    /*DISCAR*/
+    async discar(ramal,numero){
+        this.debug(' . . . . . . . . . . . . . . PASSO 3.4 - Discando')
+        //Recuperando dados do asterisk
+        const sql=`SELECT * FROM asterisk_ari WHERE active=1`; 
+        const asterisk_server = await this.querySync(sql)  
+        const modo='discador'
+        const server = asterisk_server[0].server
+        const user =  asterisk_server[0].user
+        const pass =  asterisk_server[0].pass
+                
+        _Asterisk2.default.discar(server,user,pass,modo,ramal,numero,(e,call)=>{
+            if(e) throw e 
+
+            this.debug('Data Call',call)  
+            return true
+        })          
+    }
+
    /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    * FIM DAS FUNCOES DO DISCADOOR
+    * FIM DAS FUNCOES DO DISCADOR
     * <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     */
 
+   /*Funcoes auxiliares do dicador******************************************************************************/
     //Registra o histórico de atendimento de uma chamada
     async registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_registro,id_numero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado){
+        console.log('registra atendimento')
         const sql = `INSERT INTO historico_atendimento 
                                 (data,hora,protocolo,campanha,mailing,id_registro,id_numero,agente,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado) 
                          VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_registro},${id_numero},${ramal},'${uniqueid}','${tipo_ligacao}','${numero}',${tabulacao},'${observacoes}','${contatado}')`
         return await this.querySync(sql)          
     }  
+    //Tabula uma chamada apos sua conclusao                        
+    async tabulandoContato(idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal){
+        let estado
+        let desc_estado        
+        if(produtivo==1){
+            estado=4
+            desc_estado='Já Trabalhado'
+        }else{
+            estado=0
+            desc_estado='Disponivel'
+        }    
+        const estadoAgente = 1//Libera o agente
+        const pausa=0
+        await this.alterarEstadoAgente(ramal,estadoAgente,pausa)
+        await this.desligaChamada(idAtendimento,estado,contatado,produtivo,status_tabulacao,observacao)                                
+    }  
+    //Muda o status do agente
+    async alterarEstadoAgente(agente,estado,pausa){
+        //Recuperando estado anterior do agente
+        const estadoAnterior = await this.infoEstadoAgente(agente)
+        //zerando cronometro do estado anterior
+        let sql
+        if(estadoAnterior==2){//Caso o agente venha de uma pausa
+            //Removeo agente da lista dos agentes pausados
+            sql = `DELETE FROM agentes_pausados WHERE ramal='${agente}'`
+            await this.querySync(sql)
+            //Atualiza Log
+            sql = `UPDATE log_pausas SET termino=now(), ativa=0 WHERE ramal='${agente}' AND ativa=1`
+            await this.querySync(sql)
+            await _Cronometro2.default.saiuDaPausa(agente)
+        }
+        //Atualizando o novo estado do agente
+        sql = `UPDATE agentes_filas SET estado=${estado}, idPausa=${pausa} WHERE ramal=${agente}` 
+        await this.querySync(sql)
+        sql = `UPDATE user_ramal SET estado=${estado} WHERE userId=${agente}`
+        await this.querySync(sql)
+        if(estado==1){//disponibiliza o ramal do agente no asterisk
+            sql = `UPDATE asterisk.queue_members SET paused=0 WHERE membername=${agente}`
+            await this.querySync(sql)
+        }else if(estado==2){//Caso o agente va para uma pausa
+            //dados da pausa
+            sql = `SELECT * FROM pausas WHERE id=${pausa}`
+            const infoPausa = await this.querySync(sql)
+            const idPausa = infoPausa[0].id
+            const nomePausa = infoPausa[0].nome
+            const descricaoPausa = infoPausa[0].descricao
+            const tempo = infoPausa[0].tempo
+            //pausa agente no asterisk
+            sql = `UPDATE asterisk.queue_members SET paused=1 WHERE membername='${agente}'`    
+            await this.querySync(sql)
+            let agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
+            let resultado = _moment2.default.call(void 0, agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
+            //insere na lista dos agentes pausados
+            sql = `INSERT INTO agentes_pausados (data,ramal,inicio,termino,idPausa,nome,descricao) VALUES (now(),'${agente}',now(), '${resultado}', ${idPausa}, '${nomePausa}','${descricaoPausa}')`
+            await this.querySync(sql)
+            agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
+            resultado = _moment2.default.call(void 0, agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
+            sql = `INSERT INTO log_pausas (ramal,idPausa,data,inicio,ativa) VALUES ('${agente}',${idPausa},now(),now(),1)`
+            await this.querySync(sql)
+        }
+        return true
+    }
+    //Retorna o status de pausa do agente
+    async infoEstadoAgente(ramal){
+        const sql = `SELECT * FROM user_ramal WHERE ramal='${ramal}'`
+        const rows = await this.querySync(sql)
+        if(rows.length==0){
+            return 0
+        }
+        return rows[0].estado
+    }
+
+    //Desliga Chamada
+    async desligaChamada(idAtendimento,estado,contatado,produtivo,status_tabulacao,observacao){  
+        //Le os dados do registro
+        let sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE id=${idAtendimento}`
+        const atendimento = await this.querySync(sql)
+        const idRegistro = atendimento[0].id_registro
+        const idNumero = atendimento[0].id_numero
+        const uniqueid = atendimento[0].uniqueid
+        const tipo_ligacao = atendimento[0].tipo_ligacao
+        const protocolo = atendimento[0].protocolo
+        const tabela_dados = atendimento[0].tabela_dados
+        const tabela_numeros = atendimento[0].tabela_numeros
+        const numero = atendimento[0].numero
+        const ramal = atendimento[0].ramal
+        const idMailing = atendimento[0].id_mailing
+        const idCampanha = atendimento[0].id_campanha
+
+        //const estado = 0
+        const desc_estado = 'Disponivel'       
+        //Atualiza registro com nova tentativa            
+        sql = `UPDATE mailings.${tabela_numeros} SET tentativas=tentativas+1, contatado='${contatado}', status_tabulacao=${status_tabulacao}, produtivo='${produtivo}', discando=0 WHERE id = ${idNumero}`
+        await this.querySync(sql)
+        //Grava historico
+        sql = `INSERT INTO historico_atendimento (data,hora,campanha,mailing,id_registro,id_numero,agente,protocolo,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),now(),${idCampanha},${idMailing},${idRegistro},${idNumero},${ramal},"${protocolo}","${uniqueid}","${tipo_ligacao}","${numero}",${status_tabulacao},"${observacao}","${contatado}") `
+        await this.querySync(sql)
+        //Atualiza a tabela da campanha 
+        sql = `UPDATE mailings.campanhas_tabulacao_mailing SET data=now(), numeroDiscado='${numero}', agente='${ramal}', estado='${estado}', desc_estado='${desc_estado}', contatado='${contatado}', tabulacao=${status_tabulacao}, produtivo='${produtivo}', observacao='${observacao}', tentativas=tentativas+1 WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha} AND idNumero=${idNumero}`
+        await this.querySync(sql)
+        //Removendo chamada das chamadas simultaneas
+        sql = `DELETE FROM campanhas_chamadas_simultaneas  WHERE id='${idAtendimento}'`
+        await this.querySync(sql)
+        return true
+    }
+    //Busca a fila da campanha atendida
+    async getQueueByNumber(numero){
+        const sql = `SELECT id,fila AS Fila FROM campanhas_chamadas_simultaneas WHERE numero='${numero}' ORDER BY id DESC LIMIT 1`
+        return await this.querySync(sql)
+    }
+    //Atualiza registros em uma fila de espera
+    async setaRegistroNaFila(idChamada){       
+        const sql = `UPDATE campanhas_chamadas_simultaneas SET na_fila=1, tratado=1 WHERE id='${idChamada}'`
+        return await this.querySync(sql)
+    }
 
 
 
 
+    /*Funcoes de resposta aos scripts do Asterisk******************************************************************/
+    //Retorna as informações da chamada pelo número discador
+    async dadosAtendimento_byNumero(numero){
+        //Separando a campanha que o agente pertence
+        const sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE numero='${numero}'`
+        return await this.querySync(sql)   
+    }
 
-
-
-
-    
-    
-
-    
-
-    
-
-    historicoRegistro(idReg,callback){
-        const sql = `SELECT agente, u.nome, protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,t.tabulacao,obs_tabulacao FROM historico_atendimento AS h left JOIN users AS u ON u.id=h.agente LEFT JOIN campanhas_status_tabulacao AS t ON t.id=h.status_tabulacao WHERE id_registro=${idReg} ORDER BY h.id DESC LIMIT 50`
-        _dbConnection2.default.banco.query(sql,callback) 
+    //Retorna as informações da chamada pelo id de atendimento
+    async dadosAtendimento(idAtendimento){
+        //Separando a campanha que o agente pertence
+        const sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE id='${idAtendimento}'`
+        return await this.querySync(sql) 
     }
     
-    historicoChamadas(ramal,callback){
-        const sql = `SELECT agente, u.nome, protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,t.tabulacao,obs_tabulacao FROM historico_atendimento AS h JOIN users AS u ON u.id=h.agente LEFT JOIN campanhas_status_tabulacao AS t ON t.id=h.status_tabulacao WHERE agente='${ramal}' ORDER BY h.id DESC LIMIT 50`
-        _dbConnection2.default.banco.query(sql,callback) 
-    }
-    
-    discar(ramal,numero){
-        return new Promise((resolve,reject)=>{
-            //Recuperando dados do asterisk
-            const sql=`SELECT * FROM asterisk_ari WHERE active=1`; 
-            _dbConnection2.default.banco.query(sql,(e,asterisk_server)=>{
-                if(e)
-                    reject(e)
+    /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    * FUNCOES DA TELA DO AGENTE
+    * <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    */
 
-                const modo='discador'
-                const server = asterisk_server[0].server
-                const user =  asterisk_server[0].user
-                const pass =  asterisk_server[0].pass
-                
-                console.log('modo',modo)
-                console.log('server',server)
-                console.log('user',user)
-                console.log('pass',pass)
-                _Asterisk2.default.discar(server,user,pass,modo,ramal,numero,(e,call)=>{
-                    if(e)
-                        reject(e)
-    
-                    resolve(call)
-                })          
-            })
-        })
+    //Retorna o estado atual do agente
+    async statusRamal(ramal){
+        const sql = `SELECT estado FROM user_ramal WHERE ramal=${ramal}`
+        const r = await this.querySync(sql)
+        return r[0].estado 
     }
 
-    discarCB(ramal,numero,callback){
+    //Recupera o tipo de idAtendimento
+    async modoAtendimento(ramal){
+        const sql = `SELECT m.id, m.modo_atendimento, m.id_campanha 
+                       FROM asterisk.queue_members AS q 
+                       JOIN mega_conecta.campanhas_chamadas_simultaneas AS m 
+                         ON q.queue_name=m.fila 
+                      WHERE membername=${ramal} AND na_fila=1`
+        return await this.querySync(sql)
+    }
+       
+    //Informações da chamada a ser atendida
+    async infoChamada_byIdAtendimento(idAtendimento){
+        //Separando a campanha que o agente pertence
+        let sql = `SELECT id,protocolo,id_registro,id_campanha,id_mailing,numero,tabela_dados,tabela_numeros
+                       FROM campanhas_chamadas_simultaneas WHERE id='${idAtendimento}'`
+        const calldata = await this.querySync(sql)
+        if(calldata.length==0){
+            return false
+        }
+        
+        const idMailing = calldata[0].id_mailing
+        const idReg = calldata[0].id_registro
+        const tabela_dados = calldata[0].tabela_dados
+        const tabela_numeros = calldata[0].tabela_numeros
+        const idCampanha = calldata[0].id_campanha
+        const protocolo = calldata[0].protocolo
+        const numero = calldata[0].numero
+
+        //Seleciona os campos de acordo com a configuração da tela do agente
+        //CAMPOS DE DADOS
+         sql = `SELECT id,campo,apelido
+                  FROM mailing_tipo_campo 
+                 WHERE idMailing=${idMailing}
+                   AND tipo='dados' OR tipo='nome'
+              ORDER BY ordem ASC`;
+       
+        const campos_dados = await this.querySync(sql)
+        //montando a query de busca dos dados
+        const info = {};
+              info['idAtendimento']=calldata[0].id
+              info['idMailing']=idMailing
+              info['protocolo']=protocolo
+              info['nome_registro']=await this.campoNomeRegistro(idMailing,idReg,tabela_dados)
+              info['campos']={}
+              info['campos']['idRegistro']=idReg
+       
+        for(let i=0; i<campos_dados.length; i++){
+            let apelido=''
+            if(campos_dados[i].apelido === null){
+                apelido=campos_dados[i].campo
+            }else{
+                apelido=campos_dados[i].apelido
+            }  
+            sql = `SELECT ${campos_dados[i].campo} AS 'valor' FROM mailings.${tabela_dados} WHERE id_key_base=${idReg}` 
+            let value = await this.querySync(sql)
+            info['campos'][apelido]=value[0].valor
+        }        
+       
+        info['numeros']=[]
+        //CAMPOS DE TELEFONE
+         sql = `SELECT numero
+                       FROM mailings.${tabela_numeros}
+                      WHERE id_registro=${idReg} 
+                   ORDER BY id ASC`;
+        const campos_numeros = await this.querySync(sql)
+        for(let i=0; i<campos_numeros.length; i++){
+            info['numeros'].push(`0${campos_numeros[i].numero}`);
+        }
+        info['numeros_discado']=numero
+         sql = `SELECT id,nome,descricao FROM campanhas WHERE id=${idCampanha}`
+        const dadosCampanha = await this.querySync(sql)
+        
+        info['dadosCampanha']=dadosCampanha
+        
+        return info
+    }
+
+    //Retorna o valor do campo nome do registro caso exista
+    async campoNomeRegistro(idMailing,idRegistro,tabelaDados){
+        let sql = `SELECT campo FROM mailing_tipo_campo 
+                    WHERE idMailing=${idMailing}
+                      AND tipo='nome'`
+        const campoNome = await this.querySync(sql)
+        if(campoNome.length==0){
+            return false
+        }
+        const campo = campoNome[0].campo
+        sql = `SELECT ${campo} as nome
+                 FROM mailings.${tabelaDados}
+                WHERE id_key_base=${idRegistro}`
+        const nome = await this.querySync(sql)
+        return nome[0].nome
+    }
+
+    //Informações da chamada a ser atendida
+    async infoChamada_byRamal(ramal){
+        //Separando a campanha que o agente pertence
+        let sql = `SELECT id,protocolo,id_registro,id_campanha,id_mailing,numero,tabela_dados,tabela_numeros
+                     FROM campanhas_chamadas_simultaneas 
+                    WHERE ramal='${ramal}' AND falando=1`
+        const calldata = await this.querySync(sql)
+        if(calldata.length==0){
+            return false
+        }
+        
+        const idMailing = calldata[0].id_mailing
+        const idReg = calldata[0].id_registro
+        const tabela_dados = calldata[0].tabela_dados
+        const tabela_numeros = calldata[0].tabela_numeros
+        const idCampanha = calldata[0].id_campanha
+        const protocolo = calldata[0].protocolo
+        const numero = calldata[0].numero
+
+        //Seleciona os campos de acordo com a configuração da tela do agente
+        //CAMPOS DE DADOS
+         sql = `SELECT id,campo,apelido
+                  FROM mailing_tipo_campo 
+                 WHERE idMailing=${idMailing}
+                   AND tipo='dados' OR tipo='nome'
+              ORDER BY ordem ASC`;
+       
+        const campos_dados = await this.querySync(sql)
+        //montando a query de busca dos dados
+        const info = {};
+              info['idAtendimento']=calldata[0].id
+              info['idMailing']=idMailing
+              info['protocolo']=protocolo
+              info['nome_registro']=await this.campoNomeRegistro(idMailing,idReg,tabela_dados)
+              info['campos']={}
+              info['campos']['idRegistro']=idReg
+       
+        for(let i=0; i<campos_dados.length; i++){
+            let apelido=''
+            if(campos_dados[i].apelido === null){
+                apelido=campos_dados[i].campo
+            }else{
+                apelido=campos_dados[i].apelido
+            }  
+            sql = `SELECT ${campos_dados[i].campo} AS 'valor' FROM mailings.${tabela_dados} WHERE id_key_base=${idReg}` 
+            let value = await this.querySync(sql)
+            info['campos'][apelido]=value[0].valor
+        }        
+       
+        info['numeros']=[]
+        //CAMPOS DE TELEFONE
+         sql = `SELECT numero
+                       FROM mailings.${tabela_numeros}
+                      WHERE id_registro=${idReg} 
+                   ORDER BY id ASC`;
+        const campos_numeros = await this.querySync(sql)
+        for(let i=0; i<campos_numeros.length; i++){
+            info['numeros'].push(`0${campos_numeros[i].numero}`);
+        }
+        info['numeros_discado']=numero
+         sql = `SELECT id,nome,descricao FROM campanhas WHERE id=${idCampanha}`
+        const dadosCampanha = await this.querySync(sql)
+        
+        info['dadosCampanha']=dadosCampanha
+        
+        return info
+    } 
+
+    //Atende a chamada, atualiza a chamada simultanea e retorna os dados da mesma com os históricos do registro
+    async atendeChamada(ramal){
+        //Separando a campanha que o agente pertence
+        let sql = `SELECT id FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND atendido=1`
+        const calldata = await this.querySync(sql)
+        if(calldata.length==0){
+            return "Chamada interna"
+        }
+        const idAtendimento = calldata[0].id
+        //Atualiza chamada simultanea com o status de falando
+        sql = `UPDATE campanhas_chamadas_simultaneas SET atendido=0, falando=1 WHERE id='${idAtendimento}'`;
+        await this.querySync(sql)        
+        return await this.infoChamada_byIdAtendimento(idAtendimento)
+    }
+
+    //Dados do Agente
+    async infoAgente(ramal){
+        const sql = `SELECT id as ramal, nome FROM users WHERE id=${ramal}`
+        return await this.querySync(sql)        
+    }
+
+     //Dados do Agente
+     async infoRegistro(idMailing,idRegistro){
+        const infoMailing = await _Mailing2.default.infoMailing(idMailing)
+        const tabela = infoMailing[0].tabela_dados
+        const sql = `SELECT * FROM mailings.${tabela} WHERE id_key_base=${idRegistro}`
+        return await this.querySync(sql)        
+    }
+
+    //Retorna o histórico de atendimento do registro
+    async historicoRegistro(idMailing,idReg){
+        const sql = `SELECT agente,protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,DATE_FORMAT (hora,'%H:%i') AS horario,t.tabulacao,obs_tabulacao,contatado
+                       FROM historico_atendimento AS h 
+                       LEFT JOIN tabulacoes_status AS t ON t.id=h.status_tabulacao 
+                      WHERE id_registro=${idReg} AND mailing=${idMailing} 
+                      ORDER BY h.id DESC LIMIT 50`
+        return await this.querySync(sql)  
+    }
+
+    //Retorna o histórico de atendimento do agente
+    async historicoChamadas(ramal){
+        const sql = `SELECT agente,mailing,id_registro,protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,t.tabulacao,obs_tabulacao 
+                       FROM historico_atendimento AS h 
+                       LEFT JOIN tabulacoes_status AS t ON t.id=h.status_tabulacao
+                       WHERE agente='${ramal}' 
+                       ORDER BY h.id DESC LIMIT 50`
+        return await this.querySync(sql)  
+    }
+
+    //Informacoes da chamada ja atendida pelo agente
+    async dadosChamada(ramal){
+        //Separando a campanha que o agente pertence
+        const sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND falando=1`
+        return await this.querySync(sql)  
+    }
+
+    //Verifica Lista de tabulacao da campanha
+    async tabulacoesCampanha(idCampanha){
+        let sql = `SELECT idListaTabulacao FROM campanhas_listastabulacao WHERE idCampanha='${idCampanha}'`
+        const idLista = await this.querySync(sql)
+        if(idLista.length!=0){
+           
+            const tabulacoes={}
+            //produtivas
+            sql = `SELECT id,tabulacao,descricao,followUp,venda FROM tabulacoes_status 
+                    WHERE idLista=${idLista[0].idListaTabulacao} AND tipo='produtivo' AND status=1
+                    ORDER BY ordem ASC`
+            const pro = await this.querySync(sql) 
+            tabulacoes['produtivas']=[]
+            for(let i = 0; i<pro.length; i++) {
+                tabulacoes['produtivas'].push(pro[i])
+            }
+            //improdutivas       
+            sql = `SELECT id,tabulacao,descricao,followUp,venda FROM tabulacoes_status 
+                    WHERE idLista=${idLista[0].idListaTabulacao} AND tipo='improdutivo' AND status=1
+                    ORDER BY ordem ASC`
+            const imp = await this.querySync(sql)
+            tabulacoes['improdutivas']=[]
+            for(let i = 0; i<imp.length; i++) {
+                tabulacoes['improdutivas'].push(imp[i])
+            }
+            return tabulacoes
+        }
+        return false
+    }
+    //Atualiza a chamada como tabulando
+    async preparaRegistroParaTabulacao(idAtendimento){
+        //Atualiza Chamada como tabulando 
+        const sql = `UPDATE campanhas_chamadas_simultaneas SET falando=1, tabulando=1, hora_tabulacao=now() 
+                      WHERE id='${idAtendimento}'`;
+        await this.querySync(sql) 
+    }
+
+
+
+
+
+
+
+
+
+    
+    
+
+    
+    //EM REFATORACAO
+    
+
+   
+    
+    
+    
+    
+
+    /*discarCB(ramal,numero,callback){
         //Recuperando dados do asterisk
         const sql=`SELECT * FROM asterisk_ari WHERE active=1`;
-        _dbConnection2.default.banco.query(sql,(e,asterisk_server)=>{
+        connect.banco.query(sql,(e,asterisk_server)=>{
             if(e) throw e;
             
             const modo='discador'
@@ -387,87 +790,21 @@ class Discador{
             
             //Asterisk.discar(server,user,pass,modo,ramal,numero,callback)          
         })
-    }
+    }*/
 
 
     //FUNCOES DE APOIO AO ASTERISK
-    //Busca a fila da campanha atendida
-    getQueueByNumber(numero,callback){
-        const sql = `SELECT id,fila AS Fila FROM campanhas_chamadas_simultaneas WHERE numero='${numero}' ORDER BY id DESC LIMIT 1`
-        _dbConnection2.default.banco.query(sql,callback);
-    }
+    
 
-    setaRegistroNaFila(idChamada,callback){       
-        const sql = `UPDATE campanhas_chamadas_simultaneas SET na_fila=1, tratado=1 WHERE id='${idChamada}'`
-        _dbConnection2.default.banco.query(sql,callback) 
-    }
+   
 
-    //Recupera o tipo de idAtendimento
-    modoAtendimento(ramal,callback){
-        const sql = `SELECT m.id, m.modo_atendimento, m.id_campanha FROM queue_members AS q JOIN mega_conecta.campanhas_chamadas_simultaneas AS m ON q.queue_name=m.fila WHERE membername=${ramal} AND na_fila=1`
-        _dbConnection2.default.asterisk.query(sql,callback)
-    }
+    
 
    
 
     //######################Funções do atendente######################
-    //Funcoes do atendimento de ligacao que recupera os dados da ligacao
-    atendeChamada(ramal,callback){
-        //Separando a campanha que o agente pertence
-        const sql = `SELECT id,protocolo,id_registro,id_campanha,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND atendido=1`
-        _dbConnection2.default.banco.query(sql,(e,calldata)=>{
-            if(e) throw e
-
-            if(calldata.length==0){
-                console.log('ERRO: Dados da chamada não localizados')
-                callback(e,false)
-            }else{
-                const idAtendimento = calldata[0].id
-                const idReg = calldata[0].id_reg
-                const tabela = calldata[0].tabela_mailing
-                const numero = calldata[0].numero
-                const idCampanha = calldata[0].id_campanha
-                const protocolo = calldata[0].protocolo
-
-                //Atualiza chamada simultanea com o status de falando
-                const sql = `UPDATE campanhas_chamadas_simultaneas SET atendido=0, falando=1 WHERE id='${idAtendimento}'`;
-                _dbConnection2.default.banco.query(sql,(e,r)=>{
-                    if(e) throw e                   
-
-                    //Seleciona os campos de acordo com a configuração da tela do agente
-                    //CAMPOS DE DADOS
-                    this.camposChamada(idAtendimento,idReg,tabela,numero,idCampanha,protocolo,callback)                
-                })
-            }
-        })
-    }
-
-    //Informacoes da chamada ja atendida
-    dadosChamada(ramal,callback){
-        //Separando a campanha que o agente pertence
-        const sql = `SELECT id,protocolo,id_registro,id_campanha,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND falando=1`
-        _dbConnection2.default.banco.query(sql,(e,calldata)=>{
-            if(e) throw e
-
-            if(calldata.length==0){
-                console.log('ERRO: Dados da chamada não localizados')
-                callback(e,false)
-            }else{
-                const idAtendimento = calldata[0].id
-                const idReg = calldata[0].id_reg
-                const tabela = calldata[0].tabela_mailing
-                const numero = calldata[0].numero
-                const idCampanha = calldata[0].id_campanha
-                const protocolo = calldata[0].protocolo
-
-               
-                //Seleciona os campos de acordo com a configuração da tela do agente
-                //CAMPOS DE DADOS
-                this.camposChamada(idAtendimento,idReg,tabela,numero,idCampanha,protocolo,callback)
-                                   
-            }
-        })
-    }
+   
+   
 
     //CAMPOS DE DADOS
     camposChamada(idAtendimento,idReg,tabela,numero,idCampanha,protocolo,callback){
@@ -533,176 +870,19 @@ class Discador{
         }) 
     }
 
-    //Desligando Chamada
-    preparaRegistroParaTabulacao(idAtendimento,callback){
-        //Atualiza Chamada como tabulando 
-        const sql = `UPDATE campanhas_chamadas_simultaneas SET falando=1, tabulando=1, hora_tabulacao=now() WHERE id='${idAtendimento}'`;
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
-            if(e) throw e
+    
 
-            //Retorna id da campanha
-            const sql = `SELECT id_campanha FROM campanhas_chamadas_simultaneas WHERE id=${idAtendimento}`
-            _dbConnection2.default.banco.query(sql,callback)
-        })
-    }
+   
 
-    dadosAtendimento(idAtendimento, callback){
-        //Separando a campanha que o agente pertence
-        const sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE id='${idAtendimento}'`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+    
 
-    dadosAtendimento_byNumero(numero, callback){
-        //Separando a campanha que o agente pertence
-        const sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE numero='${numero}'`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+     
 
-     //Tabula uma chamada apos sua conclusao                        
-     async tabulandoContato(idAtendimento,tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,callback){
-        let estado
-        let desc_estado
-        
-        if(produtivo==1){
-            estado=4
-            desc_estado='Já Trabalhado'
-        }else{
-            estado=0
-            desc_estado='Disponivel'
-        }    
-        const estadoAgente = 1//Libera o agente
-        const pausa=0
-        await this.alterarEstadoAgente(ramal,estadoAgente,pausa)
-        this.desligaChamada(idAtendimento,estado,contatado,produtivo,status_tabulacao,observacao,callback)                                
-    }  
-
-    desligaChamada(idAtendimento,estado,contatado,produtivo,status_tabulacao,observacao,callback){  
-        //Le os dados do registro
-        const sql = `SELECT id_reg,uniqueid,tipo_ligacao,protocolo,tabela_mailing,id_mailing,id_campanha,ramal,numero FROM campanhas_chamadas_simultaneas WHERE id=${idAtendimento}`
-        _dbConnection2.default.banco.query(sql,(e,atendimento)=>{
-            if(e) throw e
-
-            const idRegistro = atendimento[0].id_reg
-            const uniqueid = atendimento[0].uniqueid
-            const tipo_ligacao = atendimento[0].tipo_ligacao
-            const protocolo = atendimento[0].protocolo
-            const tabela = atendimento[0].tabela_mailing
-            const numero = atendimento[0].numero
-            const ramal = atendimento[0].ramal
-            const idMailing = atendimento[0].id_mailing
-            const idCampanha = atendimento[0].id_campanha
-
-            //const estado = 0
-            const desc_estado = 'Disponivel'       
-
-            //Atualiza registro com nova tentativa            
-            const sql = `UPDATE ${tabela} SET tentativas=tentativas+1, contatado='${contatado}', status_tabulacao=${status_tabulacao}, produtivo='${produtivo}' WHERE id_key_base = ${idRegistro}`
-            _dbConnection2.default.mailings.query(sql,(e,r)=>{
-                if(e) throw e
-
-                //Grava historico
-                const sql = `INSERT INTO historico_atendimento (data,hora,campanha,mailing,id_registro,agente,protocolo,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado) VALUES (now(),now(),${idCampanha},${idMailing},${idRegistro},${ramal},"${protocolo}","${uniqueid}","${tipo_ligacao}","${numero}",${status_tabulacao},"${observacao}","${contatado}") `
-                _dbConnection2.default.banco.query(sql, (e,r)=>{
-                    if(e) throw e
-
-                    //Atualiza a tabela da campanha 
-                    const sql = `UPDATE campanhas_tabulacao_mailing SET data=now(), numeroDiscado='${numero}', agente='${ramal}', estado='${estado}', desc_estado='${desc_estado}', contatado='${contatado}', tabulacao=${status_tabulacao}, produtivo='${produtivo}', observacao='${observacao}', tentativas=tentativas+1 WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha}`
-                    _dbConnection2.default.mailings.query(sql,(e,r)=>{
-                        if(e) throw e
-                        //Removendo chamada das chamadas simultaneas
-                        const sql = `DELETE FROM campanhas_chamadas_simultaneas  WHERE id='${idAtendimento}'`
-                        _dbConnection2.default.banco.query(sql,callback(e,true))
-                    }) 
-                })
-            }) 
-        })
-    }
+    
 
        
 
-    infoChamada_byIdAtendimento(idAtendimento,callback){
-        //Separando a campanha que o agente pertence
-        const sql = `SELECT id,protocolo,id_reg,id_campanha,tabela_mailing,numero FROM campanhas_chamadas_simultaneas WHERE id='${idAtendimento}'`
-        _dbConnection2.default.banco.query(sql,(e,calldata)=>{
-            if(e) throw e
-
-            if(calldata.length==0){
-                console.log('ERRO: Dados da chamada não localizados')
-                callback(e,false)
-            }else{
-                const idAtendimento = calldata[0].id
-                const idReg = calldata[0].id_reg
-                const tabela = calldata[0].tabela_mailing
-                const numero = calldata[0].numero
-                const idCampanha = calldata[0].id_campanha
-                const protocolo = calldata[0].protocolo
-
-               
-                //Seleciona os campos de acordo com a configuração da tela do agente
-                //CAMPOS DE DADOS
-                const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_agente AS s ON c.id=s.idCampo WHERE c.tipo='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
-                _dbConnection2.default.banco.query(sql,(e,campos_dados)=>{
-                    if(e) throw e
-
-                    //montando a query de busca dos dados
-                    let campos = '';
-                    for(let i=0; i<campos_dados.length; i++){
-                        let apelido=''
-                        if(campos_dados[i].apelido === null){
-                            apelido=campos_dados[i].campo
-                        }else{
-                            apelido=campos_dados[i].apelido
-                        }
-                        campos += `${campos_dados[i].campo} as ${apelido}, `
-                    }
-                    campos += 'id_key_base'
-
-                    const sql = `SELECT ${campos} FROM ${tabela} WHERE id_key_base=${idReg}`
-                    _dbConnection2.default.mailings.query(sql,(e,dados)=>{
-                        if(e) throw e
-
-                        //CAMPOS DE TELEFONE
-                        const sql = `SELECT c.id,c.campo,c.apelido FROM mailing_tipo_campo AS c JOIN campanhas_campos_tela_agente AS s ON c.id=s.idCampo WHERE c.tipo!='dados' AND s.tabela='${tabela}' AND s.idCampanha=${idCampanha} ORDER BY s.ordem ASC`;
-                        _dbConnection2.default.banco.query(sql,(e,campos_numeros)=>{
-                            if(e) throw e
-
-                            //montando a query de busca dos numeros
-                            let campos = '';
-                            for(let i=0; i<campos_numeros.length; i++){
-                                let apelido=''
-                                if(campos_numeros[i].apelido === null){
-                                    apelido=campos_numeros[i].campo
-                                }else{
-                                    apelido=campos_numeros[i].apelido
-                                }
-                                campos += `${campos_numeros[i].campo} as ${apelido}, `
-                            }
-                            campos += 'id_key_base'
-        
-                            const sql = `SELECT ${campos} FROM ${tabela} WHERE id_key_base=${idReg}`
-                            _dbConnection2.default.mailings.query(sql,(e,numeros)=>{
-                                if(e) throw e
-                                   
-                                let camposRegistro = '{"campos":{"dados":'+JSON.stringify(dados)+',' 
-                                    camposRegistro += '"numeros":'+JSON.stringify(numeros)+'},'
-                                    //Numero Discado
-                                    camposRegistro += `"numero_discado":{"protocolo":"${protocolo}","telefone":"${numero}","id_atendimento":${idAtendimento}},`;
-                                    
-                                    //Informações da campanha
-                                    _Campanhas2.default.dadosCampanha(idCampanha,(e,dadosCampanha)=>{
-                                        if(e) throw e
-                                        camposRegistro += `"info_campanha":{"idCampanha":"${idCampanha}","nome":"${dadosCampanha[0].nome}","descricao":"${dadosCampanha[0].descricao}"}`;
-                                        console.log(camposRegistro)
-
-                                        callback(false,camposRegistro)
-                                    })
-                            })
-                        })
-                    })
-                })                    
-            }
-        })
-    }
+    
 
     
 
@@ -714,125 +894,16 @@ class Discador{
 
 
     //FUNCOES DO AGENTE
-    statusRamal(ramal,callback){
-        const sql = `SELECT estado FROM agentes_filas WHERE ramal=${ramal}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+   
 
-    //Retorna o status de pausa do agente
-    infoEstadoAgente(ramal){
-        return new Promise((resolve,reject)=>{
-            const sql = `SELECT * FROM user_ramal WHERE ramal='${ramal}'`
-            _dbConnection2.default.banco.query(sql,(e,rows)=>{
-                if(e) 
-                     reject(e)
-                
-                if(rows.length==0){
-                    resolve(0)
-                    return true
-                }  
-
-                     console.log('ramal',ramal)
-                resolve(rows[0].estado)
-            })
-        })
-    }
+    
     
     infoPausaAgente(ramal,callback){
         const sql = `SELECT * FROM agentes_pausados WHERE ramal='${ramal}'`
         _dbConnection2.default.banco.query(sql,callback)
     }  
 
-    //Muda o status do agente
-    alterarEstadoAgente(agente,estado,pausa){
-        return new Promise (async(resolve,reject) =>{
-            //Recuperando estado anterior do agente
-            const estadoAnterior = await this.infoEstadoAgente(agente)
-
-            //zerando cronometro do estado anterior
-            if(estadoAnterior==2){
-                //Removeo agente da lista dos agentes pausados
-                const sql = `DELETE FROM agentes_pausados WHERE ramal='${agente}'`
-                _dbConnection2.default.banco.query(sql,(e,r)=>{
-                    if(e) 
-                        reject(e)
-                    //Atualiza Log
-                    const sql = `UPDATE log_pausas SET termino=now(), ativa=0 WHERE ramal='${agente}' AND ativa=1`
-                    _dbConnection2.default.banco.query(sql,(e,r)=>{
-                        if(e) 
-                            reject(e)
-                        _Cronometro2.default.saiuDaPausa(agente,(e,r)=>{
-                            if(e) 
-                                reject(e)
-                        })
-                    })
-                })                
-            }
-
-            const sql = `UPDATE agentes_filas SET estado=${estado}, idPausa=${pausa} WHERE ramal=${agente}` 
-            _dbConnection2.default.banco.query(sql,(e,r)=>{
-                if(e) 
-                    reject(e)
-
-                const sql = `UPDATE user_ramal SET estado=${estado} WHERE userId=${agente}`
-                _dbConnection2.default.banco.query(sql,(e,r)=>{
-                    if(e) 
-                        reject(e)
-
-                        if(estado==1){
-                            const sql = `UPDATE queue_members SET paused=0 WHERE membername=${agente}`
-                            _dbConnection2.default.asterisk.query(sql,(e,r)=>{
-                                if(e) 
-                                    reject(e)
-                            })
-                        }else if(estado==2){
-                           //dados da pausa
-                           const sql = `SELECT * FROM pausas WHERE id=${pausa}`
-                           _dbConnection2.default.banco.query(sql,(e,infoPausa)=>{
-                                if(e) 
-                                    reject(e)
-
-                                    const idPausa = infoPausa[0].id
-                                    const nomePausa = infoPausa[0].nome
-                                    const descricaoPausa = infoPausa[0].descricao
-                                    const tempo = infoPausa[0].tempo
-
-                                //pausa agente no asterisk
-                                const sql = `UPDATE queue_members SET paused=1 WHERE membername='${agente}'`    
-                                _dbConnection2.default.asterisk.query(sql,(e,r)=>{
-                                    if(e) 
-                                        reject(e)
-
-                                    const agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
-                                    const resultado = _moment2.default.call(void 0, agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
-                        
-                                    //insere na lista dos agentes pausados
-                                    const sql = `INSERT INTO agentes_pausados (data,ramal,inicio,termino,idPausa,nome,descricao) VALUES (now(),'${agente}',now(), '${resultado}', ${idPausa}, '${nomePausa}','${descricaoPausa}')`
-                                        _dbConnection2.default.banco.query(sql,(e,r)=>{
-                                            if(e) 
-                                                reject(e)
-                        
-                                        const agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
-                                        const resultado = _moment2.default.call(void 0, agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
-                        
-                                        const sql = `INSERT INTO log_pausas (ramal,idPausa,data,inicio,ativa) VALUES ('${agente}',${idPausa},now(),now(),1)`
-                                        _dbConnection2.default.banco.query(sql,(e,r)=>{
-                                            if(e) 
-                                                reject(e)
-                                        })
-                                    })
-                                })
-                           })
-                        }else if(estado==3){
-                           
-                        }else if(estado==4){
-                           
-                        }
-                    resolve(true)
-                })
-            })
-        })
-    }
+    
 
        
 

@@ -138,15 +138,15 @@ class Campanhas{
     //DISCADOR
     //######################Configuração do discador da campanha######################
     //Configurar discador da campanha
-    configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,tentativas,modo_atendimento,callback){
+    configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,modo_atendimento,callback){
         this.verConfigDiscadorCampanha(idCampanha,(e,r)=>{
             if(e) throw e
 
             if(r.length ===0){
-                const sql = `INSERT INTO campanhas_discador (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,tentativas,modo_atendimento) VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}',${tentativas},'${modo_atendimento}')`
+                const sql = `INSERT INTO campanhas_discador (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,modo_atendimento) VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}','${modo_atendimento}')`
                 _dbConnection2.default.banco.query(sql,callback)
             }else{
-                const sql = `UPDATE campanhas_discador SET tipo_discador='${tipoDiscador}',agressividade=${agressividade},ordem_discagem='${ordemDiscagem}',tipo_discagem='${tipoDiscagem}',tentativas=${tentativas},modo_atendimento='${modo_atendimento}' WHERE idCampanha = ${idCampanha}`
+                const sql = `UPDATE campanhas_discador SET tipo_discador='${tipoDiscador}',agressividade=${agressividade},ordem_discagem='${ordemDiscagem}',tipo_discagem='${tipoDiscagem}',modo_atendimento='${modo_atendimento}' WHERE idCampanha = ${idCampanha}`
                 _dbConnection2.default.banco.query(sql,callback)     
             }
         })       
@@ -192,19 +192,16 @@ class Campanhas{
         if(r.length==1){
             return false
         }
+
+        
         //Inserindo coluna da campanha na tabela de numeros
         sql = `ALTER TABLE mailings.${tabelaNumeros} 
-               ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT NULL AFTER produtivo,
-               ADD COLUMN discando_${idCampanha} TINYINT NULL DEFAULT NULL AFTER produtivo,
-               ADD INDEX campanha_${idCampanha} (campanha_${idCampanha}),
-               ADD INDEX discando_${idCampanha} (discando_${idCampanha})`
+               ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT '1' AFTER produtivo`
         await this.querySync(sql)
         //Atualiza os registros como disponíveis (1)
-        sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`
-        await this.querySync(sql)
-        //Atualiza os registros como nao discando
-        sql = `UPDATE mailings.${tabelaNumeros} SET discando_${idCampanha}=0`
-        await this.querySync(sql)
+        //sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`
+        //await this.querySync(sql)
+        
         //Inserindo informacao do id do mailing na campanha 
         sql = `INSERT INTO campanhas_mailing (idCampanha,idMailing) VALUES ('${idCampanha}','${idMailing}')`
         await this.querySync(sql)
@@ -241,9 +238,7 @@ class Campanhas{
         //Removendo coluna da campanha no mailing
         sql = `ALTER TABLE mailings.${infoMailing[0].tabela_numeros} DROP COLUMN campanha_${idCampanha}`
         await this.querySync(sql)
-        //removendo campos da discagen na campanha
-        sql = `ALTER TABLE mailings.${infoMailing[0].tabela_numeros} DROP COLUMN discando_${idCampanha}`
-        await this.querySync(sql)
+      
         //Removendo informacao do mailing da campanha
         sql = `DELETE FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
         await this.querySync(sql)
@@ -297,6 +292,8 @@ class Campanhas{
             //console.log(`Removendo filtros sql`,sql)   
            
             await this.querySync(sql)      
+            
+            
             this.delFilterDial(tabelaNumeros,idCampanha,tipo,valor,regiao)
             //Listar filtros restantes
             sql = `SELECT * FROM campanhas_mailing_filtros WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
@@ -307,6 +304,7 @@ class Campanhas{
                     this.addFilterDial(tabelaNumeros,idCampanha,fr[i].tipo,fr[i].valor,fr[i].regiao)
                 }
             }
+            
             return true
         }
         let sql=`INSERT INTO campanhas_mailing_filtros 
@@ -370,7 +368,7 @@ class Campanhas{
         if(uf!=0){ filter += ` AND uf="${uf}"` }
         if(ddd!=undefined){ filter += ` AND ddd=${ddd}`}
         const sql = `SELECT COUNT(id) AS total FROM mailings.${tabela} WHERE valido=1 ${filter}` 
-        console.log('sql',sql)      
+         
         const r = await this.querySync(sql)
         return r[0].total
     }
@@ -383,12 +381,46 @@ class Campanhas{
         return r[0].total
     }
     //Conta o total de registros filtrados de uma tabela pelo us
-    async numerosFiltrados(tabela,idCampanha,uf){
+    async numerosFiltrados(idMailing,tabelaNumeros,idCampanha,uf){
         let filter=""
         if(uf!=0){ filter += ` AND uf="${uf}"` }
-        const sql = `SELECT COUNT(id) AS total FROM mailings.${tabela} WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
+        const sql = `SELECT COUNT(id) AS total FROM mailings.${tabelaNumeros} WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
         const r = await this.querySync(sql)
         return r[0].total
+        
+        //Verifica os filtros de uma campanha
+        /*let regiao="";
+        if(uf!=0){
+            regiao=` AND regiao='${uf}'`
+        }
+        let sql = `SELECT * FROM campanhas_mailing_filtros WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${regiao}`
+        const filtros = await this.querySync(sql)      
+        let numerosFiltrados = 0
+        let filters=""
+        for(let i=0;i<filtros.length;i++){
+            let tipo=filtros[i].tipo
+            let valor = filtros[i].valor
+            //console.log(`[${i}] tipo`,tipo)
+            let temUf=0
+            if(tipo=='uf'){
+             //   console.log('tem uf',tipo)
+                temUf=valor
+            }else{
+                filters+=` AND ${tipo}='${valor}'`
+            }
+            if(temUf!=0){
+                filters=` AND uf='${temUf}'`
+            }
+        }
+       
+        if(uf!=0){filters+=` AND uf='${uf}'`}
+        
+       // console.log('filters',filters)
+        sql = `SELECT COUNT(id) AS numerosFiltrados
+                 FROM mailings.${tabelaNumeros}
+                WHERE valido=1 ${filters}`
+        const numeros = await this.querySync(sql)
+        return numeros[0].numerosFiltrados*/
     }
     //Retorna os DDDS de uma tabela de numeros
     async dddsMailings(tabela,uf){
@@ -407,7 +439,7 @@ class Campanhas{
                      WHERE idCampanha=${idCampanha}
                        AND tipo='${tipo}' AND valor='${valor}'
                        ${filter}`
-                       console.log('sql filtro',sql)
+                     //  console.log('sql filtro',sql)
         const r = await this.querySync(sql)
         if(r.length==0){
             return false;

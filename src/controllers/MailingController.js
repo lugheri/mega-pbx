@@ -2,6 +2,7 @@
 import Mailing from '../models/Mailing';
 import moment from "moment";
 import md5 from "md5";
+import { json } from 'express';
 
 
 class MailingController{
@@ -45,7 +46,7 @@ class MailingController{
             const campos=[]
             for(let i=0; i<title.length; i++){
                 let item={}
-                item['titulo']=title[i].replace(/�/gi, "ç").replace(" ", "_")
+                item['titulo']=title[i]//.replace(/�/gi, "ç").replace(" ", "_")
                 item['ordem']=i+1
                 let data=[]
                 for(let d=0; d<10; d++){
@@ -82,17 +83,47 @@ class MailingController{
 
         await Mailing.configuraTipoCampos(idBase,header,tipoCampos)//Configura os tipos de campos
         Mailing.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
-            await Mailing.importaDadosBase(idBase,jsonFile,file,header,tabData)//Importa dados na base
-            
-            await Mailing.separarNumeros(idBase)
-
             res.json(true)
+            let idKey = 1
+            let transferRate=1
+            await Mailing.importaDados_e_NumerosBase(idBase,jsonFile,file,header,tabData,tabNumbers,idKey,transferRate)
+
+           
         }) 
     }
     
     //Lista os mailings importados
     async listarMailings(req,res){
         const r = await Mailing.listaMailing()
+        
+        for(let i=0; i<r.length;i++){
+            const idMailing = r[i].id
+            const infoTabela= await Mailing.tabelaMailing(idMailing)
+            if(infoTabela.length != 0){
+                const tabela = infoTabela[0].tabela_numeros
+                const totalRegistros = await Mailing.totalRegistros(tabela);
+                const contatados = await Mailing.registrosContatados(tabela)
+                const naoContatados = await Mailing.registrosNaoContatados(tabela)
+            
+                const trabalhados = contatados + naoContatados
+                const naoTrabalhados = totalRegistros-trabalhados
+                let perc_naotrabalhados = 0
+                let perc_contatados = 0
+                let perc_naoContatados = 0            
+
+                if(totalRegistros!=0){
+                    perc_naotrabalhados = parseFloat((naoTrabalhados / totalRegistros)*100).toFixed(1)
+                    perc_contatados = parseFloat((contatados / totalRegistros)*100).toFixed(1)
+                    perc_naoContatados = parseFloat((naoContatados / totalRegistros)*100).toFixed(1)                            
+                }                 
+                const saude={}
+                saude['nao_trabalhados']=perc_naotrabalhados
+                saude['contatados']=perc_contatados
+                saude['nao_contatados']=perc_naoContatados                
+                r[i]['saude']=[]
+                r[i]['saude'].push(saude);
+            }
+        }       
         res.json(r);
     }
 
@@ -178,7 +209,16 @@ class MailingController{
         const idMailing = req.params.idMailing
         const infoTabela= await Mailing.tabelaMailing(idMailing)
         const tabela = infoTabela[0].tabela_numeros
-        const registros = await Mailing.totalRegUF(tabela)
+        const r = await Mailing.totalRegUF(tabela)
+        const registros=[]
+        for(let i=0; i<r.length;i++){
+            let reg={}
+                reg['fill']='#185979'
+                reg['UF']=r[i].UF
+                reg['registros']=r[i].registros
+                reg['numeros']=r[i].numeros
+            registros.push(reg)
+        }
         res.json(registros)
     }
     //Saude do mailing

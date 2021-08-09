@@ -70,6 +70,11 @@ class TabulacaoController{
     //Ordenacao de listagen e tipos (Rotas do DragDrop)
     async getStatusTabulacao(req,res){
         const idLista = req.params.idLista
+        const st = await _Tabulacoes2.default.dadosListaTabulacao(idLista)
+        if(st.length==0){
+            res.json(tabs)
+            return false
+        }
         const tabs={}
               tabs['statusTab']={}
               const status = await _Tabulacoes2.default.listarStatusTabulacao(idLista)

@@ -24,12 +24,15 @@ class FilasController{
 
         const agentesForaFila = await Filas.membrosForaFila(idFila)
               agentes['agentesForaDaFila']=[]
-              for(let i=0; i<agentesForaFila.length; i++){              
-                let agente={}
-                    agente['ramal']=agentesForaFila[i].ramal
-                    agente['nome']=agentesForaFila[i].nome
-                    agente['destino']='D'
-                    agentes['agentesForaDaFila'].push(agente)
+              for(let i=0; i<agentesForaFila.length; i++){   
+                 const ck=await Filas.verificaMembroFila(agentesForaFila[i].ramal,idFila)  
+                 if(ck==0){         
+                    let agente={}
+                        agente['ramal']=agentesForaFila[i].ramal
+                        agente['nome']=agentesForaFila[i].nome
+                        agente['destino']='D'
+                        agentes['agentesForaDaFila'].push(agente)
+                 }
               }
 
         const agentesNaFila = await Filas.membrosNaFila(idFila)    
