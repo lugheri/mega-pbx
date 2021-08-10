@@ -209,7 +209,7 @@ class Mailing{
                                  (id_key_base,${fieldsTb}) 
                            VALUES `;
         let sqlNumbers=`INSERT INTO ${tabelaNumeros}
-                                   (id_mailing,id_registro,ddd,numero,uf,tipo,valido,duplicado,erro,tentativas,status_tabulacao,contatado,produtivo)
+                                   (id,id_mailing,id_registro,ddd,numero,uf,tipo,valido,duplicado,erro,tentativas,status_tabulacao,contatado,produtivo)
                             VALUES `;
        
         let type_ddd=""
@@ -249,10 +249,13 @@ class Mailing{
 
         //console.log('Limite',limit)
         //Populando a query
+
         let indice = idKey
+        let idNumber = (idBase * 1000000) + 1
         for(let i=0; i<limit; i++){
+            let indiceReg = (idBase * 1000000) + indice
             sqlData+=" (";
-            sqlData+=`${indice},`  
+            sqlData+=`${indiceReg},`  
             for(let f=0; f<fields.length; f++){
                 let valor=jsonFile[0][fields[f]]
                 sqlData+=`'${valor.replace(/'/gi,'')}'`
@@ -283,7 +286,8 @@ class Mailing{
                     let duplicado = 0//await this.checaDuplicidade(numeroCompleto,tabelaNumeros)
                     //Inserindo ddd e numero na query
                     const infoN = this.validandoNumero(ddd,numeroCompleto)
-                    sqlNumbers+=` (${idBase},${indice},${ddd},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+                    sqlNumbers+=` (${idNumber},${idBase},${indiceReg},${ddd},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+                    idNumber++
                 }
             }
 
@@ -297,7 +301,8 @@ class Mailing{
                 
                     //Inserindo ddd e numero na query
                     const infoN = this.validandoNumero(dddC,numeroCompleto)
-                    sqlNumbers+=` (${idBase},${indice},${dddC},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+                    sqlNumbers+=` (${idNumber},${idBase},${indiceReg},${dddC},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+                    idNumber++
                 }
             }
             indice++
@@ -308,7 +313,7 @@ class Mailing{
 
         await this.querySync(sqlData)
         await this.querySync(queryNumeros)
-
+       
         let tR = await this.totalReg(tabelaDados)
         let tN = await this.totalNumeros(tabelaNumeros)
         let totalReg=tR[0].total

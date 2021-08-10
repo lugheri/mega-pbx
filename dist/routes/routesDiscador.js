@@ -22,7 +22,7 @@ module.exports = (routes) => {
     routes.get('/atendeChamada/:ramal',_DiscadorController2.default.atenderChamada)
 
     //Chamada atendida
-    //routes.get('/dadosChamada/:ramal',DiscadorController.dadosChamada)
+    routes.get('/dadosChamada/:ramal',_DiscadorController2.default.dadosChamadaAtendida)
     
     //Chamada desligada
     routes.post('/desligarChamada',_DiscadorController2.default.desligarChamada)

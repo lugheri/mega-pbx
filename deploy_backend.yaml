@@ -73,7 +73,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: megaconecta/api-central:v0.0.149
+        image: megaconecta/api-central:v0.0.155
         env:
         - name: TZ
           value: America/Sao_Paulo

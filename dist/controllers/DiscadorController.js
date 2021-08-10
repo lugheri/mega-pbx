@@ -300,10 +300,18 @@ class DiscadorController{
         const dados = await _Discador2.default.atendeChamada(ramal)
         res.json(dados); 
     }
+
+    async dadosChamadaAtendida(req,res){
+        const ramal = req.params.ramal
+        const dados = await _Discador2.default.dadosChamadaAtendida(ramal)
+        res.json(dados); 
+    }
+
     //Historico do id do registro
     async historicoRegistro(req,res){
-        const idReg = req.params.idRegistro
         const idMailing = req.params.idMailing
+        const idReg = req.params.idRegistro
+        
         const historico = await _Discador2.default.historicoRegistro(idMailing,idReg)
         const historicoRegistro=[]
         for(let i = 0; i < historico.length; i++){
@@ -321,9 +329,9 @@ class DiscadorController{
                 registro['informacoesAtendente']={}
                 registro['informacoesAtendente'] = agente[0]
 
-                const infoReg = await _Discador2.default.infoRegistro(idMailing,idReg)
                 registro['dadosRegistro']={}
-                registro['dadosRegistro']=infoReg
+                registro['dadosRegistro']['nome']=historico[i].nome_registro
+                registro['dadosRegistro']['numeroDiscado']=historico[i].numero_discado
             historicoRegistro.push(registro)
         }
         res.json(historicoRegistro)
@@ -347,9 +355,9 @@ class DiscadorController{
                 registro['informacoesAtendente']={}
                 registro['informacoesAtendente'] = agente[0]
 
-                const infoReg = await _Discador2.default.infoRegistro(historico[i].mailing,historico[i].id_registro)
                 registro['dadosRegistro']={}
-                registro['dadosRegistro']=infoReg
+                registro['dadosRegistro']['nome']=historico[i].nome_registro
+                registro['dadosRegistro']['numeroDiscado']=historico[i].numero_discado
             historicoRegistro.push(registro)
         }
         res.json(historicoRegistro)
@@ -358,7 +366,7 @@ class DiscadorController{
     async desligarChamada(req,res){
         const ramal =  req.body.ramal
         //Verifica se o ramal esta em chamada
-        const dadosAtendimento = await _Discador2.default.dadosChamada(ramal)
+        const dadosAtendimento = await _Discador2.default.dadosChamadaAtendida(ramal)
         if(dadosAtendimento.length!=0){//Chamada interna
             const idAtendimento = dadosAtendimento[0].id
             const idCampanha = dadosAtendimento[0].id_campanha
@@ -371,10 +379,12 @@ class DiscadorController{
                 //Pausando agente com a pausa de tabulacao
                 const estado = 3//Atualiza estado do agente para pausado 
                 const tipo='tabulacao'
-                let pausaTabulacao = 0           
+                       
                 const idPausa = await _Pausas2.default.idPausaByTipo(tipo)//Id de pausa tabulacao
+                
                 if(idPausa.length!=0){//Pausa o agente com a pausa de tabulacao
-                    pausaTabulacao = idPausa[0].id
+                    const pausaTabulacao = idPausa
+               
                     await _Discador2.default.alterarEstadoAgente(ramal,estado,pausaTabulacao)
                 }
                 //Atualiza registro como tabulando e retorna id da campanha
@@ -405,7 +415,7 @@ class DiscadorController{
         return false
     }
     //Tabula a ligação
-    tabularChamada(req,res){
+    async tabularChamada(req,res){
         const idAtendimento = req.body.idAtendimento
         const ramal = req.body.ramal
         const status_tabulacao = req.body.status_tabulacao
@@ -418,19 +428,15 @@ class DiscadorController{
             produtivo=0
         } 
         
-        _Discador2.default.dadosAtendimento(idAtendimento,(e,atendimento)=>{
-            const tabela = atendimento[0].tabela_mailing
-            const idRegistro = atendimento[0].id_reg
-            const idMailing = atendimento[0].id_mailing
-            const idCampanha = atendimento[0].id_campanha
-            const numero = atendimento[0].numero
-            _Discador2.default.tabulandoContato(idAtendimento,tabela,contatado,status_tabulacao,observacao,produtivo,numero,ramal,idRegistro,idMailing,idCampanha,async(e,r)=>{
-                if(e) throw e
-               
-                await _Cronometro2.default.encerrouTabulacao(idCampanha,numero,ramal,status_tabulacao)
-                res.json(r);                        
-            })
-        })
+        const atendimento = await _Discador2.default.dadosAtendimento(idAtendimento)
+        const idCampanha = atendimento[0].id_campanha
+        const numero = atendimento[0].numero
+
+        console.log(contatado)
+                                               
+        const r = await _Discador2.default.tabulandoContato(idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal)
+        await _Cronometro2.default.encerrouTabulacao(idCampanha,numero,ramal,status_tabulacao)
+        res.json(r);                        
     }
     
 

@@ -346,6 +346,7 @@ class DashboardController{
         frases.push('Sr. o seu inglês é de brasileiro!')
         frases.push('Um filtro que esta filtrado')
         frases.push('Apenas em casos extremamente extremos!')
+        frases.push('O Final acabou com a série!')
 
         let numero
         if(parseInt(all)>=1){            

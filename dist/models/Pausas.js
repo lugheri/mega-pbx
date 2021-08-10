@@ -59,7 +59,9 @@ class Pausas{
     
     async idPausaByTipo(tipo){
         const sql = `SELECT id FROM pausas WHERE tipo='${tipo}' AND status=1`
-        return await this.querySync(sql)
+        const r = await this.querySync(sql)
+       
+        return r[0].id
     }
 
 }
