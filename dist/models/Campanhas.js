@@ -42,6 +42,8 @@ class Campanhas{
         const sql = 'UPDATE campanhas SET ? WHERE id=?'
         _dbConnection2.default.banco.query(sql,[valores,idCampanha],callback)
     }
+
+    
     
     //Remove Campanha
     //A campanha é removida quando seu status é setado para zero
@@ -517,7 +519,11 @@ class Campanhas{
 
     //STATUS DE EVOLUCAO DE CAMPANHA
     async totalMailingsCampanha(idCampanha){
-        const sql = `SELECT SUM(totalReg) AS total FROM mailings as m JOIN campanhas_mailing AS cm ON cm.idMailing=m.id WHERE cm.idCampanha=${idCampanha}`
+        const sql = `SELECT SUM(totalReg) AS total 
+                      FROM mailings as m 
+                      JOIN campanhas_mailing AS cm 
+                      ON cm.idMailing=m.id 
+                      WHERE cm.idCampanha=${idCampanha}`
         const total_mailing= await this.querySync(sql)
         if(total_mailing[0].total == null){
             return 0
@@ -728,6 +734,14 @@ class Campanhas{
     //######################Gestão do Mailing das Campanhas ######################
     mailingCampanha(idCampanha,callback){
         const sql = `SELECT idMailing FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
+        _dbConnection2.default.banco.query(sql,callback)
+    }
+
+    campanhaDoMailing(idMailing,callback){
+        const sql = `SELECT m.idCampanha,c.nome 
+                       FROM campanhas_mailing AS m 
+                       JOIN campanhas AS c ON m.idCampanha=c.id
+                       WHERE idMailing=${idMailing} LIMIT 1`
         _dbConnection2.default.banco.query(sql,callback)
     }
 

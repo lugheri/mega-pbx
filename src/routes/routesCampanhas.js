@@ -120,6 +120,7 @@ module.exports = (routes) => {
     routes.delete('/removerMailing/:idMailing', MailingController.removerMailing)//remover Mailing
     routes.get('/statusMailing/:idMailing',MailingController.statusMailing)//Status do Mailing
     routes.get('/ufsMailing/:idMailing',MailingController.ufsMailing)//UFs do Mailing
+    routes.get('/retrabalharMailing/:idMailing',MailingController.retrabalharMailing)//UFs do Mailing
     routes.get('/dddsUfMailing/:idMailing/:uf',MailingController.dddsUfMailing)//DDDs por uf do mailing
     routes.get('/totalRegUF/:idMailing',MailingController.totalRegUF)//Resumo por ddd
     routes.get('/saudeMailing/:idMailing',MailingController.saudeMailing)//Saude do mailing

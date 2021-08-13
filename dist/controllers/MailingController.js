@@ -1,5 +1,6 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }/*import csv from 'csvtojson';*/
 var _Mailing = require('../models/Mailing'); var _Mailing2 = _interopRequireDefault(_Mailing);
+var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 var _md5 = require('md5'); var _md52 = _interopRequireDefault(_md5);
 var _express = require('express');
@@ -139,8 +140,21 @@ class MailingController{
     //remove um mailing
     async removerMailing(req,res){
         const idMailing = parseInt(req.params.idMailing);
-        const r = await _Mailing2.default.removerMailing(idMailing)
-        res.json(r)
+        _Campanhas2.default.campanhaDoMailing(idMailing,async (e,check)=>{
+            if(e) throw e 
+
+            
+            if(check.length==1){
+                const rt={}
+                rt['error']=true
+                rt['message']=`O mailing está ativo na campanha '${check[0].nome}'`
+                res.send(rt)
+                return false
+            }
+            
+            const r = await _Mailing2.default.removerMailing(idMailing)
+            res.json(r)
+        })        
     }
 
     //Exporta os registros de um mailing
@@ -185,6 +199,13 @@ class MailingController{
         const r = await _Mailing2.default.ufsMailing(idMailing)
         res.json(r)
     }
+
+    async retrabalharMailing(req,res){
+        const idMailing = req.params.idMailing
+        await _Mailing2.default.retrabalharMailing(idMailing)
+        res.json(true)
+    }
+
     //DDDs por uf do mailing
     async dddsUfMailing(req,res){
         const idMailing = (req.params.idMailing)

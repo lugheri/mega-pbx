@@ -106,7 +106,7 @@ class Mailing{
                     typeField = 'ddd';                
                 }else if((title=='numero')||(title=='telefone')||(title=='celular')||(title=='tel')||(title=='cel')||(title=='contato')||
                          (title=='NUMERO')||(title=='TELEFONE')||(title=='CELULAR')||(title=='TEL')||(title=='CEL')||(title=='CONTATO')){
-                    if(value.length>=8){
+                    if((value.length>=8)&&(value.length<=9)){
                         typeField='telefone';
                     }else if(value.length>9){
                         typeField='ddd_e_telefone'; 
@@ -251,7 +251,7 @@ class Mailing{
         //Populando a query
 
         let indice = idKey
-        let idNumber = (idBase * 1000000) + 1
+        let idNumber = (idBase * 1000000) + indice
         for(let i=0; i<limit; i++){
             let indiceReg = (idBase * 1000000) + indice
             sqlData+=" (";
@@ -654,6 +654,11 @@ class Mailing{
         }
         
         return ufs
+    }
+
+    async retrabalharMailing(idMailing){
+        const sql = `DELETE FROM mailings.campanhas_tabulacao_mailing WHERE idMailing=${idMailing}`
+        return await this.querySync(sql)
     }
 
     //DDDs por uf do mailing

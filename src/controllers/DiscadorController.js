@@ -91,7 +91,7 @@ class DiscadorController{
             }//endfor campanhas ativas
         }//endif verificacao campanhas ativas
         //Reiniciando execução
-        setTimeout(()=>{this.dial(req,res)},15000)
+        setTimeout(()=>{this.dial(req,res)},5000)
     }
 
     async iniciaPreparacaoDiscador(idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing){
@@ -147,7 +147,7 @@ class DiscadorController{
                             const registro = await Discador.filtrarRegistro(idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscagem,ordemDiscagem)
                          
                             if(registro.length ==0){
-                                let msg='Nenhum registro disponível'
+                                let msg='Todos os registros do mailing já foram trabalhados!'
                                 let estado = 3
                                 await Discador.atualizaStatus(idCampanha,msg,estado)
                             }else{
@@ -199,8 +199,8 @@ class DiscadorController{
             const agenteDisponivel = await Discador.agenteDisponivel(idFila)
 
             await Discador.registraChamada(agenteDisponivel,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,tratado,atendido)
-            
-            await Discador.alterarEstadoAgente(agenteDisponivel,3,0)
+            const estado = 5 //Estado do agente quando ele esta aguardando a discagem da tela
+            await Discador.alterarEstadoAgente(agenteDisponivel,estado,0)
             //Registra chamada simultânea
         }else if(tipoDiscador=="power"){
             //Registra chamada simultânea                                   
@@ -289,14 +289,14 @@ class DiscadorController{
         const estado = 3 //Estado do agente de falando
         const pausa = 0//Status da pausa de ocupado
         //atualiza para falando
-        const estadoAnterior = await Discador.infoEstadoAgente(ramal)
-        if(estadoAnterior==3){
-            const dados = await Discador.infoChamada_byRamal(ramal)
-            res.json(dados); 
-            return false
+        const estadoAgente = await Discador.infoEstadoAgente(ramal)
+        if(estadoAgente!=3){
+            await Discador.alterarEstadoAgente(ramal,estado,pausa)
         }
 
-        await Discador.alterarEstadoAgente(ramal,estado,pausa)
+
+        //Verifica se ramal ja esta atribuido
+
         const dados = await Discador.atendeChamada(ramal)
         res.json(dados); 
     }
@@ -366,8 +366,9 @@ class DiscadorController{
     async desligarChamada(req,res){
         const ramal =  req.body.ramal
         //Verifica se o ramal esta em chamada
-        const dadosAtendimento = await Discador.dadosChamadaAtendida(ramal)
-        if(dadosAtendimento.length!=0){//Chamada interna
+        const dadosAtendimento = await Discador.infoChamada(ramal)
+       
+        if(dadosAtendimento.length!=0){
             const idAtendimento = dadosAtendimento[0].id
             const idCampanha = dadosAtendimento[0].id_campanha
             const numeroDiscado = dadosAtendimento[0].numero
@@ -376,8 +377,9 @@ class DiscadorController{
             const tabulacoesCampanha = await Discador.tabulacoesCampanha(idCampanha)
             //Verificando status de tabulacao da campanha
             if(tabulacoesCampanha!==false){
+               
                 //Pausando agente com a pausa de tabulacao
-                const estado = 3//Atualiza estado do agente para pausado 
+                let estado = 3//Atualiza estado do agente para pausado 
                 const tipo='tabulacao'
                        
                 const idPausa = await Pausas.idPausaByTipo(tipo)//Id de pausa tabulacao
@@ -385,7 +387,7 @@ class DiscadorController{
                 if(idPausa.length!=0){//Pausa o agente com a pausa de tabulacao
                     const pausaTabulacao = idPausa
                
-                    await Discador.alterarEstadoAgente(ramal,estado,pausaTabulacao)
+                //    await Discador.alterarEstadoAgente(ramal,estado,pausaTabulacao)
                 }
                 //Atualiza registro como tabulando e retorna id da campanha
                 await Discador.preparaRegistroParaTabulacao(idAtendimento)
@@ -399,12 +401,15 @@ class DiscadorController{
 
                 return true
             }     
+           
             //Finaliza Ligacao
+            let estado = 1
             const contatado = 'S'
             const produtivo = 0
             const status_tabulacao=0
             const observacao = ''
             //Desligando a chamada
+                       
             await Discador.desligaChamada(idAtendimento,estado,contatado,produtivo,status_tabulacao,observacao)
            
         }
@@ -438,6 +443,96 @@ class DiscadorController{
         await Cronometro.encerrouTabulacao(idCampanha,numero,ramal,status_tabulacao)
         res.json(r);                        
     }
+
+    //######################PAUSAS DO AGENTE ######################
+    //PausasListas
+    //Lista as pausas disponíveis para o agente
+    async listarPausasCampanha(req,res){
+        const listaPausa = 1
+        const r = await Pausas.listarPausas(listaPausa)
+        res.send(r)
+    }
+
+    //Pausa o agente com o status selecionado
+    async pausarAgente(req,res){
+        const ramal = req.body.ramal
+        const idPausa = parseInt(req.body.idPausa)
+        const infoPausa = await Pausas.dadosPausa(idPausa)
+        
+        const pausa = infoPausa[0].nome
+        const descricao = infoPausa[0].descricao
+        const tempo = infoPausa[0].tempo
+            
+        await Discador.alterarEstadoAgente(ramal,2,idPausa)
+        const tempoPausa = await Cronometro.entrouEmPausa(idPausa,ramal)
+        res.send(true)
+        
+    }
+
+    //Exibe o estado e as informacoes da pausa do agente
+    async statusPausaAgente(req,res){
+        const ramal = req.params.ramal
+        const infoPausa = await Discador.infoPausaAgente(ramal)
+        const statusPausa={}
+        if(infoPausa.length==0){
+            statusPausa['status']="agente disponivel"
+            res.send(statusPausa)
+            return false;
+        }
+
+        const idPausa = infoPausa[0].idPausa
+        const dadosPausa = await Pausas.dadosPausa(idPausa)
+        const inicio = infoPausa[0].inicio
+        const hoje = moment().format("Y-MM-DD")
+        const agora = moment().format("HH:mm:ss")
+        const termino = infoPausa[0].termino
+        const nome = infoPausa[0].nome
+        const descricao = infoPausa[0].descricao
+        const tempo = dadosPausa[0].tempo
+
+        //Tempo passado
+        let startTime = moment(`${hoje}T${inicio}`).format();
+        let endTime = moment(`${hoje}T${agora}`).format();
+        let duration = moment.duration(moment(endTime).diff(startTime));
+    
+        let horasPass = duration.hours(); //hours instead of asHours
+        let minPass = duration.minutes(); //minutes instead of asMinutes
+        let segPass = duration.seconds(); //minutes instead of asMinutes
+        
+        const tempoPassado = horasPass+':'+minPass+':'+segPass
+        const minutosTotais = (horasPass*60)+minPass+(segPass/60)
+        const percentual = (minutosTotais/tempo)*100
+
+        //Tempo restante
+        let startTime_res = moment(`${hoje}T${agora}`).format();
+        let endTime_res = moment(`${hoje}T${termino}`).format();
+        let duration_res = moment.duration(moment(endTime_res).diff(startTime_res));
+
+        let horasRes = duration_res.hours(); //hours instead of asHours
+        let minRes = duration_res.minutes(); //minutes instead of asMinutes
+        let segRes = duration_res.seconds(); //minutes instead of asMinutes
+
+        const tempoRestante = horasRes+':'+minRes+':'+segRes
+
+        statusPausa['idPausa']=idPausa
+        statusPausa['nome']=nome
+        statusPausa['descricao']=descricao
+        statusPausa['tempoTotal']=tempo
+        statusPausa['tempoPassado']=tempoPassado
+        statusPausa['tempoRestante']=tempoRestante
+        statusPausa['porcentagem']=percentual.toFixed(1)
+
+        res.send(statusPausa)
+       
+    }
+
+    //Tira o agente da pausa
+    async removePausaAgente(req,res){
+        const ramal = req.body.ramal
+        await Discador.alterarEstadoAgente(ramal,1,0)
+        await Cronometro.saiuDaPausa(ramal)
+        res.send(true)
+    }
     
 
 
@@ -447,18 +542,6 @@ class DiscadorController{
 
     //DISCADOR DO AGENTE
     //ESTADO DO AGENTE
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
     marcarRetorno(req,res){
         const idAtendimento = req.body.idAtendimento
         const ramal = req.body.ramal
@@ -487,118 +570,7 @@ class DiscadorController{
             })
         })
     }
-
-   
-
-
-    //TELA DO ATENDIMENTO DO AGENTE
     
-
-    //######################TELA DO AGENTE ######################
-
-    //PausasListas
-    //Lista as pausas disponíveis para o agente
-    listarPausasCampanha(req,res){
-        const listaPausa = 1
-        Pausas.listarPausas(listaPausa,(e,r)=>{
-            if(e) throw e
-
-            res.send(r)
-        })
-
-    }
-
-    //Pausa o agente com o status selecionado
-    pausarAgente(req,res){
-        const ramal = req.body.ramal
-        const idPausa = parseInt(req.body.idPausa)
-        Pausas.dadosPausa(idPausa,async (e,infoPausa)=>{
-            const pausa = infoPausa[0].nome
-            const descricao = infoPausa[0].descricao
-            const tempo = infoPausa[0].tempo
-            
-            await Discador.alterarEstadoAgente(ramal,2,idPausa)
-            const tempoPausa = await Cronometro.entrouEmPausa(idPausa,ramal)
-            res.send(tempoPausa)
-        })
-    }
-
-    //Exibe o estado e as informacoes da pausa do agente
-    statusPausaAgente(req,res){
-        const ramal = req.params.ramal
-        Discador.infoPausaAgente(ramal,(e,infoPausa)=>{
-            console.log(infoPausa.length)
-            if(infoPausa.length==0){
-                let retorno = '{"status":"agente disponivel"}'  
-                res.send(JSON.parse(retorno))
-            }else{
-                const idPausa = infoPausa[0].idPausa            
-                Pausas.dadosPausa(idPausa,(e,dadosPausa)=>{
-                    if(e) throw e
-
-
-                    const inicio = infoPausa[0].inicio
-                    const hoje = moment().format("Y-MM-DD")
-                    const agora = moment().format("HH:mm:ss")
-                    const limite = infoPausa[0].limite
-                    const nome = infoPausa[0].nome
-                    const descricao = infoPausa[0].descricao
-                    const tempo = dadosPausa[0].tempo
-
-                    
-                //Tempo passado
-                    let startTime = moment(`${hoje}T${inicio}`).format();
-                    let endTime = moment(`${hoje}T${agora}`).format();
-                    let duration = moment.duration(moment(endTime).diff(startTime));
-                
-                    let horasPass = duration.hours(); //hours instead of asHours
-                    let minPass = duration.minutes(); //minutes instead of asMinutes
-                    let segPass = duration.seconds(); //minutes instead of asMinutes
-                    
-                    const tempoPassado = horasPass+':'+minPass+':'+segPass
-                    const minutosTotais = (horasPass*60)+minPass+(segPass/60)
-                    const percentual = (minutosTotais/tempo)*100
-
-                    //Tempo restante
-                    let startTime_res = moment(`${hoje}T${agora}`).format();
-                    let endTime_res = moment(`${hoje}T${limite}`).format();
-                    let duration_res = moment.duration(moment(endTime_res).diff(startTime_res));
-                    let horasRes = duration_res.hours(); //hours instead of asHours
-                    let minRes = duration_res.minutes(); //minutes instead of asMinutes
-                    let segRes = duration_res.seconds(); //minutes instead of asMinutes
-                    
-                    const tempoRestante = horasRes+':'+minRes+':'+segRes
-
-                
-
-                    let retorno = '{'
-                        retorno += `"idPausa":${idPausa},`
-                        retorno += `"nome":"${nome}",`
-                        retorno += `"descricao":"${descricao}",`
-                        retorno += `"tempoTotal":${tempo},`
-                        retorno += `"tempoPassado":"${tempoPassado}",`
-                        retorno += `"tempoRestante":"${tempoRestante}",`
-                        retorno += `"porcentagem":${percentual.toFixed(1)}`
-                    retorno += '}'    
-
-                    
-
-
-
-                    res.send(JSON.parse(retorno))
-                })
-            }
-        })
-    }
-
-    //Tira o agente da pausa
-    async removePausaAgente(req,res){
-        const ramal = req.body.ramal
-
-        await Discador.alterarEstadoAgente(ramal,1,0)
-        const tempoPausa = await Cronometro.saiuDaPausa(ramal)
-        res.send(tempoPausa)
-    }
     
 }
 

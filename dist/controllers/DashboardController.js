@@ -338,7 +338,7 @@ class DashboardController{
         frases.push('Se eu fosse escrever não escreveria palavras')
         frases.push('As pessoas estavam reunidas separadamente')
         frases.push('É só abrir que ele reabre')
-        frases.push('Tem um nome na quimíca que fala o nome')
+        frases.push('Tem um nome na química que fala o nome')
         frases.push('Tudo que você tem que fazer é pegar uma bola redonda')
         frases.push('Essa função que le o arquivo do arquivo!')
         frases.push('Com Python você deve conseguir conseguir')
@@ -347,6 +347,9 @@ class DashboardController{
         frases.push('Um filtro que esta filtrado')
         frases.push('Apenas em casos extremamente extremos!')
         frases.push('O Final acabou com a série!')
+        frases.push('Até o time feminino das mulheres!')
+        frases.push('Eu acho que eu estou achando!')
+        frases.push('Reunião semanal toda semana!')
 
         let numero
         if(parseInt(all)>=1){            

@@ -291,7 +291,7 @@ class Asterisk{
           if(err) throw err         
           console.log(err)
 
-          console.log(client)
+          //console.log(client)
 
           //Extension
           let context

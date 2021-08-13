@@ -46,15 +46,15 @@ class Pausas{
         connect.banco.query(sql,[valores,id],callback)
     }
     //Ver pausa
-    dadosPausa(id,callback){
-        const sql = 'SELECT * FROM pausas WHERE id=?'
-        connect.banco.query(sql,id,callback)
+    async dadosPausa(id){
+        const sql = `SELECT * FROM pausas WHERE id=${id}`
+        return await this.querySync(sql)
     }
 
     //Listar pausa
-    listarPausas(idLista,callback){
-        const sql = 'SELECT * FROM pausas WHERE idLista=? AND status=1'
-        connect.banco.query(sql,idLista,callback)
+    async listarPausas(idLista){
+        const sql = `SELECT * FROM pausas WHERE idLista=${idLista} AND status=1`
+        return await this.querySync(sql)
     }  
     
     async idPausaByTipo(tipo){

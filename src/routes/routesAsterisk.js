@@ -17,5 +17,5 @@ module.exports = (routes) => {
     //dialer
     //routes.post('/dialer/:numero/:ramal', AsteriskController.dialer)
     routes.get('/originate/:numero', AsteriskController.testLigacao)
-    routes.post('/ligar/:numero', AsteriskController.testLigacao)
+    routes.post('/ligarHttp/:ramal/:numero', AsteriskController.ligarHttp)
 }

@@ -6,6 +6,7 @@ var _Cronometro = require('../models/Cronometro'); var _Cronometro2 = _interopRe
 //const asteriskServer = 'http://35.202.102.245:8088'
 //const asteriskServer = 'asterisk'
 //const asteriskServer = 'localhost'
+var _http = require('http'); var _http2 = _interopRequireDefault(_http);
 
 class AsteriskController{
     //Funcoes automaticas dialplan do asterisk
@@ -59,6 +60,7 @@ class AsteriskController{
         }
         if(action=='answer'){//Quando ligacao eh atendida pelo agente
             const r = await _Asterisk2.default.answer(dados)
+           
             await _Cronometro2.default.saiuDaFila(dados.numero)
             const dadosAtendimento = await _Discador2.default.dadosAtendimento_byNumero(dados.numero)
             const idCampanha = dadosAtendimento[0].id_campanha
@@ -68,13 +70,18 @@ class AsteriskController{
             let ch = dados.ramal;
                 ch = ch.split("-");
                 ch = ch[0].split("/")
-            const ramal = ch[1]                      
+            const ramal = ch[1]
+
+            await _Discador2.default.alterarEstadoAgente(ramal,3,0)
+            await _Discador2.default.atendeChamada(ramal)
+            //atualizando ramal na chamada simultanea
+            
             //iniciou chamada
             await _Cronometro2.default.iniciouAtendimento(idCampanha,idMailing,idRegistro,dados.numero,ramal,uniqueid)
             res.json(true);
         } 
         
-        if(action=='abandon'){//Quando abandona fila
+        if(action=='abandon'){//Quando abandona fila            
             const numero = dados.numero
             const chamada = await _Discador2.default.dadosAtendimento_byNumero(dados.numero)
             if(chamada.length==0){
@@ -95,7 +102,7 @@ class AsteriskController{
                 const produtivo = 0
                 const uniqueid=chamada[0].uniqueid
                 const tipo_ligacao=chamada[0].tipo_ligacao
-                const observacoes = 'Abandonou Fila'
+                const observacoes = `Abandonou Fila`
 
                 //retira da fila e registra como abandonou fila
                 await _Cronometro2.default.saiuDaFila(dados.numero)
@@ -178,17 +185,7 @@ class AsteriskController{
       })
     }  
 
-    /*testLigacao(req,res){
-      const numero = parseInt(req.params.numero)
-      const ramal = '9878'
-
-      Asterisk.testLigacao(numero,ramal,(e,r)=>{
-        if(e) throw e
-
-        res.json(true)
-      })     
-     
-    }*//////////
+   
     testLigacao(req,res){
         const numero = parseInt(req.params.numero)
         const ramal = '1001'
@@ -197,6 +194,44 @@ class AsteriskController{
              
     }
 
+    ligarHttp(req,res){
+        const numero = parseInt(req.params.numero)
+        const ramal = req.params.ramal
+
+        let username = 'mega-user-ari';
+        let password = '1234abc@';
+        let auth = 'Basic ' + Buffer.from(username + ':' + password).toString('base64');
+
+
+        let options = {
+            protocol:'http:',
+            host: '35.239.60.116',
+            auth : `${username}:${password}`,
+            port: 8088,
+            path: '/ari/sounds',
+            method: 'POST'           
+          };
+          
+          var req = _http2.default.request(options, function(res) {
+            console.log('STATUS: ' + res.statusCode);
+            console.log('HEADERS: ' + JSON.stringify(res.headers));
+            res.setEncoding('utf8');
+            res.on('data', function (chunk) {
+              console.log('BODY: ' + chunk);
+            });
+          });
+          
+          req.on('error', function(e) {
+            console.log('problem with request: ' + e.message);
+          });
+          
+          // write data to request body
+          req.write('data\n');
+          req.write('data\n');
+          req.end();
+
+
+    }
     
 
     dialer(req,res){

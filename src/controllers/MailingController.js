@@ -1,5 +1,6 @@
 /*import csv from 'csvtojson';*/
 import Mailing from '../models/Mailing';
+import Campanhas from '../models/Campanhas';
 import moment from "moment";
 import md5 from "md5";
 import { json } from 'express';
@@ -139,8 +140,21 @@ class MailingController{
     //remove um mailing
     async removerMailing(req,res){
         const idMailing = parseInt(req.params.idMailing);
-        const r = await Mailing.removerMailing(idMailing)
-        res.json(r)
+        Campanhas.campanhaDoMailing(idMailing,async (e,check)=>{
+            if(e) throw e 
+
+            
+            if(check.length==1){
+                const rt={}
+                rt['error']=true
+                rt['message']=`O mailing está ativo na campanha '${check[0].nome}'`
+                res.send(rt)
+                return false
+            }
+            
+            const r = await Mailing.removerMailing(idMailing)
+            res.json(r)
+        })        
     }
 
     //Exporta os registros de um mailing
@@ -185,6 +199,13 @@ class MailingController{
         const r = await Mailing.ufsMailing(idMailing)
         res.json(r)
     }
+
+    async retrabalharMailing(req,res){
+        const idMailing = req.params.idMailing
+        await Mailing.retrabalharMailing(idMailing)
+        res.json(true)
+    }
+
     //DDDs por uf do mailing
     async dddsUfMailing(req,res){
         const idMailing = (req.params.idMailing)

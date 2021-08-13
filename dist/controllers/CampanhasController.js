@@ -83,9 +83,12 @@ class CampanhasController{
     atualizaCampanha(req,res){
         const idCampanha = parseInt(req.params.idCampanha);
         const valores = req.body
-        _Campanhas2.default.atualizaCampanha(idCampanha,valores,(e,r)=>{
+        _Campanhas2.default.atualizaCampanha(idCampanha,valores,async (e,r)=>{
             if(e) throw e
             
+            if(valores.estado!=1){
+                await _Discador2.default.clearCallsCampanhas(idCampanha)
+            }
             res.json(r)    
         })
     }
@@ -451,11 +454,11 @@ class CampanhasController{
     //GRAFICO CAMPANHA
     //Status da evolucao do mailing na campanha
     async statusEvolucaoCampanha(req,res){
-       /* const idCampanha = parseInt(req.params.idCampanha)
+        const idCampanha = parseInt(req.params.idCampanha)
         console.log(`idCampanha ${idCampanha}`)
-        const total = await Campanhas.totalMailingsCampanha(idCampanha)
-        const contatados = await Campanhas.mailingsContatadosPorCampanha(idCampanha,'S')
-        const naoContatados = await Campanhas.mailingsContatadosPorCampanha(idCampanha,'N')
+        const total = await _Campanhas2.default.totalMailingsCampanha(idCampanha)
+        const contatados = await _Campanhas2.default.mailingsContatadosPorCampanha(idCampanha,'S')
+        const naoContatados = await _Campanhas2.default.mailingsContatadosPorCampanha(idCampanha,'N')
         const trabalhados = contatados + naoContatados                    
         
         let perc_trabalhados = 0
@@ -465,11 +468,11 @@ class CampanhasController{
             perc_trabalhados = parseFloat((trabalhados / total)*100).toFixed(1)
             perc_contatados = parseFloat((contatados / total)*100).toFixed(1)
             perc_naoContatados = parseFloat((naoContatados / total)*100).toFixed(1)                        
-        }    */       
+        }       
         const retorno={}
-              retorno['trabalhado']=0//parseFloat(perc_trabalhados)
-              retorno['contatados']=0//parseFloat(perc_contatados)
-              retorno['nao_contatados']=0//parseFloat(perc_naoContatados)
+              retorno['trabalhado']=parseFloat(perc_trabalhados)
+              retorno['contatados']=parseFloat(perc_contatados)
+              retorno['nao_contatados']=parseFloat(perc_naoContatados)
               console.log(retorno)                    
         res.json(retorno)
     }
@@ -599,7 +602,7 @@ class CampanhasController{
         if(r==false){
             const rt={}
             rt['error']=true
-            rt['message']=`Já esiste uma fila criada com o nome '${name}'`
+            rt['message']=`Já existe uma fila criada com o nome '${name}'`
             res.send(rt)
             return false            
         }

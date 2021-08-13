@@ -11,7 +11,6 @@ const httpServer = _http2.default.createServer(app);
 //Iniciando Discador
 _DiscadorController2.default.dial()
 
-//DiscadorController.iniciandoDiscadorSistema()
 
 httpServer.listen(3000,()=>console.log('Servidor de testes online'));
 
