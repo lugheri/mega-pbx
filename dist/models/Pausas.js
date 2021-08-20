@@ -35,15 +35,29 @@ class Pausas{
 
     //PAUSAS
     //Criar pausa
-    criarPausa(dados,callback){
+    async criarPausa(dados){
         const tipo = 'manual';
-        const sql = `INSERT INTO pausas (idLista,nome,descricao,tipo,tempo,status) VALUES ('${dados.idLista}','${dados.nome}','${dados.descricao}','${tipo}','${dados.tempo}',1)`
-        _dbConnection2.default.banco.query(sql,callback)
+        const sql = `INSERT INTO pausas (idLista,nome,descricao,tipo,tempo,status) 
+                                 VALUES ('1','${dados.nome}','${dados.descricao}','${tipo}','${dados.tempo}',1)`
+        return await this.querySync(sql)
     }
     //Editar pausa
-    editarPausa(id,valores,callback){
-        const sql = 'UPDATE pausas SET ? WHERE id=?'
-        _dbConnection2.default.banco.query(sql,[valores,id],callback)
+    async editarPausa(id,valores){
+        const sql = `UPDATE pausas 
+                        SET nome='${valores.nome}',
+                            descricao='${valores.descricao}',
+                            tipo='${valores.tipo}',
+                            tempo='${valores.tempo}'
+                      WHERE id=${id}`
+        return await this.querySync(sql)
+    }
+
+    async removerPausa(id){        
+        const sql = `UPDATE pausas 
+                        SET status=0
+                      WHERE id=${id}`
+        await this.querySync(sql)
+        return true
     }
     //Ver pausa
     async dadosPausa(id){
@@ -53,7 +67,7 @@ class Pausas{
 
     //Listar pausa
     async listarPausas(idLista){
-        const sql = `SELECT * FROM pausas WHERE idLista=${idLista} AND status=1`
+        const sql = `SELECT * FROM pausas WHERE idLista=1 AND status=1`
         return await this.querySync(sql)
     }  
     

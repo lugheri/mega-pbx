@@ -299,6 +299,7 @@ class Asterisk{
           if(modo=='discador'){
             context = 'dialer'
             endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
+            //endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
           }else{
             context = 'external'
             endpoint = `PJSIP/megatrunk/` 
@@ -313,10 +314,10 @@ class Asterisk{
             "extension"      : `0${numero}`,
             "context"        : `${context}`,
             "priority"       : 1,
-            "app"            : "",
-            "appArgs"        : "",
+            "app"            : "playback",
+            "appArgs"        : "beep",
             "Callerid"       : `0${numero}`,//numero,
-            "timeout"        : -1, 
+            "timeout"        : 60, 
             //"channelId"      : '324234', 
             "otherChannelId" : ""
           }

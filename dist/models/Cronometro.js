@@ -81,14 +81,23 @@ class Cronometro{
     
 
     //TEMPO DE TABULACAO (Ociosidade)
-    async iniciaTabulacao(idCampanha,idMailing,idRegistro,numero,ramal,callback){
-        const sql = `INSERT INTO tempo_tabulacao (idCampanha,idMailing,idRegistro,numero,idAgente,entrada) VALUES (${idCampanha},${idMailing},${idRegistro},${numero},${ramal},now())`
-        _dbConnection2.default.banco.query(sql,callback);
+    async iniciaTabulacao(idCampanha,idMailing,idRegistro,numero,ramal){
+        const sql = `INSERT INTO tempo_tabulacao 
+                                 (idCampanha,idMailing,idRegistro,numero,idAgente,entrada) 
+                          VALUES (${idCampanha},${idMailing},${idRegistro},${numero},${ramal},now())`
+        await this.querySync(sql);
     }
 
-    async encerrouTabulacao(idCampanha,numero,ramal,idTabulacao,callback){
-        const sql = `UPDATE tempo_tabulacao SET  idTabulacao=${idTabulacao}, saida=NOW(), tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW()) WHERE idCampanha=${idCampanha} AND numero=${numero} AND idAgente=${ramal} AND saida is null`
-        _dbConnection2.default.banco.query(sql,callback);
+    async encerrouTabulacao(idCampanha,numero,ramal,idTabulacao){
+        const sql = `UPDATE tempo_tabulacao 
+                        SET idTabulacao=${idTabulacao}, 
+                            saida=NOW(), 
+                            tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW()) 
+                      WHERE idCampanha=${idCampanha} 
+                        AND numero=${numero} 
+                        AND idAgente=${ramal} 
+                        AND saida is null`
+        await this.querySync(sql);
     } 
 
 

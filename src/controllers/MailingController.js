@@ -47,12 +47,13 @@ class MailingController{
             const campos=[]
             for(let i=0; i<title.length; i++){
                 let item={}
-                item['titulo']=title[i]//.replace(/�/gi, "ç").replace(" ", "_")
+                item['titulo']=title[i]//.replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "");
                 item['ordem']=i+1
                 let data=[]
                 for(let d=0; d<10; d++){
                     if(d<=(jsonFile.length-1)){
-                        let value=jsonFile[d][title[i]]                                              
+                        let value=jsonFile[d][title[i]]     
+                                                                 
                         data.push(value)
                     }                    
                 }
@@ -229,6 +230,10 @@ class MailingController{
     async totalRegUF(req,res){
         const idMailing = req.params.idMailing
         const infoTabela= await Mailing.tabelaMailing(idMailing)
+        if(infoTabela.length == 0){
+            res.json(false)
+            return false;
+        }
         const tabela = infoTabela[0].tabela_numeros
         const r = await Mailing.totalRegUF(tabela)
         const registros=[]

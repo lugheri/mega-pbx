@@ -66,7 +66,8 @@ class Discador{
         this.debug(' . PASSO 1.2','Removendo chamadas presas')
         const limitTime = 30 //tempo limite para aguardar atendimento (em segundos)
         let sql = `SELECT id,id_campanha,id_mailing,id_registro,id_numero,numero FROM campanhas_chamadas_simultaneas 
-                    WHERE tipo_discador='power' AND tratado=0 AND TIMESTAMPDIFF(SECOND,data,NOW())>${limitTime} 
+                    WHERE tipo_discador='power' 
+                     AND tratado=0 AND TIMESTAMPDIFF(SECOND,data,NOW())>${limitTime} 
                     LIMIT 1`
         const r = await this.querySync(sql)
         if(r.length==0){
@@ -92,7 +93,9 @@ class Discador{
                       observacao='${observacoes}', 
                       tentativas=tentativas+1,
                       max_tent_status=4
-                WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} AND idRegistro=${idRegistro} `
+                WHERE idCampanha=${idCampanha} 
+                  AND idMailing=${idMailing} 
+                  AND idRegistro=${idRegistro} `
         await this.querySync(sql)
         //Grava no histórico de atendimento
         await this.registraHistoricoAtendimento(0,idCampanha,idMailing,idRegistro,id_numero,0,0,tipo_ligacao,numero,tabulacao,observacoes,contatado)
@@ -109,11 +112,61 @@ class Discador{
     }
 
     async clearCallsCampanhas(idCampanha){
-        let sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE id_campanha=${idCampanha}`
+        let sql = `SELECT id_campanha,tabela_numeros,id_numero FROM campanhas_chamadas_simultaneas WHERE id_campanha=${idCampanha}`
+        const infoChamada = await this.querySync(sql)
+
+        for(let i=0; i<infoChamada.length; i++){
+            const idCampanha = infoChamada[i].id_campanha
+            const idNumero = infoChamada[i].id_numero
+            const tabelaNumeros = infoChamada[i].tabela_numeros
+            //verifica tabulacao da campanha
+            sql = `UPDATE mailings.campanhas_tabulacao_mailing 
+                      SET estado=0, desc_estado='Disponivel'
+                    WHERE idCampanha=${idCampanha} 
+                    AND idNumero=${idNumero}`
+            await this.querySync(sql)
+
+            //Libera numero na base de numeros
+            sql = `UPDATE mailings.${tabelaNumeros} 
+                      SET discando=0   
+                    WHERE id=${idNumero}`
+            await this.querySync(sql)
+        }
+
+
+        sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE id_campanha=${idCampanha} AND falando=0`
         await this.querySync(sql)
         sql = `UPDATE campanhas_status SET mensagem="..." WHERE idCampanha=${idCampanha}`
         await this.querySync(sql)
     }
+    
+    async clearCallsAgent(ramal){
+        let sql = `SELECT id_campanha,tabela_numeros,id_numero FROM campanhas_chamadas_simultaneas WHERE ramal=${ramal}`
+        const infoChamada = await this.querySync(sql)
+        if(infoChamada.length==0){
+            return false
+        }
+        
+        const idCampanha = infoChamada[0].id_campanha
+        const idNumero = infoChamada[0].id_numero
+        const tabelaNumeros = infoChamada[0].tabela_numeros
+
+        //verifica tabulacao da campanha
+        sql = `UPDATE mailings.campanhas_tabulacao_mailing 
+                  SET estado=0, desc_estado='Disponivel'
+                WHERE idCampanha=${idCampanha} AND idNumero=${idNumero}`
+        await this.querySync(sql)
+
+         //Libera numero na base de numeros
+         sql = `UPDATE mailings.${tabelaNumeros} 
+                   SET discando=0   
+                 WHERE id=${idNumero}`
+        await this.querySync(sql)
+
+        sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE ramal=${ramal}`
+        await this.querySync(sql)
+    }
+
 
     //Verifica se existem campanhas ativas
     async campanhasAtivas(){   
@@ -179,13 +232,14 @@ class Discador{
     //Verificando se existem agentes disponiveis na fila
     async agentesDisponiveis(idFila){  
         this.debug(' . . . . . . . . PASSO 2.2 - Verificando se os agentes estao logados e disponiveis') 
-        const sql = `SELECT ramal FROM agentes_filas WHERE fila='${idFila}' AND estado=1`
+        const sql = `SELECT ramal FROM agentes_filas WHERE fila='${idFila}' AND estado!=4 AND estado!=0`
         return await this.querySync(sql)       
     }
 
     //Contanto total de chamadas simultaneas 
     async qtdChamadasSimultaneas(idCampanha){
-        const sql = `SELECT COUNT(id) AS total FROM campanhas_chamadas_simultaneas WHERE id_campanha=${idCampanha}`
+        const sql = `SELECT COUNT(id) AS total 
+                         FROM campanhas_chamadas_simultaneas WHERE id_campanha=${idCampanha}`
         return await this.querySync(sql)               
     }
 
@@ -209,16 +263,16 @@ class Discador{
           LEFT OUTER JOIN mailings.campanhas_tabulacao_mailing AS t 
                        ON n.id=t.idNumero
                     WHERE (t.idCampanha=${idCampanha} 
-                      AND estado=0 
+                      AND estado=0 AND TIMESTAMPDIFF (MINUTE, data, NOW()) >= 10
                       AND t.tentativas <= t.max_tent_status
                        OR t.idCampanha IS NULL 
                        OR t.idCampanha!=${idCampanha})
                       AND n.valido=1 
                       AND n.discando=0 
                       AND n.campanha_${idCampanha}=1
-                 ORDER BY t.tentativas ${ordemDiscagem} 
+                 ORDER BY t.tentativas ${ordemDiscagem},t.id ${ordemDiscagem}
                     LIMIT 1`                  
-                 
+           
             return await this.querySync(sql)
         }else{
             //modo vertical considera a tabela de dados
@@ -227,12 +281,13 @@ class Discador{
           LEFT OUTER JOIN mailings.campanhas_tabulacao_mailing AS t 
                        ON m.id_key_base=t.idRegistro
                     WHERE t.idCampanha=${idCampanha} 
-                      AND estado=0
+                      AND estado=0 AND TIMESTAMPDIFF (MINUTE, data, NOW()) >= 10
                       AND t.tentativas <= t.max_tent_status
                        OR idCampanha IS NULL
                        OR t.idCampanha!=${idCampanha}
-                 ORDER BY t.tentativas ${ordemDiscagem}
+                 ORDER BY t.tentativas ${ordemDiscagem},t.id ${ordemDiscagem}
                     LIMIT 1`                   
+            
             const idr = await this.querySync(sql)
             if(idr.length==0){
                 return []
@@ -250,8 +305,9 @@ class Discador{
                       AND n.valido=1 
                       AND n.discando=0 
                       AND n.campanha_${idCampanha}=1
-                 ORDER BY t.tentativas ${ordemDiscagem} 
+                 ORDER BY t.tentativas ${ordemDiscagem},t.id ${ordemDiscagem}
                     LIMIT 1`
+                   
             return await this.querySync(sql)
         }
     }
@@ -276,14 +332,18 @@ class Discador{
         if(r.length > 0){  
             const id = r[0].id
             sql = `UPDATE mailings.campanhas_tabulacao_mailing 
-                      SET data=now(), estado=1, desc_estado='Discando' 
+                      SET data=now(), 
+                          estado=1, 
+                          desc_estado='Discando',
+                          selecoes_registro=selecoes_registro+1,
+                          selecoes_numero=selecoes_numero+1
                     WHERE id=${id}`
             await this.querySync(sql)
             return true                              
         }     
         sql = `INSERT INTO mailings.campanhas_tabulacao_mailing 
-                          (data,idCampanha,idMailing,idRegistro,idNumero,numeroDiscado,estado,desc_estado,tentativas) 
-                   VALUES (now(),${idCampanha},${idMailing},${idRegistro},${idNumero},'${numero}',1,'Discando',0)`
+                          (data,idCampanha,idMailing,idRegistro,selecoes_registro,idNumero,selecoes_numero,numeroDiscado,estado,desc_estado,max_tent_status,tentativas) 
+                   VALUES (now(),${idCampanha},${idMailing},${idRegistro},1,${idNumero},1,'${numero}',1,'Discando',1,0)`
         await this.querySync(sql)  
 
         //atualiza como discando 
@@ -297,6 +357,9 @@ class Discador{
         const sql = `SELECT ramal FROM agentes_filas AS a LEFT JOIN tempo_espera AS t ON a.ramal=t.idAgente 
                       WHERE a.fila=${idFila} AND a.estado=1 ORDER BY t.tempo_total DESC LIMIT 1` 
         const r =  await this.querySync(sql)    
+        if(r.length==0){
+            return 0
+        }
         return r[0].ramal  
     }
 
@@ -383,8 +446,117 @@ class Discador{
                          VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_registro},${id_numero},${ramal},'${uniqueid}','${tipo_ligacao}','${numero}',${tabulacao},'${observacoes}','${contatado}')`
         return await this.querySync(sql)          
     }  
+                        
+    async tabulaChamada(idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal){
+        const dadosAtendimento = await this.dadosAtendimento(idAtendimento)
+        if(dadosAtendimento.length === 0){
+            return false
+        }
+
+        //Dados do atendimento
+        const tabelaNumero = dadosAtendimento[0].tabela_numeros
+        const tabelaDados = dadosAtendimento[0].tabela_dados
+        const idNumero  = dadosAtendimento[0].id_numero
+        const idRegistro = dadosAtendimento[0].id_registro
+        const numero  = dadosAtendimento[0].numero
+        const idMailing = dadosAtendimento[0].id_mailing
+        const idCampanha = dadosAtendimento[0].id_campanha
+        const protocolo = dadosAtendimento[0].id_campanha
+        const uniqueid = dadosAtendimento[0].uniqueid
+        const tipo_ligacao = dadosAtendimento[0].tipo_ligacao
+
+        const nome_registro=await this.campoNomeRegistro(idMailing,idRegistro,tabelaDados);
+
+        let sql =""
+        let estado =0
+        let desc_estado  =""
+        if(produtivo==1){
+            estado=4
+            desc_estado='Já Trabalhado'
+            //Verifica se todos os numeros do registro ja estao marcados na tabulacao
+            sql = `SELECT id,numero FROM mailings.${tabelaNumero} WHERE id_registro=${idRegistro}`
+            const numbers = await this.querySync(sql)
+          
+            for(let i = 0; i < numbers.length; i++){
+                sql = `SELECT id FROM mailings.campanhas_tabulacao_mailing 
+                        WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha} AND idNumero=${numbers[i].id}`
+                const n = await this.querySync(sql)
+                
+                if(n.length==0){
+                    sql = `INSERT INTO mailings.campanhas_tabulacao_mailing 
+                                      (data,numeroDiscado,agente,estado,desc_estado,contatado,tabulacao,produtivo,observacao,tentativas,idRegistro,idMailing,idCampanha,idNumero)
+                               VALUES (now(),'${numero}','${ramal}','${estado}','${desc_estado}','${contatado}',${status_tabulacao},'${produtivo}','${observacao}',1,${idRegistro},${idMailing},${idCampanha},${numbers[i].id})` 
+                    
+                    await this.querySync(sql)
+                }
+            }
+
+            //Grava tabulacao na tabela do numero atualizando todos numeros do registro
+            sql = `UPDATE mailings.${tabelaNumero} 
+                          SET tentativas=tentativas+1, 
+                              contatado='${contatado}', 
+                              status_tabulacao=${status_tabulacao}, 
+                              produtivo='${produtivo}', 
+                              discando=0
+                        WHERE id_registro = ${idRegistro}`
+            await this.querySync(sql)
+        }else{
+            estado=0
+            desc_estado='Disponivel'
+            //Grava tabulacao na tabela do numero
+            sql = `UPDATE mailings.${tabelaNumero} 
+                      SET tentativas=tentativas+1, 
+                          contatado='${contatado}', 
+                          status_tabulacao=${status_tabulacao}, 
+                          produtivo='${produtivo}', 
+                          discando=0
+                    WHERE id = ${idNumero}`
+        }   
+
+        //Marca chamada simultanea como tabulada
+        sql = `UPDATE mailings.campanhas_tabulacao_mailing 
+                  SET data=now(), 
+                      numeroDiscado='${numero}', 
+                      agente='${ramal}', 
+                      estado='${estado}', 
+                      desc_estado='${desc_estado}', 
+                      contatado='${contatado}', 
+                      tabulacao=${status_tabulacao}, 
+                      produtivo='${produtivo}', 
+                      observacao='${observacao}', 
+                      tentativas=tentativas+1 
+                WHERE idRegistro=${idRegistro} 
+                  AND idMailing=${idMailing} 
+                  AND idCampanha=${idCampanha} 
+                  AND idNumero=${idNumero}`
+        await this.querySync(sql)   
+        
+        
+        //Grava informações no histórico de chamadas
+        sql = `INSERT INTO historico_atendimento 
+                            (data,hora,campanha,mailing,id_registro,id_numero,nome_registro,agente,protocolo,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado) 
+                     VALUES (now(),now(),${idCampanha},${idMailing},${idRegistro},${idNumero},'${nome_registro}',${ramal},'${protocolo}','${uniqueid}','${tipo_ligacao}','${numero}',${status_tabulacao},'${observacao}','${contatado}') `
+        await this.querySync(sql)
+        
+        //Verifica se a chamada ja foi desligada 
+        if(dadosAtendimento[0].desligada==1){
+            //Remove chamada simultanea 
+            await this.clearCallsAgent(ramal);
+            //Atualiza estado do agente para disponivel
+            await this.alterarEstadoAgente(ramal,1,0)//Altera o status do agente para ativo
+        }else{
+            //Atualiza a tabela da chamada simultanea como tabulando
+            sql = `UPDATE campanhas_chamadas_simultaneas SET tabulado=1 WHERE id=${idAtendimento}`
+            await this.querySync(sql)
+        }
+        
+        return true;
+    }
+
+
+
     //Tabula uma chamada apos sua conclusao                        
-    async tabulandoContato(idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal){
+    async tabulandoContato_old(idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal){
         let estado
         let desc_estado        
         if(produtivo==1){
@@ -394,9 +566,7 @@ class Discador{
             estado=0
             desc_estado='Disponivel'
         }    
-        const estadoAgente = 1//Libera o agente
-        const pausa=0
-        await this.alterarEstadoAgente(ramal,estadoAgente,pausa)        
+            
         await this.desligaChamada(idAtendimento,estado,contatado,produtivo,status_tabulacao,observacao)    
         return true;                            
     }  
@@ -404,8 +574,7 @@ class Discador{
     async alterarEstadoAgente(agente,estado,pausa){
         //Recuperando estado anterior do agente
         const estadoAnterior = await this.infoEstadoAgente(agente)
-        console.log('estado',estado)
-        console.log('estadoAnterior',estadoAnterior)
+        
         //zerando cronometro do estado anterior
         let sql
         if(estadoAnterior==2){//Caso o agente venha de uma pausa            
@@ -420,9 +589,25 @@ class Discador{
        
         
         if(estado==1){//disponibiliza o ramal do agente no asterisk
+            
+            this.clearCallsAgent(agente)
             sql = `SELECT idPausa FROM agentes_filas WHERE ramal=${agente} LIMIT 1` 
             const r = await this.querySync(sql)
             const statusPausa=r[0].idPausa
+            
+            //verifica se o agente tinha solicidado saida do discador em ligacao
+            sql = `SELECT deslogado FROM user_ramal WHERE ramal=${agente}`
+            const user = await this.querySync(sql)
+            const deslogar = user[0].deslogado
+            if(deslogar==1){
+               //Atualizando o novo estado do agente        
+                sql = `UPDATE agentes_filas SET estado=4, idPausa=0 WHERE ramal=${agente}` 
+                await this.querySync(sql)
+                sql = `UPDATE user_ramal SET estado=4, deslogado=0 WHERE userId=${agente}`
+                await this.querySync(sql)
+                return false;
+            }
+            
             if(estadoAnterior==2){
                 sql = `UPDATE asterisk.queue_members SET paused=0 WHERE membername=${agente}`
                 await this.querySync(sql)  
@@ -470,6 +655,7 @@ class Discador{
                 await this.querySync(sql)
                 return false
             }
+            this.clearCallsAgent(agente)
             //dados da pausa
             sql = `SELECT * FROM pausas WHERE id=${pausa}`
             const infoPausa = await this.querySync(sql)
@@ -490,6 +676,17 @@ class Discador{
             sql = `INSERT INTO log_pausas (ramal,idPausa,data,inicio,ativa) VALUES ('${agente}',${idPausa},now(),now(),1)`
             await this.querySync(sql)
         }
+
+        if(estado==4){
+            if(estadoAnterior==3){
+                //Atualizando o novo estado do agente        
+                sql = `UPDATE user_ramal SET deslogado=1 WHERE ramal=${agente}`
+                await this.querySync(sql)
+                return false
+            }
+            this.clearCallsAgent(agente)
+        }
+        
         //Atualizando o novo estado do agente        
         sql = `UPDATE agentes_filas SET estado=${estado}, idPausa=${pausa} WHERE ramal=${agente}` 
         await this.querySync(sql)
@@ -498,6 +695,7 @@ class Discador{
 
         return true
     }
+
     //Retorna o status de pausa do agente
     async infoEstadoAgente(ramal){
         const sql = `SELECT * FROM user_ramal WHERE ramal='${ramal}'`
@@ -509,41 +707,35 @@ class Discador{
     }
 
     //Desliga Chamada
-    async desligaChamada(idAtendimento,estado,contatado,produtivo,status_tabulacao,observacao){  
+    async desligaChamada(ramal){
+        let sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE ramal=${ramal}`
+        const infoChamada = await this.querySync(sql)
+        if(infoChamada.length==0){
+            return false
+        }
+        const idAtendimento = infoChamada[0].id
+        sql = `UPDATE campanhas_chamadas_simultaneas SET desligada=1 WHERE id=${idAtendimento}`
+        await this.querySync(sql)
+        return infoChamada
+
+    }
+
+
+
+    async desligaChamada_old(idAtendimento){  
         //Le os dados do registro
         
         let sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE id=${idAtendimento}`
         const atendimento = await this.querySync(sql)
-        const idRegistro = atendimento[0].id_registro
-        const idNumero = atendimento[0].id_numero
-        const uniqueid = atendimento[0].uniqueid
-        const tipo_ligacao = atendimento[0].tipo_ligacao
-        const protocolo = atendimento[0].protocolo
-        const tabela_dados = atendimento[0].tabela_dados
-        const tabela_numeros = atendimento[0].tabela_numeros
-        const numero = atendimento[0].numero
         const ramal = atendimento[0].ramal
-        const idMailing = atendimento[0].id_mailing
-        const idCampanha = atendimento[0].id_campanha
-
-        const nome_registro=await this.campoNomeRegistro(idMailing,idRegistro,tabela_dados);
-        //
-
-        //const estado = 0
-        const desc_estado = 'Disponivel'       
-        //Atualiza registro com nova tentativa            
-        sql = `UPDATE mailings.${tabela_numeros} SET tentativas=tentativas+1, contatado='${contatado}', status_tabulacao=${status_tabulacao}, produtivo='${produtivo}', discando=0 WHERE id = ${idNumero}`
-        await this.querySync(sql)
-        //Grava historico
-        sql = `INSERT INTO historico_atendimento (data,hora,campanha,mailing,id_registro,id_numero,nome_registro,agente,protocolo,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado) 
-                                          VALUES (now(),now(),${idCampanha},${idMailing},${idRegistro},${idNumero},'${nome_registro}',${ramal},'${protocolo}','${uniqueid}','${tipo_ligacao}','${numero}',${status_tabulacao},'${observacao}','${contatado}') `
-        await this.querySync(sql)
-        //Atualiza a tabela da campanha 
-        sql = `UPDATE mailings.campanhas_tabulacao_mailing SET data=now(), numeroDiscado='${numero}', agente='${ramal}', estado='${estado}', desc_estado='${desc_estado}', contatado='${contatado}', tabulacao=${status_tabulacao}, produtivo='${produtivo}', observacao='${observacao}', tentativas=tentativas+1 WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha} AND idNumero=${idNumero}`
-        await this.querySync(sql)
         //Removendo chamada das chamadas simultaneas
         sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE id=${idAtendimento}`
         await this.querySync(sql)
+
+        const estadoAgente = 1//Libera o agente
+        const pausa=0
+        await this.alterarEstadoAgente(ramal,estadoAgente,pausa)   
+
         return true
     }
     //Busca a fila da campanha atendida
@@ -636,6 +828,7 @@ class Discador{
         //montando a query de busca dos dados
         const info = {};
               info['idAtendimento']=idAtendimento
+              info['listaTabulacao']=await _Campanhas2.default.checklistaTabulacaoCampanha(idCampanha)
               info['tipo_discador']=tipo_discador
               info['idMailing']=idMailing              
               info['idMailing']=idMailing
@@ -651,6 +844,7 @@ class Discador{
             }else{
                 apelido=campos_dados[i].apelido
             }  
+            console.log('Info Chamada - Valor do Campo',campos_dados[i].campo)
             sql = `SELECT ${campos_dados[i].campo} AS 'valor' FROM mailings.${tabela_dados} WHERE id_key_base=${idReg}` 
             let value = await this.querySync(sql)
             info['campos'][apelido]=value[0].valor
@@ -724,6 +918,7 @@ class Discador{
         const info = {};
               info['tipo_discador']=tipo_discador
               info['idAtendimento']=calldata[0].id
+              info['listaTabulacao']=await _Campanhas2.default.checklistaTabulacaoCampanha(idCampanha)
               info['idMailing']=idMailing
               info['protocolo']=protocolo
               info['nome_registro']=await this.campoNomeRegistro(idMailing,idReg,tabela_dados)
@@ -737,6 +932,7 @@ class Discador{
             }else{
                 apelido=campos_dados[i].apelido
             }  
+            console.log('Valor do Campo',campos_dados[i].campo)
             sql = `SELECT ${campos_dados[i].campo} AS 'valor' FROM mailings.${tabela_dados} WHERE id_key_base=${idReg}` 
             let value = await this.querySync(sql)
             info['campos'][apelido]=value[0].valor
@@ -778,7 +974,7 @@ class Discador{
 
     async dadosChamadaAtendida(ramal){
         //Separando a campanha que o agente pertence
-        let sql = `SELECT id FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND falando=1 OR tipo_discador='preview' OR tipo_discador='clicktocall'`
+        let sql = `SELECT id FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND (falando=1 OR tipo_discador='preview' OR tipo_discador='clicktocall')`
         const calldata = await this.querySync(sql)
         if(calldata.length==0){
             return "Chamada interna"
@@ -788,7 +984,8 @@ class Discador{
     }
 
     async infoChamada(ramal){
-        let sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' AND (falando=1 OR tipo_discador='preview' OR tipo_discador='clicktocall') `
+        let sql = `SELECT * FROM campanhas_chamadas_simultaneas 
+                    WHERE ramal='${ramal}'`
         return await this.querySync(sql)
     }
 
@@ -809,7 +1006,9 @@ class Discador{
 
     //Retorna o histórico de atendimento do registro
     async historicoRegistro(idMailing,idReg){
-        const sql = `SELECT nome_registro,numero_discado,agente,protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,DATE_FORMAT (hora,'%H:%i') AS horario,t.tabulacao,obs_tabulacao,contatado
+
+
+        const sql = `SELECT nome_registro,numero_discado,agente,protocolo,DATE_FORMAT (data,'%d/%m/%Y') AS dia,DATE_FORMAT (hora,'%H:%i') AS horario,t.tabulacao,obs_tabulacao,h.contatado
                        FROM historico_atendimento AS h 
                        LEFT JOIN tabulacoes_status AS t ON t.id=h.status_tabulacao 
                       WHERE id_registro=${idReg} AND mailing=${idMailing} 
@@ -831,13 +1030,13 @@ class Discador{
 
     //Verifica Lista de tabulacao da campanha
     async tabulacoesCampanha(idCampanha){
-        let sql = `SELECT idListaTabulacao FROM campanhas_listastabulacao WHERE idCampanha='${idCampanha}'`
+        let sql = `SELECT idListaTabulacao FROM campanhas_listastabulacao WHERE idCampanha='${idCampanha}' AND idListaTabulacao!=0`
         const idLista = await this.querySync(sql)
         if(idLista.length!=0){
            
             const tabulacoes={}
             //produtivas
-            sql = `SELECT id,tabulacao,descricao,followUp,venda FROM tabulacoes_status 
+            sql = `SELECT id,tabulacao,descricao,followUp,venda,contatado FROM tabulacoes_status 
                     WHERE idLista=${idLista[0].idListaTabulacao} AND tipo='produtivo' AND status=1
                     ORDER BY ordem ASC`
             const pro = await this.querySync(sql) 
@@ -847,7 +1046,7 @@ class Discador{
                 tabulacoes['produtivas'][i]['tipo']='produtivo'
             }
             //improdutivas       
-            sql = `SELECT id,tabulacao,descricao,followUp,venda FROM tabulacoes_status 
+            sql = `SELECT id,tabulacao,descricao,followUp,venda,contatado FROM tabulacoes_status 
                     WHERE idLista=${idLista[0].idListaTabulacao} AND tipo='improdutivo' AND status=1
                     ORDER BY ordem ASC`
             const imp = await this.querySync(sql)
@@ -863,7 +1062,8 @@ class Discador{
     //Atualiza a chamada como tabulando
     async preparaRegistroParaTabulacao(idAtendimento){
         //Atualiza Chamada como tabulando 
-        const sql = `UPDATE campanhas_chamadas_simultaneas SET falando=1, tabulando=1, hora_tabulacao=now() 
+        const sql = `UPDATE campanhas_chamadas_simultaneas
+                        SET falando=1, tabulando=1 
                       WHERE id='${idAtendimento}'`;
         await this.querySync(sql) 
     }

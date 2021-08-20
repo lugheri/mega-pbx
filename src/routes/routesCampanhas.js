@@ -24,8 +24,10 @@ module.exports = (routes) => {
     routes.post('/addListaTabulacaoCampanha',CampanhasController.addListaTabulacaoCampanha)//Adiciona Lista de Tabulacao
     routes.get('/listasTabulacaoCampanhas/:idCampanha',CampanhasController.listasTabulacaoCampanha)//Exibir listas de tabulacoes 
     routes.delete('/removerListaTabulacaoCampanha/:idListaNaCampanha',CampanhasController.removerListaTabulacaoCampanha)//Remove lista de tabulacoes
-    routes.get('/statusTabulacaoCampanha/:idCampanha',CampanhasController.statusTabulacaoCampanha)//Status de tabulacao da campanha
-
+    //routes.get('/statusTabulacaoCampanha/:idCampanha',CampanhasController.statusTabulacaoCampanha)//Status de tabulacao da campanha
+    routes.post('/setarTempoMaxTabulacao',CampanhasController.setMaxTimeStatusTab)
+    routes.get('/tempoTabulacaoCampanha/:idCampanha',CampanhasController.getMaxTimeStatusTab)
+    
     //INTEGRACOES
     routes.post('/criarIntegracao',CampanhasController.criarIntegracao)
     routes.get('/listarIntegracoes',CampanhasController.listarIntegracoes)
@@ -75,6 +77,7 @@ module.exports = (routes) => {
     //PAUSAS
     routes.post('/criarPausa',CampanhasController.criarPausa)//Criar Pausa
     routes.patch('/editarPausa/:id',CampanhasController.editarPausa)//Editar Pausa
+    routes.delete('/removerPausa/:id',CampanhasController.removerPausa)//Remove Pausa
     routes.get('/dadosPausa/:id',CampanhasController.dadosPausa)//Ver Pausa
     routes.get('/listarPausas/:idLista',CampanhasController.listarPausas)//Listar Pausa
 

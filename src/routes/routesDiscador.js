@@ -24,6 +24,9 @@ module.exports = (routes) => {
     //Chamada atendida
     routes.get('/dadosChamada/:ramal',DiscadorController.dadosChamadaAtendida)
     
+    //Lista os status de tabulacao da campanha
+    routes.get('/statusTabulacaoChamada/:ramal',DiscadorController.statusTabulacaoChamada)
+
     //Chamada desligada
     routes.post('/desligarChamada',DiscadorController.desligarChamada)
     
@@ -32,6 +35,9 @@ module.exports = (routes) => {
 
     //Tabular chamada
     routes.post('/marcarRetorno',DiscadorController.marcarRetorno)
+
+    //Pula registro
+    routes.get('/pularChamada/:ramal',DiscadorController.pularChamada)
 
     //Historico de Registro
     routes.get('/historicoRegistro/:idMailing/:idRegistro',DiscadorController.historicoRegistro)

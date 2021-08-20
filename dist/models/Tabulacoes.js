@@ -39,10 +39,16 @@ class Tabulacoes{
     async criarStatusTabulacao(dados){
         let sql=`SELECT id FROM tabulacoes_status WHERE idLista=${dados.idLista} ORDER BY ordem DESC LIMIT 1`
         const r =  await this.querySync(sql);
+        let contatado = 'S'
+        if(dados.tipo=='produtivo'){
+            contatado = 'S'
+        }else{
+            contatado = dados.contatado
+        }
         const ordem=r.length+1
         sql=`INSERT INTO tabulacoes_status 
-                         (idLista,tabulacao,descricao,tipo,venda,followUp,ordem,maxTentativas,tempoRetorno,status) 
-                  VALUES (${dados.idLista},'${dados.tabulacao}','${dados.descricao}','${dados.tipo}',${dados.venda},${dados.followUp},${ordem},${dados.maxTentativas},'${dados.tempoRetorno}',1)`
+                         (idLista,tabulacao,descricao,tipo,contatado,venda,followUp,ordem,maxTentativas,tempoRetorno,status) 
+                  VALUES (${dados.idLista},'${dados.tabulacao}','${dados.descricao}','${dados.tipo}','${contatado}',${dados.venda},${dados.followUp},${ordem},${dados.maxTentativas},'${dados.tempoRetorno}',1)`
       
         const result = await this.querySync(sql);
         await this.reordenaStatus(dados.idLista)
@@ -72,6 +78,7 @@ class Tabulacoes{
         const tabulacao = valores.tabulacao
         const descricao = valores.descricao
         const tipo = valores.tipo
+        const contatado = valores.contatado
         const venda = valores.venda
         const followUp = valores.followUp
         const tempoRetorno = valores.tempoRetorno
@@ -81,6 +88,7 @@ class Tabulacoes{
                             tabulacao='${tabulacao}',
                             descricao='${descricao}',
                             tipo='${tipo}',
+                            contatado='${contatado}',
                             venda=${venda},
                             followUp=${followUp},
                             tempoRetorno='${tempoRetorno}',

@@ -95,30 +95,39 @@ class CampanhasController{
 
     //######################CONFIGURAÇÃO DE CAMPANHA ATIVA################################
     //TABULAÇÕES
-     //Lista de Tabulaçoes da campanha
-        //Add lista na campanha
-        async addListaTabulacaoCampanha(req,res){
-            const idCampanha = req.body.idCampanha
-            const idListaTabulacao = req.body.idListaTabulacao
-            const r = await _Campanhas2.default.addListaTabulacaoCampanha(idCampanha,idListaTabulacao)
-            res.json(true);
-        }
-        //Exibe as listas de tabulacao da Campanha
-        async listasTabulacaoCampanha(req,res){
-            const idCampanha = req.params.idCampanha;
-            const r = await _Campanhas2.default.listasTabulacaoCampanha(idCampanha)
-            console.log('retorno',r)
-            res.json(r);
-        }
-        //remove Lista tabulacao da campanha
-        removerListaTabulacaoCampanha(req,res){
-            const idListaNaCampanha = req.params.idListaNaCampanha
-            const r = _Campanhas2.default.removerListaTabulacaoCampanha(idListaNaCampanha)
-            res.json(true);
-        }
-        statusTabulacaoCampanha(req,res){
-            res.json(false);
-        }
+    //Lista de Tabulaçoes da campanha
+    //Add lista na campanha
+    async addListaTabulacaoCampanha(req,res){
+        const idCampanha = req.body.idCampanha
+        const idListaTabulacao = req.body.idListaTabulacao
+        const r = await _Campanhas2.default.addListaTabulacaoCampanha(idCampanha,idListaTabulacao)
+        res.json(true);
+    }
+    //Exibe as listas de tabulacao da Campanha
+    async listasTabulacaoCampanha(req,res){
+        const idCampanha = req.params.idCampanha;
+        const r = await _Campanhas2.default.listasTabulacaoCampanha(idCampanha)
+        res.json(r);
+    }
+    //remove Lista tabulacao da campanha
+    async removerListaTabulacaoCampanha(req,res){
+        const idListaNaCampanha = req.params.idListaNaCampanha
+        const r = await _Campanhas2.default.removerListaTabulacaoCampanha(idListaNaCampanha)
+        res.json(true);
+    }
+
+    async setMaxTimeStatusTab(req,res){
+        const idCampanha = req.body.idCampanha
+        const time= req.body.maxTime
+        await _Campanhas2.default.setMaxTimeStatusTab(idCampanha,time)
+        res.json(true);
+    }
+
+    async getMaxTimeStatusTab(req,res){
+        const idCampanha = req.params.idCampanha
+        const time = await _Campanhas2.default.getMaxTimeStatusTab(idCampanha)
+        res.json(time);
+    }
 
 
     //INTEGRAÇÕES
@@ -546,44 +555,39 @@ class CampanhasController{
     }
 
     //Criar nova pausa
-    criarPausa(req,res){
+    async criarPausa(req,res){
         const dados = req.body
-        _Pausas2.default.criarPausa(dados,(e,result)=>{
-            if(e) throw e
-            
-            res.json(result)
-        })
+        const result = await _Pausas2.default.criarPausa(dados)
+        res.json(result)
     }
 
     //Editar pausa
-    editarPausa(req,res){
+    async editarPausa(req,res){
         const id = parseInt(req.params.id);
         const valores = req.body
-        _Pausas2.default.editarPausa(id,valores,(e,result)=>{
-            if(e) throw e
-            
-            res.json(result)
-        })
+        const result = await _Pausas2.default.editarPausa(id,valores)
+        res.json(result)        
+    }
+
+    async removerPausa(req,res){
+        const id = parseInt(req.params.id);
+        const result = await _Pausas2.default.removerPausa(id)
+        res.json(result)       
     }
 
     //ver pausa
-    dadosPausa(req,res){
+    async dadosPausa(req,res){
         const id = parseInt(req.params.id);
-        _Pausas2.default.dadosPausa(id,(e,result)=>{
-            if(e) throw e
-            
-            res.json(result)
-        })
+        const result =  await _Pausas2.default.dadosPausa(id)
+        res.json(result)        
     }
 
     //ver todas pausas de uma lista
-    listarPausas(req,res){
-        const idLista = parseInt(req.params.idLista)
-        _Pausas2.default.listarPausas(idLista,(e,result)=>{
-            if(e) throw e
-            
-            res.json(result)
-        })
+    async listarPausas(req,res){
+        const idLista = 1
+        const result = await _Pausas2.default.listarPausas(idLista)
+        res.json(result)
+        
     } 
 
     //#########  F I L A S            ############

@@ -350,6 +350,15 @@ class DashboardController{
         frases.push('Até o time feminino das mulheres!')
         frases.push('Eu acho que eu estou achando!')
         frases.push('Reunião semanal toda semana!')
+        frases.push('Se ele não sobreviver ele morre!')
+        frases.push('Tem que fazer o reconhecimento facial da cara!')
+        frases.push('Cara, ou o serviço deles caiu ou deve estar fora do ar!')
+        frases.push('Ai você me manda a rota na rota!')
+        frases.push('Temos que ver porque essa demora esta demorando!')
+        frases.push('Então ele ia lá e ia!')
+        frases.push('Eu vou fazer um teste aqui só pra testar!')
+        frases.push('Se a empresa Sair pra fora!')
+
 
         let numero
         if(parseInt(all)>=1){            

@@ -8,7 +8,8 @@ const user = []
 user['name'] = 'root'
 user['pass'] = '1234abc@'
 
-/*function testHost(hst){
+/*
+function testHost(hst){
     return new Promise((resolve, reject)=>{
         const conexao = mysql.createConnection({
                         host : hst,
@@ -23,7 +24,7 @@ user['pass'] = '1234abc@'
     })
 }*/
 
-const connect=()=>{};
+const connect = ()=>{};
 
 connect.pool=_mysql22.default.createPool({
     host:host,

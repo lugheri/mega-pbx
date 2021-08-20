@@ -52,25 +52,46 @@ class Campanhas{
     //TABULACOES
     //######################Gestão das listas de tabulacao das campanhas######################
     //Adiciona lista de tabulacao na campanha
-    async addListaTabulacaoCampanha(idCampanha,idListaTabulacao,callback){
+    async addListaTabulacaoCampanha(idCampanha,idListaTabulacao){
         //Removendo listas anteriores
         let sql = `DELETE FROM campanhas_listastabulacao WHERE idCampanha=${idCampanha}`
         await this.querySync(sql)
         
-        sql = `INSERT INTO campanhas_listastabulacao (idCampanha,idListaTabulacao) VALUES (${idCampanha},${idListaTabulacao})`
+        sql = `INSERT INTO campanhas_listastabulacao (idCampanha,idListaTabulacao,maxTime) VALUES (${idCampanha},${idListaTabulacao},15)`
         await this.querySync(sql)         
     }
 
     //Exibe listas de tabulacao da campanhas
     async listasTabulacaoCampanha(idCampanha){
-        const sql = `SELECT id as idListaNaCampanha, idCampanha, idListaTabulacao FROM campanhas_listastabulacao WHERE idCampanha=${idCampanha}`
+        const sql = `SELECT cl.id as idListaNaCampanha, t.nome AS nomeListaTabulacao, idCampanha, idListaTabulacao, maxTime 
+                       FROM campanhas_listastabulacao AS cl 
+                  LEFT JOIN tabulacoes_listas AS t ON t.id=cl.idListaTabulacao
+                      WHERE idCampanha=${idCampanha}`
         return await this.querySync(sql)  
+    }
+
+    async checklistaTabulacaoCampanha(idCampanha){
+        const lista = await this.listasTabulacaoCampanha(idCampanha)
+        if(lista.length==0){
+            return false
+        }
+        return lista[0].idListaTabulacao
     }
 
     //Remove listas de tabulacao da campanha
     async removerListaTabulacaoCampanha(idListaNaCampanha){
         const sql = `DELETE FROM campanhas_listastabulacao WHERE id=${idListaNaCampanha}`
         await this.querySync(sql)  
+    }
+
+    async setMaxTimeStatusTab(idCampanha,time){
+        const sql = `UPDATE campanhas_listastabulacao SET maxTime=${time} WHERE idCampanha=${idCampanha}`
+        await this.querySync(sql)  
+    }
+
+    async getMaxTimeStatusTab(idCampanha){
+        const sql = `SELECT maxTime FROM campanhas_listastabulacao WHERE idCampanha=${idCampanha}`
+        return await this.querySync(sql)  
     }
 
     //INTEGRAÇÕES
@@ -519,7 +540,7 @@ class Campanhas{
 
     //STATUS DE EVOLUCAO DE CAMPANHA
     async totalMailingsCampanha(idCampanha){
-        const sql = `SELECT SUM(totalReg) AS total 
+        const sql = `SELECT SUM(totalNumeros) AS total 
                       FROM mailings as m 
                       JOIN campanhas_mailing AS cm 
                       ON cm.idMailing=m.id 
