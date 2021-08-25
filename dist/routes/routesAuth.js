@@ -7,8 +7,7 @@ module.exports = (routes) => {
     routes.get('/listaCampos', (req, res) =>{
         res.send('API no ar')
     })
-
-
+    
     //AUTENTICAÇÃO
     routes.post('/login', _SessionController2.default.store);
 

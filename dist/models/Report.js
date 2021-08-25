@@ -13,8 +13,7 @@ class Report{
         })
     }
 
-
-    async monitorarAgentes(idCampanha,idEquipe,idUser,callback){         
+    async monitorarAgentes(idCampanha,idEquipe,idUser){         
         let filter = ""
         if(idCampanha){
             filter += ` AND cf.idCampanha = ${idCampanha} `
@@ -34,7 +33,18 @@ class Report{
             }
         }
 
-        sql=`SELECT DISTINCT ur.ramal,ea.estado,ur.estado as cod_estado,ue.equipe,us.nome FROM user_ramal AS ur JOIN users AS us ON ur.userId=us.id JOIN users_equipes AS ue ON ue.id=us.equipe LEFT JOIN estadosAgente AS ea ON ur.estado=ea.cod LEFT JOIN agentes_filas AS af ON af.ramal=us.id LEFT JOIN campanhas_filas AS cf ON af.fila=cf.id WHERE 1=1 ${filter}`
+        sql=`SELECT DISTINCT ur.ramal,
+                             ea.estado,
+                             ur.estado as cod_estado,
+                             ue.equipe,
+                             us.nome 
+                        FROM user_ramal AS ur 
+                        JOIN users AS us ON ur.userId=us.id 
+                        JOIN users_equipes AS ue ON ue.id=us.equipe 
+                        LEFT JOIN estadosAgente AS ea ON ur.estado=ea.cod 
+                        LEFT JOIN agentes_filas AS af ON af.ramal=us.id 
+                        LEFT JOIN campanhas_filas AS cf ON af.fila=cf.id 
+                       WHERE 1=1 ${filter}`
         const rowsAgentes = await this.querySync(sql)            
           
         for(let k in rowsAgentes){
@@ -47,7 +57,9 @@ class Report{
             let codEstado = rowsAgentes[k].cod_estado
             rowsAgentes[k]['tempoStatus'] = await this.tempoEstadoAgente(ramal,codEstado)
                 
-            let sql = `SELECT COUNT(id) as total FROM historico_atendimento WHERE agente=${rowsAgentes[k].ramal} ${filter}`
+            let sql = `SELECT COUNT(id) as total 
+                         FROM historico_atendimento
+                        WHERE agente=${rowsAgentes[k].ramal} ${filter}`
             const rowsQTD = await this.querySync(sql);
             rowsAgentes[k]['quantidade']=rowsQTD[0].total
               
@@ -55,7 +67,11 @@ class Report{
             if(idCampanha){
                 filter = ` AND h.campanha = ${idCampanha} `
             }
-            sql = `SELECT h.campanha, c.nome as nomeCampanha FROM historico_atendimento AS h LEFT JOIN campanhas AS c ON c.id=h.campanha WHERE h.agente=${rowsAgentes[k].ramal} ${filter} ORDER BY h.id DESC LIMIT 1`
+            sql = `SELECT h.campanha, c.nome as nomeCampanha 
+                     FROM historico_atendimento AS h 
+                LEFT JOIN campanhas AS c ON c.id=h.campanha 
+                    WHERE h.agente=${rowsAgentes[k].ramal} ${filter} 
+                    ORDER BY h.id DESC LIMIT 1`
             const rowsCampanha = await this.querySync(sql);
             let nomeCampanha="";
             if(rowsCampanha.length==1){
@@ -67,43 +83,55 @@ class Report{
             if(idCampanha){
                 filter = ` AND idCampanha = ${idCampanha} `
             }
-            sql=`SELECT AVG(tempo_total) as TMT FROM tempo_tabulacao WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
+            sql=`SELECT AVG(tempo_total) as TMT 
+                   FROM tempo_tabulacao WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
             const rowsTMT = await this.querySync(sql)    
             rowsAgentes[k]['TMT']=await this.converteSeg_tempo(rowsTMT[0].TMT)  
                 
             //TMA
-            sql=`SELECT AVG(tempo_total) as TMA FROM tempo_ligacao WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
+            sql=`SELECT AVG(tempo_total) as TMA 
+                   FROM tempo_ligacao WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
             const rowsTMA = await this.querySync(sql)    
             rowsAgentes[k]['TMA']=await this.converteSeg_tempo(rowsTMA[0].TMA)
                 
             //TMO
-            sql=`SELECT AVG(tempo_total) as TMO FROM tempo_espera WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
+            sql=`SELECT AVG(tempo_total) as TMO 
+                   FROM tempo_espera WHERE idAgente=${rowsAgentes[k].ramal} ${filter}`
             const rowsTMO = await this.querySync(sql)  
             rowsAgentes[k]['TMO']=await this.converteSeg_tempo(rowsTMO[0].TMO)
                 
             //PRODUTIVAS
-            sql=`SELECT COUNT(id) as produtivos FROM mailings.campanhas_tabulacao_mailing WHERE agente=${rowsAgentes[k].ramal} AND produtivo=1 ${filter}`
+            sql=`SELECT COUNT(id) as produtivos 
+                   FROM mailings.campanhas_tabulacao_mailing 
+                  WHERE agente=${rowsAgentes[k].ramal} AND produtivo=1 ${filter}`
             const rowsProdutivos = await this.querySync(sql)  
             rowsAgentes[k]['produtivos']=rowsProdutivos[0].produtivos
                 
             //IMPRODUTIVAS
-            sql=`SELECT COUNT(id) as improdutivos FROM mailings.campanhas_tabulacao_mailing WHERE agente=${rowsAgentes[k].ramal} AND produtivo!=1 ${filter}`
+            sql=`SELECT COUNT(id) as improdutivos 
+                   FROM mailings.campanhas_tabulacao_mailing 
+                  WHERE agente=${rowsAgentes[k].ramal} AND produtivo!=1 ${filter}`
             const rowsImprodutivos = await this.querySync(sql)  
             rowsAgentes[k]['improdutivos']=rowsImprodutivos[0].improdutivos
 
             let statusVenda=0
             let totalVendas=0
             if(idCampanha){
-                sql=`SELECT s.id as statusVenda FROM campanhas_status_tabulacao AS s JOIN campanhas_listastabulacao_selecionadas AS l ON l.idListaTabulacao=s.idLista WHERE l.idCampanha=${idCampanha} AND s.venda=1 `
+                sql=`SELECT s.id as statusVenda 
+                      FROM tabulacoes_status AS s 
+                      JOIN campanhas_listastabulacao AS l ON l.idListaTabulacao=s.idLista 
+                      WHERE l.idCampanha=${idCampanha} AND s.venda=1 `
                 const rowStatusVenda = await this.querySync(sql)
                 if(rowStatusVenda.length!=0){
                     statusVenda=rowStatusVenda[0].statusVenda
-                    sql=`SELECT COUNT(id) as totalVendas FROM historico_atendimento WHERE status_tabulacao=${statusVenda} AND campanha=${idCampanha} AND agente=${rowsAgentes[k].ramal}`
+                    sql=`SELECT COUNT(id) as totalVendas 
+                          FROM historico_atendimento 
+                          WHERE status_tabulacao=${statusVenda} AND campanha=${idCampanha} AND agente=${rowsAgentes[k].ramal}`
                     const rowVendas = await this.querySync(sql)
                     totalVendas = rowVendas[0].totalVendas            
                 }
             }else{
-                sql=`SELECT id as statusVenda FROM campanhas_status_tabulacao WHERE venda=1`
+                sql=`SELECT id as statusVenda FROM tabulacoes_status WHERE venda=1`
                 const rowStatusVenda = await this.querySync(sql)
                 if(rowStatusVenda.length!=0){
                     statusVenda=rowStatusVenda[0].statusVenda
@@ -120,7 +148,7 @@ class Report{
             rowsAgentes[k]['totalVendas']=totalVendas
             rowsAgentes[k]['conversao']=conversao
         }
-        callback(null,rowsAgentes)         
+        return rowsAgentes         
     }  
 
     
@@ -163,7 +191,9 @@ class Report{
         const atendidas=rowAtendidas[0].atendidas
         monitoramentoCampanhaIndividual['ChamadasAtendidasNoTotal']=atendidas
 
-        sql=`SELECT s.id as statusVenda FROM campanhas_status_tabulacao AS s JOIN campanhas_listastabulacao_selecionadas AS l ON l.idListaTabulacao=s.idLista WHERE l.idCampanha=${idCampanha} AND s.venda=1 `
+        sql=`SELECT s.id as statusVenda FROM tabulacoes_status AS s 
+            JOIN campanhas_listastabulacao AS l ON l.idListaTabulacao=s.idLista 
+            WHERE l.idCampanha=${idCampanha} AND s.venda=1 `
         const rowStatusVenda = await this.querySync(sql)
         let statusVenda=0
         let totalVendas=0
@@ -349,7 +379,7 @@ class Report{
         const atendidas=rowAtendidas[0].atendidas
         monitoramentoCampanhas['ChamadasAtendidasNoTotal']=atendidas
 
-        sql=`SELECT s.id as statusVenda FROM campanhas_status_tabulacao AS s JOIN campanhas_listastabulacao_selecionadas AS l ON l.idListaTabulacao=s.idLista WHERE s.venda=1 `
+        sql=`SELECT s.id as statusVenda FROM tabulacoes_status AS s JOIN campanhas_listastabulacao AS l ON l.idListaTabulacao=s.idLista WHERE s.venda=1 `
         const rowStatusVenda = await this.querySync(sql)
         let statusVenda=0
         let totalVendas=0

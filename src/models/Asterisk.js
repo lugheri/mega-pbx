@@ -55,17 +55,33 @@ class Asterisk{
 
 
     //######################Configuração do Asterisk######################
-    setRecord(data,hora,ramal,uniqueid,callback){
+    async setRecord(data,hora,ramal,uniqueid,callback){
+        await this.setUniqueid(ramal,uniqueid)
+
         const sql = `INSERT INTO records (date,date_record,time_record,ramal,uniqueid) VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}')`
         connect.banco.query(sql,(e,r)=>{
-            if(e) throw e
+            if(e) throw e          
+
             this.servidorWebRTC(callback)
         })
     }
 
-    getDomain(callback){//Ip/dominio do servidor onde o asterisk esta instalado
+    async setUniqueid(ramal,uniqueid){
+        let sql = `SELECT uniqueid FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' LIMIT 1`
+        const check = await this.querySync(sql)
+        if(check.length==1){
+            if(check[0].uniqueid == null){
+                let sql = `UPDATE campanhas_chamadas_simultaneas SET uniqueid='${uniqueid}' WHERE ramal='${ramal}'`
+                await this.querySync(sql)
+                return true
+            }
+        }
+        return false       
+    }
+
+    async getDomain(){//Ip/dominio do servidor onde o asterisk esta instalado
         const sql = "SELECT ip FROM servidor_webrtc WHERE status=1"
-        connect.banco.query(sql,callback)
+        return await this.querySync(sql)
     }
 
     servidorWebRTC(callback){//Ip da maquina onde o asterisk esta instalado
@@ -124,7 +140,7 @@ class Asterisk{
         //dados da campanha
         const sql = `UPDATE campanhas_chamadas_simultaneas 
                         SET uniqueid='${uniqueid}',ramal='${ramal}', na_fila=0, atendido=1
-                      WHERE numero='${numero}' AND na_fila=1`  
+                      WHERE numero='${numero}'`// AND na_fila=1`  
         return await this.querySync(sql)
     }
 
@@ -288,44 +304,46 @@ class Asterisk{
         console.log(`ramal ${ramal}`)
         console.log(`modo ${modo}`)
         ari.connect(server, user, pass, (err,client)=>{
-          if(err) throw err         
-          console.log(err)
+            if(err) throw err         
+            //console.log(client)
 
-          //console.log(client)
+            //Extension
+            let context
+            let endpoint
+            if(modo=='discador'){
+                context = 'dialer'
+                endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
+                //endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
+            }else{
+                context = 'external'
+                endpoint = `PJSIP/megatrunk/` 
+            }
+            /*console.log(`context: ${context}`)
+            console.log(`endpoint: ${endpoint}`)
+            console.log(`numero recebido: ${numero}`)
+            console.log(`Servidor: ${server}`)*/
 
-          //Extension
-          let context
-          let endpoint
-          if(modo=='discador'){
-            context = 'dialer'
-            endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
-            //endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
-          }else{
-            context = 'external'
-            endpoint = `PJSIP/megatrunk/` 
-          }
-          console.log(`context: ${context}`)
-          console.log(`endpoint: ${endpoint}`)
-          console.log(`numero recebido: ${numero}`)
-          console.log(`Servidor: ${server}`)
-
-          const options = {            
-            "endpoint"       : `${endpoint}`,
-            "extension"      : `0${numero}`,
-            "context"        : `${context}`,
-            "priority"       : 1,
-            "app"            : "playback",
-            "appArgs"        : "beep",
-            "Callerid"       : `0${numero}`,//numero,
-            "timeout"        : 60, 
-            //"channelId"      : '324234', 
-            "otherChannelId" : ""
-          }
-          client.channels.originate(options,(e,r)=>{
-            if(e) throw e
+            const options = {            
+                "endpoint"       : `${endpoint}`,
+                "extension"      : `0${numero}`,
+                "context"        : `${context}`,
+                "priority"       : 1,
+                "app"            : "playback",
+                "appArgs"        : "beep",
+                "Callerid"       : `0${numero}`,//numero,
+                "timeout"        : 60, 
+                //"channelId"      : '324234', 
+                "otherChannelId" : ""
+            }
+            client.channels.originate(options,(e,r)=>{
+                if(e) throw e
+                
                 res.json(r)
             })
-          //client.channel
+            /*
+            client.on('StasisStart',(event,channel)=>{
+                console.log(event)
+            })*/
         })  
     }
     

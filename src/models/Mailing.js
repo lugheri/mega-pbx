@@ -3,6 +3,7 @@ import csv from 'csvtojson';
 import { Parser } from 'json2csv';
 import fs from "fs";
 import Campanhas from '../models/Campanhas'
+import moment from 'moment';
 
 class Mailing{
     querySync(sql){
@@ -688,11 +689,12 @@ class Mailing{
     async retrabalharMailing(idMailing){
         const infoMailing = await this.infoMailing(idMailing)
         const tabelaNumeros =  infoMailing[0].tabela_numeros
-
+        const hoje = moment().format("Y-MM-DD 00:00:00")
         //verifica tabulacao da campanha
         let sql = `UPDATE mailings.campanhas_tabulacao_mailing 
-                  SET data = null, estado=0, desc_estado='Disponivel', tentativas=0
+                  SET data = '${hoje}', estado=0, desc_estado='Disponivel', tentativas=0
                 WHERE idMailing=${idMailing} AND (produtivo = 0 OR produtivo is null)`
+               console.log(sql)
         await this.querySync(sql)
 
         //Libera numero na base de numeros

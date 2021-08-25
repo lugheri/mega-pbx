@@ -762,7 +762,8 @@ class Campanhas{
         const sql = `SELECT m.idCampanha,c.nome 
                        FROM campanhas_mailing AS m 
                        JOIN campanhas AS c ON m.idCampanha=c.id
-                       WHERE idMailing=${idMailing} LIMIT 1`
+                      WHERE idMailing=${idMailing} AND c.status=1
+                      LIMIT 1`
         _dbConnection2.default.banco.query(sql,callback)
     }
 

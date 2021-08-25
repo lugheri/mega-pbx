@@ -40,11 +40,13 @@ class AsteriskController{
         }
         if(action=='get_queue'){//Quando reconhece a voz humana
             const numero = req.body.numero
+            console.log(numero)
             const queue = await _Discador2.default.getQueueByNumber(numero)
             if(queue.length==0){
                 res.json("")
                 return false
             }
+            console.log('queue', queue)
             const fila = queue[0].Fila
             const idAtendimento = queue[0].id
             console.log('idAtendimento',idAtendimento)
@@ -58,11 +60,19 @@ class AsteriskController{
             await _Cronometro2.default.entrouNaFila(idCampanha,idMailing,idRegistro,numero)
             res.json(fila)            
         }
+        if(action=='voz'){
+            const numero = req.body.numero
+            const saudacao = await _Discador2.default.saudadacao(numero)
+            res.json(saudacao)   
+        }
         if(action=='answer'){//Quando ligacao eh atendida pelo agente
             const r = await _Asterisk2.default.answer(dados)
            
             await _Cronometro2.default.saiuDaFila(dados.numero)
             const dadosAtendimento = await _Discador2.default.dadosAtendimento_byNumero(dados.numero)
+            if(dadosAtendimento.length==0){
+                return false
+            }
             const idCampanha = dadosAtendimento[0].id_campanha
             const idMailing = dadosAtendimento[0].id_mailing
             const idRegistro = dadosAtendimento[0].id_registro 
@@ -117,6 +127,7 @@ class AsteriskController{
 
         }      
     }
+
 
     /////////////////////// testes ////////////////////////////////
     channelDump(req,res){

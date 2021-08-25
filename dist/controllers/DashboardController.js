@@ -358,6 +358,8 @@ class DashboardController{
         frases.push('Então ele ia lá e ia!')
         frases.push('Eu vou fazer um teste aqui só pra testar!')
         frases.push('Se a empresa Sair pra fora!')
+        frases.push('Ele não deixou de deixar!')
+        frases.push('Quanto mais curto menor!')
 
 
         let numero

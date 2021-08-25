@@ -3,6 +3,7 @@ var _csvtojson = require('csvtojson'); var _csvtojson2 = _interopRequireDefault(
 var _json2csv = require('json2csv');
 var _fs = require('fs'); var _fs2 = _interopRequireDefault(_fs);
 var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
+var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 
 class Mailing{
     querySync(sql){
@@ -688,11 +689,12 @@ class Mailing{
     async retrabalharMailing(idMailing){
         const infoMailing = await this.infoMailing(idMailing)
         const tabelaNumeros =  infoMailing[0].tabela_numeros
-
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD 00:00:00")
         //verifica tabulacao da campanha
         let sql = `UPDATE mailings.campanhas_tabulacao_mailing 
-                  SET data = null, estado=0, desc_estado='Disponivel', tentativas=0
+                  SET data = '${hoje}', estado=0, desc_estado='Disponivel', tentativas=0
                 WHERE idMailing=${idMailing} AND (produtivo = 0 OR produtivo is null)`
+               console.log(sql)
         await this.querySync(sql)
 
         //Libera numero na base de numeros

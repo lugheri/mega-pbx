@@ -1,17 +1,47 @@
 import connect from '../Config/dbConnection';
 
 class Gravacao{
-    listarGravacoes(inicio,limit,callback){
-       const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,r.date_record,r.time_record,r.id,r.ramal as origem,r.uniqueid,h.agente as ramal,h.protocolo,h.numero_discado AS numero,tb.tabulacao,tb.tipo,tb.venda,u.nome,e.equipe,t.tempo_total as duracao FROM records AS r LEFT JOIN historico_atendimento AS h ON h.uniqueid=r.uniqueid LEFT JOIN users AS u ON h.agente=u.id LEFT JOIN users_equipes AS e ON u.equipe=e.id LEFT JOIN tempo_ligacao AS t ON r.uniqueid=t.uniqueid LEFT JOIN campanhas_status_tabulacao AS tb ON tb.id=h.status_tabulacao ORDER BY id DESC LIMIT ${inicio},${limit}`
-        connect.banco.query(sql,callback)
+    querySync(sql){
+        return new Promise((resolve,reject)=>{
+            connect.pool.query(sql,(e,rows)=>{
+                if(e) reject(e);
+
+                resolve(rows)
+            })
+        })
+    }
+
+    async listarGravacoes(inicio,limit){
+        const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,
+                            r.date_record,
+                            r.time_record,
+                            r.id,
+                            r.ramal as origem,
+                            r.uniqueid,
+                            h.agente as ramal,
+                            h.protocolo,
+                            h.numero_discado AS numero,
+                            tb.tabulacao,
+                            tb.tipo,
+                            tb.venda,
+                            u.nome,
+                            e.equipe,
+                            t.tempo_total as duracao 
+                       FROM records AS r 
+                  LEFT JOIN historico_atendimento AS h ON h.uniqueid=r.uniqueid 
+                  LEFT JOIN users AS u ON h.agente=u.id 
+                  LEFT JOIN users_equipes AS e ON u.equipe=e.id 
+                  LEFT JOIN tempo_ligacao AS t ON r.uniqueid=t.uniqueid 
+                  LEFT JOIN tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
+                   ORDER BY id DESC 
+                      LIMIT ${inicio},${limit}`
+        return await this.querySync(sql)
     }
 
 
-    //protocolo
+    //protocolo 
     
-    
-
-    buscarGravacao(minTime,maxTime,de,ate,buscarPor,parametro,callback){
+    async buscarGravacao(minTime,maxTime,de,ate,buscarPor,parametro){
         let filter=""
         //Tempo de Gravação
         if(minTime){
@@ -20,7 +50,7 @@ class Gravacao{
             let minutos = parseInt(time[1]*60)
             let segundos = parseInt(time[2])
             let tempo = parseInt(horas+minutos+segundos)
-            console.log(`tempo minimo: ${tempo}`)
+            //console.log(`tempo minimo: ${tempo}`)
             if(tempo>0){
                 filter += `AND t.tempo_total >= ${tempo}`
             }            
@@ -31,7 +61,7 @@ class Gravacao{
             let minutos = parseInt(time[1]*60)
             let segundos = parseInt(time[2])
             let tempo = horas+minutos+segundos
-            console.log(`tempo maximo: ${tempo}`)
+            //console.log(`tempo maximo: ${tempo}`)
             if(tempo>0){
                 filter += ` AND t.tempo_total <= ${tempo}`
             }
@@ -68,15 +98,37 @@ class Gravacao{
             }
         }
         
-        const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,r.date_record,r.time_record,r.id,r.ramal as origem,r.uniqueid,h.tipo,h.agente as ramal,h.protocolo,h.numero_discado AS numero,tb.tabulacao,tb.tipo,tb.venda,u.nome,e.equipe,t.tempo_total as duracao FROM records AS r LEFT JOIN historico_atendimento AS h ON h.uniqueid=r.uniqueid LEFT JOIN users AS u ON h.agente=u.id LEFT JOIN users_equipes AS e ON u.equipe=e.id LEFT JOIN tempo_ligacao AS t ON r.uniqueid=t.uniqueid LEFT JOIN campanhas_status_tabulacao AS tb ON tb.id=h.status_tabulacao WHERE 1=1 ${filter}`
-        console.log(buscarPor)
-        console.log(sql)
-        connect.banco.query(sql,callback)
+        const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,
+                            r.date_record,
+                            r.time_record,
+                            r.id,
+                            r.ramal as origem,
+                            r.uniqueid,
+                            h.tipo,
+                            h.agente as ramal,
+                            h.protocolo,
+                            h.numero_discado AS numero,
+                            tb.tabulacao,
+                            tb.tipo,
+                            tb.venda,
+                            u.nome,
+                            e.equipe,
+                            t.tempo_total as duracao 
+                       FROM records AS r 
+                  LEFT JOIN historico_atendimento AS h ON h.uniqueid=r.uniqueid 
+                  LEFT JOIN users AS u ON h.agente=u.id 
+                  LEFT JOIN users_equipes AS e ON u.equipe=e.id 
+                  LEFT JOIN tempo_ligacao AS t ON r.uniqueid=t.uniqueid 
+                  LEFT JOIN tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
+                      WHERE 1=1 ${filter}`
+        //console.log(buscarPor)
+        //console.log(sql)
+        return await this.querySync(sql)
     }
 
-    infoGravacao(idGravacao,callback){
+    async infoGravacao(idGravacao){
         const sql = `SELECT * FROM records WHERE id=${idGravacao}`
-        connect.banco.query(sql,callback)
+        return await this.querySync(sql)
     }
 }
 

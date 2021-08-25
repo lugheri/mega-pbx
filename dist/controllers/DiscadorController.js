@@ -107,7 +107,7 @@ class DiscadorController{
             await _Discador2.default.atualizaStatus(idCampanha,msg,estado)
         }else{
             //#2 Verificando se os agentes estao logados e disponiveis
-            const agentesDisponiveis = await _Discador2.default.agentesDisponiveis(idFila)
+            const agentesDisponiveis = await _Discador2.default.agentesDisponiveis(idFila)            
             if(agentesDisponiveis.length === 0){   
                 let msg='Nenhum agente disponível'
                 let estado = 2
@@ -138,6 +138,7 @@ class DiscadorController{
                         //#4 Conta chamadas simultaneas e agressividade e compara com os agentes disponiveis
                         this.debug(' . . . . . . . . . . PASSO 2.4 - Calculando chamadas simultaneas x agentes disponiveis')
                         const limiteDiscagem = agentesDisponiveis.length * agressividade 
+                      
                         const qtdChamadasSimultaneas = await _Discador2.default.qtdChamadasSimultaneas(idCampanha)
                         if(qtdChamadasSimultaneas[0].total>=limiteDiscagem){
                             let msg='Limite de chamadas simultâneas atingido, aumente a agressividade ou aguarde os agentes ficarem disponíveis'
@@ -224,7 +225,7 @@ class DiscadorController{
     }
                                   
     
-      
+    /*Importar Audio */  
 
 
     /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -320,28 +321,7 @@ class DiscadorController{
         const idReg = req.params.idRegistro
         
         const historico = await _Discador2.default.historicoRegistro(idMailing,idReg)
-        const historicoRegistro=[]
-        for(let i = 0; i < historico.length; i++){
-            let registro={}
-                registro['dadosAtendimento']={}
-                registro['dadosAtendimento']['protocolo']=historico[i].protocolo
-                registro['dadosAtendimento']['data']=historico[i].dia
-                registro['dadosAtendimento']['hora']=historico[i].horario
-                registro['dadosAtendimento']['contatado']=historico[i].contatado
-                registro['dadosAtendimento']['tabulacao']=historico[i].tabulacao
-                registro['dadosAtendimento']['observacoes']=historico[i].obs_tabulacao
-                
-                
-                const agente = await _Discador2.default.infoAgente(historico[i].agente)
-                registro['informacoesAtendente']={}
-                registro['informacoesAtendente'] = agente[0]
-
-                registro['dadosRegistro']={}
-                registro['dadosRegistro']['nome']=historico[i].nome_registro
-                registro['dadosRegistro']['numeroDiscado']=historico[i].numero_discado
-            historicoRegistro.push(registro)
-        }
-        res.json(historicoRegistro)
+        res.json(historico)
     }
     //Historico do agente
     async historicoChamadas(req,res){
@@ -355,6 +335,7 @@ class DiscadorController{
                 registro['dadosAtendimento']['data']=historico[i].dia
                 registro['dadosAtendimento']['hora']=historico[i].horario
                 registro['dadosAtendimento']['contatado']=historico[i].contatado
+                registro['dadosAtendimento']['produtivo']=historico[i].produtivo
                 registro['dadosAtendimento']['tabulacao']=historico[i].tabulacao
                 registro['dadosAtendimento']['observacoes']=historico[i].obs_tabulacao                
                 

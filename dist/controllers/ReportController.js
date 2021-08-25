@@ -1,15 +1,12 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _Report = require('../models/Report'); var _Report2 = _interopRequireDefault(_Report);
 
 class ReportController{  
-    monitoramentoAgente(req,res){
+    async monitoramentoAgente(req,res){
         const idCampanha = parseInt(req.params.idCampanha)
         const idEquipe = parseInt(req.params.idEquipe)
         const idUser = parseInt(req.params.idUser)
-        _Report2.default.monitorarAgentes(idCampanha,idEquipe,idUser,(e,agentes)=>{
-            if(e) throw e;
-
-            res.json(agentes)
-        })
+        const agentes = await _Report2.default.monitorarAgentes(idCampanha,idEquipe,idUser)
+        res.json(agentes)
     }
 
     monitoramentoCampanhas(req,res){
