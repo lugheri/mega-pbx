@@ -93,7 +93,7 @@ class Filas{
             const sql = `SELECT u.id as ramal, u.nome 
                            FROM users AS u 
                           WHERE status=1  
-                          ORDER BY u.ordem ASC;`
+                          ORDER BY u.nome ASC;`
             _dbConnection2.default.banco.query(sql,(e,r)=>{
                 if(e) reject(e)
 

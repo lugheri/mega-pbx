@@ -91,7 +91,7 @@ class DiscadorController{
             }//endfor campanhas ativas
         }//endif verificacao campanhas ativas
         //Reiniciando execução
-        setTimeout(()=>{this.dial(req,res)},6000)
+        setTimeout(()=>{this.dial(req,res)},15000)
     }
 
     async iniciaPreparacaoDiscador(idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing){
@@ -107,7 +107,8 @@ class DiscadorController{
             await Discador.atualizaStatus(idCampanha,msg,estado)
         }else{
             //#2 Verificando se os agentes estao logados e disponiveis
-            const agentesDisponiveis = await Discador.agentesDisponiveis(idFila)            
+            const agentesDisponiveis = await Discador.agentesDisponiveis(idFila)   
+                 
             if(agentesDisponiveis.length === 0){   
                 let msg='Nenhum agente disponível'
                 let estado = 2
@@ -365,7 +366,9 @@ class DiscadorController{
         const idCampanha = dadosAtendimento[0].id_campanha
         const idAtendimento = dadosAtendimento[0].id
 
-        const tabulacoesCampanha = await Discador.tabulacoesCampanha(idCampanha)
+        const nome = await Discador.campoNomeRegistro(dadosAtendimento[0].id_mailing,dadosAtendimento[0].id_registro,dadosAtendimento[0].tabela_dados);
+        
+        const tabulacoesCampanha = await Discador.tabulacoesCampanha(nome,idCampanha)
         if(tabulacoesCampanha===false){
             const error={}
             error['message']="Nenhum status de tabulacao disponivel"
@@ -389,6 +392,8 @@ class DiscadorController{
         const status_tabulacao = req.body.status_tabulacao
         const observacao = req.body.obs_tabulacao
         const contatado = req.body.contatado
+        const id_numero = req.body.id_numero
+        const removeNumero = req.body.removeNumero
         let produtivo
         if(req.body.tipo_tabulacao=='produtivo'){
             produtivo=1      
@@ -396,7 +401,7 @@ class DiscadorController{
         }else{
             produtivo=0
         }        
-        const r = await Discador.tabulaChamada(idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal)
+        const r = await Discador.tabulaChamada(idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal,id_numero,removeNumero)
         res.json(r); 
     }
 
@@ -406,6 +411,7 @@ class DiscadorController{
     async desligarChamada(req,res){
         const ramal = req.body.ramal
         const dadosChamadaDesligada = await Discador.desligaChamada(ramal)
+        let nome=""
         
         const errors={}
         if(dadosChamadaDesligada === false){
@@ -413,6 +419,7 @@ class DiscadorController{
             await Discador.alterarEstadoAgente(ramal,1,0)//Altera o status do agente para ativo
             errors['message']=`Nenhuma chamada encontrada em atendimento com o agente ${ramal} `
             errors['warning']=true
+
             res.json(errors)
             return false
         };
@@ -432,7 +439,9 @@ class DiscadorController{
         }
 
         //Verificando se a campanha possui tabulacao configurada
-        const tabulacoesCampanha = await Discador.tabulacoesCampanha(dadosChamadaDesligada[0].id_campanha)
+        nome = await Discador.campoNomeRegistro(dadosChamadaDesligada[0].id_mailing,dadosChamadaDesligada[0].id_registro,dadosChamadaDesligada[0].tabela_dados);
+        
+        const tabulacoesCampanha = await Discador.tabulacoesCampanha(nome,dadosChamadaDesligada[0].id_campanha)
         if(tabulacoesCampanha==false){
             //Registra uma tabulacao padrão
             const contatado = 'S'

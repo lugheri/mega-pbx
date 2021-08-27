@@ -1,28 +1,29 @@
 import mysql from 'mysql2';
-const dev = 'localhost'
+//Definição de Ambiente
+//const environment = "dev"
+//const environment = "ks8"
+const environment = "CLOUD_DB"
 
-//const host = dev
-const host = 'mysql'
-    
+
+let host = 'localhost'
 const user = []
-user['name'] = 'root'
-user['pass'] = '1234abc@'
 
-/*
-function testHost(hst){
-    return new Promise((resolve, reject)=>{
-        const conexao = mysql.createConnection({
-                        host : hst,
-                        user : 'root',
-                        password : '1234abc@'
-                    })
-        conexao.query('use mega_conecta;',(e,r)=>{
-            if(e) resolve('mysql')
-            
-            resolve(hst)
-        })             
-    })
-}*/
+switch(environment){
+    case 'dev':
+        host = 'localhost'
+        user['name'] = 'root'
+        user['pass'] = '1234abc@'
+    break;
+    case 'ks8':
+        host = 'mysql'
+        user['name'] = 'root'
+        user['pass'] = '1234abc@'
+    break;
+    default:
+        host = '104.154.176.149'
+        user['name'] = 'megauser'
+        user['pass'] = 'M3g4_devDB@'
+}
 
 const connect = ()=>{};
 
