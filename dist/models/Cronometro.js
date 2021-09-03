@@ -31,7 +31,8 @@ class Cronometro{
     }
     //Encerra a contagem de ociosidade do sistema ao concluir a tabulacao
     async encerrouTabulacao(idCampanha,ramal){
-        const sql = `UPDATE tempo_espera SET idCampanha=${idCampanha},saida=NOW(),tempo_total=TIMESTAMPDIFF(SECOND, entrada, NOW()) 
+        const sql = `UPDATE tempo_espera 
+                       SET idCampanha=${idCampanha},saida=NOW(),tempo_total=TIMESTAMPDIFF(SECOND, entrada, NOW()) 
                       WHERE idAgente=${ramal} AND saida is null`
         return await this.querySync(sql);
     } 
@@ -44,7 +45,8 @@ class Cronometro{
     }
     //Encerra a contagem do tempo de pausa
     async saiuDaPausa(idAgente){
-        const sql = `UPDATE tempo_pausa SET saida=NOW(), tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW()) WHERE idAgente=${idAgente} AND saida is null`
+        const sql = `UPDATE tempo_pausa SET saida=NOW(), tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW()) 
+                     WHERE idAgente=${idAgente} AND saida is null`
         return await this.querySync(sql);
     } 
 

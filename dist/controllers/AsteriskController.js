@@ -113,13 +113,16 @@ class AsteriskController{
                 const uniqueid=chamada[0].uniqueid
                 const tipo_ligacao=chamada[0].tipo_ligacao
                 const observacoes = `Abandonou Fila`
+                const removeNumero =0
 
                 //retira da fila e registra como abandonou fila
                 await _Cronometro2.default.saiuDaFila(dados.numero)
                 //Registra histórico de chamada
                 await _Discador2.default.registraHistoricoAtendimento(protocolo,idCampanha,idMailing,idRegistro,idNumero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado)
                 //Tabula registro
-                await _Discador2.default.tabulandoContato(idAtendimento,contatado,tabulacao,observacoes,produtivo,ramal)
+                await _Discador2.default.tabulaChamada(idAtendimento,contatado,tabulacao,observacoes,produtivo,ramal,idNumero,removeNumero)
+                //Removendo ligacao do historico de chamadas_simultaneas
+                await clearCallbyId(idAtendimento)    
                 res.json(true);
             }
         } 

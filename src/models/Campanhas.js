@@ -17,7 +17,8 @@ class Campanhas{
     //######################Operacoes básicas das campanhas (CRUD)######################
     //Criar Campanha
     criarCampanha(tipo,nome,descricao,callback){
-        const sql = `INSERT INTO campanhas (dataCriacao,tipo,nome,descricao,estado,status) VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
+        const sql = `INSERT INTO campanhas (dataCriacao,tipo,nome,descricao,estado,status) 
+                                VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
         connect.banco.query(sql,callback)
     }      
 
@@ -148,13 +149,16 @@ class Campanhas{
 
     //Listar Integracoes de uma campanhas
     listaIntegracaoCampanha(idCampanha,callback){
-        const sql = `SELECT i.* FROM  campanhas_integracoes AS c JOIN campanhas_integracoes_disponiveis AS i ON i.id=c.idIntegracao WHERE c.idCampanha=${idCampanha}`
+        const sql = `SELECT i.* FROM  campanhas_integracoes AS c 
+                       JOIN campanhas_integracoes_disponiveis AS i ON i.id=c.idIntegracao 
+                       WHERE c.idCampanha=${idCampanha}`
         connect.banco.query(sql,callback)
     }
 
     //remove integracao campannha
     removerIntegracaoCampanha(idCampanha,idIntegracao,callback){
-        const sql = `DELETE FROM campanhas_integracoes WHERE idCampanha=${idCampanha} AND idIntegracao=${idIntegracao}`
+        const sql = `DELETE FROM campanhas_integracoes 
+                      WHERE idCampanha=${idCampanha} AND idIntegracao=${idIntegracao}`
         connect.banco.query(sql,callback)
     }
 
@@ -166,10 +170,14 @@ class Campanhas{
             if(e) throw e
 
             if(r.length ===0){
-                const sql = `INSERT INTO campanhas_discador (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,modo_atendimento) VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}','${modo_atendimento}')`
+                const sql = `INSERT INTO campanhas_discador 
+                                        (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,modo_atendimento) 
+                                 VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}','${modo_atendimento}')`
                 connect.banco.query(sql,callback)
             }else{
-                const sql = `UPDATE campanhas_discador SET tipo_discador='${tipoDiscador}',agressividade=${agressividade},ordem_discagem='${ordemDiscagem}',tipo_discagem='${tipoDiscagem}',modo_atendimento='${modo_atendimento}' WHERE idCampanha = ${idCampanha}`
+                const sql = `UPDATE campanhas_discador 
+                                SET tipo_discador='${tipoDiscador}',agressividade=${agressividade},ordem_discagem='${ordemDiscagem}',tipo_discagem='${tipoDiscagem}',modo_atendimento='${modo_atendimento}' 
+                              WHERE idCampanha = ${idCampanha}`
                 connect.banco.query(sql,callback)     
             }
         })       
@@ -218,7 +226,7 @@ class Campanhas{
 
         
         //Inserindo coluna da campanha na tabela de numeros
-        sql = `ALTER TABLE mailings.${tabelaNumeros} 
+        sql = `ALTER TABLE ${connect.db.mailings}.${tabelaNumeros} 
                ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT '1' AFTER produtivo`
         await this.querySync(sql)
         //Atualiza os registros como disponíveis (1)
@@ -259,7 +267,7 @@ class Campanhas{
             return false
         }
         //Removendo coluna da campanha no mailing
-        sql = `ALTER TABLE mailings.${infoMailing[0].tabela_numeros} DROP COLUMN campanha_${idCampanha}`
+        sql = `ALTER TABLE ${connect.db.mailings}.${infoMailing[0].tabela_numeros} DROP COLUMN campanha_${idCampanha}`
         await this.querySync(sql)
       
         //Removendo informacao do mailing da campanha
@@ -369,7 +377,7 @@ class Campanhas{
         filter+=`${tipo}='${valor}'`
         if(regiao!=0){ filter+=` AND uf='${regiao}'`}
        
-        let sql = `UPDATE mailings.${tabela} SET campanha_${idCampanha}=1 WHERE ${filter}`       
+        let sql = `UPDATE ${connect.db.mailings}.${tabela} SET campanha_${idCampanha}=1 WHERE ${filter}`       
         console.log(`delFilter sql`,sql)
         await this.querySync(sql)
         return true
@@ -380,7 +388,7 @@ class Campanhas{
         let filter=""
         filter+=`${tipo}='${valor}'`
         if(regiao!=0){ filter+=` AND uf='${regiao}'`}       
-        let sql = `UPDATE mailings.${tabela} SET campanha_${idCampanha}=0 WHERE ${filter}`          
+        let sql = `UPDATE ${connect.db.mailings}.${tabela} SET campanha_${idCampanha}=0 WHERE ${filter}`          
         await this.querySync(sql)
         return true
     }
@@ -390,7 +398,7 @@ class Campanhas{
         let filter=""
         if(uf!=0){ filter += ` AND uf="${uf}"` }
         if(ddd!=undefined){ filter += ` AND ddd=${ddd}`}
-        const sql = `SELECT COUNT(id) AS total FROM mailings.${tabela} WHERE valido=1 ${filter}` 
+        const sql = `SELECT COUNT(id) AS total FROM ${connect.db.mailings}.${tabela} WHERE valido=1 ${filter}` 
          
         const r = await this.querySync(sql)
         return r[0].total
@@ -399,7 +407,7 @@ class Campanhas{
         let filter=""
         if(uf!=0){ filter += ` AND uf="${uf}"` }
         if(tipo!=undefined){ filter += ` AND tipo='${tipo}'`}
-        const sql = `SELECT COUNT(id) AS total FROM mailings.${tabela} WHERE valido=1 ${filter}`       
+        const sql = `SELECT COUNT(id) AS total FROM ${connect.db.mailings}.${tabela} WHERE valido=1 ${filter}`       
         const r = await this.querySync(sql)
         return r[0].total
     }
@@ -407,7 +415,7 @@ class Campanhas{
     async numerosFiltrados(idMailing,tabelaNumeros,idCampanha,uf){
         let filter=""
         if(uf!=0){ filter += ` AND uf="${uf}"` }
-        const sql = `SELECT COUNT(id) AS total FROM mailings.${tabelaNumeros} WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
+        const sql = `SELECT COUNT(id) AS total FROM ${connect.db.mailings}.${tabelaNumeros} WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
         const r = await this.querySync(sql)
         return r[0].total
         
@@ -440,7 +448,7 @@ class Campanhas{
         
        // console.log('filters',filters)
         sql = `SELECT COUNT(id) AS numerosFiltrados
-                 FROM mailings.${tabelaNumeros}
+                 FROM ${connect.db.mailings}.${tabelaNumeros}
                 WHERE valido=1 ${filters}`
         const numeros = await this.querySync(sql)
         return numeros[0].numerosFiltrados*/
@@ -449,7 +457,7 @@ class Campanhas{
     async dddsMailings(tabela,uf){
         let filter=""
         if(uf!=0){ filter = `WHERE uf='${uf}'` }
-        let sql = `SELECT DISTINCT ddd FROM mailings.${tabela} ${filter}`
+        let sql = `SELECT DISTINCT ddd FROM ${connect.db.mailings}.${tabela} ${filter}`
         return await this.querySync(sql)
     }
     //Checa se existe algum filtro de DDD aplicado
@@ -473,12 +481,16 @@ class Campanhas{
     //CONFIGURAR TELA DO AGENTE    
      //Lista todos os campos que foram configurados do mailing
      async camposConfiguradosDisponiveis(idMailing){
-        const sql = `SELECT id,campo,apelido,tipo FROM mailing_tipo_campo WHERE idMailing='${idMailing}' AND conferido=1`
+        const sql = `SELECT id,campo,apelido,tipo
+                       FROM mailing_tipo_campo WHERE idMailing='${idMailing}' AND conferido=1`
         return await this.querySync(sql)
     }
     //Verifica se o campo esta selecionado
     async campoSelecionadoTelaAgente(campo,tabela,idCampanha){
-        const sql = `SELECT COUNT(id) AS total FROM campanhas_campos_tela_agente WHERE idCampo=${campo} AND idCampanha=${idCampanha} AND tabela='${tabela}' ORDER BY ordem ASC`
+        const sql = `SELECT COUNT(id) AS total 
+                       FROM campanhas_campos_tela_agente 
+                      WHERE idCampo=${campo} AND idCampanha=${idCampanha} AND tabela='${tabela}'
+                       ORDER BY ordem ASC`
         const total = await this.querySync(sql)     
         if(total[0].total===0){
             return false;
@@ -487,16 +499,21 @@ class Campanhas{
     }
     //Adiciona campo na tela do agente
     async addCampoTelaAgente(idCampanha,tabela,idCampo){
-        const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo,ordem) VALUES (${idCampanha},'${tabela}',${idCampo},0)`
+        const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo,ordem) 
+                       VALUES (${idCampanha},'${tabela}',${idCampo},0)`
         return await this.querySync(sql)
     }
     async camposTelaAgente(idCampanha,tabela){
-        const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo FROM campanhas_campos_tela_agente AS t JOIN mailing_tipo_campo AS m ON m.id=t.idCampo WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
+        const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo 
+                      FROM campanhas_campos_tela_agente AS t 
+                      JOIN mailing_tipo_campo AS m ON m.id=t.idCampo
+                       WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
         return await this.querySync(sql)
     }
     //Remove campo da campanha
     async delCampoTelaAgente(idCampanha,idCampo){
-        const sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
+        const sql = `DELETE FROM campanhas_campos_tela_agente 
+                       WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
         return await this.querySync(sql)
     }
 
@@ -553,7 +570,8 @@ class Campanhas{
     }
 
     async mailingsContatadosPorCampanha(idCampanha,status){
-        const sql = `SELECT count(id) AS total FROM mailings.campanhas_tabulacao_mailing WHERE contatado='${status}' AND idCampanha=${idCampanha}`
+        const sql = `SELECT count(id) AS total FROM ${connect.db.mailings}.campanhas_tabulacao_mailing 
+                      WHERE contatado='${status}' AND idCampanha=${idCampanha}`
         const total_mailing= await this.querySync(sql)
         return total_mailing[0].total
     }   
@@ -566,10 +584,14 @@ class Campanhas{
             if(e) throw e            
 
             if(r.length ===0){
-                const sql = `INSERT INTO campanhas_horarios (id_campanha,inicio,termino,hora_inicio,hora_termino) VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
+                const sql = `INSERT INTO campanhas_horarios 
+                                        (id_campanha,inicio,termino,hora_inicio,hora_termino) 
+                                 VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
                 connect.banco.query(sql,callback)
             }else{
-                const sql = `UPDATE campanhas_horarios SET inicio='${dI}',termino='${dT}',hora_inicio='${hI}',hora_termino='${hT}' WHERE id_campanha='${idCampanha}'`
+                const sql = `UPDATE campanhas_horarios 
+                                SET inicio='${dI}',termino='${dT}',hora_inicio='${hI}',hora_termino='${hT}' 
+                                WHERE id_campanha='${idCampanha}'`
                 connect.banco.query(sql,callback)
             }
         })
@@ -627,7 +649,8 @@ class Campanhas{
 
     //total de campanhas que rodaram por dia
     campanhasByDay(limit,callback){
-        const sql = `SELECT COUNT(DISTINCT campanha) AS campanhas, DATE_FORMAT (data,'%d/%m/%Y') AS dia FROM historico_atendimento GROUP BY data ORDER BY data DESC LIMIT ${limit}`
+        const sql = `SELECT COUNT(DISTINCT campanha) AS campanhas, DATE_FORMAT (data,'%d/%m/%Y') AS dia 
+                       FROM historico_atendimento GROUP BY data ORDER BY data DESC LIMIT ${limit}`
         connect.banco.query(sql,callback)
     }
     
@@ -638,19 +661,28 @@ class Campanhas{
     }
     
     campanhasAtivas(callback){
-        const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo FROM campanhas AS c LEFT JOIN campanhas_status AS s ON c.id = s.idCampanha WHERE c.status=1 AND c.estado=1 AND s.estado=1`
+        const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo 
+                      FROM campanhas AS c 
+                      LEFT JOIN campanhas_status AS s ON c.id = s.idCampanha
+                       WHERE c.status=1 AND c.estado=1 AND s.estado=1`
         connect.banco.query(sql,callback)
     }
 
     //Total de campanhas em pausa
     campanhasPausadas(callback){
-        const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo FROM campanhas AS c LEFT JOIN campanhas_status AS s ON c.id = s.idCampanha WHERE c.status=1 AND c.estado=2 OR c.estado=1 AND s.estado=2`
+        const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo
+                      FROM campanhas AS c 
+                      LEFT JOIN campanhas_status AS s ON c.id = s.idCampanha 
+                      WHERE c.status=1 AND c.estado=2 OR c.estado=1 AND s.estado=2`
         connect.banco.query(sql,callback)
     }
 
     //Total de campanhas paradas
     campanhasParadas(callback){
-        const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo FROM campanhas AS c LEFT JOIN campanhas_status AS s ON c.id = s.idCampanha WHERE c.status=1 AND c.estado=3 OR c.estado=1 AND s.estado=3`
+        const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo 
+                      FROM campanhas AS c 
+                      LEFT JOIN campanhas_status AS s ON c.id = s.idCampanha 
+                      WHERE c.status=1 AND c.estado=3 OR c.estado=1 AND s.estado=3`
         connect.banco.query(sql,callback)
     }
         
@@ -681,7 +713,8 @@ class Campanhas{
     
 
     totalAgentesDisponiveis(callback){
-        const sql = `SELECT distinct ramal FROM agentes_filas AS a JOIN users AS u ON u.id=a.ramal WHERE u.logado=1 AND u.status=1 AND a.estado=1`
+        const sql = `SELECT distinct ramal FROM agentes_filas AS a 
+                       JOIN users AS u ON u.id=a.ramal WHERE u.logado=1 AND u.status=1 AND a.estado=1`
         connect.banco.query(sql,callback)
     }
     
@@ -725,14 +758,21 @@ class Campanhas{
 
     agentesEmPausa(callback){
         //Estado 2 = Em Pausa
-        const sql = `SELECT DISTINCT a.ramal AS agentes FROM agentes_filas AS a JOIN campanhas_filas AS f ON a.fila = f.id JOIN campanhas AS c ON c.id=f.idCampanha WHERE c.estado=1 AND c.status=1 AND a.estado=2`
+        const sql = `SELECT DISTINCT a.ramal AS agentes FROM agentes_filas AS a 
+                       JOIN campanhas_filas AS f ON a.fila = f.id 
+                       JOIN campanhas AS c ON c.id=f.idCampanha 
+                       WHERE c.estado=1 AND c.status=1 AND a.estado=2`
         connect.banco.query(sql,callback)
     }
 
     agentesDisponiveis(callback){
         //Estado 1 = Disponível
         //Estado 0 = Deslogado
-        const sql = `SELECT DISTINCT a.ramal AS agentes FROM agentes_filas AS a JOIN campanhas_filas AS f ON a.fila = f.id JOIN campanhas AS c ON c.id=f.idCampanha WHERE c.estado=1 AND c.status=1 AND a.estado=1`
+        const sql = `SELECT DISTINCT a.ramal AS agentes 
+                       FROM agentes_filas AS a 
+                       JOIN campanhas_filas AS f ON a.fila = f.id 
+                       JOIN campanhas AS c ON c.id=f.idCampanha 
+                       WHERE c.estado=1 AND c.status=1 AND a.estado=1`
         connect.banco.query(sql,callback)
     }
 
@@ -743,7 +783,8 @@ class Campanhas{
 
     //Atualiza um registro como disponivel na tabulacao mailing
     liberaRegisto(idCampanha,idMailing,idRegistro,callback){ 
-     const sql = `UPDATE campanhas_tabulacao_mailing SET estado=1, desc_estado='Disponível' WHERE idCampanha=${idCampanha},idMailing=${idMailing},idRegistro=${idRegistro}`
+     const sql = `UPDATE campanhas_tabulacao_mailing SET estado=1, desc_estado='Disponível' 
+                   WHERE idCampanha=${idCampanha},idMailing=${idMailing},idRegistro=${idRegistro}`
      connect.mailings.query(sql,callback)
     }
 
@@ -780,17 +821,27 @@ class Campanhas{
         connect.banco.query(sql,callback)
     }*/
     totalMailings(callback){
-        const sql = `SELECT SUM(totalReg) AS total FROM mailings as m JOIN campanhas_mailing AS cm ON cm.idMailing=m.id JOIN campanhas AS c ON c.id=cm.idCampanha WHERE c.estado=1 AND c.status=1`
+        const sql = `SELECT SUM(totalReg) AS total FROM mailings as m 
+                      JOIN campanhas_mailing AS cm ON cm.idMailing=m.id 
+                      JOIN campanhas AS c ON c.id=cm.idCampanha 
+                      WHERE c.estado=1 AND c.status=1`
         connect.banco.query(sql,callback)
     }
 
     mailingsContatados(callback){
-        const sql = `SELECT count(t.id) AS contatados FROM mailings.campanhas_tabulacao_mailing AS t JOIN campanhas AS c ON c.id=t.idCampanha WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
+        const sql = `SELECT count(t.id) AS contatados 
+                       FROM ${connect.db.mailings}.campanhas_tabulacao_mailing AS t 
+                       JOIN campanhas AS c ON c.id=t.idCampanha 
+                       WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
         connect.banco.query(sql,callback)
     }
 
     mailingsNaoContatados(callback){
-        const sql = `SELECT count(t.id) AS nao_contatados FROM mailings.campanhas_tabulacao_mailing AS t JOIN campanhas AS c ON c.id=t.idCampanha WHERE t.contatado='N' AND c.estado=1 AND c.status=1`
+        const sql = `SELECT count(t.id) AS nao_contatados 
+                       FROM ${connect.db.mailings}.campanhas_tabulacao_mailing AS t 
+                       JOIN campanhas AS c 
+                         ON c.id=t.idCampanha 
+                      WHERE t.contatado='N' AND c.estado=1 AND c.status=1`
         connect.banco.query(sql,callback)
     }
 
@@ -923,7 +974,9 @@ class Campanhas{
 
     //Verifica se uma determinada campanha tem mailing adicionado e configurado
     mailingProntoParaDiscagem(idCampanha,callback){
-        const sql = `SELECT m.id FROM campanhas_mailing AS cm JOIN mailings AS m ON m.id=cm.idMailing WHERE cm.idCampanha=${idCampanha} AND m.configurado=1`
+        const sql = `SELECT m.id FROM campanhas_mailing AS cm 
+                      JOIN mailings AS m ON m.id=cm.idMailing 
+                      WHERE cm.idCampanha=${idCampanha} AND m.configurado=1`
         connect.banco.query(sql,callback)
     }
 
@@ -935,13 +988,16 @@ class Campanhas{
 
     //Verifica se hoje esta dentro da data de agendamento de uma campanha
     dataCampanha(idCampanha,hoje,callback){
-        const sql = `SELECT id FROM campanhas_horarios WHERE id_campanha = '${idCampanha}' AND inicio <= '${hoje}' AND termino >='${hoje}'`;
+        const sql = `SELECT id FROM campanhas_horarios 
+                      WHERE id_campanha = '${idCampanha}' AND inicio <= '${hoje}' AND termino >='${hoje}'`;
         connect.banco.query(sql,callback)
     }
 
     //Verifica se agora esta dentro do horário de agendamento de uma campanha
     horarioCampanha(idCampanha,hora,callback){
-        const sql = `SELECT id FROM campanhas_horarios WHERE id_campanha = '${idCampanha}' AND hora_inicio <= '${hora}' AND hora_termino >='${hora}'`;
+        const sql = `SELECT id 
+                       FROM campanhas_horarios 
+                       WHERE id_campanha = '${idCampanha}' AND hora_inicio <= '${hora}' AND hora_termino >='${hora}'`;
         connect.banco.query(sql,callback)
     }
 

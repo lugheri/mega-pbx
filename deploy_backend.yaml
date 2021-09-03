@@ -73,10 +73,18 @@ spec:
     spec:
       containers:
       - name: api
-        image: megaconecta/api-central:v0.0.238
+        image: megaconecta/api-central:v0.0.249
         env:
-        - name: TZ
-          value: America/Sao_Paulo
+          - name: client
+            value: id:1001
+          - name: db_asterisk
+            value: asterisk
+          - name: db_mailings
+            value: mailings
+          - name: db_dados
+            value: mega_conecta
+          - name: TZ
+            value: America/Sao_Paulo
 ---
 #Mysql
 #Mysql service
@@ -414,10 +422,12 @@ spec:
     spec:
       containers:
       - name: api
-        image: megaconecta/frontendcentral:v61
+        image: megaconecta/frontendcentral:v71
         env:
+        - name: REACT_APP_VERSION
+          value: "1.68"
         - name: TZ
-          value: America/Sao_Paulo
+          value: America/Sao_Paulo       
 ---
 #front service
 kind: Service

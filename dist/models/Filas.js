@@ -17,37 +17,37 @@ class Filas{
     //CRUD FILAS
     //Criar nova filas
     async criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat){
-        const sql = `INSERT INTO asterisk.queues (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
+        const sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.queues (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
         await this.querySync(sql)
         return true
     }
    
     //Exibe os dads da fila
     async dadosFila(nomeFila){
-        const sql = `SELECT * FROM asterisk.queues WHERE name='${nomeFila}'`
+        const sql = `SELECT * FROM ${_dbConnection2.default.db.asterisk}.queues WHERE name='${nomeFila}'`
         return await this.querySync(sql)
     }
     //Listar Filas
     async listar(){
-        const sql = `SELECT * FROM asterisk.queues`
+        const sql = `SELECT * FROM ${_dbConnection2.default.db.asterisk}.queues`
         return await this.querySync(sql)
     }   
     //Edita os dados da fila
     async editarFila(nomeFila,dados){
-        const sql = `UPDATE asterisk.queues SET musiconhold='${dados.musiconhold}',strategy='${dados.strategy}',timeout='${dados.timeout}',retry='${dados.retry}',autopause='${dados.autopause}',maxlen='${dados.maxlen}' WHERE name='${nomeFila}'`
+        const sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queues SET musiconhold='${dados.musiconhold}',strategy='${dados.strategy}',timeout='${dados.timeout}',retry='${dados.retry}',autopause='${dados.autopause}',maxlen='${dados.maxlen}' WHERE name='${nomeFila}'`
         return await this.querySync(sql)
     }
 
     async editarNomeFila(nomeFilaAtual,name){
-        const sql = `UPDATE asterisk.queues SET name='${name}' WHERE name='${nomeFilaAtual}'`
+        const sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queues SET name='${name}' WHERE name='${nomeFilaAtual}'`
         return await this.querySync(sql)
     }
 
      //Remove a fila
      async removerFila(nomeFila){
-        const sql = `DELETE FROM asterisk.queues WHERE name='${nomeFila}'`
+        const sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.queues WHERE name='${nomeFila}'`
         await this.querySync(sql)
-        const sql2 = `DELETE FROM asterisk.queue_members WHERE queue_name='${nomeFila}'`
+        const sql2 = `DELETE FROM ${_dbConnection2.default.db.asterisk}.queue_members WHERE queue_name='${nomeFila}'`
         await this.querySync(sql2)
     }
 

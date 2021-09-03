@@ -102,14 +102,14 @@ class Report{
                 
             //PRODUTIVAS
             sql=`SELECT COUNT(id) as produtivos 
-                   FROM mailings.campanhas_tabulacao_mailing 
+                   FROM ${connect.db.mailings}.campanhas_tabulacao_mailing 
                   WHERE agente=${rowsAgentes[k].ramal} AND produtivo=1 ${filter}`
             const rowsProdutivos = await this.querySync(sql)  
             rowsAgentes[k]['produtivos']=rowsProdutivos[0].produtivos
                 
             //IMPRODUTIVAS
             sql=`SELECT COUNT(id) as improdutivos 
-                   FROM mailings.campanhas_tabulacao_mailing 
+                   FROM ${connect.db.mailings}.campanhas_tabulacao_mailing 
                   WHERE agente=${rowsAgentes[k].ramal} AND produtivo!=1 ${filter}`
             const rowsImprodutivos = await this.querySync(sql)  
             rowsAgentes[k]['improdutivos']=rowsImprodutivos[0].improdutivos
@@ -244,7 +244,7 @@ class Report{
         const rowsTotalMailing = await this.querySync(sql)     
         const totalRegistros = rowsTotalMailing[0].totalRegistros
 
-        sql=`SELECT count(id) as trabalhados FROM mailings.campanhas_tabulacao_mailing WHERE contatado='S' AND idCampanha=${idCampanha}`        
+        sql=`SELECT count(id) as trabalhados FROM ${connect.db.mailings}.campanhas_tabulacao_mailing WHERE contatado='S' AND idCampanha=${idCampanha}`        
         const rowsTrabalhadas = await this.querySync(sql)  
         let trabalhados=0
         let produtivas=0
@@ -254,14 +254,14 @@ class Report{
         }
         monitoramentoCampanhaIndividual['DadosCampanhaPorcentagem']['Trabalhado']=parseInt(trabalhados.toFixed(0))
 
-        sql=`SELECT count(id) as produtivo FROM mailings.campanhas_tabulacao_mailing WHERE contatado='S' AND produtivo=1 AND idCampanha=${idCampanha}`        
+        sql=`SELECT count(id) as produtivo FROM ${connect.db.mailings}.campanhas_tabulacao_mailing WHERE contatado='S' AND produtivo=1 AND idCampanha=${idCampanha}`        
         const rowsProdutivas = await this.querySync(sql)  
         if(produtivas>0){   
         const produtivas = (rowsProdutivas[0].produtivo/rowsTrabalhadas[0].trabalhados)*100
         }
         monitoramentoCampanhaIndividual['DadosCampanhaPorcentagem']['Produtivo']=parseInt(produtivas.toFixed(0))
 
-        sql=`SELECT count(id) as improdutivas FROM mailings.campanhas_tabulacao_mailing WHERE contatado='S' AND produtivo=0 AND idCampanha=${idCampanha}`        
+        sql=`SELECT count(id) as improdutivas FROM ${connect.db.mailings}.campanhas_tabulacao_mailing WHERE contatado='S' AND produtivo=0 AND idCampanha=${idCampanha}`        
         const rowsImprodutivas = await this.querySync(sql)   
         if(improdutivas>0){   
             improdutivas = (rowsImprodutivas[0].improdutivas/rowsTrabalhadas[0].trabalhados)*100
@@ -427,7 +427,7 @@ class Report{
         const rowsTotalMailing = await this.querySync(sql)     
         const totalRegistros = rowsTotalMailing[0].totalRegistros
 
-        sql=`SELECT count(id) as trabalhados FROM mailings.campanhas_tabulacao_mailing WHERE contatado='S'`        
+        sql=`SELECT count(id) as trabalhados FROM ${connect.db.mailings}.campanhas_tabulacao_mailing WHERE contatado='S'`        
         const rowsTrabalhadas = await this.querySync(sql)  
         let trabalhados=0
         let produtivas=0
@@ -439,14 +439,14 @@ class Report{
 
         monitoramentoCampanhas['DadosCampanhaPorcentagem']['Trabalhado']=parseInt(trabalhados.toFixed(0))
 
-        sql=`SELECT count(id) as produtivo FROM mailings.campanhas_tabulacao_mailing WHERE contatado='S' AND produtivo=1`        
+        sql=`SELECT count(id) as produtivo FROM ${connect.db.mailings}.campanhas_tabulacao_mailing WHERE contatado='S' AND produtivo=1`        
         const rowsProdutivas = await this.querySync(sql)     
         if(produtivas>0){
             produtivas = (rowsProdutivas[0].produtivo/rowsTrabalhadas[0].trabalhados)*100
         }
         monitoramentoCampanhas['DadosCampanhaPorcentagem']['Produtivo']=parseInt(produtivas.toFixed(0))
 
-        sql=`SELECT count(id) as improdutivas FROM mailings.campanhas_tabulacao_mailing WHERE contatado='S' AND produtivo=0`        
+        sql=`SELECT count(id) as improdutivas FROM ${connect.db.mailings}.campanhas_tabulacao_mailing WHERE contatado='S' AND produtivo=0`        
         const rowsImprodutivas = await this.querySync(sql)   
         if(improdutivas>0){
              improdutivas = (rowsImprodutivas[0].improdutivas/rowsTrabalhadas[0].trabalhados)*100
@@ -590,7 +590,9 @@ class Report{
     async restantes(idCampanha){
         return new Promise ((resolve,reject) =>{
             //Calculando tentativas e mailing da campanha
-            const sql = `SELECT d.tentativas,m.id as idMailing,m.tabela,m.totalReg FROM campanhas_discador AS d JOIN campanhas_mailing AS cm ON cm.idCampanha=d.idCampanha JOIN mailings AS m ON m.id=cm.idMailing WHERE d.idCampanha=${idCampanha}`
+            const sql = `SELECT d.tentativas,m.id as idMailing,m.tabela,m.totalReg 
+                           FROM campanhas_discador AS d JOIN campanhas_mailing AS cm ON cm.idCampanha=d.idCampanha 
+                           JOIN mailings AS m ON m.id=cm.idMailing WHERE d.idCampanha=${idCampanha}`
             connect.banco.query(sql,(e,rowDadosCampanha)=>{
                 if(e) throw e
                 const tentativas = rowDadosCampanha[0].tentativas
@@ -598,7 +600,10 @@ class Report{
                 const idMailing = rowDadosCampanha[0].idMailing
                 const totalReg = rowDadosCampanha[0].totalReg
                 //Contanto total de registros e registros com menos tentativas
-                const sql = `SELECT COUNT(id_key_base) AS trabalhados FROM ${tabela} AS t LEFT JOIN mailings.campanhas_tabulacao_mailing AS c ON c.idRegistro=t.id_key_base WHERE (c.idCampanha=${idCampanha} OR c.idCampanha IS NULL) AND (c.idMailing=${idMailing} OR c.idMailing IS NULL) AND c.tentativas>=${tentativas}`
+                const sql = `SELECT COUNT(id_key_base) AS trabalhados 
+                               FROM ${tabela} AS t 
+                               LEFT JOIN ${connect.db.mailings}.campanhas_tabulacao_mailing AS c ON c.idRegistro=t.id_key_base 
+                               WHERE (c.idCampanha=${idCampanha} OR c.idCampanha IS NULL) AND (c.idMailing=${idMailing} OR c.idMailing IS NULL) AND c.tentativas>=${tentativas}`
                 connect.mailings.query(sql,(e,rowRestantes)=>{
                     
                     const trabalhados=rowRestantes[0].trabalhados

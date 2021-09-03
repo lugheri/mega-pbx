@@ -1,37 +1,42 @@
 import mysql from 'mysql2';
 //Definição de Ambiente
 //const environment = "dev"
-//const environment = "ks8"
-const environment = "CLOUD_DB"
+const environment = "DB_DEV"
 
 
 let host = 'localhost'
 const user = []
-
+const db = []
 switch(environment){
     case 'dev':
         host = 'localhost'
         user['name'] = 'root'
         user['pass'] = '1234abc@'
-    break;
-    case 'ks8':
-        host = 'mysql'
-        user['name'] = 'root'
-        user['pass'] = '1234abc@'
+
+        db['asterisk'] = 'asterisk'
+        db['mailings'] = 'mailings'
+        db['dados'] = 'mega_conecta'
     break;
     default:
-        host = '104.154.176.149'
-        user['name'] = 'megauser'
-        user['pass'] = 'M3g4_devDB@'
+        host = process.env.DB_HOST
+        user['name'] = process.env.DB_USER
+        user['pass'] = process.env.DB_PASS
+
+        db['asterisk'] = 'asterisk'
+        db['mailings'] = 'mailings'
+        db['dados'] = 'mega_conecta'
 }
 
+
 const connect = ()=>{};
+
+connect.db=db
 
 connect.pool=mysql.createPool({
     host:host,
     user : user['name'],
     password : user['pass'],
-    database : 'mega_conecta',
+    database : db['dados'],
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -50,20 +55,20 @@ connect.banco=mysql.createConnection({
     host : host,
     user : user['name'],
     password : user['pass'],
-    database : 'mega_conecta'
+    database : db['dados']
 })
 
 connect.mailings=mysql.createConnection({
     host : host,
     user : user['name'],
     password : user['pass'],
-    database : 'mailings'
+    database : db['mailings']
 })
 connect.asterisk=mysql.createConnection({    
     host : host,
     user : user['name'],
     password : user['pass'],
-    database : 'asterisk'
+    database : db['asterisk']
 })
 
 

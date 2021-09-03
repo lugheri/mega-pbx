@@ -15,29 +15,29 @@ class Blacklist{
     }
 
     async novaLista(dados){
-        const sql = `INSERT INTO mailings.blacklists (nome,descricao,padrao) VALUES ('${dados.nome}','${dados.descricao}','${dados.default}')`;
+        const sql = `INSERT INTO ${_dbConnection2.default.db.mailings}.blacklists (nome,descricao,padrao) VALUES ('${dados.nome}','${dados.descricao}','${dados.default}')`;
         const rows = await this.querySync(sql)
     }
 
     async listarBlacklists(){
-        const sql = `SELECT id,nome,descricao,padrao as 'default' FROM mailings.blacklists`;
+        const sql = `SELECT id,nome,descricao,padrao as 'default' FROM ${_dbConnection2.default.db.mailings}.blacklists`;
         return await this.querySync(sql)
     }
 
     async verDadosLista(idLista){
-        const sql = `SELECT nome,descricao,padrao as 'default' FROM mailings.blacklists WHERE id=${idLista}`;
+        const sql = `SELECT nome,descricao,padrao as 'default' FROM ${_dbConnection2.default.db.mailings}.blacklists WHERE id=${idLista}`;
         return await this.querySync(sql)
     }
 
     async editarDadosLista(idLista,dados){
-        const sql = `UPDATE mailings.blacklists SET nome='${dados.nome}',descricao='${dados.descricao}',padrao=${dados.default} WHERE id=${idLista}`;
+        const sql = `UPDATE ${_dbConnection2.default.db.mailings}.blacklists SET nome='${dados.nome}',descricao='${dados.descricao}',padrao=${dados.default} WHERE id=${idLista}`;
         return await this.querySync(sql)
     }
 
     async removerBlacklist(idLista){
-        const sql = `DELETE FROM mailings.blacklists WHERE id=${idLista}`;
+        const sql = `DELETE FROM ${_dbConnection2.default.db.mailings}.blacklists WHERE id=${idLista}`;
         await this.querySync(sql)
-        const sql2 = `DELETE FROM mailings.blacklist_numeros WHERE idLista=${idLista}`;
+        const sql2 = `DELETE FROM ${_dbConnection2.default.db.mailings}.blacklist_numeros WHERE idLista=${idLista}`;
         await this.querySync(sql2)
         return true
     }
@@ -103,7 +103,7 @@ class Blacklist{
         }
         const duplicidade = await this.buscarNumero(idLista,numero)
         if(duplicidade==0){
-            const sql = `INSERT INTO mailings.blacklist_numeros (idLista,dataBloqueio,ddd,numero,tipo) VALUES (${idLista},now(),'${ddd}','${numero}','${tipo}')`
+            const sql = `INSERT INTO ${_dbConnection2.default.db.mailings}.blacklist_numeros (idLista,dataBloqueio,ddd,numero,tipo) VALUES (${idLista},now(),'${ddd}','${numero}','${tipo}')`
             await this.querySync(sql)
             return true
         }
@@ -111,22 +111,25 @@ class Blacklist{
     }
 
     async buscarNumero(idLista,numero){
-        const sql = `SELECT id,idLista,DATE_FORMAT(dataBloqueio,'%d/%m/%Y') AS inclusao, ddd,numero,tipo FROM mailings.blacklist_numeros WHERE numero LIKE '%${numero}%' AND idLista=${idLista}`
+        const sql = `SELECT id,idLista,DATE_FORMAT(dataBloqueio,'%d/%m/%Y') AS inclusao, ddd,numero,tipo 
+                       FROM ${_dbConnection2.default.db.mailings}.blacklist_numeros WHERE numero LIKE '%${numero}%' AND idLista=${idLista}`
         return await this.querySync(sql)
     }
 
     async numerosBloqueados(inicio,limit){
-        const sql = `SELECT DATE_FORMAT(dataBloqueio,'%d/%m/%Y') AS inclusao,ddd,numero,tipo FROM mailings.blacklist_numeros LIMIT ${inicio},${limit}`
+        const sql = `SELECT DATE_FORMAT(dataBloqueio,'%d/%m/%Y') AS inclusao,ddd,numero,tipo 
+                      FROM ${_dbConnection2.default.db.mailings}.blacklist_numeros LIMIT ${inicio},${limit}`
         return await this.querySync(sql)
      }
 
     async removerNumero(idLista,numero){
-        const sql = `DELETE FROM mailings.blacklist_numeros WHERE numero='${numero}' AND idLista=${idLista}`
+        const sql = `DELETE FROM ${_dbConnection2.default.db.mailings}.blacklist_numeros WHERE numero='${numero}' AND idLista=${idLista}`
         await this.querySync(sql)
     }
 
     async addBlacklistCampanha(idBlacklist,idCampanha){
-        const sqlTest = `SELECT idBlacklist FROM campanhas_blacklists WHERE idCampanha=${idCampanha} AND idBlacklist=${idBlacklist} `
+        const sqlTest = `SELECT idBlacklist 
+                           FROM campanhas_blacklists WHERE idCampanha=${idCampanha} AND idBlacklist=${idBlacklist} `
         const test = await this.querySync(sqlTest)
         if(test.length>=1){
             return false
@@ -141,7 +144,7 @@ class Blacklist{
     async blacklistsCampanha(idCampanha){
         const sql = `SELECT b.id as idBlacklist, b.nome
                         FROM campanhas_blacklists as c
-                        JOIN mailings.blacklists as b ON b.id=c.idBlacklist
+                        JOIN ${_dbConnection2.default.db.mailings}.blacklists as b ON b.id=c.idBlacklist
                        WHERE idCampanha=${idCampanha}`
         return await this.querySync(sql)
     }

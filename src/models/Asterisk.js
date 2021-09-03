@@ -27,7 +27,7 @@ class Asterisk{
         if(check){
             return false;
         }
-        const sql = `INSERT INTO asterisk.queue_members (queue_name,interface,membername,state_interface,penalty) VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
+        const sql = `INSERT INTO ${connect.db.asterisk}.queue_members (queue_name,interface,membername,state_interface,penalty) VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
         await this.querySync(sql)
         return true
     }
@@ -38,12 +38,12 @@ class Asterisk{
     }
     //Remove os membros da fila
     async removeMembroFila(nomeFila,membro){
-        const sql = `DELETE FROM asterisk.queue_members WHERE queue_name='${nomeFila}' AND membername='${membro}'`
+        const sql = `DELETE FROM ${connect.db.asterisk}.queue_members WHERE queue_name='${nomeFila}' AND membername='${membro}'`
         await this.querySync(sql)
         return true
     }
     async checkAgenteFila(queue_name,membername){
-        const sql = `SELECT uniqueid FROM asterisk.queue_members WHERE queue_name='${queue_name}' AND membername='${membername}'`
+        const sql = `SELECT uniqueid FROM ${connect.db.asterisk}.queue_members WHERE queue_name='${queue_name}' AND membername='${membername}'`
         const r = await this.querySync(sql)
         return r.length
     }
@@ -119,9 +119,12 @@ class Asterisk{
             const produtivo = 0
             const uniqueid=chamada[0].uniqueid
             const tipo_ligacao=chamada[0].tipo_ligacao
+            const removeNumero=0
             //Tabula registro
             const status_tabulacao = 0
-            await Discador.tabulandoContato(idAtendimento,contatado,status_tabulacao,observacoes,produtivo,ramal)
+            await Discador.tabulaChamada(idAtendimento,contatado,status_tabulacao,observacoes,produtivo,ramal,id_numero,removeNumero)
+            //Removendo ligacao do historico de chamadas_simultaneas
+            await clearCallbyId(idAtendimento)
             return true
         }
         return false
