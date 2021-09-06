@@ -1,58 +1,81 @@
 import connect from '../Config/dbConnection';
+
+import jwt from 'jsonwebtoken';
 import md5 from 'md5';
 
 class User{
-    findUser(usuario,callback){
-        const sql = `SELECT * FROM users WHERE usuario='${usuario}' AND status=1`;
-        connect.banco.query(sql, usuario, callback)
+    querySync(sql){
+        return new Promise((resolve,reject)=>{
+            connect.poolEmpresa.query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })
+        })
+    }
+    
+    async findUser(usuario){
+        const u = usuario.split('@');
+        const empresa = u[1]
+
+        const sql = `SELECT * FROM ${empresa}_dados.users WHERE usuario='${usuario}' AND status=1`;
+        return await this.querySync(sql) 
     }
 
-    registraLogin(usuarioId,acao,callback){
-        const sql = `INSERT INTO registro_logins (data,hora,user_id,acao) VALUES (NOW(),NOW(),${usuarioId},'${acao}')`
-        connect.banco.query(sql,(e,r)=>{
-            if(e) throw e
+    async registraLogin(usuarioId,empresa,acao,callback){
+        let sql = `INSERT INTO ${empresa}_dados.registro_logins 
+                                (data,hora,user_id,acao) 
+                         VALUES (NOW(),NOW(),${usuarioId},'${acao}')`
+        await this.querySync(sql) 
 
-            if(acao=='login'){
-                //Atualiza em todas as filas estado como 1
-                const sql = `UPDATE agentes_filas SET estado=4 WHERE ramal=${usuarioId}`
-                connect.banco.query(sql,(e,r)=>{
-                    if(e) throw e
-                    
-                    const sql = `UPDATE users SET logado=1, ultimo_acesso=NOW() WHERE id=${usuarioId}`
-                    connect.banco.query(sql,(e,r)=>{
-                        if(e) throw e
+        if(acao=='login'){
+            //Atualiza em todas as filas estado como 1
+            sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=4 WHERE ramal=${usuarioId}`
+            await this.querySync(sql) 
+                               
+            sql = `UPDATE ${empresa}_dados.users SET logado=1, ultimo_acesso=NOW() WHERE id=${usuarioId}`
+            await this.querySync(sql) 
+            
+            sql = `UPDATE ${empresa}_dados.user_ramal SET estado=4 WHERE userId=${usuarioId}`
+            await this.querySync(sql) 
+            return true
+        }else{                
+            //Atualiza em todas as filas estado como 0
+            sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0 WHERE ramal=${usuarioId}`
+            await this.querySync(sql)
+            
+            sql = `UPDATE ${empresa}_dados.users SET logado=0 WHERE id=${usuarioId}`
+            await this.querySync(sql)
 
-                        const sql = `UPDATE user_ramal SET estado=4 WHERE userId=${usuarioId}`
-                        connect.banco.query(sql,callback)
-                    })
-                })                
-            }else{                
-                //Atualiza em todas as filas estado como 0
-                const sql = `UPDATE agentes_filas SET estado=0 WHERE ramal=${usuarioId}`
-                connect.banco.query(sql,(e,r)=>{
-                    if(e) throw e
-
-                    const sql = `UPDATE users SET logado=0 WHERE id=${usuarioId}`
-                    connect.banco.query(sql,(e,r)=>{
-                        if(e) throw e
-                        
-                        const sql = `UPDATE user_ramal SET estado=0 WHERE userId=${usuarioId}`
-                        connect.banco.query(sql,callback)
-                    })
-                }) 
-            } 
-        })        
+            sql = `UPDATE ${empresa}_dados.user_ramal SET estado=0 WHERE userId=${usuarioId}`
+            await this.querySync(sql)
+        } 
     }
 
-    totalAgentesLogados(callback){
-        const sql = `SELECT COUNT(id) AS total FROM users WHERE STATUS=1 AND logado=1`
-        connect.banco.query(sql,callback)
+    async getEmpresa(req){
+        const authHeader = req.headers.authorization;
+        const payload = jwt.verify(authHeader, process.env.APP_SECRET);
+        const empresa = payload.empresa
+        return empresa
     }
 
-    logadosPorDia(limit,callback){
-        const sql = `SELECT COUNT(DISTINCT(user_id)) AS agentes, DATE_FORMAT (data,'%d/%m/%Y') AS dia FROM registro_logins GROUP BY data ORDER BY data DESC LIMIT ${limit}`
-        connect.banco.query(sql,callback) 
+    async totalAgentesLogados(empresa){
+        const sql = `SELECT COUNT(id) AS total 
+                       FROM ${empresa}_dados.users 
+                      WHERE status=1 AND logado=1`
+        return await this.querySync(sql)
     }
+
+    async logadosPorDia(empresa,limit){
+        const sql = `SELECT COUNT(DISTINCT(user_id)) AS agentes, DATE_FORMAT (data,'%d/%m/%Y') AS dia 
+                       FROM ${empresa}_dados.registro_logins 
+                       GROUP BY data 
+                       ORDER BY data DESC 
+                       LIMIT ${limit}`
+        return await this.querySync(sql)
+    }
+
+
+
 
     newUser(dados,callback){
         const sql = `SELECT id FROM users WHERE usuario='${dados.usuario}'`;
@@ -100,9 +123,12 @@ class User{
         })        
     }
 
-    resumoUser(user,callback){
-        const sql = `SELECT u.nome,e.equipe FROM users AS u LEFT JOIN users_equipes AS e ON u.equipe=e.id WHERE u.id=${user}`
-        connect.banco.query(sql,callback)        
+    async resumoUser(empresa,user){
+        const sql = `SELECT u.id, u.nome,e.equipe 
+                       FROM ${empresa}_dados.users AS u 
+                       LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id 
+                       WHERE u.id=${user}`
+        return await this.querySync(sql)        
     }
 
     //retorna se agente esta logado
@@ -208,6 +234,8 @@ class User{
         const sql = `SELECT ramal AS agentes FROM user_ramal WHERE estado=1`
         connect.banco.query(sql,callback)
     }
+
+
 
 
 }

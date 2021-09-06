@@ -1,31 +1,29 @@
 import Filas from '../models/Filas'
+import User from '../models/User'
 
 class FilasController{
-    dadosFila(req,res){
+    async dadosFila(req,res){
+        const empresa = await User.getEmpresa(req)
         const idFila = parseInt(req.params.idFila)
-        Filas.dadosFila(idFila,(e,filas)=>{
-            if(e) throw e
-
-            res.json(filas)
-        })
+        const filas = await Filas.dadosFila(empresa,idFila)
+        res.json(filas)
     }
     //Listar Filas
-    listarFilas(req,res){
-        Filas.listar((e,filas)=>{
-            if(e) throw e
-
-            res.json(filas)
-        })
+    async listarFilas(req,res){
+        const empresa = await User.getEmpresa(req)
+        const filas = await Filas.listar(empresa)
+        res.json(filas)
     }
     //agentesFila
     async agentesFila(req,res){
+        const empresa = await User.getEmpresa(req)
         const idFila = req.params.idFila            
         const agentes = {}
 
-        const agentesForaFila = await Filas.membrosForaFila(idFila)
+        const agentesForaFila = await Filas.membrosForaFila(empresa,idFila)
               agentes['agentesForaDaFila']=[]
               for(let i=0; i<agentesForaFila.length; i++){   
-                 const ck=await Filas.verificaMembroFila(agentesForaFila[i].ramal,idFila)  
+                 const ck=await Filas.verificaMembroFila(empresa,agentesForaFila[i].ramal,idFila)  
                  if(ck==0){         
                     let agente={}
                         agente['ramal']=agentesForaFila[i].ramal
@@ -35,7 +33,7 @@ class FilasController{
                  }
               }
 
-        const agentesNaFila = await Filas.membrosNaFila(idFila)    
+        const agentesNaFila = await Filas.membrosNaFila(empresa,idFila)    
               agentes['agentesNaFila']=[]
               for(let i=0; i<agentesNaFila.length; i++){
                 let agente={}
@@ -49,17 +47,18 @@ class FilasController{
     }  
     //Atualizar membros da campanha
     async updateMemberFila(req,res){
+        const empresa = await User.getEmpresa(req)
         const idFila = parseInt(req.params.idFila)
         const ramal = req.body.ramal
         const destino =  req.body.destino
 
         if(destino=="D"){//Adiciona membro a fila
-            const r = await Filas.addMembroFila(ramal,idFila)
+            const r = await Filas.addMembroFila(empresa,ramal,idFila)
             res.json(r)  
             return false;          
         }
         if(destino=="F"){//Remove membro da fila caso destino nao seja 'D'
-            const r = Filas.removeMembroFila(ramal,idFila)
+            const r = Filas.removeMembroFila(empresa,ramal,idFila)
             res.json(true)
             return false;          
         }     
@@ -67,18 +66,19 @@ class FilasController{
     }
 
     async moveAllMembers(req, res){
+        const empresa = await User.getEmpresa(req)
         const idFila = req.params.idFila
         const destino = req.params.destino
         if(destino=="D"){
-            const agentesForaFila = await Filas.membrosForaFila(idFila)
+            const agentesForaFila = await Filas.membrosForaFila(empresa,idFila)
             for(let i=0; i<agentesForaFila.length; i++){
-                await Filas.addMembroFila(agentesForaFila[i].ramal,idFila)
+                await Filas.addMembroFila(empresa,agentesForaFila[i].ramal,idFila)
             }
         }
         if(destino=="F"){
-            const agentesNaFila = await Filas.membrosNaFila(idFila) 
+            const agentesNaFila = await Filas.membrosNaFila(empresa,idFila) 
             for(let i=0; i<agentesNaFila.length; i++){
-                await Filas.removeMembroFila(agentesNaFila[i].ramal,idFila)
+                await Filas.removeMembroFila(empresa,agentesNaFila[i].ramal,idFila)
                 
             }   
         }

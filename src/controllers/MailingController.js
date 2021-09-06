@@ -1,13 +1,15 @@
 /*import csv from 'csvtojson';*/
 import Mailing from '../models/Mailing';
 import Campanhas from '../models/Campanhas';
+import User from '../models/User';
 import moment from "moment";
 import md5 from "md5";
 import { json } from 'express';
 
 
 class MailingController{
-    importarBase(req,res){
+    async importarBase(req,res){
+        const empresa = await User.getEmpresa(req)
         //Recebendo o arquivo
         const path=`tmp/files/`
         const filename=req.file.filename
@@ -25,13 +27,14 @@ class MailingController{
             const hoje = moment().format("YMMDDHHmmss")
             const nomeTabela = hoje   
             const keys = Object.keys(jsonFile[0])     
-            const infoMailing=await Mailing.criarTabelaMailing(keys,nome,nomeTabela,header,filename,delimitador)
+            const infoMailing=await Mailing.criarTabelaMailing(empresa,keys,nome,nomeTabela,header,filename,delimitador)
             
             res.json(infoMailing)
         })        
     }
 
     async iniciarConfigBase(req,res){
+        const empresa = await User.getEmpresa(req)
         const idBase = req.params.idBase
         const infoMailing=await Mailing.infoMailing(idBase)
         const path=`tmp/files/`
@@ -71,6 +74,7 @@ class MailingController{
     }
 
     async concluirConfigBase(req,res){
+        const empresa = await User.getEmpresa(req)
         const idBase = req.body.idBase
         const tipoCampos = req.body.fields
         const infoMailing=await Mailing.infoMailing(idBase)
@@ -83,12 +87,12 @@ class MailingController{
         const tabData=infoMailing[0].tabela_dados
         const tabNumbers=infoMailing[0].tabela_numeros
 
-        await Mailing.configuraTipoCampos(idBase,header,tipoCampos)//Configura os tipos de campos
+        await Mailing.configuraTipoCampos(empresa,idBase,header,tipoCampos)//Configura os tipos de campos
         Mailing.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
             res.json(true)
             let idKey = 1
             let transferRate=1
-            await Mailing.importaDados_e_NumerosBase(idBase,jsonFile,file,header,tabData,tabNumbers,idKey,transferRate)
+            await Mailing.importaDados_e_NumerosBase(empresa,idBase,jsonFile,file,header,tabData,tabNumbers,idKey,transferRate)
 
            
         }) 
@@ -96,16 +100,17 @@ class MailingController{
     
     //Lista os mailings importados
     async listarMailings(req,res){
-        const r = await Mailing.listaMailing()
+        const empresa = await User.getEmpresa(req)
+        const r = await Mailing.listaMailing(empresa)
         
         for(let i=0; i<r.length;i++){
             const idMailing = r[i].id
-            const infoTabela= await Mailing.tabelaMailing(idMailing)
+            const infoTabela= await Mailing.tabelaMailing(empresa,idMailing)
             if(infoTabela.length != 0){
                 const tabela = infoTabela[0].tabela_numeros
-                const totalRegistros = await Mailing.totalRegistros(tabela);
-                const contatados = await Mailing.registrosContatados(tabela)
-                const naoContatados = await Mailing.registrosNaoContatados(tabela)
+                const totalRegistros = await Mailing.totalRegistros(empresa,tabela);
+                const contatados = await Mailing.registrosContatados(empresa,tabela)
+                const naoContatados = await Mailing.registrosNaoContatados(empresa,tabela)
             
                 const trabalhados = contatados + naoContatados
                 const naoTrabalhados = totalRegistros-trabalhados
@@ -131,17 +136,19 @@ class MailingController{
 
     //Abre um mailing
     async abrirMailing(req,res){
+        const empresa = await User.getEmpresa(req)
         const idMailing = parseInt(req.params.idMailing)
         const pag = parseInt(req.params.pag)
         const reg = parseInt(req.params.reg)
-        const registros = await Mailing.abrirMailing(idMailing,pag,reg)
+        const registros = await Mailing.abrirMailing(empresa,idMailing,pag,reg)
         res.json(registros)
     }
 
     //remove um mailing
     async removerMailing(req,res){
+        const empresa = await User.getEmpresa(req)
         const idMailing = parseInt(req.params.idMailing);
-        Campanhas.campanhaDoMailing(idMailing,async (e,check)=>{
+        Campanhas.campanhaDoMailing(empresa,idMailing,async (e,check)=>{
             if(e) throw e 
 
             
@@ -153,22 +160,24 @@ class MailingController{
                 return false
             }
             
-            const r = await Mailing.removerMailing(idMailing)
+            const r = await Mailing.removerMailing(empresa,idMailing)
             res.json(r)
         })        
     }
 
     //Exporta os registros de um mailing
     async exportarMailing(req,res){
+        const empresa = await User.getEmpresa(req)
         const idMailing = parseInt(req.params.idMailing)        
-        await Mailing.exportarMailing(idMailing,res)       
+        await Mailing.exportarMailing(empresa,idMailing,res)       
         //res.json(false)
     }
 
     //Status do Mailing
     async statusMailing(req,res){
+        const empresa = await User.getEmpresa(req)
         const idMailing = req.params.idMailing
-        const statusMailing = await Mailing.statusMailing(idMailing)
+        const statusMailing = await Mailing.statusMailing(empresa,idMailing)
         const result={}
         result['pronto']=false
         if(statusMailing.length==0){
@@ -196,25 +205,28 @@ class MailingController{
     }    
     //Exibe os ufs de um mailing
     async ufsMailing(req,res){
+        const empresa = await User.getEmpresa(req)
         const idMailing = req.params.idMailing
-        const r = await Mailing.ufsMailing(idMailing)
+        const r = await Mailing.ufsMailing(empresa,idMailing)
         res.json(r)
     }
 
     async retrabalharMailing(req,res){
+        const empresa = await User.getEmpresa(req)
         const idMailing = req.params.idMailing
-        await Mailing.retrabalharMailing(idMailing)
+        await Mailing.retrabalharMailing(empresa,idMailing)
         res.json(true)
     }
 
     //DDDs por uf do mailing
     async dddsUfMailing(req,res){
+        const empresa = await User.getEmpresa(req)
         const idMailing = (req.params.idMailing)
         const UF = req.params.uf
-        const infoTabela= await Mailing.tabelaMailing(idMailing)
+        const infoTabela= await Mailing.tabelaMailing(empresa,idMailing)
         const tabela = infoTabela[0].tabela_numeros
         
-        const ddds = await Mailing.dddsUfMailing(tabela,UF)
+        const ddds = await Mailing.dddsUfMailing(empresa,tabela,UF)
         const retorno={}
               retorno['dados']=[]
             for(let i=0; i<ddds.length;i++){
@@ -228,14 +240,15 @@ class MailingController{
     }
     //Resumo por ddd
     async totalRegUF(req,res){
+        const empresa = await User.getEmpresa(req)
         const idMailing = req.params.idMailing
-        const infoTabela= await Mailing.tabelaMailing(idMailing)
+        const infoTabela= await Mailing.tabelaMailing(empresa,idMailing)
         if(infoTabela.length == 0){
             res.json(false)
             return false;
         }
         const tabela = infoTabela[0].tabela_numeros
-        const r = await Mailing.totalRegUF(tabela)
+        const r = await Mailing.totalRegUF(empresa,tabela)
         const registros=[]
         for(let i=0; i<r.length;i++){
             let reg={}
@@ -249,13 +262,14 @@ class MailingController{
     }
     //Saude do mailing
     async saudeMailing(req,res){
+        const empresa = await User.getEmpresa(req)
         const idMailing = req.params.idMailing
-        const infoTabela= await Mailing.tabelaMailing(idMailing)
+        const infoTabela= await Mailing.tabelaMailing(empresa,idMailing)
         if(infoTabela.length != 0){
             const tabela = infoTabela[0].tabela_numeros
-            const totalRegistros = await Mailing.totalRegistros(tabela);
-            const contatados = await Mailing.registrosContatados(tabela)
-            const naoContatados = await Mailing.registrosNaoContatados(tabela)
+            const totalRegistros = await Mailing.totalRegistros(empresa,tabela);
+            const contatados = await Mailing.registrosContatados(empresa,tabela)
+            const naoContatados = await Mailing.registrosNaoContatados(empresa,tabela)
             
             const trabalhados = contatados + naoContatados
             const naoTrabalhados = totalRegistros-trabalhados

@@ -6,23 +6,24 @@ import Cronometro from './Cronometro';
 import moment from 'moment';
 
 class Discador{
-    async debug(title="",msg=""){
-        const debug=await this.mode()       
+    async debug(title="",msg="",empresa){
+        const debug=await this.mode(empresa)       
         if(debug==1){
             console.log(`${title}`,msg)
         }
     }
     querySync(sql){
         return new Promise((resolve,reject)=>{
-            connect.pool.query(sql,(e,rows)=>{
+            connect.poolEmpresa.query(sql,(e,rows)=>{
                 if(e) reject(e);
-
                 resolve(rows)
             })
         })
     }
-    async mode(){
-        const sql = `SELECT debug FROM asterisk_ari WHERE active=1`
+    async mode(empresa){
+        const sql = `SELECT debug 
+                       FROM ${empresa}_dados.asterisk_ari
+                      WHERE active=1`
         const mode = await this.querySync(sql);
         return mode[0].debug
     }
@@ -35,21 +36,24 @@ class Discador{
     *  PASSO 1 - VERIFICAÇÃO
     **/
     //Registrando chamadas simultaneas atuais no log 
-    async registrarChamadasSimultaneas(){
-        this.debug(' . PASSO 1.1','Registrando chamadas simultaneas')
-        const chamadas_simultaneas = await this.chamadasSimultaneas('todas')
-        const chamadas_conectadas = await this.chamadasSimultaneas('conectadas')
-        const chamadas_manuais = await this.chamadasSimultaneas('manuais')
+    async registrarChamadasSimultaneas(empresa){
+        this.debug(' . PASSO 1.1','Registrando chamadas simultaneas',empresa)
+        const chamadas_simultaneas = await this.chamadasSimultaneas(empresa,'todas')
+        const chamadas_conectadas = await this.chamadasSimultaneas(empresa,'conectadas')
+        const chamadas_manuais = await this.chamadasSimultaneas(empresa,'manuais')
         //removendo do log chamadas do dia anterior
-    let sql = `DELETE FROM log_chamadas_simultaneas WHERE DATA < DATE_SUB(NOW(), INTERVAL 1 DAY);`
-    await this.querySync(sql)
-    //Inserindo informacoes de chamadas para o grafico de chamadas simultaneas
-    sql = `INSERT INTO log_chamadas_simultaneas (data,total,conectadas) VALUE (now(),${chamadas_simultaneas},${chamadas_conectadas})`
-    await this.querySync(sql)
-    return true
-}
+        let sql = `DELETE FROM ${empresa}_dados.log_chamadas_simultaneas  
+                         WHERE DATA < DATE_SUB(NOW(), INTERVAL 1 DAY);`
+        await this.querySync(sql)
+        //Inserindo informacoes de chamadas para o grafico de chamadas simultaneas
+        sql = `INSERT INTO ${empresa}_dados.log_chamadas_simultaneas 
+                           (data,total,conectadas) 
+                     VALUE (now(),${chamadas_simultaneas},${chamadas_conectadas})`
+        await this.querySync(sql)
+        return true
+    }
     //Conta as chamadas simultaneas
-    async chamadasSimultaneas(parametro){
+    async chamadasSimultaneas(empresa,parametro){
         let filter=""
         switch(parametro){
             case 'conectadas':
@@ -62,19 +66,20 @@ class Discador{
                 filter=``
         }
         const sql = `SELECT COUNT(id) as total 
-                       FROM campanhas_chamadas_simultaneas 
+                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                       WHERE uniqueid is not null
                       ${filter}`
         const r = await this.querySync(sql)
         return r[0].total
     }
-    //Remove Chamadas presas nas chamadas simultaneas
+
+     //Remove Chamadas presas nas chamadas simultaneas
     //Remove apenas as chamadas nao tratadas do power dentro da regra de limite disponivel
-    async clearCalls(){
-        this.debug(' . PASSO 1.2','Removendo chamadas presas')
+    async clearCalls(empresa){
+        this.debug(' . PASSO 1.2','Removendo chamadas presas',empresa)
         const limitTime = 30 //tempo limite para aguardar atendimento (em segundos)
         let sql = `SELECT id,id_campanha,id_mailing,id_registro,id_numero,numero 
-                     FROM campanhas_chamadas_simultaneas 
+                     FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE tipo_discador='power' 
                      AND tratado=0 
                      AND TIMESTAMPDIFF(SECOND,data,NOW())>${limitTime} 
@@ -96,7 +101,7 @@ class Discador{
         const observacoes = 'Não Atendida'
         const tabulacao = 0
         const tipo_ligacao='discador'
-        sql = `UPDATE ${connect.db.mailings}.campanhas_tabulacao_mailing 
+        sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
                   SET estado=0, 
                       desc_estado='Disponivel',
                       contatado='${contatado}', 
@@ -109,20 +114,23 @@ class Discador{
                   AND produtivo <> 1`
         await this.querySync(sql)
         //Grava no histórico de atendimento
-        await this.registraHistoricoAtendimento(0,idCampanha,idMailing,idRegistro,id_numero,0,0,tipo_ligacao,numero,tabulacao,observacoes,contatado)
+        await this.registraHistoricoAtendimento(empresa,0,idCampanha,idMailing,idRegistro,id_numero,0,0,tipo_ligacao,numero,tabulacao,observacoes,contatado)
         
         //Marcando numero na tabela de numeros como disponivel
-        sql = `UPDATE ${connect.db.mailings}.${tabela_numeros} SET discando=0 WHERE id_registro=${idRegistro}`
+        sql = `UPDATE ${empresa}_mailings.${tabela_numeros} 
+                  SET discando=0 
+                WHERE id_registro=${idRegistro}`
         await this.querySync(sql)
         //removendo chamada simultanea
-        sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE id=${idChamada}`
+        sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                WHERE id=${idChamada}`
         await this.querySync(sql)
         return true; 
     }
 
-    async clearCallsCampanhas(idCampanha){
+    async clearCallsCampanhas(empresa,idCampanha){
         let sql = `SELECT id_campanha,tabela_numeros,id_numero 
-                     FROM campanhas_chamadas_simultaneas 
+                     FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE id_campanha=${idCampanha}`
         const infoChamada = await this.querySync(sql)
 
@@ -131,7 +139,7 @@ class Discador{
             const idNumero = infoChamada[i].id_numero
             const tabelaNumeros = infoChamada[i].tabela_numeros
             //verifica tabulacao da campanha
-            sql = `UPDATE ${connect.db.mailings}.campanhas_tabulacao_mailing 
+            sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
                       SET estado=0, desc_estado='Disponivel'
                     WHERE idCampanha=${idCampanha} 
                       AND idNumero=${idNumero}
@@ -139,21 +147,24 @@ class Discador{
             await this.querySync(sql)
 
             //Libera numero na base de numeros
-            sql = `UPDATE ${connect.db.mailings}.${tabelaNumeros} 
+            sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
                       SET discando=0   
                     WHERE id=${idNumero}`
             await this.querySync(sql)
         }
 
-        sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE id_campanha=${idCampanha} AND falando=0`
+        sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                WHERE id_campanha=${idCampanha} AND falando=0`
         await this.querySync(sql)
-        sql = `UPDATE campanhas_status SET mensagem="..." WHERE idCampanha=${idCampanha}`
+        sql = `UPDATE ${empresa}_dados.campanhas_status
+                  SET mensagem="..." 
+                WHERE idCampanha=${idCampanha}`
         await this.querySync(sql)
     }
 
-    async clearCallsAgent(ramal){
+    async clearCallsAgent(empresa,ramal){
         let sql = `SELECT id_campanha,tabela_numeros,id_numero 
-                     FROM campanhas_chamadas_simultaneas 
+                     FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE ramal=${ramal}`
         const infoChamada = await this.querySync(sql)
         if(infoChamada.length==0){
@@ -164,73 +175,107 @@ class Discador{
         const tabelaNumeros = infoChamada[0].tabela_numeros
 
         //verifica tabulacao da campanha
-        sql = `UPDATE ${connect.db.mailings}.campanhas_tabulacao_mailing 
+        sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
                   SET estado=0, desc_estado='Disponivel'
                 WHERE idCampanha=${idCampanha} AND idNumero=${idNumero} AND produtivo <> 1`
         await this.querySync(sql)
 
          //Libera numero na base de numeros
-         sql = `UPDATE ${connect.db.mailings}.${tabelaNumeros} 
+         sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
                    SET discando=0   
                  WHERE id=${idNumero}`
         await this.querySync(sql)
 
-        sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE ramal=${ramal}`
+        sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                     WHERE ramal=${ramal}`
         await this.querySync(sql)
     }
 
-    async clearCallbyId(idAtendimento){
-        sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE id=${idAtendimento}`
+    async clearCallbyId(empresa,idAtendimento){
+        sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                WHERE id=${idAtendimento}`
         await this.querySync(sql)
     }
 
     //Verifica se existem campanhas ativas
-    async campanhasAtivas(){   
-        this.debug(' . PASSO 1.3','Verificando Campanhas Ativas')     
-        const sql = `SELECT id FROM campanhas WHERE tipo='a' AND status=1 AND estado=1 ORDER BY RAND()`
+    async campanhasAtivas(empresa){   
+        this.debug(' . PASSO 1.3','Verificando Campanhas Ativas',empresa)     
+        const sql = `SELECT id 
+                       FROM ${empresa}_dados.campanhas 
+                      WHERE tipo='a' AND status=1 AND estado=1 
+                      ORDER BY RAND()`
         return await this.querySync(sql)
     }
-
     //Checando se a campanha possui fila de agentes configurada
-    async filasCampanha(idCampanha){
-        this.debug(' . . . PASSO 1.4',`Verifica a fila da Campanha`)
-        const sql = `SELECT idFila, nomeFila FROM campanhas_filas WHERE idCampanha='${idCampanha}'`
+    async filasCampanha(empresa,idCampanha){
+        this.debug(' . . . PASSO 1.4',`Verifica a fila da Campanha`,empresa)
+        const sql = `SELECT idFila, nomeFila 
+                       FROM ${empresa}_dados.campanhas_filas WHERE idCampanha='${idCampanha}'`
         return await this.querySync(sql)        
     }
-
     //Verifica mailings atribuidos na campanha
-    async verificaMailing(idCampanha){
-        this.debug(' . . . PASSO 1.5',`Verifica se existe mailing adicionado`)
-        const sql = `SELECT idMailing FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
+    async verificaMailing(empresa,idCampanha){
+        this.debug(' . . . PASSO 1.5',`Verifica se existe mailing adicionado`,empresa)
+        const sql = `SELECT idMailing 
+                       FROM ${empresa}_dados.campanhas_mailing 
+                       WHERE idCampanha=${idCampanha}`
         return await this.querySync(sql)  
     }
     //Verifica se o mailing da campanha esta pronto para discar
-    async mailingConfigurado(idMailing){
-        this.debug(' . . . . PASSO 1.6',`Verifica se existe mailing configurado`)
-        const sql = `SELECT id,tabela_dados,tabela_numeros FROM mailings WHERE id=${idMailing} AND configurado=1`
+    async mailingConfigurado(empresa,idMailing){
+        this.debug(' . . . . PASSO 1.6',`Verifica se existe mailing configurado`,empresa)
+        const sql = `SELECT id,tabela_dados,tabela_numeros 
+                       FROM ${empresa}_dados.mailings
+                      WHERE id=${idMailing} AND configurado=1`
         return await this.querySync(sql)  
     }
     //Verifica se a campanha possui Agendamento
-    async agendamentoCampanha(idCampanha){
-        this.debug(' . . . . . PASSO 1.7',`Verifica se existe mailing possui Agendamento`)
-        const sql = `SELECT id FROM campanhas_horarios WHERE id_campanha=${idCampanha}`
+    async agendamentoCampanha(empresa,idCampanha){
+        this.debug(' . . . . . PASSO 1.7',`Verifica se existe mailing possui Agendamento`,empresa)
+        const sql = `SELECT id 
+                       FROM ${empresa}_dados.campanhas_horarios 
+                       WHERE id_campanha=${idCampanha}`
         return await this.querySync(sql)  
     } 
 
     //Verifica se hoje esta dentro da data de agendamento de uma campanha
-    async agendamentoCampanha_data(idCampanha,hoje){
-        this.debug(' . . . . . . PASSO 1.8',`Verifica se a campanha esta dentro da data de agendamento`)
-        const sql = `SELECT id FROM campanhas_horarios 
+    async agendamentoCampanha_data(empresa,idCampanha,hoje){
+        this.debug(' . . . . . . PASSO 1.8',`Verifica se a campanha esta dentro da data de agendamento`,empresa)
+        const sql = `SELECT id 
+                       FROM ${empresa}_dados.campanhas_horarios 
                       WHERE id_campanha=${idCampanha} AND inicio<='${hoje}' AND termino>='${hoje}'`;
          return await this.querySync(sql)       
     }
     //Verifica se agora esta dentro do horário de agendamento de uma campanha
-    async agendamentoCampanha_horario(idCampanha,hora){
-        this.debug(' . . . . . . . PASSO 1.8.1',`Verifica se a campanha esta dentro do horario de agendamento`)                                
-        const sql = `SELECT id FROM campanhas_horarios 
+    async agendamentoCampanha_horario(empresa,idCampanha,hora){
+        this.debug(' . . . . . . . PASSO 1.8.1',`Verifica se a campanha esta dentro do horario de agendamento`,empresa)                                
+        const sql = `SELECT id 
+                       FROM ${empresa}_dados.campanhas_horarios 
                       WHERE id_campanha=${idCampanha} AND hora_inicio<='${hora}' AND hora_termino>='${hora}'`;
         return await this.querySync(sql)
     }
+
+
+
+
+
+
+
+
+
+   
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     /** 
     *  PASSO 2 - PREPARAÇÃO DO DISCADOR
@@ -517,30 +562,34 @@ class Discador{
    /** 
     *  ATUALIZACAO DE STATUS E INFORMAÇÕES DO DISCADOR
     **/
-    async atualizaStatus(idCampanha,msg,estado){
+    async atualizaStatus(empresa,idCampanha,msg,estado){
         //verificando se a campanha ja possui status
-        const statusCampanha = await this.statusCampanha(idCampanha)
-        this.debug('[!]','')
-        this.debug('[!]',`Campanha: ${idCampanha} msg: ${msg} `)
-        this.debug('[!]','')
+        const statusCampanha = await this.statusCampanha(empresa,idCampanha)
+        this.debug('[!]','',empresa)
+        this.debug('[!]',`Campanha: ${idCampanha} msg: ${msg} `,empresa)
+        this.debug('[!]','',empresa)
         //console.log('[!]',msg)        
 
         if(statusCampanha.length==0){
             //Caso nao, insere o status
-            const sql = `INSERT INTO campanhas_status (idCampanha,data,mensagem,estado) 
+            const sql = `INSERT INTO ${empresa}_dados.campanhas_status
+                                     (idCampanha,data,mensagem,estado) 
                               VALUES (${idCampanha},now(),'${msg}',${estado})`               
             await this.querySync(sql)         
         }else{
             //Caso sim atualiza o mesmo
-            const sql = `UPDATE campanhas_status SET data=now(),mensagem='${msg}',estado=${estado}
+            const sql = `UPDATE ${empresa}_dados.campanhas_status
+                            SET data=now(),mensagem='${msg}',estado=${estado}
                           WHERE idCampanha=${idCampanha}` 
             await this.querySync(sql)               
         }
         return true
     }
     //Status atual de uma campanha 
-    async statusCampanha(idCampanha){
-        const sql =`SELECT * FROM campanhas_status WHERE idCampanha = ${idCampanha}`
+    async statusCampanha(empresa,idCampanha){
+        const sql =`SELECT * 
+                      FROM ${empresa}_dados.campanhas_status 
+                     WHERE idCampanha = ${idCampanha}`
         return await this.querySync(sql)        
     }
 
@@ -571,9 +620,9 @@ class Discador{
 
    /*Funcoes auxiliares do dicador******************************************************************************/
     //Registra o histórico de atendimento de uma chamada
-    async registraHistoricoAtendimento(protocolo,idCampanha,idMailing,id_registro,id_numero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado){
+    async registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_registro,id_numero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado){
         console.log('registra atendimento')
-        const sql = `INSERT INTO historico_atendimento 
+        const sql = `INSERT INTO ${empresa}_dados.historico_atendimento 
                                 (data,hora,protocolo,campanha,mailing,id_registro,id_numero,agente,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado) 
                          VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_registro},${id_numero},${ramal},'${uniqueid}','${tipo_ligacao}','${numero}',${tabulacao},'${observacoes}','${contatado}')`
         return await this.querySync(sql)          
@@ -1446,10 +1495,11 @@ class Discador{
 
        
 
-    log_chamadasSimultaneas(limit,tipo,callback){
+    async log_chamadasSimultaneas(empresa,limit,tipo){
         const sql = `SELECT ${tipo} AS chamadas 
-                       FROM log_chamadas_simultaneas ORDER BY id DESC LIMIT ${limit}`
-        connect.banco.query(sql, callback)
+                       FROM ${empresa}_dados.log_chamadas_simultaneas 
+                      ORDER BY id DESC LIMIT ${limit}`
+        return await this.querySync(sql)
     }
     
 

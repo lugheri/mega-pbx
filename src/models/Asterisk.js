@@ -22,12 +22,14 @@ class Asterisk{
     //######################Configuração das filas######################
     
     //Adiciona membros na fila
-    async addMembroFila(queue_name,queue_interface,membername,state_interface,penalty){
-        const check = await this.checkAgenteFila(queue_name,membername)
+    async addMembroFila(empresa,queue_name,queue_interface,membername,state_interface,penalty){
+        const check = await this.checkAgenteFila(empresa,queue_name,membername)
         if(check){
             return false;
         }
-        const sql = `INSERT INTO ${connect.db.asterisk}.queue_members (queue_name,interface,membername,state_interface,penalty) VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
+        const sql = `INSERT INTO ${connect.db.asterisk}.queue_members 
+                                (queue_name,interface,membername,state_interface,penalty) 
+                         VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
         await this.querySync(sql)
         return true
     }
@@ -37,13 +39,16 @@ class Asterisk{
         connect.asterisk.query(sql,nomeFila,callback)
     }
     //Remove os membros da fila
-    async removeMembroFila(nomeFila,membro){
-        const sql = `DELETE FROM ${connect.db.asterisk}.queue_members WHERE queue_name='${nomeFila}' AND membername='${membro}'`
+    async removeMembroFila(empresa,nomeFila,membro){
+        const sql = `DELETE FROM ${connect.db.asterisk}.queue_members 
+                      WHERE queue_name='${nomeFila}' AND membername='${membro}'`
         await this.querySync(sql)
         return true
     }
-    async checkAgenteFila(queue_name,membername){
-        const sql = `SELECT uniqueid FROM ${connect.db.asterisk}.queue_members WHERE queue_name='${queue_name}' AND membername='${membername}'`
+    async checkAgenteFila(empresa,queue_name,membername){
+        const sql = `SELECT uniqueid 
+                       FROM ${connect.db.asterisk}.queue_members 
+                      WHERE queue_name='${queue_name}' AND membername='${membername}'`
         const r = await this.querySync(sql)
         return r.length
     }

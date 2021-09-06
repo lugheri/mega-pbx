@@ -1,7 +1,8 @@
 import mysql from 'mysql2';
 //Definição de Ambiente
-//const environment = "dev"
-const environment = "DB_DEV"
+const environment = "dev"
+//const environment = "DB_DEV"
+
 
 
 let host = 'localhost'
@@ -12,10 +13,9 @@ switch(environment){
         host = 'localhost'
         user['name'] = 'root'
         user['pass'] = '1234abc@'
-
         db['asterisk'] = 'asterisk'
-        db['mailings'] = 'mailings'
-        db['dados'] = 'mega_conecta'
+        db['clients'] = 'clients'
+        db['dados'] = 'megaconecta_dados'
     break;
     default:
         host = process.env.DB_HOST
@@ -26,21 +26,32 @@ switch(environment){
         db['mailings'] = 'mailings'
         db['dados'] = 'mega_conecta'
 }
-
-
 const connect = ()=>{};
 
-connect.db=db
-
-connect.pool=mysql.createPool({
+connect.poolEmpresa=mysql.createPool({
     host:host,
     user : user['name'],
     password : user['pass'],
-    database : db['dados'],
+    database : db['clients'],
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 })
+
+
+connect.db=db
+
+connect.pool=mysql.createPool({
+        host:host,
+        user : user['name'],
+        password : user['pass'],
+        database : db['dados'],
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+    })
+
+
 
 connect.base=((database)=>{
     return mysql.createConnection({        
@@ -70,6 +81,7 @@ connect.asterisk=mysql.createConnection({
     password : user['pass'],
     database : db['asterisk']
 })
+
 
 
 

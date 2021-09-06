@@ -4,9 +4,8 @@ import Mailing from './Mailing';
 class Campanhas{   
     querySync(sql){
         return new Promise((resolve,reject)=>{
-            connect.pool.query(sql,(e,rows)=>{
+            connect.poolEmpresa.query(sql,(e,rows)=>{
                 if(e) reject(e);
-
                 resolve(rows)
             })
         })
@@ -16,36 +15,49 @@ class Campanhas{
     
     //######################Operacoes básicas das campanhas (CRUD)######################
     //Criar Campanha
-    criarCampanha(tipo,nome,descricao,callback){
-        const sql = `INSERT INTO campanhas (dataCriacao,tipo,nome,descricao,estado,status) 
-                                VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
-        connect.banco.query(sql,callback)
+    async criarCampanha(empresa,tipo,nome,descricao){
+        const sql = `INSERT INTO ${empresa}_dados.campanhas 
+                                (dataCriacao,tipo,nome,descricao,estado,status) 
+                         VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
+        return await this.querySync(sql)  
     }      
 
     //Lista campanhas
-    listarCampanhas(callback){
-        const sql = "SELECT * FROM campanhas WHERE status=1 ORDER BY status ASC, id ASC"
-        connect.banco.query(sql,callback)
+    async listarCampanhas(empresa){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.campanhas 
+                      WHERE status=1 
+                      ORDER BY status ASC, id ASC`
+        return await this.querySync(sql)  
     }
-    listarCampanhasAtivas(callback){
-        const sql = "SELECT * FROM campanhas WHERE estado=1 AND status=1 ORDER BY status ASC, id ASC"
-        connect.banco.query(sql,callback)        
+    async listarCampanhasAtivas(empresa){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.campanhas 
+                      WHERE estado=1 
+                        AND status=1 
+                   ORDER BY status ASC, id ASC`
+        return await this.querySync(sql)         
     }
 
     //Retorna Campanha
-    dadosCampanha(idCampanha,callback){
-        const sql = `SELECT * FROM campanhas WHERE id='${idCampanha}' AND status=1`
-        connect.banco.query(sql,callback)
+    async dadosCampanha(empresa,idCampanha){
+        const sql = `SELECT * FROM ${empresa}_dados.campanhas
+                      WHERE id='${idCampanha}' AND status=1`
+        return await this.querySync(sql)  
     }
 
     //Atualiza campanha
-    atualizaCampanha(idCampanha,valores,callback){
-        const sql = 'UPDATE campanhas SET ? WHERE id=?'
-        connect.banco.query(sql,[valores,idCampanha],callback)
+    async atualizaCampanha(empresa,idCampanha,valores){
+        const sql = `UPDATE ${empresa}_dados.campanhas 
+                        SET tipo=${valores.tipo},
+                            nome=${valores.nome},
+                            descricao=${valores.descricao},
+                            estado=${valores.estado},
+                            status=${valores.status} 
+                      WHERE id=${idCampanha}`
+        return await this.querySync(sql)  
     }
 
-    
-    
     //Remove Campanha
     //A campanha é removida quando seu status é setado para zero
 
@@ -53,26 +65,29 @@ class Campanhas{
     //TABULACOES
     //######################Gestão das listas de tabulacao das campanhas######################
     //Adiciona lista de tabulacao na campanha
-    async addListaTabulacaoCampanha(idCampanha,idListaTabulacao){
+    async addListaTabulacaoCampanha(empresa,idCampanha,idListaTabulacao){
         //Removendo listas anteriores
-        let sql = `DELETE FROM campanhas_listastabulacao WHERE idCampanha=${idCampanha}`
+        let sql = `DELETE FROM ${empresa}_dados.campanhas_listastabulacao
+                         WHERE idCampanha=${idCampanha}`
         await this.querySync(sql)
         
-        sql = `INSERT INTO campanhas_listastabulacao (idCampanha,idListaTabulacao,maxTime) VALUES (${idCampanha},${idListaTabulacao},15)`
+        sql = `INSERT INTO ${empresa}_dados.campanhas_listastabulacao 
+                           (idCampanha,idListaTabulacao,maxTime) 
+                    VALUES (${idCampanha},${idListaTabulacao},15)`
         await this.querySync(sql)         
     }
 
     //Exibe listas de tabulacao da campanhas
-    async listasTabulacaoCampanha(idCampanha){
+    async listasTabulacaoCampanha(empresa,idCampanha){
         const sql = `SELECT cl.id as idListaNaCampanha, t.nome AS nomeListaTabulacao, idCampanha, idListaTabulacao, maxTime 
-                       FROM campanhas_listastabulacao AS cl 
-                  LEFT JOIN tabulacoes_listas AS t ON t.id=cl.idListaTabulacao
+                       FROM ${empresa}_dados.campanhas_listastabulacao AS cl 
+                  LEFT JOIN ${empresa}_dados.tabulacoes_listas AS t ON t.id=cl.idListaTabulacao
                       WHERE idCampanha=${idCampanha}`
         return await this.querySync(sql)  
     }
 
-    async checklistaTabulacaoCampanha(idCampanha){
-        const lista = await this.listasTabulacaoCampanha(idCampanha)
+    async checklistaTabulacaoCampanha(empresa,idCampanha){
+        const lista = await this.listasTabulacaoCampanha(empresa,idCampanha)
         if(lista.length==0){
             return false
         }
@@ -80,145 +95,167 @@ class Campanhas{
     }
 
     //Remove listas de tabulacao da campanha
-    async removerListaTabulacaoCampanha(idListaNaCampanha){
-        const sql = `DELETE FROM campanhas_listastabulacao WHERE id=${idListaNaCampanha}`
+    async removerListaTabulacaoCampanha(empresa,idListaNaCampanha){
+        const sql = `DELETE FROM ${empresa}_dados.campanhas_listastabulacao 
+                           WHERE id=${idListaNaCampanha}`
         await this.querySync(sql)  
     }
 
-    async setMaxTimeStatusTab(idCampanha,time){
-        const sql = `UPDATE campanhas_listastabulacao SET maxTime=${time} WHERE idCampanha=${idCampanha}`
+    async setMaxTimeStatusTab(empresa,idCampanha,time){
+        const sql = `UPDATE ${empresa}_dados.campanhas_listastabulacao 
+                        SET maxTime=${time} 
+                      WHERE idCampanha=${idCampanha}`
         await this.querySync(sql)  
     }
 
-    async getMaxTimeStatusTab(idCampanha){
-        const sql = `SELECT maxTime FROM campanhas_listastabulacao WHERE idCampanha=${idCampanha}`
+    async getMaxTimeStatusTab(empresa,idCampanha){
+        const sql = `SELECT maxTime 
+                       FROM ${empresa}_dados.campanhas_listastabulacao 
+                       WHERE idCampanha=${idCampanha}`
         return await this.querySync(sql)  
     }
 
     //INTEGRAÇÕES
     //######################Gestão das integrações######################
     //Cria Integração
-    criarIntegracao(dados,callback){
-        const sql = `INSERT INTO campanhas_integracoes_disponiveis (url,descricao,modoAbertura) VALUES ('${dados.url}','${dados.descricao}','${dados.modoAbertura}')`
-        connect.banco.query(sql,callback)
+    async criarIntegracao(empresa,dados){
+        const sql = `INSERT INTO ${empresa}_dados.campanhas_integracoes_disponiveis 
+                                 (url,descricao,modoAbertura)
+                          VALUES ('${dados.url}','${dados.descricao}','${dados.modoAbertura}')`
+        return await this.querySync(sql) 
     }
 
     //Listar integracao
-    listarIntegracoes(callback){
-        const sql = `SELECT * FROM campanhas_integracoes_disponiveis`
-        connect.banco.query(sql,callback)
+    async listarIntegracoes(empresa){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.campanhas_integracoes_disponiveis`
+        return await this.querySync(sql) 
     }
 
     //Atualiza Integracao
-    atualizarIntegracao(idIntegracao,dados,callback){
-        const sql = `UPDATE campanhas_integracoes_disponiveis SET url='${dados.url}',descricao='${dados.descricao}',modoAbertura='${dados.modoAbertura}' WHERE id=${idIntegracao}`
-        connect.banco.query(sql,callback)
+    async atualizarIntegracao(empresa,idIntegracao,dados){
+        const sql = `UPDATE ${empresa}_dados.campanhas_integracoes_disponiveis 
+                       SET url='${dados.url}',
+                           descricao='${dados.descricao}',
+                           modoAbertura='${dados.modoAbertura}' 
+                     WHERE id=${idIntegracao}`
+        return await this.querySync(sql) 
     }
 
     //Dados integracao
-    dadosIntegracao(idIntegracao,callback){
-        const sql = `SELECT * FROM  campanhas_integracoes_disponiveis WHERE id=${idIntegracao}`
-        connect.banco.query(sql,callback)
+    async dadosIntegracao(empresa,idIntegracao){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.campanhas_integracoes_disponiveis 
+                      WHERE id=${idIntegracao}`
+        return await this.querySync(sql) 
     }
 
     //Remove Integracao
-    removerIntegracao(idIntegracao,callback){
-        const sql = `DELETE FROM campanhas_integracoes_disponiveis WHERE id=${idIntegracao}`
-        connect.banco.query(sql,(e,r)=>{
-            if(e) throw e
-
-            const sql = `DELETE FROM campanhas_integracoes WHERE idIntegracao=${idIntegracao}`
-            connect.banco.query(sql,callback)
-        })
+    async removerIntegracao(empresa,idIntegracao){
+        let sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes_disponiveis WHERE id=${idIntegracao}`
+        await this.querySync(sql) 
+        
+        sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes WHERE idIntegracao=${idIntegracao}`
+        return await this.querySync(sql) 
+        
     }
 
     //Selecionar integracao
-    inserirIntegracaoCampanha(dados,callback){
-        const sql = `SELECT id FROM campanhas_integracoes WHERE idCampanha=${dados.idCampanha}`
-        connect.banco.query(sql,(e,rows)=>{
-            if(e) throw e
-
-            if(rows.length>=1){
-                callback(false,false)
-                return false;
-            }
-            const sql = `INSERT INTO campanhas_integracoes (idCampanha,idIntegracao) VALUES (${dados.idCampanha},${dados.idIntegracao})`
-            connect.banco.query(sql,callback)
-        })        
+    async inserirIntegracaoCampanha(empresa,dados){
+        let sql = `SELECT id FROM ${empresa}_dados.campanhas_integracoes
+                    WHERE idCampanha=${dados.idCampanha}`
+        const rows = await this.querySync(sql) 
+        if(rows.length>=1){
+            return false;
+        }
+        sql = `INSERT INTO ${empresa}_dados.campanhas_integracoes (idCampanha,idIntegracao) 
+                    VALUES (${dados.idCampanha},${dados.idIntegracao})`
+        return await this.querySync(sql) 
     }
 
     //Listar Integracoes de uma campanhas
-    listaIntegracaoCampanha(idCampanha,callback){
-        const sql = `SELECT i.* FROM  campanhas_integracoes AS c 
-                       JOIN campanhas_integracoes_disponiveis AS i ON i.id=c.idIntegracao 
-                       WHERE c.idCampanha=${idCampanha}`
-        connect.banco.query(sql,callback)
+    async listaIntegracaoCampanha(empresa,idCampanha){
+        const sql = `SELECT i.* 
+                       FROM ${empresa}_dados.campanhas_integracoes AS c 
+                       JOIN ${empresa}_dados.campanhas_integracoes_disponiveis AS i ON i.id=c.idIntegracao 
+                      WHERE c.idCampanha=${idCampanha}`
+                       return await this.querySync(sql) 
     }
 
     //remove integracao campannha
-    removerIntegracaoCampanha(idCampanha,idIntegracao,callback){
-        const sql = `DELETE FROM campanhas_integracoes 
-                      WHERE idCampanha=${idCampanha} AND idIntegracao=${idIntegracao}`
-        connect.banco.query(sql,callback)
+    async removerIntegracaoCampanha(empresa,idCampanha,idIntegracao){
+        const sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes 
+                      WHERE idCampanha=${idCampanha}
+                        AND idIntegracao=${idIntegracao}`
+        return await this.querySync(sql) 
     }
 
     //DISCADOR
     //######################Configuração do discador da campanha######################
     //Configurar discador da campanha
-    configDiscadorCampanha(idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,modo_atendimento,callback){
-        this.verConfigDiscadorCampanha(idCampanha,(e,r)=>{
-            if(e) throw e
-
-            if(r.length ===0){
-                const sql = `INSERT INTO campanhas_discador 
-                                        (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,modo_atendimento) 
-                                 VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}','${modo_atendimento}')`
-                connect.banco.query(sql,callback)
-            }else{
-                const sql = `UPDATE campanhas_discador 
-                                SET tipo_discador='${tipoDiscador}',agressividade=${agressividade},ordem_discagem='${ordemDiscagem}',tipo_discagem='${tipoDiscagem}',modo_atendimento='${modo_atendimento}' 
-                              WHERE idCampanha = ${idCampanha}`
-                connect.banco.query(sql,callback)     
-            }
-        })       
+    async configDiscadorCampanha(empresa,idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,modo_atendimento,saudacao){
+        const conf = await this.verConfigDiscadorCampanha(empresa,idCampanha)
+        if(conf.length ===0){
+            const sql = `INSERT INTO  ${empresa}_dados.campanhas_discador 
+                                     (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,modo_atendimento,saudacao) 
+                              VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}','${modo_atendimento}','${saudacao}')`
+            return await this.querySync(sql) 
+        }else{
+            const sql = `UPDATE ${empresa}_dados.campanhas_discador 
+                            SET tipo_discador='${tipoDiscador}',
+                                agressividade=${agressividade},
+                                ordem_discagem='${ordemDiscagem}',
+                                tipo_discagem='${tipoDiscagem}',
+                                modo_atendimento='${modo_atendimento}',
+                                saudacao='${saudacao}'
+                          WHERE idCampanha = ${idCampanha}`
+            return await this.querySync(sql)      
+        }
     }
     //Ver configuracoes do discador
-    verConfigDiscadorCampanha(idCampanha,callback){
-        const sql = `SELECT * FROM campanhas_discador WHERE idCampanha = ${idCampanha}`
-        connect.banco.query(sql,callback)
+    async verConfigDiscadorCampanha(empresa,idCampanha){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.campanhas_discador 
+                      WHERE idCampanha = ${idCampanha}`
+        return await this.querySync(sql)   
     }
 
     //FILAS
     //Listar filas da campanha
-    listarFilasCampanha(idCampanha,callback){
-        const sql = `SELECT idFila, nomeFila FROM campanhas_filas WHERE idCampanha='${idCampanha}'`
-        connect.banco.query(sql,callback)
+    async listarFilasCampanha(empresa,idCampanha){
+        const sql = `SELECT idFila, nomeFila
+                       FROM ${empresa}_dados.campanhas_filas 
+                      WHERE idCampanha='${idCampanha}'`
+        return await this.querySync(sql)   
     }    
     //Incluir fila a campanhas
-    addFila(idCampanha,idFila,nomeFila,callback){
-        const sql = `DELETE FROM campanhas_filas WHERE idCampanha=${idCampanha}`
-        connect.banco.query(sql,(e,r)=>{
-            if(e) throw e
-
-            const sql = `INSERT INTO campanhas_filas (idCampanha,idFila,nomeFila) VALUES (${idCampanha},${idFila},'${nomeFila}')`
-            connect.banco.query(sql,callback)
-        })
+    async addFila(empresa,idCampanha,idFila,nomeFila){
+        let sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
+                    WHERE idCampanha=${idCampanha}`
+        await this.querySync(sql)  
+        sql = `INSERT INTO ${empresa}_dados.campanhas_filas 
+                          (idCampanha,idFila,nomeFila) 
+                   VALUES (${idCampanha},${idFila},'${nomeFila}')`
+        return await this.querySync(sql)   
     }
 
     //Remove uma determinada fila da campanha
-    removerFilaCampanha(idCampanha,idFila,callback){
-        const sql = `DELETE FROM campanhas_filas WHERE idCampanha=${idCampanha} AND idFila='${idFila}'`
-        connect.banco.query(sql,callback)
+    async removerFilaCampanha(empresa,idCampanha,idFila){
+        const sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
+                      WHERE idCampanha=${idCampanha} AND idFila='${idFila}'`
+        return await this.querySync(sql)   
     }    
 
     //MAILING
     //ADICIONA O MAILING A UMA CAMPANHA
-    async addMailingCampanha(idCampanha,idMailing){
+    async addMailingCampanha(empresa,idCampanha,idMailing){
         const infoMailing = await Mailing.infoMailing(idMailing)
         const tabelaDados = infoMailing[0].tabela_dados
         const tabelaNumeros = infoMailing[0].tabela_numeros
         //verifica se mailing ja existem na campanha
-        let sql = `SELECT id FROM campanhas_mailing WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
+        let sql = `SELECT id 
+                     FROM ${empresa}_dados.campanhas_mailing 
+                     WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
         const r = await this.querySync(sql)
         if(r.length==1){
             return false
@@ -226,7 +263,7 @@ class Campanhas{
 
         
         //Inserindo coluna da campanha na tabela de numeros
-        sql = `ALTER TABLE ${connect.db.mailings}.${tabelaNumeros} 
+        sql = `ALTER TABLE ${empresa}_mailings.${tabelaNumeros} 
                ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT '1' AFTER produtivo`
         await this.querySync(sql)
         //Atualiza os registros como disponíveis (1)
@@ -234,59 +271,72 @@ class Campanhas{
         //await this.querySync(sql)
         
         //Inserindo informacao do id do mailing na campanha 
-        sql = `INSERT INTO campanhas_mailing (idCampanha,idMailing) VALUES ('${idCampanha}','${idMailing}')`
+        sql = `INSERT INTO ${empresa}_dados.campanhas_mailing 
+                           (idCampanha,idMailing) 
+                    VALUES ('${idCampanha}','${idMailing}')`
         await this.querySync(sql)
         //Inserindo campos do mailing
-        sql = `SELECT * FROM mailing_tipo_campo WHERE idMailing=${idMailing}`
+        sql = `SELECT * 
+                 FROM ${empresa}_dados.mailing_tipo_campo 
+                WHERE idMailing=${idMailing}`
         const campos =  await this.querySync(sql)
-        sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,idMailing,tabela,idCampo,ordem) VALUES ` 
-        for(let i=0; i<campos.length; i++){
-            sql += `(${idCampanha},${idMailing},'${tabelaDados}',${campos[i].id},${i})`
-            if((i+1)<campos.length){ sql +=', '}
-            
-        }
-        console.log(sql)
+        sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
+                           (idCampanha,idMailing,tabela,idCampo,ordem) 
+                    VALUES ` 
+            for(let i=0; i<campos.length; i++){
+                sql += `(${idCampanha},${idMailing},'${tabelaDados}',${campos[i].id},${i})`
+                if((i+1)<campos.length){ sql +=', '}            
+            }
+        //console.log(sql)
         await this.querySync(sql)
         return true
     }
 
     //Lista os mailings adicionados em uma campanha
-    listarMailingCampanha(idCampanha,callback){
-        const sql = `SELECT * FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
-        connect.banco.query(sql,callback)
+    async listarMailingCampanha(empresa,idCampanha){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.campanhas_mailing 
+                      WHERE idCampanha=${idCampanha}`
+        return await this.querySync(sql)
     }
 
     //Remove o mailing de uma campanha
-    async removeMailingCampanha(idCampanha){
+    async removeMailingCampanha(empresa,idCampanha){
         const infoMailing = await this.infoMailingCampanha(idCampanha)
 
         //Recuperando o id da campanha
-        let sql = `SELECT idCampanha FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
+        let sql = `SELECT idCampanha 
+                     FROM ${empresa}_dados.campanhas_mailing 
+                    WHERE idCampanha=${idCampanha}`
         const r = await this.querySync(sql)
         if(r.length==0){
             return false
         }
         //Removendo coluna da campanha no mailing
-        sql = `ALTER TABLE ${connect.db.mailings}.${infoMailing[0].tabela_numeros} DROP COLUMN campanha_${idCampanha}`
+        sql = `ALTER TABLE ${empresa}_mailings.${infoMailing[0].tabela_numeros} 
+                DROP COLUMN campanha_${idCampanha}`
         await this.querySync(sql)
       
         //Removendo informacao do mailing da campanha
-        sql = `DELETE FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
+        sql = `DELETE FROM ${empresa}_dados.campanhas_mailing 
+                WHERE idCampanha=${idCampanha}`
         await this.querySync(sql)
         //Removendo filtros do mailing na campanha
-        sql = `DELETE FROM campanhas_mailing_filtros WHERE idCampanha=${idCampanha}`
+        sql = `DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
+                     WHERE idCampanha=${idCampanha}`
         await this.querySync(sql)
         //removendo campos do mailing na campanha
-        sql = `DELETE FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha}` 
+        sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
+                WHERE idCampanha=${idCampanha}` 
         await this.querySync(sql)
         return true
     }
 
     //FILTROS DE DISCAGEM ##################################################################################
     //Aplica/remove um filtro de discagem
-    async filtrarRegistrosCampanha(parametros){     
+    async filtrarRegistrosCampanha(empresa,parametros){     
         const idCampanha = parametros.idCampanha;
-        const infoMailing = await this.infoMailingCampanha(idCampanha)//informacoes do mailing
+        const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)//informacoes do mailing
         const idMailing = infoMailing[0].id;
         const tabelaNumeros = infoMailing[0].tabela_numeros;
         const tipo = parametros.tipo;
@@ -298,7 +348,7 @@ class Campanhas{
             //console.log('Mailing nao encontrado')
             return false
         }
-        const checkFilter = await this.checkFilter(idCampanha,idMailing,tipo,valor,regiao)//Verificando se ja existe filtro aplicado
+        const checkFilter = await this.checkFilter(empresa,idCampanha,idMailing,tipo,valor,regiao)//Verificando se ja existe filtro aplicado
         
         //verifica se filtro ja esta aplicado
         if(checkFilter===true){
@@ -306,14 +356,14 @@ class Campanhas{
             let sql=""
             if(regiao==""){//remo
                 //console.log(`Removendo filtro ${tipo}=${valor}`)
-                sql=`DELETE FROM campanhas_mailing_filtros 
+                sql=`DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
                      WHERE idCampanha=${idCampanha}
                        AND idMailing=${idMailing}
                        AND tipo='${tipo}'
                        AND valor='${valor}'`
             }else{
                 //console.log(`Removendo filtros ${tipo}=${valor}`)
-                sql=`DELETE FROM campanhas_mailing_filtros 
+                sql=`DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
                            WHERE idCampanha=${idCampanha}
                              AND idMailing=${idMailing}
                              AND tipo='${tipo}'
@@ -325,40 +375,44 @@ class Campanhas{
             await this.querySync(sql)      
             
             
-            this.delFilterDial(tabelaNumeros,idCampanha,tipo,valor,regiao)
+            this.delFilterDial(empresa,tabelaNumeros,idCampanha,tipo,valor,regiao)
             //Listar filtros restantes
-            sql = `SELECT * FROM campanhas_mailing_filtros WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
+            sql = `SELECT * 
+                     FROM ${empresa}_dados.campanhas_mailing_filtros 
+                    WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
             const fr = await this.querySync(sql)//Filtros Restantes
             
             if(fr.length>=1){
                 for (let i = 0; i < fr.length; i++) {
-                    this.addFilterDial(tabelaNumeros,idCampanha,fr[i].tipo,fr[i].valor,fr[i].regiao)
+                    this.addFilterDial(empresa,tabelaNumeros,idCampanha,fr[i].tipo,fr[i].valor,fr[i].regiao)
                 }
             }
             
             return true
         }
-        let sql=`INSERT INTO campanhas_mailing_filtros 
+        let sql=`INSERT INTO ${empresa}_dados.campanhas_mailing_filtros 
                          (idCampanha,idMailing,tipo,valor,regiao)
                   VALUES (${idCampanha},${idMailing},'${tipo}','${valor}','${regiao}')`
                   //console.log(`last sql`,sql)          
         await this.querySync(sql)
-        this.addFilterDial(tabelaNumeros,idCampanha,tipo,valor,regiao)
+        this.addFilterDial(empresa,tabelaNumeros,idCampanha,tipo,valor,regiao)
         return true
     }
 
 
     //Retorna todas as informações de um mailing que esta atribuido em uma campanha
-    async infoMailingCampanha(idCampanha){
-        const sql =`SELECT m.* FROM mailings AS m
-                    JOIN campanhas_mailing AS c
-                    ON c.idMailing=m.id
-                    WHERE idCampanha=${idCampanha}`
+    async infoMailingCampanha(empresa,idCampanha){
+        const sql =`SELECT m.* 
+                      FROM ${empresa}_dados.mailings AS m
+                      JOIN ${empresa}_dados.campanhas_mailing AS c
+                        ON c.idMailing=m.id
+                     WHERE idCampanha=${idCampanha}`
         return await this.querySync(sql)
     }
     //Checa se já existe algum filtro aplicado com os parametros informados
-    async checkFilter(idCampanha,idMailing,tipo,valor,regiao){
-        const sql =`SELECT id FROM campanhas_mailing_filtros 
+    async checkFilter(empresa,idCampanha,idMailing,tipo,valor,regiao){
+        const sql =`SELECT id 
+                      FROM ${empresa}_dados.campanhas_mailing_filtros 
                      WHERE idCampanha=${idCampanha}
                        AND idMailing=${idMailing}
                        AND tipo='${tipo}'
@@ -371,51 +425,61 @@ class Campanhas{
         return true;
     }
     //Remove um filtro de uma tabela
-    async delFilterDial(tabela,idCampanha,tipo,valor,regiao){
+    async delFilterDial(empresa,tabela,idCampanha,tipo,valor,regiao){
         console.log(`delFilterDial ${tipo}=${valor}`)
         let filter=""
         filter+=`${tipo}='${valor}'`
         if(regiao!=0){ filter+=` AND uf='${regiao}'`}
        
-        let sql = `UPDATE ${connect.db.mailings}.${tabela} SET campanha_${idCampanha}=1 WHERE ${filter}`       
+        let sql = `UPDATE ${empresa}_mailings.${tabela} 
+                      SET campanha_${idCampanha}=1 
+                    WHERE ${filter}`       
         console.log(`delFilter sql`,sql)
         await this.querySync(sql)
         return true
     }
     //Aplica um filtro a uma tabela
-    async addFilterDial(tabela,idCampanha,tipo,valor,regiao){
+    async addFilterDial(empresa,tabela,idCampanha,tipo,valor,regiao){
         console.log(`addFilterDial ${tipo}=${valor}`)
         let filter=""
         filter+=`${tipo}='${valor}'`
         if(regiao!=0){ filter+=` AND uf='${regiao}'`}       
-        let sql = `UPDATE ${connect.db.mailings}.${tabela} SET campanha_${idCampanha}=0 WHERE ${filter}`          
+        let sql = `UPDATE ${empresa}_mailings.${tabela} 
+                      SET campanha_${idCampanha}=0 
+                    WHERE ${filter}`          
         await this.querySync(sql)
         return true
     }
 
     //Conta o total de numeros de uma tabela pelo UF, ou DDD
-    async totalNumeros(tabela,uf,ddd){
+    async totalNumeros(empresa,tabela,uf,ddd){
         let filter=""
         if(uf!=0){ filter += ` AND uf="${uf}"` }
         if(ddd!=undefined){ filter += ` AND ddd=${ddd}`}
-        const sql = `SELECT COUNT(id) AS total FROM ${connect.db.mailings}.${tabela} WHERE valido=1 ${filter}` 
+        const sql = `SELECT COUNT(id) AS total 
+                       FROM ${empresa}_mailings.${tabela}
+                       WHERE valido=1 ${filter}` 
          
         const r = await this.querySync(sql)
         return r[0].total
     }
-    async totalNumeros_porTipo(tabela,uf,tipo){
+    async totalNumeros_porTipo(empresa,tabela,uf,tipo){
         let filter=""
         if(uf!=0){ filter += ` AND uf="${uf}"` }
         if(tipo!=undefined){ filter += ` AND tipo='${tipo}'`}
-        const sql = `SELECT COUNT(id) AS total FROM ${connect.db.mailings}.${tabela} WHERE valido=1 ${filter}`       
+        const sql = `SELECT COUNT(id) AS total 
+                       FROM ${empresa}_mailings.${tabela} 
+                      WHERE valido=1 ${filter}`       
         const r = await this.querySync(sql)
         return r[0].total
     }
     //Conta o total de registros filtrados de uma tabela pelo us
-    async numerosFiltrados(idMailing,tabelaNumeros,idCampanha,uf){
+    async numerosFiltrados(empresa,idMailing,tabelaNumeros,idCampanha,uf){
         let filter=""
         if(uf!=0){ filter += ` AND uf="${uf}"` }
-        const sql = `SELECT COUNT(id) AS total FROM ${connect.db.mailings}.${tabelaNumeros} WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
+        const sql = `SELECT COUNT(id) AS total
+                       FROM ${empresa}_mailings.${tabelaNumeros}
+                      WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
         const r = await this.querySync(sql)
         return r[0].total
         
@@ -454,19 +518,21 @@ class Campanhas{
         return numeros[0].numerosFiltrados*/
     }
     //Retorna os DDDS de uma tabela de numeros
-    async dddsMailings(tabela,uf){
+    async dddsMailings(empresa,tabela,uf){
         let filter=""
         if(uf!=0){ filter = `WHERE uf='${uf}'` }
-        let sql = `SELECT DISTINCT ddd FROM ${connect.db.mailings}.${tabela} ${filter}`
+        let sql = `SELECT DISTINCT ddd 
+                     FROM ${empresa}_mailings.${tabela} ${filter}`
         return await this.querySync(sql)
     }
     //Checa se existe algum filtro de DDD aplicado
-    async checkTypeFilter(idCampanha,tipo,valor,uf){     
+    async checkTypeFilter(empresa,idCampanha,tipo,valor,uf){     
         let filter  =""
          if(tipo!='uf'){
              filter=` AND regiao = "${uf}"`
          }
-        const sql =`SELECT id FROM campanhas_mailing_filtros 
+        const sql =`SELECT id 
+                      FROM ${empresa}_dados.campanhas_mailing_filtros 
                      WHERE idCampanha=${idCampanha}
                        AND tipo='${tipo}' AND valor='${valor}'
                        ${filter}`
@@ -480,15 +546,16 @@ class Campanhas{
 
     //CONFIGURAR TELA DO AGENTE    
      //Lista todos os campos que foram configurados do mailing
-     async camposConfiguradosDisponiveis(idMailing){
+     async camposConfiguradosDisponiveis(empresa,idMailing){
         const sql = `SELECT id,campo,apelido,tipo
-                       FROM mailing_tipo_campo WHERE idMailing='${idMailing}' AND conferido=1`
+                       FROM ${empresa}_dados.mailing_tipo_campo 
+                       WHERE idMailing='${idMailing}' AND conferido=1`
         return await this.querySync(sql)
     }
     //Verifica se o campo esta selecionado
-    async campoSelecionadoTelaAgente(campo,tabela,idCampanha){
+    async campoSelecionadoTelaAgente(empresa,campo,tabela,idCampanha){
         const sql = `SELECT COUNT(id) AS total 
-                       FROM campanhas_campos_tela_agente 
+                       FROM ${empresa}_dados.campanhas_campos_tela_agente 
                       WHERE idCampo=${campo} AND idCampanha=${idCampanha} AND tabela='${tabela}'
                        ORDER BY ordem ASC`
         const total = await this.querySync(sql)     
@@ -498,21 +565,22 @@ class Campanhas{
         return true; 
     }
     //Adiciona campo na tela do agente
-    async addCampoTelaAgente(idCampanha,tabela,idCampo){
-        const sql = `INSERT INTO campanhas_campos_tela_agente (idCampanha,tabela,idCampo,ordem) 
-                       VALUES (${idCampanha},'${tabela}',${idCampo},0)`
+    async addCampoTelaAgente(empresa,idCampanha,tabela,idCampo){
+        const sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
+                                (idCampanha,tabela,idCampo,ordem) 
+                         VALUES (${idCampanha},'${tabela}',${idCampo},0)`
         return await this.querySync(sql)
     }
-    async camposTelaAgente(idCampanha,tabela){
+    async camposTelaAgente(empresa,idCampanha,tabela){
         const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo 
-                      FROM campanhas_campos_tela_agente AS t 
-                      JOIN mailing_tipo_campo AS m ON m.id=t.idCampo
+                      FROM ${empresa}_dados.campanhas_campos_tela_agente AS t 
+                      JOIN ${empresa}_dados.mailing_tipo_campo AS m ON m.id=t.idCampo
                        WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
         return await this.querySync(sql)
     }
     //Remove campo da campanha
-    async delCampoTelaAgente(idCampanha,idCampo){
-        const sql = `DELETE FROM campanhas_campos_tela_agente 
+    async delCampoTelaAgente(empresa,idCampanha,idCampo){
+        const sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
                        WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
         return await this.querySync(sql)
     }
@@ -556,11 +624,11 @@ class Campanhas{
     //BLACKLIST
 
     //STATUS DE EVOLUCAO DE CAMPANHA
-    async totalMailingsCampanha(idCampanha){
+    async totalMailingsCampanha(empresa,idCampanha){
         const sql = `SELECT SUM(totalNumeros) AS total 
-                      FROM mailings as m 
-                      JOIN campanhas_mailing AS cm 
-                      ON cm.idMailing=m.id 
+                      FROM ${empresa}_dados.mailings as m 
+                      JOIN ${empresa}_dados.campanhas_mailing AS cm 
+                        ON cm.idMailing=m.id 
                       WHERE cm.idCampanha=${idCampanha}`
         const total_mailing= await this.querySync(sql)
         if(total_mailing[0].total == null){
@@ -569,8 +637,9 @@ class Campanhas{
         return parseInt(total_mailing[0].total)
     }
 
-    async mailingsContatadosPorCampanha(idCampanha,status){
-        const sql = `SELECT count(id) AS total FROM ${connect.db.mailings}.campanhas_tabulacao_mailing 
+    async mailingsContatadosPorCampanha(empresa,idCampanha,status){
+        const sql = `SELECT count(id) AS total 
+                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                       WHERE contatado='${status}' AND idCampanha=${idCampanha}`
         const total_mailing= await this.querySync(sql)
         return total_mailing[0].total
@@ -578,34 +647,34 @@ class Campanhas{
 
     //AGENDAMENTO DE CAMPANHAS
     //Agenda campanha
-    agendarCampanha(idCampanha,dI,dT,hI,hT,callback){ 
+    async agendarCampanha(empresa,idCampanha,dI,dT,hI,hT){ 
         //verifica se a campanha ja possui agendamento
-        this.verAgendaCampanha(idCampanha,(e,r)=>{
-            if(e) throw e            
-
-            if(r.length ===0){
-                const sql = `INSERT INTO campanhas_horarios 
-                                        (id_campanha,inicio,termino,hora_inicio,hora_termino) 
-                                 VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
-                connect.banco.query(sql,callback)
-            }else{
-                const sql = `UPDATE campanhas_horarios 
-                                SET inicio='${dI}',termino='${dT}',hora_inicio='${hI}',hora_termino='${hT}' 
-                                WHERE id_campanha='${idCampanha}'`
-                connect.banco.query(sql,callback)
-            }
-        })
+        const r = await this.verAgendaCampanha(empresa,idCampanha)
+        if(r.length ===0){
+            const sql = `INSERT INTO ${empresa}_dados.campanhas_horarios 
+                                    (id_campanha,inicio,termino,hora_inicio,hora_termino) 
+                             VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
+            return await this.querySync(sql)
+        }else{
+            const sql = `UPDATE ${empresa}_dados.campanhas_horarios 
+                            SET inicio='${dI}',termino='${dT}',hora_inicio='${hI}',hora_termino='${hT}' 
+                          WHERE id_campanha='${idCampanha}'`
+            return await this.querySync(sql)
+        }
     }
-
     //Ver Agendamento da campanha
-    verAgendaCampanha(idCampanha,callback){
-        const sql = `SELECT * FROM campanhas_horarios WHERE id_campanha=${idCampanha}`
-        connect.banco.query(sql,callback)
+    async verAgendaCampanha(empresa,idCampanha){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.campanhas_horarios 
+                      WHERE id_campanha=${idCampanha}`
+        return await this.querySync(sql)
     }
    
     //#########  F I L A S  ############
-    async novaFila(nomeFila,descricao){
-        let sql = `SELECT id FROM filas WHERE nome='${nomeFila}'`
+    async novaFila(empresa,nomeFila,descricao){
+        let sql = `SELECT id 
+                     FROM ${empresa}_dados.filas 
+                    WHERE nome='${nomeFila}'`
         const r = await this.querySync(sql)
         if(r.length>=1){
             return false
@@ -615,23 +684,29 @@ class Campanhas{
         return true
     }
 
-    async listarFilas(){
-        const sql = `SELECT * FROM filas`
+    async listarFilas(empresa){
+        const sql = `SELECT * FROM ${empresa}_dados.filas`
         return await this.querySync(sql)
     } 
 
-    async dadosFila(idFila){
-        const sql = `SELECT * FROM filas WHERE id=${idFila}`
+    async dadosFila(empresa,idFila){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.filas 
+                      WHERE id=${idFila}`
         return await this.querySync(sql)
     } 
 
-    async editarFila(idFila,dados){
-        const sql = `UPDATE filas SET nome='${dados.name}',descricao='${dados.description}' WHERE id='${idFila}'`
+    async editarFila(empresa,idFila,dados){
+        const sql = `UPDATE ${empresa}_dados.filas 
+                        SET nome='${dados.name}',
+                            descricao='${dados.description}' 
+                        WHERE id='${idFila}'`
         return await this.querySync(sql)
     }
 
-    async removerFila(idFila){
-        const sql = `DELETE FROM filas WHERE id='${idFila}'`
+    async removerFila(empresa,idFila){
+        const sql = `DELETE FROM ${empresa}_dados.filas 
+                      WHERE id='${idFila}'`
         await this.querySync(sql)
         return true
     }
@@ -648,42 +723,48 @@ class Campanhas{
     ////////////////////OLD
 
     //total de campanhas que rodaram por dia
-    campanhasByDay(limit,callback){
+    async campanhasByDay(empresa,limit){
         const sql = `SELECT COUNT(DISTINCT campanha) AS campanhas, DATE_FORMAT (data,'%d/%m/%Y') AS dia 
-                       FROM historico_atendimento GROUP BY data ORDER BY data DESC LIMIT ${limit}`
-        connect.banco.query(sql,callback)
+                       FROM ${empresa}_dados.historico_atendimento 
+                       GROUP BY data 
+                       ORDER BY data DESC 
+                       LIMIT ${limit}`
+        return await this.querySync(sql)
     }
     
     //Total de campanhas ativas
-    totalCampanhasAtivas(callback){
-        const sql = `SELECT COUNT(id) as total FROM campanhas WHERE status=1 AND estado=1`
-        connect.banco.query(sql,callback)
+    async totalCampanhasAtivas(empresa){
+        const sql = `SELECT COUNT(id) as total 
+                       FROM ${empresa}_dados.campanhas
+                      WHERE status=1 AND estado=1`
+        return await this.querySync(sql)
     }
     
-    campanhasAtivas(callback){
+    async campanhasAtivas(empresa){
+       
         const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo 
-                      FROM campanhas AS c 
-                      LEFT JOIN campanhas_status AS s ON c.id = s.idCampanha
-                       WHERE c.status=1 AND c.estado=1 AND s.estado=1`
-        connect.banco.query(sql,callback)
+                       FROM ${empresa}_dados.campanhas AS c 
+                  LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha
+                      WHERE c.status=1 AND c.estado=1 AND s.estado=1`
+        return await this.querySync(sql)
     }
 
     //Total de campanhas em pausa
-    campanhasPausadas(callback){
+    async campanhasPausadas(empresa){
         const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo
-                      FROM campanhas AS c 
-                      LEFT JOIN campanhas_status AS s ON c.id = s.idCampanha 
+                       FROM ${empresa}_dados.campanhas AS c 
+                  LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha 
                       WHERE c.status=1 AND c.estado=2 OR c.estado=1 AND s.estado=2`
-        connect.banco.query(sql,callback)
+        return await this.querySync(sql)
     }
 
     //Total de campanhas paradas
-    campanhasParadas(callback){
+    async campanhasParadas(empresa){
         const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo 
-                      FROM campanhas AS c 
-                      LEFT JOIN campanhas_status AS s ON c.id = s.idCampanha 
+                       FROM ${empresa}_dados.campanhas AS c 
+                  LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha 
                       WHERE c.status=1 AND c.estado=3 OR c.estado=1 AND s.estado=3`
-        connect.banco.query(sql,callback)
+        return await this.querySync(sql)
     }
         
 
@@ -730,10 +811,12 @@ class Campanhas{
 
     
     //Status dos agentes das campanhas
-    agentesFalando(callback){
+    async agentesFalando(empresa){
         //Estado 3 = Falando
-        const sql = `SELECT DISTINCT ramal AS agentes FROM campanhas_chamadas_simultaneas WHERE falando=3`
-        connect.banco.query(sql,callback)
+        const sql = `SELECT DISTINCT ramal AS agentes 
+                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                      WHERE falando=1`
+        return this.querySync(sql)
     }
 
     atualizaEstadoAgente(ramal,estado,idPausa,callback){
@@ -756,24 +839,26 @@ class Campanhas{
         })
     }
 
-    agentesEmPausa(callback){
+    async agentesEmPausa(empresa){
         //Estado 2 = Em Pausa
-        const sql = `SELECT DISTINCT a.ramal AS agentes FROM agentes_filas AS a 
-                       JOIN campanhas_filas AS f ON a.fila = f.id 
-                       JOIN campanhas AS c ON c.id=f.idCampanha 
+        const sql = `SELECT DISTINCT a.ramal AS agentes 
+                       FROM ${empresa}_dados.agentes_filas AS a 
+                       JOIN ${empresa}_dados.campanhas_filas AS f ON a.fila = f.id 
+                       JOIN ${empresa}_dados.campanhas AS c ON c.id=f.idCampanha 
                        WHERE c.estado=1 AND c.status=1 AND a.estado=2`
-        connect.banco.query(sql,callback)
+        return await this.querySync(sql)
     }
 
-    agentesDisponiveis(callback){
+    async agentesDisponiveis(empresa){
         //Estado 1 = Disponível
         //Estado 0 = Deslogado
         const sql = `SELECT DISTINCT a.ramal AS agentes 
-                       FROM agentes_filas AS a 
-                       JOIN campanhas_filas AS f ON a.fila = f.id 
-                       JOIN campanhas AS c ON c.id=f.idCampanha 
+                       FROM ${empresa}_dados.agentes_filas AS a 
+                       JOIN ${empresa}_dados.campanhas_filas AS f ON a.fila = f.id 
+                       JOIN ${empresa}_dados.campanhas AS c ON c.id=f.idCampanha 
                        WHERE c.estado=1 AND c.status=1 AND a.estado=1`
-        connect.banco.query(sql,callback)
+                       
+        return await this.querySync(sql)
     }
 
     chamadasTravadas(callback){
@@ -799,17 +884,19 @@ class Campanhas{
         connect.banco.query(sql,callback)
     }
 
-    campanhaDoMailing(idMailing,callback){
+    campanhaDoMailing(empresa,idMailing,callback){
         const sql = `SELECT m.idCampanha,c.nome 
-                       FROM campanhas_mailing AS m 
-                       JOIN campanhas AS c ON m.idCampanha=c.id
+                       FROM ${empresa}_dados.campanhas_mailing AS m 
+                       JOIN ${empresa}_dados.campanhas AS c ON m.idCampanha=c.id
                       WHERE idMailing=${idMailing} AND c.status=1
                       LIMIT 1`
         connect.banco.query(sql,callback)
     }
 
-    mailingConfigurado(idMailing,callback){
-        const sql = `SELECT tabela_dados FROM mailings WHERE id=${idMailing} AND configurado=1`
+    mailingConfigurado(empresa,idMailing,callback){
+        const sql = `SELECT tabela_dados 
+                       FROM ${empresa}_dados.mailings 
+                       WHERE id=${idMailing} AND configurado=1`
         connect.banco.query(sql,callback)
     }
 
@@ -820,29 +907,29 @@ class Campanhas{
         const sql = `SELECT count(t.id) AS nao_trabalhados FROM campanhas_tabulacao_mailing AS t JOIN campanhas AS c ON c.id=t.idCampanha WHERE t.contatado is null AND c.estado=1 AND c.status=1`
         connect.banco.query(sql,callback)
     }*/
-    totalMailings(callback){
+    async totalMailings(empresa){
         const sql = `SELECT SUM(totalReg) AS total FROM mailings as m 
-                      JOIN campanhas_mailing AS cm ON cm.idMailing=m.id 
-                      JOIN campanhas AS c ON c.id=cm.idCampanha 
+                      JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
+                      JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
                       WHERE c.estado=1 AND c.status=1`
-        connect.banco.query(sql,callback)
+        return await this.querySync(sql)
     }
 
-    mailingsContatados(callback){
+    async mailingsContatados(empresa){
         const sql = `SELECT count(t.id) AS contatados 
                        FROM ${connect.db.mailings}.campanhas_tabulacao_mailing AS t 
-                       JOIN campanhas AS c ON c.id=t.idCampanha 
+                       JOIN ${empresa}_dados.campanhas AS c ON c.id=t.idCampanha 
                        WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
-        connect.banco.query(sql,callback)
+        return await this.querySync(sql)
     }
 
-    mailingsNaoContatados(callback){
+    async mailingsNaoContatados(empresa){
         const sql = `SELECT count(t.id) AS nao_contatados 
-                       FROM ${connect.db.mailings}.campanhas_tabulacao_mailing AS t 
-                       JOIN campanhas AS c 
+                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
+                       JOIN ${empresa}_dados.campanhas AS c 
                          ON c.id=t.idCampanha 
                       WHERE t.contatado='N' AND c.estado=1 AND c.status=1`
-        connect.banco.query(sql,callback)
+        return await this.querySync(sql)
     }
 
     //Status dos Mailings por campanha
