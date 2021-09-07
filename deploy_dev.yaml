@@ -1,0 +1,217 @@
+#Namespace
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: megadev-pbx
+---
+#Autorization
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: voip-manager
+  namespace: megadev-pbx
+rules:
+  - apiGroups: [""] # "" indicates the core API group
+    resources: ["pods","endpoints","services","nodes"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "watch", "list", "update", "patch"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: manager
+  namespace: megadev-pbx
+subjects:
+  - kind: User
+    name: system:serviceaccount:megadev-pbx:default
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: voip-manager
+  apiGroup: rbac.authorization.k8s.io
+---
+#Backend
+#Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-svc
+  namespace: megadev-pbx
+  labels: 
+    tier: backend
+spec: 
+  selector:
+    app: central-v1
+    tier: backend
+  ports:
+  - protocol: TCP
+    port: 3000
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bd-auth
+  namespace: megadev-pbx
+type: kubernetes.io/basic-auth
+stringData:
+  username: megaconecta
+  password: M3g4_devDB@2021
+  host: "34.132.255.110"
+---
+#Deploy do Backend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deploy
+  namespace: megadev-pbx
+  labels:
+    tier: backend
+spec:
+  #replicas: 3
+  selector:
+    matchLabels:
+      app: central-v1
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: central-v1
+        tier: backend
+    spec:      
+      containers:
+      - name: api
+        image: megaconecta/api-central:v0.0.258
+        #resources:
+        #  limits:
+        #    cpu: 0.1m
+        #    memory: 300Mi   
+        #  requests:
+        #    memory: 300Mi
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: bd-auth
+              key: username
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: bd-auth
+              key: password
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: bd-auth
+              key: host
+        - name: TZ
+          value: America/Sao_Paulo
+---
+#apiVersion: autoscaling/v1
+#kind: HorizontalPodAutoscaler
+#metadata:
+#  name: backend-scaler
+#  namespace: megadev-pbx
+#spec:
+#  scaleTargetRef:
+#    kind: Deployment
+#    name: api-deploy    
+#  minReplicas: 2
+#  maxReplicas: 10
+#  targetCPUUtilizationPercentage: 50
+#---
+#Frontend
+#Front End Deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-deploy
+  namespace: megadev-pbx
+  labels:
+    tier: frontend
+spec:
+  selector:
+    matchLabels:
+      app: central-v1
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: central-v1
+        tier: frontend
+    spec:
+      containers:
+      - name: api
+        image: megaconecta/frontendcentral:v72
+        env:
+        - name: TZ
+          value: America/Sao_Paulo
+---
+#front service
+kind: Service
+apiVersion: v1
+metadata: 
+  name: front-srv
+  namespace: megadev-pbx
+  labels:
+    app: central-v1
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    protocol: TCP
+  selector: 
+    app: central-v1
+    tier: frontend
+
+#Certificados 
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+    name: letsencrypt-prod
+    namespace: megadev-pbx
+spec:
+    acme:
+      server: https://acme-v02.api.letsencrypt.org/directory
+      email: glaucolugh@gmail.com
+      privateKeySecretRef:
+          name: letsencrypt-prod
+      solvers:
+      - selector: {}
+        http01:
+          ingress:
+            class: nginx        
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+    name: ingress
+    namespace: megadev-pbx
+    annotations:
+        kubernetes.io/ingress.class: "nginx"  
+        cert-manager.io/issuer: letsencrypt-prod
+        nginx.ingress.kubernetes.io/proxy-body-size: 512m
+spec: 
+  tls:
+  - hosts:
+    - desenvolvimento.cloudcall.tec.br
+    - dev-api.cloudcall.tec.br
+    secretName: megapbx-prod-tls
+  rules: 
+    - host: dev-api.cloudcall.tec.br
+      http: 
+        paths: 
+          - path: /
+            backend: 
+                serviceName: api-svc
+                servicePort: 3000
+    - host: desenvolvimento.cloudcall.tec.br
+      http: 
+        paths: 
+          - path: /
+            backend: 
+                serviceName: front-srv
+                servicePort: 80

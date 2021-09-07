@@ -6,154 +6,123 @@ class UserController{
         const { email, password } = req.body
     }  
 
-    newUser(req,res){
+    async newUser(req,res){
+        const empresa = await User.getEmpresa(req)
         const dados = req.body
-        User.newUser(dados,(e,r)=>{
-            if(e) throw e
-            res.json(r)
-        })
+        const r = await User.newUser(empresa,dados)
+        res.json(r)
     }
 
-    listUsers(req,res){
+    async listUsers(req,res){
+        const empresa = await User.getEmpresa(req)
         const status = parseInt(req.params.status)
-        User.listUsers(status,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
-    }  
-
-    userData(req,res){
-        const userId = parseInt(req.params.userId)
-        User.userData(userId,(e,r)=>{
-            if(e) throw e
-            res.json(r)
-        })
+        const r = await User.listUsers(empresa,status)
+        res.json(r)
     }
 
-    editUser(req,res){
-       
-        const userId = {"id":parseInt(req.params.userId)}
+    async userData(req,res){
+        const empresa = await User.getEmpresa(req)
+        const userId = parseInt(req.params.userId)
+        const r = await User.userData(empresa,userId)
+        res.json(r)
+    }
+
+    async editUser(req,res){
+        const empresa = await User.getEmpresa(req)
+        const userId = parseInt(req.params.userId)
         const userData = req.body
-        User.editUser(userId,userData,(e,r)=>{
-            if(e) throw e
-            res.json(r)
-        })
+        const r = await User.editUser(empresa,userId,userData)
+        res.json(r)
     }
 
     //EQUIPES
-    novaEquipe(req,res){
+    async novaEquipe(req,res){
+        const empresa = await User.getEmpresa(req)
         const dados = req.body
-        User.novaEquipe(dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.novaEquipe(empresa,dados)
+        res.json(r)
     }
 
-    listEquipes(req,res){
+    async listEquipes(req,res){
+        const empresa = await User.getEmpresa(req)
         const status = parseInt(req.params.status);
-        User.listEquipes(status,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.listEquipes(empresa,status)
+        res.json(r)
     }
 
-    dadosEquipe(req,res){
+    async dadosEquipe(req,res){
+        const empresa = await User.getEmpresa(req)
         const idEquipe = parseInt(req.params.idEquipe)
-        User.dadosEquipe(idEquipe,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.dadosEquipe(empresa,idEquipe)
+        res.json(r)
     }
 
-    editEquipe(req,res){
+    async editEquipe(req,res){
+        const empresa = await User.getEmpresa(req)
         const idEquipe = {"id":parseInt(req.params.idEquipe)}
         const dados = req.body
-        User.editEquipe(idEquipe,dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.editEquipe(empresa,idEquipe,dados)
+        res.json(r)
     }
 
 
     //CARGOS
-    novoCargo(req,res){
+    async novoCargo(req,res){
+        const empresa = await User.getEmpresa(req)
         const dados = req.body
-        User.novoCargo(dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.novoCargo(empresa,dados)
+        res.json(r)
     }
 
-    listCargos(req,res){
+    async listCargos(req,res){
+        const empresa = await User.getEmpresa(req)
         const status = parseInt(req.params.status);
-        User.listCargos(status,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.listCargos(empresa,status)
+        res.json(r)
     }
 
-    dadosCargo(req,res){
+    async dadosCargo(req,res){
+        const empresa = await User.getEmpresa(req)
         const idCargo = parseInt(req.params.idCargo)
-        User.dadosCargo(idCargo,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.dadosCargo(empresa,idCargo)
+        res.json(r)
     }
 
-    editCargo(req,res){        
+    async editCargo(req,res){   
+        const empresa = await User.getEmpresa(req)     
         const idCargo = {"id":parseInt(req.params.idCargo)}
         const dados = req.body
-        User.editCargo(idCargo,dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.editCargo(empresa,idCargo,dados)
+        res.json(r)
     }
 
     //NÍVEIS DE ACESSO
-    novoNivel(req,res){
+    async novoNivel(req,res){
+        const empresa = await User.getEmpresa(req)
         const dados = req.body
-        User.novoNivel(dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.novoNivel(empresa,dados)
+        res.json(r)
     }
 
-    listNiveis(req,res){
+    async listNiveis(req,res){
+        const empresa = await User.getEmpresa(req)
         const status = parseInt(req.params.status);
-        User.listNiveis(status,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = User.listNiveis(empresa,status)
+        res.json(r)
     }
 
-    dadosNivel(req,res){
+    async dadosNivel(req,res){
+        const empresa = await User.getEmpresa(req)
         const idNivel = parseInt(req.params.idNivel)
-        User.dadosNivel(idNivel,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.dadosNivel(empresa,idNivel)
+        res.json(r)
     }
-
-    editNivel(req,res){
+    async editNivel(req,res){
+        const empresa = await User.getEmpresa(req)
         const idNivel = {"id":parseInt(req.params.idNivel)}
         const dados = req.body
-        User.editNivel(idNivel,dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await User.editNivel(empresa,idNivel,dados)
+        res.json(r)
     }
     
 

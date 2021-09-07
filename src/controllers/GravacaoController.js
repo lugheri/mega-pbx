@@ -1,22 +1,23 @@
 import Asterisk from '../models/Asterisk';
-import Campanhas from '../models/Campanhas';
+import User from '../models/User';
 import Gravacao from '../models/Gravacao';
 
 class GravacaoController{
-    async listarGravacoes(req,res){        
+    async listarGravacoes(req,res){     
+        const empresa = await User.getEmpresa(req)
         const pag  = parseInt(req.params.pag-1)       
         const limit = parseInt(req.params.limit)
         const inicio = pag*limit
         //console.log(`Pag: ${pag} Inicio: ${inicio} Fim: ${limit}`)
-        const gravacoes = await Gravacao.listarGravacoes(inicio,limit)
-        const server = await Asterisk.getDomain()
+        const gravacoes = await Gravacao.listarGravacoes(empresa,inicio,limit)
+        const server = await Asterisk.getDomain(empresa)
         const servidor = `https://${server[0].ip}/api/`
         const listaGravacoes=[]
         
         for(let i=0; i<gravacoes.length; ++i){
             const retorno={}
-            let ouvir = `${servidor}gravacoes/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].origem}_${gravacoes[i].uniqueid}.wav`
-            let baixar = `${servidor}gravacao.php?id=${gravacoes[i].uniqueid}`
+            let ouvir = `${servidor}gravacoes/${empresa}/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].origem}_${gravacoes[i].uniqueid}.wav`
+            let baixar = `${servidor}gravacao.php?empresa=${empresa}&id=${gravacoes[i].uniqueid}`
             retorno["idGravacao"]=gravacoes[i].id
             retorno["data"]=gravacoes[i].data
 
@@ -47,29 +48,31 @@ class GravacaoController{
     }
     
     async compartilharGravacao(req,res){
+        const empresa = await User.getEmpresa(req)
         const idGravacao = parseInt(req.params.idGravacao)
-        const infoGravacao = await Gravacao.infoGravacao(idGravacao)
-        const server = await Asterisk.getDomain()
+        const infoGravacao = await Gravacao.infoGravacao(empresa,idGravacao)
+        const server = await Asterisk.getDomain(empresa)
         const pasta = infoGravacao[0].date_record
         const arquivo = `${infoGravacao[0].time_record}_${infoGravacao[0].ramal}_${infoGravacao[0].uniqueid}.wav`
-        const link = `https://${server[0].ip}/api/gravacoes/${pasta}/${arquivo}`
+        const link = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
         res.json(link)               
     }
     
     async buscarGravacoes(req,res){
+        const empresa = await User.getEmpresa(req)
         const minTime = req.body.minTime
         const maxTime = req.body.maxTime
         const de = req.body.de
         const ate = req.body.ate
         const buscarPor = req.body.buscarPor
         const parametro = req.body.parametro
-        const gravacoes = await Gravacao.buscarGravacao(minTime,maxTime,de,ate,buscarPor,parametro)
-        const server = await Asterisk.getDomain()
+        const gravacoes = await Gravacao.buscarGravacao(empresa,minTime,maxTime,de,ate,buscarPor,parametro)
+        const server = await Asterisk.getDomain(empresa)
         const servidor = `https://${server[0].ip}/api/`
         const resultBusca = []
         for(let i=0; i<gravacoes.length; ++i){
-            let ouvir = `${servidor}gravacoes/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].origem}_${gravacoes[i].uniqueid}.wav`
-            let baixar = `${servidor}gravacao.php?id=${gravacoes[i].uniqueid}`
+            let ouvir = `${servidor}gravacoes/${empresa}/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].origem}_${gravacoes[i].uniqueid}.wav`
+            let baixar = `${servidor}gravacao.php?empresa=${empresa}&id=${gravacoes[i].uniqueid}`
             const item={}
             item["idGravacao"]=gravacoes[i].id
             item["data"]=gravacoes[i].data
@@ -101,11 +104,12 @@ class GravacaoController{
     }
     
     async baixarGravacao(req,res){
+        const empresa = await User.getEmpresa(req)
         const idGravacao = parseInt(req.params.idGravacao)
-        const infoGravacao = await Gravacao.infoGravacao(idGravacao)
-        const server = await Asterisk.getDomain()
+        const infoGravacao = await Gravacao.infoGravacao(empresa,idGravacao)
+        const server = await Asterisk.getDomain(empresa)
         const uniqueidarquivo = infoGravacao[0].uniqueid
-        const link = `https://${server[0].ip}/api/gravacao.php?id=${uniqueidarquivo}`
+        const link = `https://${server[0].ip}/api/gravacao.php?empresa=${empresa}&id=${uniqueidarquivo}`
         res.json(link)               
     }
 }

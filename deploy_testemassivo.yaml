@@ -1,0 +1,265 @@
+#Namespace
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: megadev-massive-v1
+---
+#Autorization
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: voip-manager
+  namespace: megadev-massive-v1
+rules:
+  - apiGroups: [""] # "" indicates the core API group
+    resources: ["pods","endpoints","services","nodes"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "watch", "list", "update", "patch"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: manager
+  namespace: megadev-massive-v1
+subjects:
+  - kind: User
+    name: system:serviceaccount:megadev-massive-v1:default
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: voip-manager
+  apiGroup: rbac.authorization.k8s.io
+---
+#Backend Services
+#API
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-svc
+  namespace: megadev-massive-v1
+  labels: 
+    tier: backend
+spec: 
+  selector:
+    app: central-massive-v1
+    tier: backend
+  ports:
+  - protocol: TCP
+    port: 3000
+  type: ClusterIP
+---
+#Front service
+kind: Service
+apiVersion: v1
+metadata: 
+  name: front-srv
+  namespace: megadev-massive-v1
+  labels:
+    app: central-massive-v1
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    protocol: TCP
+  selector: 
+    app: central-massive-v1
+    tier: frontend
+---
+##CREDENCIAIS SQL
+#secretGenerator:
+#- name: bd-auth
+#  namespace: megadev-massive-v1
+#    literals:
+#    - username=root
+#    - password=M3g4_devDB@2021
+#    - database=mega_conecta
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bd-auth
+  namespace: megadev-massive-v1
+type: kubernetes.io/basic-auth
+stringData:
+  username: root
+  password: M3g4_devDB@2021
+  database: mega_conecta
+#CREDENCIAIS cloudSQL
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sa-secret
+  namespace: megadev-massive-v1
+type: Opaque
+stringData:
+  service_account.json: |
+    {
+      "type": "service_account",
+      "project_id": "desenvolvimento-272718",
+      "private_key_id": "69860bd20fa1c0b77a778c1f0ca21a0fd5042e0e",
+      "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDNvO7dnbHQkCXT\nOQVm7OkO+aOr0Mu1l9hBN37TLlGVZbRDri98xdBjMFhFldwSMRshrWD1Fz3mPdeg\nKBLoz3BBRv8fD63PUvdii7rTZ8+HSB8AglXsCI8NoFt1idwJT2RdDAdPqAJ1wIHD\n0sfWoJ0jjYlxb9aSiSGpZ+zipDE0HNN8vNra3Rl0sHmAr4/h6GgyP2wyOVXtRlG4\nBtOl/vIX3ktjwoOEW41y2RXYOtt5G/HytYCKb3H0AIuP0nQo7Fi6HNIBmBDRNeQj\nREf15H9/J2K8T5bQ69nd75+vBt+SZMFNlEYSKQ0hCdMTELmjBK73v5oW7SD3vShQ\nH0ZwVMrJAgMBAAECggEACMeuK/VYYCMJXN/F7BQNMs89iGNokM8yR+o4i9uiA1hW\nnpLMQldmIsLZPt2miXzgqwnCpa2rExcti2SvwJFluYDFpMuJqoY1uitmEDKRx99b\nOgLV7DTwoe9nfSHNKvU2k8VOeebyH+3/Zl4pmsO6S7OfxiBfOFwI0eQhAbUUcnml\ngyDYolPWr6kmSEzlCfktIL0ZcMV2UZWZ/d4wilJvzaRBsUOhFSQSpvRIi9KU+j5L\nbWhi4vy0O2OQG0J1Lj7kzdTbqaiKH1BpdbSBm5Obc9A8LmE0h6+NWGTrfxTApYxh\nsn6HnnB6dmThZiHeN5UBQSYN/ZfQ9Q20Q6U95eGNlwKBgQDwKsXZULCvfFhzzifU\nOFNbgQB7uc32m4PXJgrG7hK+B7M1enm20y+7effjRd5tv1nn1ohUlR3Zb+2g6zZf\nDo0CIWx8QCY6c7Oe3JSkZmkjcjzwQXaKnViK9MsKIFF0t4qaa34i3LEi4CJHKHuv\nCa+8E5LjrJ3qL4zFb3B2cH/nXwKBgQDbTRyCmW5sLqMs4LEisaHyQzvnAjbyXIWi\nLQnhIgKtpB/bitrWef5c6ljkFqixceFfpL5/aqeR8pZPsgdNcAol2alo2pUNMO36\nk0F7Xswx7CU5/ns8S9q7Hy7/lQBoN/vEd42H4bkQetfp24vm5/AE5NFOFe887TLv\ncF9X6crG1wKBgGXfTtMSZg/Z588feEeNqNYcjy7sLpBXgQIG8fVV0P9oVrztealy\nRUH5x4tQ/LuCukkb9/Ig2mt8Dcj/XK3Ph0KLGPBPaafLojpViHt/sUNG1tB2hCjh\n+0fd9C4UbVjb7d/4jqWNBVosxn12j5g8vJ1DlEAc3VMT3lt1HLgwmiBzAoGBAMyl\nD9bboQy5FLKbVxFeHBb8INk42ted+WJWjyKU31T0lHoGAKMmonRIh/0JHBDCiaL8\nFHzIpWjvrM7f/iqIRCAAFzPuzirKHzm20uNymjB4AmE1FgE1c/8sYWpFvGSE4Z/8\nRImp3U4ApJ3pr4sho3ydnqg0ldUQMHj6Ly7Vz9FvAoGBAJYcucyvtSq1QvtS/Gvf\nwebOg5lOsIOGnmuHIbpI3BVdB1wpbx08B6KAV0ngtiuJVLGD7unyRuJPbGYHMban\nV9Wes+o8pQJiKkrJdcrH4KjI50R2LXxSYNZXnqUkzogkUEFe5B1wD4ttxyouBeVt\nqhItkbLz26D7Cyxx+Niu0Lnp\n-----END PRIVATE KEY-----\n",
+      "client_email": "megacrm-deploys@desenvolvimento-272718.iam.gserviceaccount.com",
+      "client_id": "111430391360904808605",
+      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+      "token_uri": "https://oauth2.googleapis.com/token",
+      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/megacrm-deploys%40desenvolvimento-272718.iam.gserviceaccount.com"
+    }
+---
+#Deploy
+#API Deploy 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deploy
+  namespace: megadev-massive-v1
+  labels:
+    tier: backend
+spec:
+  selector:
+    matchLabels:
+      app: central-massive-v1
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: central-massive-v1
+        tier: backend
+    spec:
+      volumes:
+        - name: sa-secret-volum
+          secret: 
+            secretName: sa-secret
+      containers:
+      - name: api
+        image: megaconecta/api-central-db:v0.0.5
+        env:
+        - name: client
+          value: id:1001
+        - name: db_asterisk
+          value: asterisk
+        - name: db_mailings
+          value: mailings
+        - name: db_dados
+          value: mega_conecta
+        - name: TZ
+          value: America/Sao_Paulo
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: bd-auth
+              key: username
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: bd-auth
+              key: password
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: bd-auth
+              key: database
+      - name: cloud-sql-proxy
+        # It is recommended to use the latest version of the Cloud SQL proxy
+        # Make sure to update on a regular schedule!
+        image: gcr.io/cloudsql-docker/gce-proxy:1.17
+        command:
+          - "/cloud_sql_proxy"
+
+          # If connecting from a VPC-native GKE cluster, you can use the
+          # following flag to have the proxy connect over private IP
+          # - "-ip_address_types=PRIVATE"
+
+          # Replace DB_PORT with the port the proxy should listen on
+          # Defaults: MySQL: 3306, Postgres: 5432, SQLServer: 1433
+          - "-instances=desenvolvimento-272718:us-central1:megadesenvolvimento-db=tcp:3306"
+          - "-credential_file=/secrets/service_account.json"
+        securityContext:
+          # The default Cloud SQL proxy image runs as the
+          # "nonroot" user and group (uid: 65532) by default.
+          runAsNonRoot: true
+        # Resource configuration depends on an application's requirements. You
+        # should adjust the following values based on what your application
+        # needs. For details, see https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        volumeMounts:
+        - name: sa-secret-volum
+          mountPath: /secrets/
+          readOnly: true
+---
+#Front Deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-deploy
+  namespace: megadev-massive-v1
+  labels:
+    tier: frontend
+spec:
+  selector:
+    matchLabels:
+      app: central-massive-v1
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: central-massive-v1
+        tier: frontend
+    spec:
+      containers:
+      - name: api
+        image: megaconecta/frontendcentral:v64
+        env:
+        - name: TZ
+          value: America/Sao_Paulo
+---
+#Certificados 
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+    name: letsencrypt-prod
+    namespace: megadev-massive-v1
+spec:
+    acme:
+      server: https://acme-v02.api.letsencrypt.org/directory
+      email: glaucolugh@gmail.com
+      privateKeySecretRef:
+          name: letsencrypt-prod
+      solvers:
+      - selector: {}
+        http01:
+          ingress:
+            class: nginx        
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+    name: ingress
+    namespace: megadev-massive-v1
+    annotations:
+        kubernetes.io/ingress.class: "nginx"  
+        cert-manager.io/issuer: letsencrypt-prod
+        nginx.ingress.kubernetes.io/proxy-body-size: 512m
+        
+spec: 
+  tls:
+  - hosts:
+    - junior.cloudcall.tec.br
+    - junior-api.cloudcall.tec.br
+    secretName: megapbx-prod-tls
+  rules: 
+    - host: junior-api.cloudcall.tec.br
+      http: 
+        paths: 
+          - path: /
+            backend: 
+                serviceName: api-svc
+                servicePort: 3000
+    - host: junior.cloudcall.tec.br
+      http: 
+        paths: 
+          - path: /
+            backend: 
+                serviceName: front-srv
+                servicePort: 80

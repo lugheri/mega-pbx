@@ -12,9 +12,8 @@ import Discador from './Discador';
 class Asterisk{
     querySync(sql){
         return new Promise((resolve,reject)=>{
-            connect.pool.query(sql,(e,rows)=>{
+            connect.poolEmpresa.query(sql,(e,rows)=>{
                 if(e) reject(e);
-
                 resolve(rows)
             })
         })
@@ -34,9 +33,11 @@ class Asterisk{
         return true
     }
     //Lista os membros da fila
-    listarMembrosFila(nomeFila,callback){
-        const sql = `SELECT * FROM queue_members WHERE queue_name = ?`
-        connect.asterisk.query(sql,nomeFila,callback)
+    async listarMembrosFila(nomeFila){
+        const sql = `SELECT * 
+                       FROM ${connect.db.asterisk}.queue_members 
+                      WHERE queue_name = ${nomeFila}`
+        return await this.querySync(sql)
     }
     //Remove os membros da fila
     async removeMembroFila(empresa,nomeFila,membro){
@@ -60,23 +61,26 @@ class Asterisk{
 
 
     //######################Configuração do Asterisk######################
-    async setRecord(data,hora,ramal,uniqueid,callback){
-        await this.setUniqueid(ramal,uniqueid)
-
-        const sql = `INSERT INTO records (date,date_record,time_record,ramal,uniqueid) VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}')`
-        connect.banco.query(sql,(e,r)=>{
-            if(e) throw e          
-
-            this.servidorWebRTC(callback)
-        })
+    async setRecord(empresa,data,hora,ramal,uniqueid){
+        await this.setUniqueid(empresa,ramal,uniqueid)
+        const sql = `INSERT INTO ${empresa}_dados.records
+                                (date,date_record,time_record,ramal,uniqueid)
+                         VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}')`
+        await this.querySync(sql)
+        return await this.servidorWebRTC(empresa)
+        
     }
 
-    async setUniqueid(ramal,uniqueid){
-        let sql = `SELECT uniqueid FROM campanhas_chamadas_simultaneas WHERE ramal='${ramal}' LIMIT 1`
+    async setUniqueid(empresa,ramal,uniqueid){
+        let sql = `SELECT uniqueid 
+                     FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                    WHERE ramal='${ramal}' LIMIT 1`
         const check = await this.querySync(sql)
         if(check.length==1){
             if(check[0].uniqueid == null){
-                let sql = `UPDATE campanhas_chamadas_simultaneas SET uniqueid='${uniqueid}' WHERE ramal='${ramal}'`
+                let sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
+                              SET uniqueid='${uniqueid}' 
+                            WHERE ramal='${ramal}'`
                 await this.querySync(sql)
                 return true
             }
@@ -84,14 +88,18 @@ class Asterisk{
         return false       
     }
 
-    async getDomain(){//Ip/dominio do servidor onde o asterisk esta instalado
-        const sql = "SELECT ip FROM servidor_webrtc WHERE status=1"
+    async getDomain(empresa){//Ip/dominio do servidor onde o asterisk esta instalado
+        const sql = `SELECT ip 
+                       FROM ${empresa}_dados.servidor_webrtc 
+                      WHERE status=1`
         return await this.querySync(sql)
     }
 
-    servidorWebRTC(callback){//Ip da maquina onde o asterisk esta instalado
-        const sql = "SELECT * FROM servidor_webrtc WHERE status=1"
-        connect.banco.query(sql,callback)
+    async servidorWebRTC(empresa){//Ip da maquina onde o asterisk esta instalado
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.servidor_webrtc 
+                       WHERE status=1`
+        return await this.querySync(sql)
     }
 
     ariConnect(server,user,pass,callback){
@@ -102,11 +110,12 @@ class Asterisk{
     //Trata a ligação em caso de Máquina ou Não Atendida    
     async machine(dados){
         //Dados recebidos pelo AGI do asterisk
+        const empresa = dados.empresa
         const numero = dados.numero
         const observacoes = dados.status
 
         //Verificando se o numero ja consta em alguma chamada simultanea
-        const chamada = await Discador.dadosAtendimento_byNumero(numero)
+        const chamada = await Discador.dadosAtendimento_byNumero(empresa,numero)
         
         if(chamada.length!=0){     
             const idAtendimento =chamada[0].id          
@@ -127,9 +136,9 @@ class Asterisk{
             const removeNumero=0
             //Tabula registro
             const status_tabulacao = 0
-            await Discador.tabulaChamada(idAtendimento,contatado,status_tabulacao,observacoes,produtivo,ramal,id_numero,removeNumero)
+            await Discador.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacoes,produtivo,ramal,id_numero,removeNumero)
             //Removendo ligacao do historico de chamadas_simultaneas
-            await clearCallbyId(idAtendimento)
+            await Discador.clearCallbyId(empresa,idAtendimento)
             return true
         }
         return false
@@ -138,6 +147,7 @@ class Asterisk{
     //Atendente atendeu chamada da fila
     async answer(dados){
         //Dados recebidos pelo AGI
+        const empresa = dados.empresa
         const uniqueid = dados.uniqueid;
         const numero = dados.numero;
         let ch = dados.ramal;
@@ -146,18 +156,14 @@ class Asterisk{
         const ramal = ch[1]
         //console.log(`RAMAL DO AGENTE: ${ramal}`)
         //dados da campanha
-        const sql = `UPDATE campanhas_chamadas_simultaneas 
+        const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                         SET uniqueid='${uniqueid}',ramal='${ramal}', na_fila=0, atendido=1
                       WHERE numero='${numero}'`// AND na_fila=1`  
         return await this.querySync(sql)
-    }
+    }   
 
-    //Chamada Manual
-    handcall(dados,callback){       
-    }    
-
-     //######################DISCAR######################
-    discar(server,user,pass,modo,ramal,numero,callback){
+    //######################DISCAR######################
+    discar(empresa,server,user,pass,modo,ramal,numero,callback){
         console.log(`recebendo ligacao ${numero}`)
         console.log(`ramal ${ramal}`)
         ari.connect(server, user, pass, (err,client)=>{
@@ -184,6 +190,8 @@ class Asterisk{
             "context"        : `${context}`,
             "priority"       : 1,
             "app"            : "",
+            "variables"      : {"EMPRESA":`${empresa}`},
+            "Async"          : true,
             "appArgs"        : "",
             "Callerid"       : `0${numero}`,//numero,
             "timeout"        : -1, 

@@ -37,7 +37,7 @@ connect.poolEmpresa=mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0
 })
-
+/*
 
 connect.db=db
 
@@ -82,7 +82,7 @@ connect.asterisk=mysql.createConnection({
     database : db['asterisk']
 })
 
-
+*/
 
 
 export default connect;

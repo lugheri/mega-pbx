@@ -74,53 +74,44 @@ class User{
         return await this.querySync(sql)
     }
 
-
-
-
-    newUser(dados,callback){
-        const sql = `SELECT id FROM users WHERE usuario='${dados.usuario}'`;
-        connect.banco.query(sql,(e,r)=>{
-            if(e) throw e
-
-            if(r.length >= 1){
-                const resp = {
-                    "erro":1,
-                    "descricao":`Usuário ${dados.usuario} já existe`
-                }
-                callback(e,resp)
-            }else{
-                const sql = `INSERT INTO users (criacao,nome,usuario,senha,nivelAcesso,cargo,equipe,reset,logado,status)
-                                        VALUES (NOW(),'${dados.nome}','${dados.usuario}',md5('${dados.senha}'),'${dados.nivelAcesso}','${dados.cargo}','${dados.equipe}','${dados.reset}',0,'${dados.status}')`
-                connect.banco.query(sql,(e,r)=>{
-                    if(e) throw e
-
-                    const userId = r.insertId;
-
-                    //Cadastrando ramal
-                    const sql = `INSERT INTO user_ramal (userId,ramal,estado) VALUES ('${userId}','${userId}',0)`
-                    connect.banco.query(sql,(e,r)=>{
-                        if(e) throw e
-
-                        //criando ramal no asterisk
-                        //AOR
-                        const sql = `INSERT INTO ps_aors (id,max_contacts,remove_existing) VALUES ('${userId}',1,'yes')`
-                        connect.asterisk.query(sql,(e,r)=>{
-                            if(e) throw e
-                            
-                            //AUTH
-                            const sql = `INSERT INTO ps_auths (id,auth_type,password,realm,username) VALUES ('${userId}','userpass','mega_${userId}@agent','asterisk','${userId}')`
-                            connect.asterisk.query(sql,(e,r)=>{
-                                if(e) throw e
-
-                                //ENDPOINT
-                                const sql = `INSERT INTO ps_endpoints (id,transport,aors,auth,context,disallow,allow,webrtc,dtls_auto_generate_cert,direct_media,force_rport,ice_support,rewrite_contact,rtp_symmetric) VALUES ('${userId}','transport-wss','${userId}','${userId}','external','all','alaw,ulaw,opus','yes','yes','no','yes','yes','yes','yes')`
-                                connect.asterisk.query(sql,callback)
-                            })  
-                        })
-                    })
-                })
-            }
-        })        
+    async newUser(empresa,dados){
+        let sql = `SELECT id 
+                       FROM ${empresa}_dados.users 
+                      WHERE usuario='${dados.usuario}'`;
+        const c = await this.querySync(sql)
+        const rt={}
+        if(c.length >= 1){
+            rt['error']=1
+            rt['message']=`Usuário ${dados.usuario} já existe`
+            return rt
+        }
+        sql = `INSERT INTO ${empresa}_dados.users
+                           (criacao,nome,usuario,senha,nivelAcesso,cargo,equipe,reset,logado,status)
+                    VALUES (NOW(),'${dados.nome}','${dados.usuario}',md5('${dados.senha}'),'${dados.nivelAcesso}','${dados.cargo}','${dados.equipe}','${dados.reset}',0,'${dados.status}')`
+        const u = await this.querySync(sql)
+        const userId = u.insertId;
+        //Cadastrando ramal
+        sql = `INSERT INTO ${empresa}_dados.user_ramal 
+                           (userId,ramal,estado)
+                    VALUES ('${userId}','${userId}',0)`
+        const r = await this.querySync(sql)
+        //criando ramal no asterisk
+        //AOR
+        sql = `INSERT INTO ${connect.db.asterisk}.ps_aors 
+                           (id,max_contacts,remove_existing) 
+                    VALUES ('${userId}',1,'yes')`
+        const a = await this.querySync(sql)
+        //AUTH
+        sql = `INSERT INTO ${connect.db.asterisk}.ps_auths
+                           (id,auth_type,password,realm,username) 
+                    VALUES ('${userId}','userpass','mega_${userId}@agent','asterisk','${userId}')`
+        const h = await this.querySync(sql)
+        //ENDPOINT
+        sql = `INSERT INTO ${connect.db.asterisk}.ps_endpoints 
+                           (id,transport,aors,auth,context,disallow,allow,webrtc,dtls_auto_generate_cert,direct_media,force_rport,ice_support,rewrite_contact,rtp_symmetric) 
+                    VALUES ('${userId}','transport-wss','${userId}','${userId}','external','all','alaw,ulaw,opus','yes','yes','no','yes','yes','yes','yes')`
+        const e = await this.querySync(sql)
+        return true;    
     }
 
     async resumoUser(empresa,user){
@@ -132,107 +123,171 @@ class User{
     }
 
     //retorna se agente esta logado
-    agenteLogado(idAgente,callback){
-        const sql = `SELECT logado FROM users WHERE id=${idAgente}`
-        connect.banco.query(sql,callback)
+    async agenteLogado(empresa,idAgente){
+        const sql = `SELECT logado 
+                       FROM ${empresa}_dados.users 
+                       WHERE id=${idAgente}`
+        return await this.querySync(sql)
     }
 
-    listUsers(status,callback){
-        const sql = `SELECT u.id,DATE_FORMAT (u.criacao,'%d/%m/%Y %H:%i:%s') as criacao,u.nome,u.usuario,u.nivelAcesso,e.equipe,c.cargo,n.nivel,u.reset,u.logado,DATE_FORMAT (u.ultimo_acesso,'%d/%m/%Y %H:%i:%s') as ultimo_acesso, u.status FROM users AS u LEFT JOIN users_equipes AS e ON u.equipe=e.id  LEFT JOIN users_cargos AS c ON u.cargo=c.id LEFT JOIN users_niveis AS n ON u.nivelAcesso=n.id WHERE u.status=${status} ORDER BY u.id DESC`
-        connect.banco.query(sql,callback)
+    async listUsers(empresa,status){
+        const sql = `SELECT u.id,
+                            DATE_FORMAT (u.criacao,'%d/%m/%Y %H:%i:%s') as criacao,
+                            u.nome,
+                            u.usuario,
+                            u.nivelAcesso,
+                            e.equipe,
+                            c.cargo,
+                            n.nivel,
+                            u.reset,
+                            u.logado,
+                            DATE_FORMAT (u.ultimo_acesso,'%d/%m/%Y %H:%i:%s') as ultimo_acesso, 
+                            u.status 
+                       FROM ${empresa}_dados.users AS u 
+                  LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id 
+                  LEFT JOIN ${empresa}_dados.users_cargos AS c ON u.cargo=c.id 
+                  LEFT JOIN ${empresa}_dados.users_niveis AS n ON u.nivelAcesso=n.id 
+                      WHERE u.status=${status} 
+                      ORDER BY u.id DESC`
+        return await this.querySync(sql)
     }
 
-    listOnlyUsers(status,callback){
-        const sql = `SELECT * FROM users WHERE status = ${status} ORDER BY ordem ASC`
-        connect.banco.query(sql,callback)
+    async listOnlyUsers(empresa,status){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.users 
+                      WHERE status = ${status} 
+                      ORDER BY ordem ASC`
+        return await this.querySync(sql)
     }
 
-    userData(userId,callback){
-        const sql = `SELECT * FROM users WHERE id='${userId}'`
-        connect.banco.query(sql,callback)
+    async userData(empresa,userId){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.users 
+                      WHERE id='${userId}'`
+        return await this.querySync(sql)
     }
 
-    editUser(userId,userData,callback){
-        const sql = `UPDATE users SET modificado=NOW(), ? ,senha=md5('${userData.senha}') WHERE ?`
-        connect.banco.query(sql,[userData,userId],callback)
+    async editUser(empresa,userId,userData){
+        const sql = `UPDATE ${empresa}_dados.users
+                        SET modificado=NOW(),
+                            nome='${userData.nome}',                            
+                            nivelAcesso=${userData.nivelAcesso},
+                            cargo=${userData.cargo},
+                            reset=${userData.reset},
+                            status=${userData.status}
+                            senha=md5('${userData.senha}') 
+                      WHERE id=${userId}`
+        return await this.querySync(sql)
     }
 
     //EQUIPES
-    novaEquipe(dados,callback){
-        const sql = `INSERT INTO users_equipes (supervisor,equipe,descricao,status) VALUES (${dados.supervisor},'${dados.equipe}','${dados.descricao}',1)`
-        connect.banco.query(sql,callback)
+    async novaEquipe(empresa,dados){
+        const sql = `INSERT INTO ${empresa}_dados.users_equipes 
+                                 (supervisor,equipe,descricao,status) 
+                          VALUES (${dados.supervisor},'${dados.equipe}','${dados.descricao}',1)`
+        return await this.querySync(sql)
     }
 
-    listEquipes(status,callback){
-        const sql = `SELECT * FROM users_equipes WHERE status=${status}`
-        connect.banco.query(sql,callback)
+    async listEquipes(empresa,status){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.users_equipes 
+                      WHERE status=${status}`
+        return await this.querySync(sql)
     }
     
-    dadosEquipe(idEquipe,callback){
-        const sql = `SELECT * FROM users_equipes WHERE id=${idEquipe}`
-        connect.banco.query(sql,callback)
+    async dadosEquipe(empresa,idEquipe){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.users_equipes 
+                      WHERE id=${idEquipe}`
+        return await this.querySync(sql)
     }
     
-    editEquipe(idEquipe,dados,callback){
-        const sql = `UPDATE users_equipes SET ? WHERE ?`
-        connect.banco.query(sql,[dados,idEquipe],callback)
+    async editEquipe(empresa,idEquipe,dados){
+        const sql = `UPDATE ${empresa}_dados.users_equipes 
+                        SET supervisor=${dados.supervisor},
+                            equipe='${dados.equipe}',
+                            descricao='${dados.descricao}',
+                            status=${dados.status} 
+                      WHERE id=${idEquipe}`
+        return await this.querySync(sql)
     }
     
 
     //CARGOS
-    novoCargo(dados,callback){
-        const sql = `INSERT INTO users_cargos (cargo,descricao,status) VALUES ('${dados.cargo}','${dados.descricao}',1)`
-        connect.banco.query(sql,callback)
+    async novoCargo(empresa,dados){
+        const sql = `INSERT INTO ${empresa}_dados.users_cargos 
+                                 (cargo,descricao,status)
+                          VALUES ('${dados.cargo}','${dados.descricao}',1)`
+        return await this.querySync(sql)
     }
 
-    listCargos(status,callback){
-        const sql = `SELECT * FROM users_cargos WHERE status=${status}`
-        connect.banco.query(sql,callback)
+    async listCargos(empresa,status){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.users_cargos 
+                      WHERE status=${status}`
+        return await this.querySync(sql)
     }
     
-    dadosCargo(idCargo,callback){
-        const sql = `SELECT * FROM users_cargos WHERE id=${idCargo}`
-        connect.banco.query(sql,callback)
+    async dadosCargo(empresa,idCargo){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.users_cargos 
+                      WHERE id=${idCargo}`
+        return await this.querySync(sql)
     }
     
-    editCargo(idCargo,dados,callback){
-        const sql = `UPDATE users_cargos SET ? WHERE ?`
-        connect.banco.query(sql,[dados,idCargo],callback)
+    async editCargo(empresa,idCargo,dados){
+        const sql = `UPDATE ${empresa}_dados.users_cargos 
+                        SET cargo=${dados.cargo},
+                            descricao='${dados.descricao}' 
+                      WHERE id=${idCargo}`
+        return await this.querySync(sql)
     }
        
     //NÍVEIS DE ACESSO
-    novoNivel(dados,callback){
-        const sql = `INSERT INTO users_niveis (nivel,descricao,status) VALUES ('${dados.nivel}','${dados.descricao}',1)`
-        connect.banco.query(sql,callback)
+    async novoNivel(empresa,dados){
+        const sql = `INSERT INTO ${empresa}_dados.users_niveis
+                                 (nivel,descricao,status)
+                          VALUES ('${dados.nivel}','${dados.descricao}',1)`
+        return await this.querySync(sql)
     }
     
-    listNiveis(status,callback){
-        const sql = `SELECT * FROM users_niveis WHERE status=${status}`
-        connect.banco.query(sql,callback)
+    async listNiveis(empresa,status){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.users_niveis 
+                      WHERE status=${status}`
+        return await this.querySync(sql)
     }
     
-    dadosNivel(idNivel,callback){
-        const sql = `SELECT * FROM users_niveis WHERE id='${idNivel}'`
-        connect.banco.query(sql,callback)
+    async dadosNivel(empresa,idNivel){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.users_niveis 
+                      WHERE id='${idNivel}'`
+        return await this.querySync(sql)
     }
     
-    editNivel(idNivel,dados,callback){
-        const sql = `UPDATE users_niveis SET ? WHERE ?`
-        connect.banco.query(sql,[dados,idNivel],callback)
+    async editNivel(empresa,idNivel,dados){
+        const sql = `UPDATE ${empresa}_dados.users_niveis 
+                        SET nivel=${dados.nivel},descricao='${dados.descricao}'
+                      WHERE id=${idNivel}`
+        return await this.querySync(sql)
     }
         
     //Informacoes dos usuarios
-    todosAgentesEmPausa(callback){
+    async todosAgentesEmPausa(empresa){
         //Estado 2 = Em Pausa
-        const sql = `SELECT ramal AS agentes FROM user_ramal WHERE estado=estado=2`
-        connect.banco.query(sql,callback)
+        const sql = `SELECT ramal AS agentes 
+                       FROM ${empresa}_dados.user_ramal 
+                       WHERE estado=estado=2`
+        return await this.querySync(sql)
     }
 
-    todosAgentesDisponiveis(callback){
+    async todosAgentesDisponiveis(empresa){
         //Estado 1 = Disponível
         //Estado 0 = Deslogado
-        const sql = `SELECT ramal AS agentes FROM user_ramal WHERE estado=1`
-        connect.banco.query(sql,callback)
+        const sql = `SELECT ramal AS agentes 
+                       FROM ${empresa}_dados.user_ramal 
+                       WHERE estado=1`
+        return await this.querySync(sql)
     }
 
 
