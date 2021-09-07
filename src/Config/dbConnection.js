@@ -1,7 +1,7 @@
 import mysql from 'mysql2';
 //Definição de Ambiente
-const environment = "dev"
-//const environment = "DB_DEV"
+//const environment = "dev"
+const environment = "DB_DEV"
 
 
 
@@ -15,7 +15,6 @@ switch(environment){
         user['pass'] = '1234abc@'
         db['asterisk'] = 'asterisk'
         db['clients'] = 'clients'
-        db['dados'] = 'megaconecta_dados'
     break;
     default:
         host = process.env.DB_HOST
@@ -23,8 +22,7 @@ switch(environment){
         user['pass'] = process.env.DB_PASS
 
         db['asterisk'] = 'asterisk'
-        db['mailings'] = 'mailings'
-        db['dados'] = 'mega_conecta'
+        db['clients'] = 'clients'
 }
 const connect = ()=>{};
 

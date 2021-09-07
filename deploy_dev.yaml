@@ -83,7 +83,7 @@ spec:
     spec:      
       containers:
       - name: api
-        image: megaconecta/api-central:v0.0.258
+        image: megaconecta/api-central:v0.0.259
         #resources:
         #  limits:
         #    cpu: 0.1m
