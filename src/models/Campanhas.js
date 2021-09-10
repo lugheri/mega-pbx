@@ -49,9 +49,9 @@ class Campanhas{
     //Atualiza campanha
     async atualizaCampanha(empresa,idCampanha,valores){
         const sql = `UPDATE ${empresa}_dados.campanhas 
-                        SET tipo=${valores.tipo},
-                            nome=${valores.nome},
-                            descricao=${valores.descricao},
+                        SET tipo='${valores.tipo}',
+                            nome='${valores.nome}',
+                            descricao='${valores.descricao}',
                             estado=${valores.estado},
                             status=${valores.status} 
                       WHERE id=${idCampanha}`
@@ -249,13 +249,14 @@ class Campanhas{
     //MAILING
     //ADICIONA O MAILING A UMA CAMPANHA
     async addMailingCampanha(empresa,idCampanha,idMailing){
-        const infoMailing = await Mailing.infoMailing(idMailing)
+        const infoMailing = await Mailing.infoMailing(empresa,idMailing)
         const tabelaDados = infoMailing[0].tabela_dados
         const tabelaNumeros = infoMailing[0].tabela_numeros
         //verifica se mailing ja existem na campanha
         let sql = `SELECT id 
                      FROM ${empresa}_dados.campanhas_mailing 
-                     WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
+                     WHERE idCampanha=${idCampanha} 
+                       AND idMailing=${idMailing}`
         const r = await this.querySync(sql)
         if(r.length==1){
             return false
@@ -302,7 +303,7 @@ class Campanhas{
 
     //Remove o mailing de uma campanha
     async removeMailingCampanha(empresa,idCampanha){
-        const infoMailing = await this.infoMailingCampanha(idCampanha)
+        const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)
 
         //Recuperando o id da campanha
         let sql = `SELECT idCampanha 
@@ -337,6 +338,7 @@ class Campanhas{
     async filtrarRegistrosCampanha(empresa,parametros){     
         const idCampanha = parametros.idCampanha;
         const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)//informacoes do mailing
+        
         const idMailing = infoMailing[0].id;
         const tabelaNumeros = infoMailing[0].tabela_numeros;
         const tipo = parametros.tipo;
@@ -679,7 +681,7 @@ class Campanhas{
         if(r.length>=1){
             return false
         }
-        sql = `INSERT INTO filas (nome,descricao) VALUES('${nomeFila}','${descricao}')`
+        sql = `INSERT INTO ${empresa}_dados.filas (nome,descricao) VALUES('${nomeFila}','${descricao}')`
         await this.querySync(sql)
         return true
     }
@@ -884,13 +886,13 @@ class Campanhas{
         connect.banco.query(sql,callback)
     }
 
-    campanhaDoMailing(empresa,idMailing,callback){
+    async campanhaDoMailing(empresa,idMailing){
         const sql = `SELECT m.idCampanha,c.nome 
                        FROM ${empresa}_dados.campanhas_mailing AS m 
                        JOIN ${empresa}_dados.campanhas AS c ON m.idCampanha=c.id
                       WHERE idMailing=${idMailing} AND c.status=1
                       LIMIT 1`
-        connect.banco.query(sql,callback)
+        return await this.querySync(sql)
     }
 
     mailingConfigurado(empresa,idMailing,callback){
@@ -908,16 +910,17 @@ class Campanhas{
         connect.banco.query(sql,callback)
     }*/
     async totalMailings(empresa){
-        const sql = `SELECT SUM(totalReg) AS total FROM mailings as m 
-                      JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
-                      JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
+        const sql = `SELECT SUM(totalReg) AS total 
+                       FROM ${empresa}_dados.mailings as m 
+                       JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
+                       JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
                       WHERE c.estado=1 AND c.status=1`
         return await this.querySync(sql)
     }
 
     async mailingsContatados(empresa){
         const sql = `SELECT count(t.id) AS contatados 
-                       FROM ${connect.db.mailings}.campanhas_tabulacao_mailing AS t 
+                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
                        JOIN ${empresa}_dados.campanhas AS c ON c.id=t.idCampanha 
                        WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
         return await this.querySync(sql)

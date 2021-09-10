@@ -8,9 +8,6 @@ module.exports = (routes) => {
     routes.get('/monitoramentoCampanha/:idCampanha',_ReportController2.default.monitoramentoCampanhas)
 
 
-
-
-
     //Lista de Campanhas ativas
     routes.get('/filtroCampanhas', _ReportController2.default.filtroCampanhas)
     //Lista de Equipes

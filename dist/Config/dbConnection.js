@@ -4,6 +4,7 @@
 const environment = "DB_DEV"
 
 
+
 let host = 'localhost'
 const user = []
 const db = []
@@ -12,10 +13,8 @@ switch(environment){
         host = 'localhost'
         user['name'] = 'root'
         user['pass'] = '1234abc@'
-
         db['asterisk'] = 'asterisk'
-        db['mailings'] = 'mailings'
-        db['dados'] = 'mega_conecta'
+        db['clients'] = 'clients'
     break;
     default:
         host = process.env.DB_HOST
@@ -23,27 +22,37 @@ switch(environment){
         user['pass'] = process.env.DB_PASS
 
         db['asterisk'] = 'asterisk'
-        db['mailings'] = 'mailings'
-        db['dados'] = 'mega_conecta'
+        db['clients'] = 'clients'
 }
-
-
 const connect = ()=>{};
-
 connect.db=db
-
-connect.pool=_mysql22.default.createPool({
+connect.poolEmpresa=_mysql22.default.createPool({
     host:host,
     user : user['name'],
     password : user['pass'],
-    database : db['dados'],
+    database : db['clients'],
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 })
+/*
+
+connect.db=db
+
+connect.pool=mysql.createPool({
+        host:host,
+        user : user['name'],
+        password : user['pass'],
+        database : db['dados'],
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+    })
+
+
 
 connect.base=((database)=>{
-    return _mysql22.default.createConnection({        
+    return mysql.createConnection({        
         host : host,
         user : user['name'],
         password : user['pass'],
@@ -51,26 +60,27 @@ connect.base=((database)=>{
     })   
 })   
 
-connect.banco=_mysql22.default.createConnection({
+connect.banco=mysql.createConnection({
     host : host,
     user : user['name'],
     password : user['pass'],
     database : db['dados']
 })
 
-connect.mailings=_mysql22.default.createConnection({
+connect.mailings=mysql.createConnection({
     host : host,
     user : user['name'],
     password : user['pass'],
     database : db['mailings']
 })
-connect.asterisk=_mysql22.default.createConnection({    
+connect.asterisk=mysql.createConnection({    
     host : host,
     user : user['name'],
     password : user['pass'],
     database : db['asterisk']
 })
 
+*/
 
 
 exports. default = connect;

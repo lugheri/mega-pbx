@@ -73,7 +73,6 @@ class TabulacaoController{
     async reordenarStatus(req,res){
         const empresa = await User.getEmpresa(req)
         const idLista = req.params.idLista;
-        console.log('idLista',idLista)
         const r = await Tabulacoes.reordenaStatus(empresa,idLista)
         res.json(r)
     }

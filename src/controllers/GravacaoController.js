@@ -51,6 +51,10 @@ class GravacaoController{
         const empresa = await User.getEmpresa(req)
         const idGravacao = parseInt(req.params.idGravacao)
         const infoGravacao = await Gravacao.infoGravacao(empresa,idGravacao)
+        if(infoGravacao.length==0){
+            res.json(false)   
+            return false
+        }
         const server = await Asterisk.getDomain(empresa)
         const pasta = infoGravacao[0].date_record
         const arquivo = `${infoGravacao[0].time_record}_${infoGravacao[0].ramal}_${infoGravacao[0].uniqueid}.wav`
@@ -107,6 +111,10 @@ class GravacaoController{
         const empresa = await User.getEmpresa(req)
         const idGravacao = parseInt(req.params.idGravacao)
         const infoGravacao = await Gravacao.infoGravacao(empresa,idGravacao)
+        if(infoGravacao.length==0){
+            res.json(false)   
+            return false
+        }
         const server = await Asterisk.getDomain(empresa)
         const uniqueidarquivo = infoGravacao[0].uniqueid
         const link = `https://${server[0].ip}/api/gravacao.php?empresa=${empresa}&id=${uniqueidarquivo}`

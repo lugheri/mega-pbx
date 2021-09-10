@@ -36,7 +36,7 @@ class MailingController{
     async iniciarConfigBase(req,res){
         const empresa = await User.getEmpresa(req)
         const idBase = req.params.idBase
-        const infoMailing=await Mailing.infoMailing(idBase)
+        const infoMailing=await Mailing.infoMailing(empresa,idBase)
         const path=`tmp/files/`
         const filename = infoMailing[0].arquivo
         const header = infoMailing[0].header
@@ -77,7 +77,7 @@ class MailingController{
         const empresa = await User.getEmpresa(req)
         const idBase = req.body.idBase
         const tipoCampos = req.body.fields
-        const infoMailing=await Mailing.infoMailing(idBase)
+        const infoMailing=await Mailing.infoMailing(empresa,idBase)
         const path=`tmp/files/`
         const filename = infoMailing[0].arquivo
         const header = infoMailing[0].header
@@ -148,21 +148,17 @@ class MailingController{
     async removerMailing(req,res){
         const empresa = await User.getEmpresa(req)
         const idMailing = parseInt(req.params.idMailing);
-        Campanhas.campanhaDoMailing(empresa,idMailing,async (e,check)=>{
-            if(e) throw e 
-
+        const check = await Campanhas.campanhaDoMailing(empresa,idMailing)
+        if(check.length==1){
+            const rt={}
+            rt['error']=true
+            rt['message']=`O mailing está ativo na campanha '${check[0].nome}'`
+            res.send(rt)
+            return false
+        }
             
-            if(check.length==1){
-                const rt={}
-                rt['error']=true
-                rt['message']=`O mailing está ativo na campanha '${check[0].nome}'`
-                res.send(rt)
-                return false
-            }
-            
-            const r = await Mailing.removerMailing(empresa,idMailing)
-            res.json(r)
-        })        
+        const r = await Mailing.removerMailing(empresa,idMailing)
+        res.json(r)
     }
 
     //Exporta os registros de um mailing

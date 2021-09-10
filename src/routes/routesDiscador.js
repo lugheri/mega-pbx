@@ -44,4 +44,6 @@ module.exports = (routes) => {
     //Retirar Pausa
     routes.post('/removePausa/',DiscadorController.removePausaAgente)
 
+    //Teste
+    //routes.get('/dial/',DiscadorController.dialTest)
 }

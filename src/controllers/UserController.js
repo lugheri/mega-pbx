@@ -59,7 +59,7 @@ class UserController{
 
     async editEquipe(req,res){
         const empresa = await User.getEmpresa(req)
-        const idEquipe = {"id":parseInt(req.params.idEquipe)}
+        const idEquipe = parseInt(req.params.idEquipe)
         const dados = req.body
         const r = await User.editEquipe(empresa,idEquipe,dados)
         res.json(r)
@@ -90,7 +90,7 @@ class UserController{
 
     async editCargo(req,res){   
         const empresa = await User.getEmpresa(req)     
-        const idCargo = {"id":parseInt(req.params.idCargo)}
+        const idCargo = parseInt(req.params.idCargo)
         const dados = req.body
         const r = await User.editCargo(empresa,idCargo,dados)
         res.json(r)
@@ -107,8 +107,8 @@ class UserController{
     async listNiveis(req,res){
         const empresa = await User.getEmpresa(req)
         const status = parseInt(req.params.status);
-        const r = User.listNiveis(empresa,status)
-        res.json(r)
+        const niveis = await User.listNiveis(empresa,status)
+        res.json(niveis)
     }
 
     async dadosNivel(req,res){
@@ -119,7 +119,7 @@ class UserController{
     }
     async editNivel(req,res){
         const empresa = await User.getEmpresa(req)
-        const idNivel = {"id":parseInt(req.params.idNivel)}
+        const idNivel = parseInt(req.params.idNivel)
         const dados = req.body
         const r = await User.editNivel(empresa,idNivel,dados)
         res.json(r)

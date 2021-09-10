@@ -4,7 +4,6 @@ module.exports = (routes) => {
 //CONFIGURACOES
 
     //Usuários
-
     //novo usuario
     routes.post('/newUser', _UserController2.default.newUser)
 

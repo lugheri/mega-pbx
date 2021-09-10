@@ -3,15 +3,14 @@
 class Gravacao{
     querySync(sql){
         return new Promise((resolve,reject)=>{
-            _dbConnection2.default.pool.query(sql,(e,rows)=>{
+            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
                 if(e) reject(e);
-
                 resolve(rows)
             })
         })
     }
 
-    async listarGravacoes(inicio,limit){
+    async listarGravacoes(empresa,inicio,limit){
         const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,
                             r.date_record,
                             r.time_record,
@@ -27,12 +26,12 @@ class Gravacao{
                             u.nome,
                             e.equipe,
                             t.tempo_total as duracao 
-                       FROM records AS r 
-                  LEFT JOIN historico_atendimento AS h ON h.uniqueid=r.uniqueid 
-                  LEFT JOIN users AS u ON h.agente=u.id 
-                  LEFT JOIN users_equipes AS e ON u.equipe=e.id 
-                  LEFT JOIN tempo_ligacao AS t ON r.uniqueid=t.uniqueid 
-                  LEFT JOIN tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
+                       FROM ${empresa}_dados.records AS r 
+                  LEFT JOIN ${empresa}_dados.historico_atendimento AS h ON h.uniqueid=r.uniqueid 
+                  LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id 
+                  LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id 
+                  LEFT JOIN ${empresa}_dados.tempo_ligacao AS t ON r.uniqueid=t.uniqueid 
+                  LEFT JOIN ${empresa}_dados.tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
                    ORDER BY id DESC 
                       LIMIT ${inicio},${limit}`
         return await this.querySync(sql)
@@ -41,7 +40,7 @@ class Gravacao{
 
     //protocolo 
     
-    async buscarGravacao(minTime,maxTime,de,ate,buscarPor,parametro){
+    async buscarGravacao(empresa,minTime,maxTime,de,ate,buscarPor,parametro){
         let filter=""
         //Tempo de Gravação
         if(minTime){
@@ -114,20 +113,22 @@ class Gravacao{
                             u.nome,
                             e.equipe,
                             t.tempo_total as duracao 
-                       FROM records AS r 
-                  LEFT JOIN historico_atendimento AS h ON h.uniqueid=r.uniqueid 
-                  LEFT JOIN users AS u ON h.agente=u.id 
-                  LEFT JOIN users_equipes AS e ON u.equipe=e.id 
-                  LEFT JOIN tempo_ligacao AS t ON r.uniqueid=t.uniqueid 
-                  LEFT JOIN tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
+                       FROM ${empresa}_dados.records AS r 
+                  LEFT JOIN ${empresa}_dados.historico_atendimento AS h ON h.uniqueid=r.uniqueid 
+                  LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id 
+                  LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id 
+                  LEFT JOIN ${empresa}_dados.tempo_ligacao AS t ON r.uniqueid=t.uniqueid 
+                  LEFT JOIN ${empresa}_dados.tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
                       WHERE 1=1 ${filter}`
         //console.log(buscarPor)
         //console.log(sql)
         return await this.querySync(sql)
     }
 
-    async infoGravacao(idGravacao){
-        const sql = `SELECT * FROM records WHERE id=${idGravacao}`
+    async infoGravacao(empresa,idGravacao){
+        const sql = `SELECT *
+                       FROM ${empresa}_dados.records
+                      WHERE id=${idGravacao}`
         return await this.querySync(sql)
     }
 }

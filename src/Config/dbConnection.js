@@ -25,7 +25,7 @@ switch(environment){
         db['clients'] = 'clients'
 }
 const connect = ()=>{};
-
+connect.db=db
 connect.poolEmpresa=mysql.createPool({
     host:host,
     user : user['name'],

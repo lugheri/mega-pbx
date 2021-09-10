@@ -6,9 +6,8 @@ import Asterisk from '../models/Asterisk'
 class Filas{
     querySync(sql){
         return new Promise((resolve,reject)=>{
-            connect.pool.query(sql,(e,rows)=>{
+            connect.poolEmpresa.query(sql,(e,rows)=>{
                 if(e) reject(e);
-
                 resolve(rows)
             })
         })
@@ -17,7 +16,9 @@ class Filas{
     //CRUD FILAS
     //Criar nova filas
     async criarFila(empresa,name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat){
-        const sql = `INSERT INTO ${connect.db.asterisk}.queues (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
+        const sql = `INSERT INTO ${connect.db.asterisk}.queues 
+                                (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) 
+                         VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
         await this.querySync(sql)
         return true
     }

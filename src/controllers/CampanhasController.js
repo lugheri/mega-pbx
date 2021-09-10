@@ -76,7 +76,7 @@ class CampanhasController{
         const valores = req.body
         await Campanhas.atualizaCampanha(empresa,idCampanha,valores)
         if(valores.estado!=1){
-            await Discador.clearCallsCampanhas(idCampanha)
+            await Discador.clearCallsCampanhas(empresa,idCampanha)
         }
         res.json(true)    
     }
@@ -128,7 +128,7 @@ class CampanhasController{
         const empresa = await User.getEmpresa(req)
         const dados = req.body
         await Campanhas.criarIntegracao(empresa,dados)
-        return true
+        res.json(true);
     }    
     
     async listarIntegracoes(req,res){

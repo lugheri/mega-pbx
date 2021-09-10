@@ -1,13 +1,15 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }/*import csv from 'csvtojson';*/
 var _Mailing = require('../models/Mailing'); var _Mailing2 = _interopRequireDefault(_Mailing);
 var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
+var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 var _md5 = require('md5'); var _md52 = _interopRequireDefault(_md5);
 var _express = require('express');
 
 
 class MailingController{
-    importarBase(req,res){
+    async importarBase(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         //Recebendo o arquivo
         const path=`tmp/files/`
         const filename=req.file.filename
@@ -25,15 +27,16 @@ class MailingController{
             const hoje = _moment2.default.call(void 0, ).format("YMMDDHHmmss")
             const nomeTabela = hoje   
             const keys = Object.keys(jsonFile[0])     
-            const infoMailing=await _Mailing2.default.criarTabelaMailing(keys,nome,nomeTabela,header,filename,delimitador)
+            const infoMailing=await _Mailing2.default.criarTabelaMailing(empresa,keys,nome,nomeTabela,header,filename,delimitador)
             
             res.json(infoMailing)
         })        
     }
 
     async iniciarConfigBase(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idBase = req.params.idBase
-        const infoMailing=await _Mailing2.default.infoMailing(idBase)
+        const infoMailing=await _Mailing2.default.infoMailing(empresa,idBase)
         const path=`tmp/files/`
         const filename = infoMailing[0].arquivo
         const header = infoMailing[0].header
@@ -71,9 +74,10 @@ class MailingController{
     }
 
     async concluirConfigBase(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idBase = req.body.idBase
         const tipoCampos = req.body.fields
-        const infoMailing=await _Mailing2.default.infoMailing(idBase)
+        const infoMailing=await _Mailing2.default.infoMailing(empresa,idBase)
         const path=`tmp/files/`
         const filename = infoMailing[0].arquivo
         const header = infoMailing[0].header
@@ -83,12 +87,12 @@ class MailingController{
         const tabData=infoMailing[0].tabela_dados
         const tabNumbers=infoMailing[0].tabela_numeros
 
-        await _Mailing2.default.configuraTipoCampos(idBase,header,tipoCampos)//Configura os tipos de campos
+        await _Mailing2.default.configuraTipoCampos(empresa,idBase,header,tipoCampos)//Configura os tipos de campos
         _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
             res.json(true)
             let idKey = 1
             let transferRate=1
-            await _Mailing2.default.importaDados_e_NumerosBase(idBase,jsonFile,file,header,tabData,tabNumbers,idKey,transferRate)
+            await _Mailing2.default.importaDados_e_NumerosBase(empresa,idBase,jsonFile,file,header,tabData,tabNumbers,idKey,transferRate)
 
            
         }) 
@@ -96,16 +100,17 @@ class MailingController{
     
     //Lista os mailings importados
     async listarMailings(req,res){
-        const r = await _Mailing2.default.listaMailing()
+        const empresa = await _User2.default.getEmpresa(req)
+        const r = await _Mailing2.default.listaMailing(empresa)
         
         for(let i=0; i<r.length;i++){
             const idMailing = r[i].id
-            const infoTabela= await _Mailing2.default.tabelaMailing(idMailing)
+            const infoTabela= await _Mailing2.default.tabelaMailing(empresa,idMailing)
             if(infoTabela.length != 0){
                 const tabela = infoTabela[0].tabela_numeros
-                const totalRegistros = await _Mailing2.default.totalRegistros(tabela);
-                const contatados = await _Mailing2.default.registrosContatados(tabela)
-                const naoContatados = await _Mailing2.default.registrosNaoContatados(tabela)
+                const totalRegistros = await _Mailing2.default.totalRegistros(empresa,tabela);
+                const contatados = await _Mailing2.default.registrosContatados(empresa,tabela)
+                const naoContatados = await _Mailing2.default.registrosNaoContatados(empresa,tabela)
             
                 const trabalhados = contatados + naoContatados
                 const naoTrabalhados = totalRegistros-trabalhados
@@ -131,44 +136,44 @@ class MailingController{
 
     //Abre um mailing
     async abrirMailing(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idMailing = parseInt(req.params.idMailing)
         const pag = parseInt(req.params.pag)
         const reg = parseInt(req.params.reg)
-        const registros = await _Mailing2.default.abrirMailing(idMailing,pag,reg)
+        const registros = await _Mailing2.default.abrirMailing(empresa,idMailing,pag,reg)
         res.json(registros)
     }
 
     //remove um mailing
     async removerMailing(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idMailing = parseInt(req.params.idMailing);
-        _Campanhas2.default.campanhaDoMailing(idMailing,async (e,check)=>{
-            if(e) throw e 
-
+        const check = await _Campanhas2.default.campanhaDoMailing(empresa,idMailing)
+        if(check.length==1){
+            const rt={}
+            rt['error']=true
+            rt['message']=`O mailing está ativo na campanha '${check[0].nome}'`
+            res.send(rt)
+            return false
+        }
             
-            if(check.length==1){
-                const rt={}
-                rt['error']=true
-                rt['message']=`O mailing está ativo na campanha '${check[0].nome}'`
-                res.send(rt)
-                return false
-            }
-            
-            const r = await _Mailing2.default.removerMailing(idMailing)
-            res.json(r)
-        })        
+        const r = await _Mailing2.default.removerMailing(empresa,idMailing)
+        res.json(r)
     }
 
     //Exporta os registros de um mailing
     async exportarMailing(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idMailing = parseInt(req.params.idMailing)        
-        await _Mailing2.default.exportarMailing(idMailing,res)       
+        await _Mailing2.default.exportarMailing(empresa,idMailing,res)       
         //res.json(false)
     }
 
     //Status do Mailing
     async statusMailing(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idMailing = req.params.idMailing
-        const statusMailing = await _Mailing2.default.statusMailing(idMailing)
+        const statusMailing = await _Mailing2.default.statusMailing(empresa,idMailing)
         const result={}
         result['pronto']=false
         if(statusMailing.length==0){
@@ -196,25 +201,28 @@ class MailingController{
     }    
     //Exibe os ufs de um mailing
     async ufsMailing(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idMailing = req.params.idMailing
-        const r = await _Mailing2.default.ufsMailing(idMailing)
+        const r = await _Mailing2.default.ufsMailing(empresa,idMailing)
         res.json(r)
     }
 
     async retrabalharMailing(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idMailing = req.params.idMailing
-        await _Mailing2.default.retrabalharMailing(idMailing)
+        await _Mailing2.default.retrabalharMailing(empresa,idMailing)
         res.json(true)
     }
 
     //DDDs por uf do mailing
     async dddsUfMailing(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idMailing = (req.params.idMailing)
         const UF = req.params.uf
-        const infoTabela= await _Mailing2.default.tabelaMailing(idMailing)
+        const infoTabela= await _Mailing2.default.tabelaMailing(empresa,idMailing)
         const tabela = infoTabela[0].tabela_numeros
         
-        const ddds = await _Mailing2.default.dddsUfMailing(tabela,UF)
+        const ddds = await _Mailing2.default.dddsUfMailing(empresa,tabela,UF)
         const retorno={}
               retorno['dados']=[]
             for(let i=0; i<ddds.length;i++){
@@ -228,14 +236,15 @@ class MailingController{
     }
     //Resumo por ddd
     async totalRegUF(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idMailing = req.params.idMailing
-        const infoTabela= await _Mailing2.default.tabelaMailing(idMailing)
+        const infoTabela= await _Mailing2.default.tabelaMailing(empresa,idMailing)
         if(infoTabela.length == 0){
             res.json(false)
             return false;
         }
         const tabela = infoTabela[0].tabela_numeros
-        const r = await _Mailing2.default.totalRegUF(tabela)
+        const r = await _Mailing2.default.totalRegUF(empresa,tabela)
         const registros=[]
         for(let i=0; i<r.length;i++){
             let reg={}
@@ -249,13 +258,14 @@ class MailingController{
     }
     //Saude do mailing
     async saudeMailing(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idMailing = req.params.idMailing
-        const infoTabela= await _Mailing2.default.tabelaMailing(idMailing)
+        const infoTabela= await _Mailing2.default.tabelaMailing(empresa,idMailing)
         if(infoTabela.length != 0){
             const tabela = infoTabela[0].tabela_numeros
-            const totalRegistros = await _Mailing2.default.totalRegistros(tabela);
-            const contatados = await _Mailing2.default.registrosContatados(tabela)
-            const naoContatados = await _Mailing2.default.registrosNaoContatados(tabela)
+            const totalRegistros = await _Mailing2.default.totalRegistros(empresa,tabela);
+            const contatados = await _Mailing2.default.registrosContatados(empresa,tabela)
+            const naoContatados = await _Mailing2.default.registrosNaoContatados(empresa,tabela)
             
             const trabalhados = contatados + naoContatados
             const naoTrabalhados = totalRegistros-trabalhados

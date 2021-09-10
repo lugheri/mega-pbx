@@ -12,16 +12,27 @@ class User{
             })
         })
     }
-    
-    async findUser(usuario){
+
+    async findEmpresa(usuario){
         const u = usuario.split('@');
         const empresa = u[1]
+        const sql = `SELECT client_number,prefix
+                      FROM accounts
+                     WHERE prefix='${empresa}'
+                       AND status=1`
+        return await this.querySync(sql) 
+    }
+    
+    async findUser(empresa,usuario){
+      
 
-        const sql = `SELECT * FROM ${empresa}_dados.users WHERE usuario='${usuario}' AND status=1`;
+        const sql = `SELECT *
+                       FROM ${empresa}_dados.users 
+                      WHERE usuario='${usuario}' AND status=1`;
         return await this.querySync(sql) 
     }
 
-    async registraLogin(usuarioId,empresa,acao,callback){
+    async registraLogin(empresa,usuarioId,acao){
         let sql = `INSERT INTO ${empresa}_dados.registro_logins 
                                 (data,hora,user_id,acao) 
                          VALUES (NOW(),NOW(),${usuarioId},'${acao}')`
@@ -174,7 +185,7 @@ class User{
                             nivelAcesso=${userData.nivelAcesso},
                             cargo=${userData.cargo},
                             reset=${userData.reset},
-                            status=${userData.status}
+                            status=${userData.status},
                             senha=md5('${userData.senha}') 
                       WHERE id=${userId}`
         return await this.querySync(sql)
@@ -237,7 +248,7 @@ class User{
     
     async editCargo(empresa,idCargo,dados){
         const sql = `UPDATE ${empresa}_dados.users_cargos 
-                        SET cargo=${dados.cargo},
+                        SET cargo='${dados.cargo}',
                             descricao='${dados.descricao}' 
                       WHERE id=${idCargo}`
         return await this.querySync(sql)
@@ -267,7 +278,8 @@ class User{
     
     async editNivel(empresa,idNivel,dados){
         const sql = `UPDATE ${empresa}_dados.users_niveis 
-                        SET nivel=${dados.nivel},descricao='${dados.descricao}'
+                        SET nivel='${dados.nivel}',
+                            descricao='${dados.descricao}'
                       WHERE id=${idNivel}`
         return await this.querySync(sql)
     }

@@ -1,4 +1,5 @@
 import Asterisk from '../models/Asterisk';
+import User from '../models/User';
 import util from 'util';
 import fs from 'fs';
 import Discador from '../models/Discador';
@@ -23,69 +24,73 @@ class AsteriskController{
     async agi(req,res){
         const action = req.params.action
         const dados = req.body
+        if(action=='voz'){
+            const empresa = dados.empresa
+            const numero = dados.numero
+            const saudacao = await Discador.saudadacao(empresa,numero)
+            console.log('agi:voz',`Empresa: ${empresa},numero: ${numero}, saida: ${saudacao}`)
+            res.json(saudacao)   
+        }
         if(action=='machine'){//Quando cai na caixa postal
             const r = await Asterisk.machine(dados)
+            console.log('agi:machine',`Empresa: ${dados.empresa},numero:${dados.numero},status:${dados.status}, saida: ${r}`)
             res.json(r);
         }
-        if(action=='get_queue'){//Quando reconhece a voz humana
-            const empresa = req.body.empresa
-            const numero = req.body.numero
-            console.log(numero)
-            const queue = await Discador.getQueueByNumber(empresa,numero)
-            if(queue.length==0){
-                res.json("")
+        if(action=='set_queue'){//Quando reconhece a voz humana
+            const empresa = dados.empresa
+            const numero = dados.numero 
+            const dadosAtendimento = await Discador.setaRegistroNaFila(empresa,numero)
+            if(dadosAtendimento===false){
+                res.json(false) 
                 return false
             }
-            console.log('queue', queue)
-            const fila = queue[0].Fila
-            const idAtendimento = queue[0].id
-            console.log('idAtendimento',idAtendimento)
-            await Discador.setaRegistroNaFila(empresa,idAtendimento)
-            //recupera dados da campanhas
-            const dadosAtendimento = await Discador.dadosAtendimento(empresa,idAtendimento)
-            console.log('dadosAtendimento',dadosAtendimento)
+            //recupera dados da campanhas           
             const idCampanha = dadosAtendimento[0].id_campanha
             const idMailing = dadosAtendimento[0].id_mailing
             const idRegistro = dadosAtendimento[0].id_registro
             await Cronometro.entrouNaFila(empresa,idCampanha,idMailing,idRegistro,numero)
-            res.json(fila)            
+
+            console.log('agi:set_queue',`Empresa: ${empresa},numero: ${numero}, saida: ${dadosAtendimento}`)
+            res.json(true)            
         }
-        if(action=='voz'){
-            const empresa = req.body.empresa
-            const numero = req.body.numero
-            const saudacao = await Discador.saudadacao(empresa,numero)
-            res.json(saudacao)   
-        }
+        
         if(action=='answer'){//Quando ligacao eh atendida pelo agente
-            const r = await Asterisk.answer(dados)
-           
-            await Cronometro.saiuDaFila(dados.empresa,dados.numero)
-            const dadosAtendimento = await Discador.dadosAtendimento_byNumero(dados.empresa,dados.numero)
+            const empresa = dados.empresa
+            const uniqueid = dados.numero 
+            const numero = dados.numero
+            let ch = dados.ramal;
+                ch = ch.split("-");
+                ch = ch[0].split("/")
+            const ramal = ch[1]
+            const r = await Asterisk.answer(empresa,uniqueid,numero,ramal)
+            console.log('agi:answer',`Empresa: ${empresa},numero: ${numero},uniqueid:${uniqueid},ramal:${ramal}, saida: ${r}`)
+            await Cronometro.saiuDaFila(empresa,numero)
+            const dadosAtendimento = await Discador.dadosAtendimento_byNumero(empresa,numero)
             if(dadosAtendimento.length==0){
+                res.json(false);
                 return false
             }
             const idCampanha = dadosAtendimento[0].id_campanha
             const idMailing = dadosAtendimento[0].id_mailing
             const idRegistro = dadosAtendimento[0].id_registro 
-            const uniqueid = dadosAtendimento[0].uniqueid  
-            let ch = dados.ramal;
-                ch = ch.split("-");
-                ch = ch[0].split("/")
-            const ramal = ch[1]
+            const uniqueid_Reg = dadosAtendimento[0].uniqueid  
+           
 
-            await Discador.alterarEstadoAgente(dados.empresa,ramal,3,0)
-            await Discador.atendeChamada(dados.empresa,ramal)
+            await Discador.alterarEstadoAgente(empresa,ramal,3,0)
+            await Discador.atendeChamada(empresa,ramal)
             //atualizando ramal na chamada simultanea
             
             //iniciou chamada
-            await Cronometro.iniciouAtendimento(dados.empresa,idCampanha,idMailing,idRegistro,dados.numero,ramal,uniqueid)
+            await Cronometro.iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,numero,ramal,uniqueid_Reg)
             res.json(true);
         } 
         
-        if(action=='abandon'){//Quando abandona fila  
+        if(action=='desligou'){//Quando abandona fila  
             const empresa = dados.empresa          
             const numero = dados.numero
+            const motivo = dados.motivo
             const chamada = await Discador.dadosAtendimento_byNumero(empresa,numero)
+            console.log('agi:desligou',`Empresa: ${empresa},numero: ${numero},motivo:${motivo}, saida: ${chamada}`)
             if(chamada.length==0){
                 res.json(false);
                 return false    
@@ -104,7 +109,7 @@ class AsteriskController{
                 const produtivo = 0
                 const uniqueid=chamada[0].uniqueid
                 const tipo_ligacao=chamada[0].tipo_ligacao
-                const observacoes = `Abandonou Fila`
+                const observacoes = motivo
                 const removeNumero =0
 
                 //retira da fila e registra como abandonou fila
@@ -116,11 +121,11 @@ class AsteriskController{
                 //Removendo ligacao do historico de chamadas_simultaneas
                 await Discador.clearCallbyId(empresa,idAtendimento)    
                 res.json(true);
+            }else{
+                await Discador.desligaChamadaNumero(empresa,numero)
+                res.json(true);
             }
-        } 
-        if(action=='fail'){//Quando nao atende
-
-        }      
+        }
     }
 
 
@@ -175,18 +180,14 @@ class AsteriskController{
       })
     }
 
-    servidorWebRTC(req,res){
-      Asterisk.servidorWebRTC((e,r)=>{
-        if(e) throw e;
-
+    async servidorWebRTC(req,res){
+        const empresa = await User.getEmpresa(req)
+        const s = await Asterisk.servidorWebRTC(empresa)
         const resp = {
-          "endereco":`${r[0].protocolo}://${r[0].ip}:${r[0].porta}/ws`,
-          "ip":r[0].ip
+          "endereco":`${s[0].protocolo}://${s[0].ip}:${s[0].porta}/ws`,
+          "ip":s[0].ip
         };
-
         res.json(resp)
-      
-      })
     }  
 
    

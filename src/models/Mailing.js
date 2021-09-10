@@ -13,7 +13,7 @@ class Mailing{
                 resolve(rows)
             })
         })
-    }
+    }    
     
 
     //Abre o csv do mailing a ser importado
@@ -205,7 +205,7 @@ class Mailing{
         if(min>=totalBase){
             min=totalBase
         }
-
+        
         let max = 5000
         let rate=transferRate*2
 
@@ -221,6 +221,14 @@ class Mailing{
         }
         limit=rate
         
+        const multiplicador=2
+
+        //console.log('','=========== Transfer rate =========')
+        //console.log('limit',limit)
+        limit=limit*multiplicador
+        //console.log('multiplicador',multiplicador)
+        //console.log('rate',limit)
+        //console.log('Base restante',totalBase)
         if(limit>=totalBase){
             limit=totalBase
         }
@@ -282,6 +290,7 @@ class Mailing{
         if(limit<=min){
             limit = min
         }
+        console.log('Rate real',limit)
 
         //console.log('Limite',limit)
         //Populando a query
@@ -634,17 +643,21 @@ class Mailing{
         //Removendo os dados do mailing
         const tabelaDados = result[0].tabela_dados
         const tabelaNumeros = result[0].tabela_numeros
-        sql = `DROP TABLE ${connect.db.mailings}.${tabelaDados}`//Removendo tabela de dados
+        sql = `DROP TABLE ${empresa}_mailings.${tabelaDados}`//Removendo tabela de dados
         await this.querySync(sql)
-        sql = `DROP TABLE ${connect.db.mailings}.${tabelaNumeros}`//Removendo tabela de numeros
+        sql = `DROP TABLE ${empresa}_mailings.${tabelaNumeros}`//Removendo tabela de numeros
         await this.querySync(sql)
-        sql=`DELETE FROM mailings WHERE id=${idMailing}` //Removendo informações do Mailing
+        sql=`DELETE FROM ${empresa}_dados.mailings 
+              WHERE id=${idMailing}` //Removendo informações do Mailing
         await this.querySync(sql)
-        sql=`DELETE FROM mailing_tipo_campo WHERE idMailing=${idMailing}` //Removendo configuracoes dos tipos de campos
+        sql=`DELETE FROM ${empresa}_dados.mailing_tipo_campo 
+              WHERE idMailing=${idMailing}` //Removendo configuracoes dos tipos de campos
         await this.querySync(sql)
-        sql=`DELETE FROM campanhas_mailing WHERE idMailing=${idMailing}`//Removendo mailing das campanhas
+        sql=`DELETE FROM ${empresa}_dados.campanhas_mailing 
+              WHERE idMailing=${idMailing}`//Removendo mailing das campanhas
         await this.querySync(sql)
-        sql=`DELETE FROM campanhas_campos_tela_agente WHERE idMailing='${idMailing}'` //Removendo configurações da tela do agente
+        sql=`DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
+              WHERE idMailing='${idMailing}'` //Removendo configurações da tela do agente
         await this.querySync(sql)
         return true
     }

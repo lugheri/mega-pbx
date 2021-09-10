@@ -7,307 +7,196 @@ var _Dashboard = require('../models/Dashboard'); var _Dashboard2 = _interopRequi
 
 class DashboardController{
     async painel(req,res){
-        res.json(await _Dashboard2.default.painel())
+        const empresa = await _User2.default.getEmpresa(req)
+
+        const panelData= await _Dashboard2.default.painel(empresa)
+        res.json(panelData)
     }
     
-    usersRealTime(req,res){
-        _User2.default.totalAgentesLogados((e,totalLogados)=>{
-            if(e) throw e
-
-            res.json(totalLogados)
-
-        })
+    async usersRealTime(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const totalLogados = await _User2.default.totalAgentesLogados(empresa)
+        res.json(totalLogados)
     }
     
-    logadosPorDia(req,res){
+    async logadosPorDia(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const limit = parseInt(req.params.limit)
-        _User2.default.logadosPorDia(limit,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const logados = await _User2.default.logadosPorDia(empresa,limit)
+        res.json(logados)
     }
 
     //Funcoes de informacoes dos agentes
-    usersByStatus(req,res){
+    async usersByStatus(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         //Agentes em ligacao
-        _Campanhas2.default.agentesFalando((e,falando)=>{
-            if(e) throw e
+        const falando = await _Campanhas2.default.agentesFalando(empresa,req)
+        const agentes_falando = parseInt(falando.length)
+        
+        //Agentes em pausa
+        const emPausa = await _Campanhas2.default.agentesEmPausa(empresa)
+        const agentes_emPausa = parseInt(emPausa.length)
 
-            const agentes_falando = parseInt(falando.length)
-            //Agentes em pausa
-            _Campanhas2.default.agentesEmPausa((e,emPausa)=>{
-                if(e) throw e
+        //Agentes Disponíveis
+        const disponiveis = _Campanhas2.default.agentesDisponiveis(empresa)
+        let agentes_disponiveis=0
+        if(disponiveis.length>=1){
+            agentes_disponiveis = disponiveis.length
+        }       
 
-                const agentes_emPausa = parseInt(emPausa.length)
-                //Agentes Disponíveis
-                _Campanhas2.default.agentesDisponiveis((e,disponiveis)=>{
-                    if(e) throw e
-    
-                    const agentes_disponiveis = parseInt(disponiveis.length)
-
-                    let retorno = '{'
-                        retorno += `"ligando": ${agentes_falando},`
-                        retorno += `"pausa": ${agentes_emPausa},`
-                        retorno += `"disponiveis": ${agentes_disponiveis}`
-                        retorno += '}'                       
-                 
-                    retorno = JSON.parse(retorno)   
-                    res.json(retorno)
-                })                    
-            })
-        })
+        const retorno={}
+              retorno['ligando']=agentes_falando
+              retorno['pausa']=agentes_emPausa
+              retorno['disponiveis']=agentes_disponiveis
+        res.json(retorno)
     }
 
-    listUsersByStatus(req,res){
+    async listUsersByStatus(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const status = req.params.status
+        const agentes=[]
 
         if(status=='ligando'){
-            _Campanhas2.default.agentesFalando((e,falando)=>{
-                if(e) throw e
-
-                if(falando.length ==0){
-                    res.json({})
-                }else{
-               
-                    let sql = 'SELECT u.id,u.nome,e.equipe FROM users AS u LEFT JOIN users_equipes AS e ON u.equipe=e.id WHERE ' 
-                    for(let i = 0; i<falando.length; i++){
-                        let ramal = falando[i].agentes
-                        sql += `u.id=${ramal}`
-                        if(i<(falando.length-1)){sql += ' OR '}
-                    }
-                    console.log(sql)
-                    _dbConnection2.default.banco.query(sql,(e,r)=>{
-                        if(e) throw e
-
-                        res.json(r)
-                    })
-                }
-                               
-            })
+            const falando = await _Campanhas2.default.agentesFalando(empresa)
+            if(falando.length ==0){
+               res.json({})
+               return false
+            }
+            for(let i = 0; i<falando.length; i++){
+                let ramal = falando[i].agentes
+                const infoUser = await _User2.default.resumoUser(empresa,ramal);
+                agentes.push(infoUser[0])
+            }
         }
 
         if(status=='pausa'){
-            _Campanhas2.default.agentesEmPausa((e,emPausa)=>{
-                if(e) throw e
-               
-                let sql = 'SELECT u.id,u.nome,e.equipe FROM users AS u LEFT JOIN users_equipes AS e ON u.equipe=e.id WHERE ' 
-                if(emPausa.length ==0){
-                    res.json({})
-                }else{
-                    for(let i = 0; i<emPausa.length; i++){
-                        let ramal = emPausa[i].agentes
-                        sql += `u.id=${ramal}`
-                        if(i<(emPausa.length-1)){sql += ' OR '}
-                    }
-                    console.log(sql)
-                    _dbConnection2.default.banco.query(sql,(e,r)=>{
-                        if(e) throw e
-
-                        res.json(r)
-                    })
-                }
-                               
-            })
+            const emPausa = await _Campanhas2.default.agentesEmPausa(empresa)
+            if(emPausa.length ==0){
+                res.json({})
+                return false;
+            }
+            for(let i = 0; i<emPausa.length; i++){
+                let ramal = emPausa[i].agentes
+                const infoUser = await _User2.default.resumoUser(empresa,ramal);
+                agentes.push(infoUser[0])
+            }
         }
 
         if(status=='disponiveis'){
-            _Campanhas2.default.agentesDisponiveis((e,disponiveis)=>{
-                if(e) throw e
-                
-                if(disponiveis.length ==0){
-                    res.json({})
-                }else{
-                    let sql = 'SELECT u.id,u.nome,e.equipe FROM users AS u LEFT JOIN users_equipes AS e ON u.equipe=e.id WHERE ' 
-                    for(let i = 0; i<disponiveis.length; i++){
-                        let ramal = disponiveis[i].agentes
-                        sql += `u.id=${ramal}`
-                        if(i<(disponiveis.length-1)){sql += ' OR '}
-                    }
-                    console.log(sql)
-                    _dbConnection2.default.banco.query(sql,(e,r)=>{
-                        if(e) throw e
-
-                        res.json(r)
-                    })
-                }
-                               
-            })
-        }        
+            const disponiveis = await _Campanhas2.default.agentesDisponiveis(empresa)
+            if(disponiveis.length ==0){
+                res.json({})
+                return false;
+            }
+            for(let i = 0; i<disponiveis.length; i++){
+                let ramal = disponiveis[i].agentes
+                const infoUser = await _User2.default.resumoUser(empresa,ramal)
+                agentes.push(infoUser[0])
+            }
+        }
+        res.json(agentes)        
     }
     
     //Funcoes de informacoes das Campanhas
-    campainsRealTime(req,res){
-        _Campanhas2.default.totalCampanhasAtivas((e,campanhasAtivas)=>{
-            if(e) throw e
-
-            res.json(campanhasAtivas)
-        })
-
-
+    async campainsRealTime(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const campanhasAtivas = await _Campanhas2.default.totalCampanhasAtivas(empresa)
+        res.json(campanhasAtivas)
     }
-    
-    campanhasByDay(req,res){
+
+    async campanhasByDay(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const limit = parseInt(req.params.limit)
-        _Campanhas2.default.campanhasByDay(limit,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
-
+        const campByDay = await _Campanhas2.default.campanhasByDay(empresa,limit)
+        res.json(campByDay)
     }
 
-    
-    campanhasByStatus(req,res){
+    async campanhasByStatus(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         //Campanhas Ativas
-        _Campanhas2.default.campanhasAtivas((e,ativas)=>{
-            if(e) throw e
+        const ativas = await _Campanhas2.default.campanhasAtivas(empresa)
+        const campanhas_ativas = parseInt(ativas.length)
+        //Campanhas pausadas
+        const pausadas = await _Campanhas2.default.campanhasPausadas(empresa)
+        const campanhas_pausadas = parseInt(pausadas.length)
+        //Campanhas paradas
+        const paradas = await _Campanhas2.default.campanhasParadas(empresa)
+        const campanhas_paradas = parseInt(paradas.length)
 
-            const campanhas_ativas = parseInt(ativas.length)
-            //Campanhas pausadas
-            _Campanhas2.default.campanhasPausadas((e,pausadas)=>{
-                if(e) throw e
-
-                const campanhas_pausadas = parseInt(pausadas.length)
-                //Campanhas paradas
-                _Campanhas2.default.campanhasParadas((e,paradas)=>{
-                    if(e) throw e
-                    
-                    const campanhas_paradas = parseInt(paradas.length)
-
-                    let retorno = '{'
-                        retorno += `"ativas": ${campanhas_ativas},`
-                        retorno += `"pausadas": ${campanhas_pausadas},`
-                        retorno += `"paradas": ${campanhas_paradas}`
-                        retorno += '}'                       
-                    retorno = JSON.parse(retorno)   
-                    res.json(retorno)
-                    
-                })
-            })
-        })
+        const retorno={}
+              retorno['ativas']=campanhas_ativas
+              retorno['pausadas']=campanhas_pausadas
+              retorno['paradas']=campanhas_paradas
+        res.json(retorno)
     }
 
-    listCampanhasByStatus(req,res){
+    async listCampanhasByStatus(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const status = req.params.status
+        let campanhas = {}
         if(status=="ativas"){
-            _Campanhas2.default.campanhasAtivas((e,ativas)=>{
-                if(e) throw e
-
-                res.json(ativas)
-            })    
+            campanhas = await _Campanhas2.default.campanhasAtivas(empresa)
         }
         if(status=="pausadas"){
-            _Campanhas2.default.campanhasPausadas((e,pausadas)=>{
-                if(e) throw e
-
-                res.json(pausadas)
-            })    
+            campanhas = await _Campanhas2.default.campanhasPausadas(empresa)
         }
         if(status=="paradas"){
-            _Campanhas2.default.campanhasParadas((e,paradas)=>{
-                if(e) throw e
-
-                res.json(paradas)
-            })            
+            campanhas = await _Campanhas2.default.campanhasParadas(empresa)
         }
+        res.json(campanhas)
     }
 
-    //Mailing de todas as campanha
-    mailingCampanhas(req,res){
-        _Campanhas2.default.totalMailings((e,total_reg)=>{
-            if(e) throw e
+     //Mailing de todas as campanha
+     async mailingCampanhas(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const total_reg = await _Campanhas2.default.totalMailings(empresa)
+        let total = 0
+        if(total_reg[0].total !== null){
+            total = parseInt(total_reg[0].total)
+        }
+        
+        const ja_contatados = await  _Campanhas2.default.mailingsContatados(empresa)
+        const contatados = parseInt(ja_contatados[0].contatados)
+        
+        const nao_Contatados = await _Campanhas2.default.mailingsNaoContatados(empresa)
+        const naoContatados = parseInt(nao_Contatados[0].nao_contatados)
 
-           
-            let total
-            if(total_reg[0].total == null){
-                 total = 0
-            }else{
-                total = parseInt(total_reg[0].total)
-            }
+        const trabalhados = contatados + naoContatados
+        let perc_trabalhados = 0
+        let perc_contatados = 0
+        let perc_naoContatados = 0
 
-            
-            _Campanhas2.default.mailingsContatados((e,ja_contatados)=>{
-                if(e) throw e
-
-                const contatados = parseInt(ja_contatados[0].contatados)
-                _Campanhas2.default.mailingsNaoContatados((e,nao_Contatados)=>{
-                    if(e) throw e
-
-                    const naoContatados = parseInt(nao_Contatados[0].nao_contatados)
-
-                    const trabalhados = contatados + naoContatados
-
-                    let perc_trabalhados = 0
-                    let perc_contatados = 0
-                    let perc_naoContatados = 0
-
-                    if(total!=0){
-                        perc_trabalhados = parseFloat((trabalhados / total)*100).toFixed(1)
-                        perc_contatados = parseFloat((contatados / total)*100).toFixed(1)
-                        perc_naoContatados = parseFloat((naoContatados / total)*100).toFixed(1)
-                    }             
-                    
-
-                    let retorno = '{'
-                        retorno += `"trabalhado": ${perc_trabalhados},`
-                        retorno += `"contatados": ${perc_contatados},`
-                        retorno += `"nao_contatados": ${perc_naoContatados}`
-                        retorno += '}'     
-                        
-                        console.log(total)
-                        console.log(contatados)
-                        console.log(naoContatados)
-                        console.log(trabalhados)  
-                    console.log(retorno)
-                     
-                    retorno = JSON.parse(retorno)                  
-
-                    res.json(retorno)
-
-                })
-            })
-        })
+        if(total!=0){
+            perc_trabalhados = parseFloat((trabalhados / total)*100).toFixed(1)
+            perc_contatados = parseFloat((contatados / total)*100).toFixed(1)
+            perc_naoContatados = parseFloat((naoContatados / total)*100).toFixed(1)
+        }             
+        
+        const retorno = {}
+              retorno['trabalhado']=perc_trabalhados
+              retorno['contatados']=perc_contatados
+              retorno['nao_contatados']=perc_naoContatados
+        res.json(retorno)
     }
 
     //chamadasSimultaneas
-    chamadasSimultaneas(req,res){
+    async chamadasSimultaneas(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const limit = parseInt(req.params.limit)
-        _Discador2.default.log_chamadasSimultaneas(limit,'total',(e,chamadas)=>{
-            if(e) throw e
-            //Total de chamadas simultaneas
-            const chamadas_simultaneas = chamadas
-            _Discador2.default.log_chamadasSimultaneas(limit,'conectadas',(e,conectadas)=>{
-                if(e) throw e
-
-                const chamadas_conectadas = conectadas
-
-                let retorno = '{'
-                    retorno += `"chamadas_simultaneas": [`
-                    for (let i = 0; i < chamadas_simultaneas.length; i++) {
-                        retorno += chamadas_simultaneas[i].chamadas;
-                        if(i<chamadas_simultaneas.length-1){
-                            retorno += ', '
-                        }                        
-                    }                                        
-                    retorno += `],`
-
-                    retorno += `"conectados": [`
-                    for (let i = 0; i < chamadas_conectadas.length; i++) {
-                        retorno += chamadas_conectadas[i].chamadas;
-                        if(i<chamadas_conectadas.length-1){
-                            retorno += ', '
-                        }                        
-                    }  
-                    retorno += ']}'                       
-                     console.log(retorno)
-                    retorno = JSON.parse(retorno)                  
-
-                    res.json(retorno)
-
-            })
-        })
-    }
+        const chamadas_simultaneas = await _Discador2.default.log_chamadasSimultaneas(empresa,limit,'total')
+        //Total de chamadas simultaneas
+        const chamadas_conectadas = await _Discador2.default.log_chamadasSimultaneas(empresa,limit,'conectadas')
+        const retorno = {}
+              retorno['chamadas_simultaneas']=[]
+              for (let i = 0; i < chamadas_simultaneas.length; i++) {
+                   retorno['chamadas_simultaneas'].push(chamadas_simultaneas[i].chamadas);
+              }                                        
+              retorno['conectados']=[]
+              for (let i = 0; i < chamadas_conectadas.length; i++) {
+                   retorno['conectados'].push(chamadas_conectadas[i].chamadas);
+              }                        
+        res.json(retorno)
+   }
 
     fraseologia(req,res){
         const all = req.params.all
@@ -361,6 +250,7 @@ class DashboardController{
         frases.push('Ele não deixou de deixar!')
         frases.push('Quanto mais curto menor!')
         frases.push('Eu sou uma pessoa que me julgo que tenho um bom julgamento!')
+        frases.push('Eu acho que com certeza!')
 
 
         let numero

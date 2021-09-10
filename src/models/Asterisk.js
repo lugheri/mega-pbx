@@ -145,15 +145,8 @@ class Asterisk{
     }
 
     //Atendente atendeu chamada da fila
-    async answer(dados){
-        //Dados recebidos pelo AGI
-        const empresa = dados.empresa
-        const uniqueid = dados.uniqueid;
-        const numero = dados.numero;
-        let ch = dados.ramal;
-        ch = ch.split("-");
-        ch = ch[0].split("/")
-        const ramal = ch[1]
+    async answer(empresa,uniqueid,numero,ramal){
+        //Dados recebidos pelo AGI       
         //console.log(`RAMAL DO AGENTE: ${ramal}`)
         //dados da campanha
         const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
@@ -163,7 +156,7 @@ class Asterisk{
     }   
 
     //######################DISCAR######################
-    discar(empresa,server,user,pass,modo,ramal,numero,callback){
+    discar(empresa,fila,server,user,pass,modo,ramal,numero,callback){
         console.log(`recebendo ligacao ${numero}`)
         console.log(`ramal ${ramal}`)
         ari.connect(server, user, pass, (err,client)=>{
@@ -190,7 +183,7 @@ class Asterisk{
             "context"        : `${context}`,
             "priority"       : 1,
             "app"            : "",
-            "variables"      : {"EMPRESA":`${empresa}`},
+            "variables"      : {"EMPRESA":`${empresa}`,"FILA":`${fila}`},
             "Async"          : true,
             "appArgs"        : "",
             "Callerid"       : `0${numero}`,//numero,

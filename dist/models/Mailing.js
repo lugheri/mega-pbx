@@ -8,20 +8,20 @@ var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 class Mailing{
     querySync(sql){
         return new Promise((resolve,reject)=>{
-            _dbConnection2.default.pool.query(sql,(e,rows)=>{
+            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
                 if(e) reject(e);
-
                 resolve(rows)
             })
         })
-    }
+    }    
+    
 
     //Abre o csv do mailing a ser importado
     async abreCsv(path,delimitador,callback){
         await _csvtojson2.default.call(void 0, {delimiter:delimitador}).fromFile(path).then(callback)
     }
 
-    async criarTabelaMailing(keys,nome,nomeTabela,header,filename,delimitador){
+    async criarTabelaMailing(empresa,keys,nome,nomeTabela,header,filename,delimitador){
         let campos='';
         //Dados do Mailing
         const tableData=`dados_${nomeTabela}`
@@ -36,7 +36,7 @@ class Mailing{
                 campos+=`campo_${(i+1)} VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8_general_ci',`
             }
         }
-        const sql = `CREATE TABLE IF NOT EXISTS ${_dbConnection2.default.db.mailings}.${tableData} 
+        const sql = `CREATE TABLE IF NOT EXISTS ${empresa}_mailings.${tableData} 
                         (id_key_base INT(11) NOT NULL AUTO_INCREMENT, 
                         ${campos}
                         test INT(4) NULL DEFAULT NULL,
@@ -46,7 +46,7 @@ class Mailing{
 
         //Numeros do Mailing        
         const tableNumbers=`numeros_${nomeTabela}`
-        const sqlN = `CREATE TABLE IF NOT EXISTS ${_dbConnection2.default.db.mailings}.${tableNumbers} 
+        const sqlN = `CREATE TABLE IF NOT EXISTS ${empresa}_mailings.${tableNumbers} 
                         (id INT(11) NOT NULL AUTO_INCREMENT,
                         id_mailing INT(11) NULL DEFAULT NULL,
                         id_registro INT(11) NULL DEFAULT NULL,
@@ -63,7 +63,7 @@ class Mailing{
                         produtivo INT(11) NULL DEFAULT NULL, 
                         discando INT(11) NULL DEFAULT '0', 
                         PRIMARY KEY (id) USING BTREE,
-                        INDEX dd (ddd),
+                        INDEX ddd (ddd),
                         INDEX uf (uf),
                         INDEX tipo (tipo),
                         INDEX produtivo (produtivo),
@@ -72,25 +72,29 @@ class Mailing{
                         COLLATE='utf8_general_ci' ENGINE=InnoDB;`
         await this.querySync(sqlN)   
         
-        const insertMailing = await this.addInfoMailing(nome,tableData,tableNumbers,filename,header,delimitador)
-        return await this.infoMailing(insertMailing['insertId']);        
+        const insertMailing = await this.addInfoMailing(empresa,nome,tableData,tableNumbers,filename,header,delimitador)
+        return await this.infoMailing(empresa,insertMailing['insertId']);        
     }
 
     //Adiciona as informacoes do mailing na tabela de controle de mailings
-    async addInfoMailing(nome,tableData,tableNumber,arquivo,header,delimitador){       
-        const sql = `INSERT INTO mailings
+    async addInfoMailing(empresa,nome,tableData,tableNumber,arquivo,header,delimitador){       
+        const sql = `INSERT INTO ${empresa}_dados.mailings
                                (data,nome,arquivo,header,delimitador,tabela_dados,tabela_numeros,configurado,repetidos,pronto,status) 
                         VALUES (NOW(),'${nome}','${arquivo}',${header},'${delimitador}','${tableData}','${tableNumber}',0,0,0,1)`
         return await this.querySync(sql)  
     }
 
-    async infoMailing(idMailing){
-        const sql = `SELECT * FROM mailings WHERE id=${idMailing}`
+    async infoMailing(empresa,idMailing){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.mailings 
+                      WHERE id=${idMailing}`
         return await this.querySync(sql)  
     }
 
-    async tabelaMailing(idMailing){
-        const sql = `SELECT tabela_dados, tabela_numeros FROM mailings WHERE id=${idMailing}`
+    async tabelaMailing(empresa,idMailing){
+        const sql = `SELECT tabela_dados, tabela_numeros 
+                       FROM ${empresa}_dados.mailings
+                      WHERE id=${idMailing}`
         return await this.querySync(sql)
     }
     
@@ -151,9 +155,9 @@ class Mailing{
         })        
     }
 
-    async configuraTipoCampos(idBase,header,campos){
+    async configuraTipoCampos(empresa,idBase,header,campos){
       
-        let sql=`INSERT INTO mailing_tipo_campo 
+        let sql=`INSERT INTO ${empresa}_dados.mailing_tipo_campo 
                             (idMailing,campo,nome_original_campo,apelido,tipo,conferido,ordem) 
                      VALUES `;
         for(let i=0; i<campos.length; i++){
@@ -176,9 +180,9 @@ class Mailing{
         await this.querySync(sql)
     }
 
-    async importaDados_e_NumerosBase(idBase,jsonFile,file,header,dataTab,numTab,idKey,transferRate){
-        const tabelaDados = `${_dbConnection2.default.db.mailings}.${dataTab}`
-        const tabelaNumeros = `${_dbConnection2.default.db.mailings}.${numTab}` 
+    async importaDados_e_NumerosBase(empresa,idBase,jsonFile,file,header,dataTab,numTab,idKey,transferRate){
+        const tabelaDados = `${empresa}_mailings.${dataTab}`
+        const tabelaNumeros = `${empresa}_mailings.${numTab}` 
         let erros=0
         let fields=Object.keys(jsonFile[0])//Campos do arquivo
         let fieldsTb=[]//array dos campos que irao para query
@@ -201,7 +205,7 @@ class Mailing{
         if(min>=totalBase){
             min=totalBase
         }
-
+        
         let max = 5000
         let rate=transferRate*2
 
@@ -217,6 +221,14 @@ class Mailing{
         }
         limit=rate
         
+        const multiplicador=2
+
+        //console.log('','=========== Transfer rate =========')
+        //console.log('limit',limit)
+        limit=limit*multiplicador
+        //console.log('multiplicador',multiplicador)
+        //console.log('rate',limit)
+        //console.log('Base restante',totalBase)
         if(limit>=totalBase){
             limit=totalBase
         }
@@ -236,19 +248,22 @@ class Mailing{
         let type_completo=[]
 
         //Verificando campos de telefones
-        const sql_ddds = `SELECT nome_original_campo as campo FROM mailing_tipo_campo 
+        const sql_ddds = `SELECT nome_original_campo as campo 
+                            FROM ${empresa}_dados.mailing_tipo_campo 
                            WHERE idMailing=${idBase} 
                              AND tipo='ddd'`
         const field_ddd = await this.querySync(sql_ddds)
         
         //verificando se possuem campos apenas de numero
-        const sql_numeros = `SELECT nome_original_campo as campo FROM mailing_tipo_campo 
+        const sql_numeros = `SELECT nome_original_campo as campo 
+                               FROM ${empresa}_dados.mailing_tipo_campo 
                               WHERE idMailing=${idBase} 
                                 AND tipo='telefone'`                                
         const fieldNumeros = await this.querySync(sql_numeros)
 
         //verificando se possuem campos de ddd e numero
-        const sql_completo = `SELECT nome_original_campo as campo FROM mailing_tipo_campo 
+        const sql_completo = `SELECT nome_original_campo as campo 
+                                FROM ${empresa}_dados.mailing_tipo_campo 
                                WHERE idMailing=${idBase} 
                                  AND tipo='ddd_e_telefone'`
         const fieldCompleto = await this.querySync(sql_completo)   
@@ -275,6 +290,7 @@ class Mailing{
         if(limit<=min){
             limit = min
         }
+        console.log('Rate real',limit)
 
         //console.log('Limite',limit)
         //Populando a query
@@ -351,21 +367,28 @@ class Mailing{
         await this.querySync(sqlData)
         await this.querySync(queryNumeros)      
        
-        let tR = await this.totalReg(tabelaDados)
-        let tN = await this.totalNumeros(tabelaNumeros)
+        let tR = await this.totalReg(tabelaDados)//Nome da empresa ja incluido no nome da tabela
+        let tN = await this.totalNumeros(tabelaNumeros)//Nome da empresa ja incluido no nome da tabela
         let totalReg=tR[0].total
         let totalNumeros=tN[0].total
-        let sql = `UPDATE mailings SET configurado=1, totalReg='${totalReg}',totalNumeros='${totalNumeros}'                   WHERE id='${idBase}'`
+        let sql = `UPDATE ${empresa}_dados.mailings 
+                      SET configurado=1, 
+                          totalReg='${totalReg}',
+                          totalNumeros='${totalNumeros}'
+                    WHERE id='${idBase}'`
                    
         await this.querySync(sql)        
 
         //Verificando restantes para reexecução
         if(jsonFile.length>0){
-            await this.importaDados_e_NumerosBase(idBase,jsonFile,file,header,dataTab,numTab,indice,rate)
+            await this.importaDados_e_NumerosBase(empresa,idBase,jsonFile,file,header,dataTab,numTab,indice,rate)
            
         }else{
             //gravando log
-            sql = `UPDATE mailings SET termino_importacao=now(), pronto=1 WHERE id='${idBase}'`           
+            sql = `UPDATE ${empresa}_dados.mailings 
+                      SET termino_importacao=now(), 
+                          pronto=1 
+                    WHERE id='${idBase}'`           
             _fs2.default.unlinkSync(file)//Removendo Arquivo
             await this.querySync(sql)           
         }
@@ -525,12 +548,14 @@ class Mailing{
 
     //Conta o total de registros em uma tabela de mailing
     async totalReg(tabela){
-        const sql = `SELECT count(id_key_base) as total FROM ${tabela}`
+        const sql = `SELECT count(id_key_base) as total 
+                       FROM ${tabela}`
         return await this.querySync(sql)
     }
 
     async totalNumeros(tabela){
-        const sql = `SELECT count(id) as total FROM ${tabela}`
+        const sql = `SELECT count(id) as total 
+                       FROM ${tabela}`
         return await this.querySync(sql)
     }
 
@@ -546,14 +571,16 @@ class Mailing{
         return 0
     }
 
-    async totalNumerosFiltrados(tabela,campanha,uf){
-        const sql = `SELECT COUNT(id) AS numeros FROM ${_dbConnection2.default.db.mailings}.${tabela} WHERE campanha_${campanha}=0 AND uf='${uf}' AND valido=1 `
+    async totalNumerosFiltrados(empresa,tabela,campanha,uf){
+        const sql = `SELECT COUNT(id) AS numeros
+                       FROM ${empresa}_mailings.${tabela} 
+                       WHERE campanha_${campanha}=0 AND uf='${uf}' AND valido=1 `
         const r = await this.querySync(sql)
         return r[0].numeros
     }
 
     //Listar mailings importados
-    async listaMailing(){
+    async listaMailing(empresa){
         const sql = `SELECT id,
                             DATE_FORMAT (data,'%d/%m/%Y') AS data_importacao,
                             DATE_FORMAT (termino_importacao,'%d/%m/%Y') AS conclusao_importacao,
@@ -568,27 +595,35 @@ class Mailing{
                             configurado,
                             pronto,
                             status 
-                       FROM mailings WHERE  configurado=1 AND status=1 ORDER BY id DESC`
+                       FROM ${empresa}_dados.mailings 
+                       WHERE configurado=1 AND status=1 ORDER BY id DESC`
         return  await this.querySync(sql);       
     }
 
     //Abre o mailing importado por paginas com a qtd de reg informada
-    async abrirMailing(id,p,r){
-        let sql = `SELECT tabela_dados FROM mailings WHERE id=${id}`
+    async abrirMailing(empresa,id,p,r){
+        let sql = `SELECT tabela_dados 
+                     FROM ${empresa}_dados.mailings 
+                    WHERE id=${id}`
         const rows = await this.querySync(sql)
         const qtd=r
         const pag=((p-1)*r)
         const tabela = rows[0].tabela_dados
-        console.log(`SELECT * FROM ${_dbConnection2.default.db.mailings}.${tabela} LIMIT ${pag},${qtd}`)            
-        sql = `SELECT * FROM ${_dbConnection2.default.db.mailings}.${tabela} LIMIT ${pag},${qtd}`
+        //console.log(`SELECT * FROM ${empresa}_mailings.${tabela} LIMIT ${pag},${qtd}`)            
+        sql = `SELECT * 
+                 FROM ${empresa}_mailings.${tabela} 
+                LIMIT ${pag},${qtd}`
         return await this.querySync(sql)
     }
 
     //ExportarMailing
-    async exportarMailing(idMailing,res){
-        let sql = `SELECT tabela_dados,nome FROM mailings WHERE id=${idMailing}` 
+    async exportarMailing(empresa,idMailing,res){
+        let sql = `SELECT tabela_dados,nome 
+                     FROM ${empresa}_dados.mailings 
+                    WHERE id=${idMailing}` 
         const r = await this.querySync(sql)
-        sql = `SELECT * FROM mailings.${r[0].tabela_dados}`
+        sql = `SELECT * 
+                 FROM ${empresa}_mailings.${r[0].tabela_dados}`
         const data = await this.querySync(sql)
         const json2csvParser = new (0, _json2csv.Parser)({ delimiter: ';' });
         const csv = json2csvParser.parse(data);
@@ -597,8 +632,10 @@ class Mailing{
     }   
 
     //Remover Mailing
-    async removerMailing(idMailing){
-        let sql = `SELECT tabela_dados,tabela_numeros FROM mailings WHERE id=${idMailing}`
+    async removerMailing(empresa,idMailing){
+        let sql = `SELECT tabela_dados,tabela_numeros 
+                     FROM ${empresa}_dados.mailings 
+                    WHERE id=${idMailing}`
         const result = await this.querySync(sql)
         if(result.length==0){
             return false
@@ -606,37 +643,45 @@ class Mailing{
         //Removendo os dados do mailing
         const tabelaDados = result[0].tabela_dados
         const tabelaNumeros = result[0].tabela_numeros
-        sql = `DROP TABLE ${_dbConnection2.default.db.mailings}.${tabelaDados}`//Removendo tabela de dados
+        sql = `DROP TABLE ${empresa}_mailings.${tabelaDados}`//Removendo tabela de dados
         await this.querySync(sql)
-        sql = `DROP TABLE ${_dbConnection2.default.db.mailings}.${tabelaNumeros}`//Removendo tabela de numeros
+        sql = `DROP TABLE ${empresa}_mailings.${tabelaNumeros}`//Removendo tabela de numeros
         await this.querySync(sql)
-        sql=`DELETE FROM mailings WHERE id=${idMailing}` //Removendo informações do Mailing
+        sql=`DELETE FROM ${empresa}_dados.mailings 
+              WHERE id=${idMailing}` //Removendo informações do Mailing
         await this.querySync(sql)
-        sql=`DELETE FROM mailing_tipo_campo WHERE idMailing=${idMailing}` //Removendo configuracoes dos tipos de campos
+        sql=`DELETE FROM ${empresa}_dados.mailing_tipo_campo 
+              WHERE idMailing=${idMailing}` //Removendo configuracoes dos tipos de campos
         await this.querySync(sql)
-        sql=`DELETE FROM campanhas_mailing WHERE idMailing=${idMailing}`//Removendo mailing das campanhas
+        sql=`DELETE FROM ${empresa}_dados.campanhas_mailing 
+              WHERE idMailing=${idMailing}`//Removendo mailing das campanhas
         await this.querySync(sql)
-        sql=`DELETE FROM campanhas_campos_tela_agente WHERE idMailing='${idMailing}'` //Removendo configurações da tela do agente
+        sql=`DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
+              WHERE idMailing='${idMailing}'` //Removendo configurações da tela do agente
         await this.querySync(sql)
         return true
     }
 
     //Status mailing
-    async statusMailing(idMailing,callback){
-        const sql = `SELECT configurado,totalReg,totalNumeros,pronto,status FROM mailings WHERE id=${idMailing}`
+    async statusMailing(empresa,idMailing){
+        const sql = `SELECT configurado,totalReg,totalNumeros,pronto,status 
+                       FROM ${empresa}_dados.mailings 
+                       WHERE id=${idMailing}`
         return await this.querySync(sql) 
     }
 
     //Conta os ufs do mailing
-    async ufsMailing(idCampanha){
-        const infoMailing = await _Campanhas2.default.infoMailingCampanha(idCampanha)
+    async ufsMailing(empresa,idCampanha){
+        const infoMailing = await _Campanhas2.default.infoMailingCampanha(empresa,idCampanha)
         if(infoMailing.length==0){
             return false
         }
         const idMailing = infoMailing[0].id
         const tabela = infoMailing[0].tabela_numeros
 
-        let sql = `SELECT COUNT(uf) AS total, uf FROM ${_dbConnection2.default.db.mailings}.${tabela} WHERE valido=1 GROUP BY uf`
+        let sql = `SELECT COUNT(uf) AS total, uf 
+                     FROM ${empresa}_mailings.${tabela} 
+                    WHERE valido=1 GROUP BY uf`
         const r = await  this.querySync(sql)     
         const estados=[
             //Centro-Oeste       
@@ -676,7 +721,7 @@ class Mailing{
         for(let i=0; i<r.length; i++){
             let fill = "#185979"
             let totalNumeros=r[i].total
-            let numerosFiltrados = await this.totalNumerosFiltrados(tabela,idCampanha,r[i].uf)
+            let numerosFiltrados = await this.totalNumerosFiltrados(empresa,tabela,idCampanha,r[i].uf)
             let disponiveis = totalNumeros-numerosFiltrados
            
             if(disponiveis==0){
@@ -694,53 +739,66 @@ class Mailing{
         return ufs
     }
 
-    async retrabalharMailing(idMailing){
-        const infoMailing = await this.infoMailing(idMailing)
+    async retrabalharMailing(empresa,idMailing){
+        const infoMailing = await this.infoMailing(empresa,idMailing)
         const tabelaNumeros =  infoMailing[0].tabela_numeros
         const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD 00:00:00")
         //verifica tabulacao da campanha
-        let sql = `UPDATE ${_dbConnection2.default.db.mailings}.campanhas_tabulacao_mailing 
-                  SET data = '${hoje}', estado=0, desc_estado='Disponivel', tentativas=0
-                WHERE idMailing=${idMailing} AND (produtivo = 0 OR produtivo is null)`
-               console.log(sql)
+        let sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
+                      SET data='${hoje}',
+                          estado=0,
+                          desc_estado='Disponivel',
+                          tentativas=0
+                    WHERE idMailing=${idMailing} AND (produtivo = 0 OR produtivo is null)`
+        //console.log(sql)
         await this.querySync(sql)
 
         //Libera numero na base de numeros
-        sql = `UPDATE ${_dbConnection2.default.db.mailings}.${tabelaNumeros} SET discando=0 WHERE produtivo != 1`
+        sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
+                  SET discando=0 
+                WHERE produtivo != 1`
         await this.querySync(sql)       
         
         return true       
     }
 
     //DDDs por uf do mailing
-    async  dddsUfMailing(tabela,uf){
+    async dddsUfMailing(empresa,tabela,uf){
         const sql = `SELECT ddd, COUNT(id) AS total 
-                       FROM ${_dbConnection2.default.db.mailings}.${tabela} WHERE uf='${uf}' GROUP BY ddd ORDER BY ddd ASC`
+                       FROM ${empresa}_mailings.${tabela} 
+                      WHERE uf='${uf}' GROUP BY ddd ORDER BY ddd ASC`
         return await this.querySync(sql)
     }
 
     //Resumo por ddd
-    async totalRegUF(tabela){
+    async totalRegUF(empresa,tabela){
         const sql = `SELECT uf AS UF, COUNT(id) AS numeros, COUNT(DISTINCT id_registro) AS registros 
-                       FROM ${_dbConnection2.default.db.mailings}.${tabela} GROUP BY uf ORDER BY uf ASC`
+                       FROM ${empresa}_mailings.${tabela} 
+                       GROUP BY uf 
+                       ORDER BY uf ASC`
         return await this.querySync(sql)
     }
 
     //Saude do mailing
-    async totalRegistros(tabela){
-        const sql = `SELECT COUNT(id) AS total FROM ${_dbConnection2.default.db.mailings}.${tabela}`
+    async totalRegistros(empresa,tabela){
+        const sql = `SELECT COUNT(id) AS total 
+                       FROM ${empresa}_mailings.${tabela}`
         const reg = await this.querySync(sql)
         return reg[0].total
     }
 
-    async registrosContatados(tabela){
-        const sql = `SELECT COUNT(id) AS total FROM ${_dbConnection2.default.db.mailings}.${tabela} WHERE contatado='S'`
+    async registrosContatados(empresa,tabela){
+        const sql = `SELECT COUNT(id) AS total 
+                       FROM ${empresa}_mailings.${tabela} 
+                       WHERE contatado='S'`
         const reg = await this.querySync(sql)
         return reg[0].total
     }
 
-    async registrosNaoContatados(tabela){
-        const sql = `SELECT COUNT(id) AS total FROM ${_dbConnection2.default.db.mailings}.${tabela} WHERE contatado='N'`
+    async registrosNaoContatados(empresa,tabela){
+        const sql = `SELECT COUNT(id) AS total 
+                       FROM ${empresa}_mailings.${tabela}
+                      WHERE contatado='N'`
         const reg = await this.querySync(sql)
         return reg[0].total
     }

@@ -5,43 +5,30 @@ module.exports = (routes) => {
     //DISCADOR
     //novo Metodo do Discador
     routes.get('/teste_iniciandoDiscadorSistema',_DiscadorController2.default.dial)
-
     //iniciarDiscador
     routes.get('/iniciarDiscador/:ramal',_DiscadorController2.default.iniciarDiscador)
-
     //Status do ramal
     routes.get('/statusRamal/:ramal',_DiscadorController2.default.statusRamal)
-
     //pararDiscador
     routes.get('/pararDiscador/:ramal',_DiscadorController2.default.pararDiscador)
-
     //Chamada atendida
     routes.get('/modoAtendimento/:ramal',_DiscadorController2.default.modoAtendimento)
-
     //Chamada atendida
     routes.get('/atendeChamada/:ramal',_DiscadorController2.default.atenderChamada)
-
     //Chamada atendida
-    routes.get('/dadosChamada/:ramal',_DiscadorController2.default.dadosChamadaAtendida)
-    
+    routes.get('/dadosChamada/:ramal',_DiscadorController2.default.dadosChamadaAtendida)    
     //Lista os status de tabulacao da campanha
     routes.get('/statusTabulacaoChamada/:ramal',_DiscadorController2.default.statusTabulacaoChamada)
-
     //Chamada desligada
-    routes.post('/desligarChamada',_DiscadorController2.default.desligarChamada)
-    
+    routes.post('/desligarChamada',_DiscadorController2.default.desligarChamada)    
     //Tabular chamada
     routes.post('/tabularChamada',_DiscadorController2.default.tabularChamada)
-
     //Tabular chamada
     routes.post('/marcarRetorno',_DiscadorController2.default.marcarRetorno)
-
     //Pula registro
     routes.get('/pularChamada/:ramal',_DiscadorController2.default.pularChamada)
-
     //Historico de Registro
     routes.get('/historicoRegistro/:idMailing/:idRegistro',_DiscadorController2.default.historicoRegistro)
-
     //Historico de Chamadas
     routes.get('/historicoChamadas/:ramal',_DiscadorController2.default.historicoChamadas)
 
@@ -50,14 +37,13 @@ module.exports = (routes) => {
 //TELA DE ATENDIMENTO
     //Abrir Listagem de Pausa da Campanha
     routes.get('/pausasDisponiveis',_DiscadorController2.default.listarPausasCampanha)
-
     //Pausar agente
     routes.post('/pausarAgente',_DiscadorController2.default.pausarAgente)
-
     //Status Pausa Agente
-    routes.get('/statusPausaAgente/:ramal',_DiscadorController2.default.statusPausaAgente)
- 
+    routes.get('/statusPausaAgente/:ramal',_DiscadorController2.default.statusPausaAgente) 
     //Retirar Pausa
     routes.post('/removePausa/',_DiscadorController2.default.removePausaAgente)
 
+    //Teste
+    //routes.get('/dial/',DiscadorController.dialTest)
 }

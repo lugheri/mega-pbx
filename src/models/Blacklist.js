@@ -6,9 +6,8 @@ import fs from 'fs';
 class Blacklist{
     querySync(sql){
         return new Promise((resolve,reject)=>{
-            connect.pool.query(sql,(e,rows)=>{
+            connect.poolEmpresa.query(sql,(e,rows)=>{
                 if(e) reject(e);
-
                 resolve(rows)
             })
         })

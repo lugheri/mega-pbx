@@ -83,14 +83,14 @@ spec:
     spec:      
       containers:
       - name: api
-        image: megaconecta/api-central:v0.0.259
+        image: megaconecta/api-central:v0.0.296
         #resources:
         #  limits:
         #    cpu: 0.1m
         #    memory: 300Mi   
         #  requests:
         #    memory: 300Mi
-        env:
+        env:      
         - name: DB_USER
           valueFrom:
             secretKeyRef:

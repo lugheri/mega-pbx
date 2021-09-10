@@ -6,154 +6,123 @@ class UserController{
         const { email, password } = req.body
     }  
 
-    newUser(req,res){
+    async newUser(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const dados = req.body
-        _User2.default.newUser(dados,(e,r)=>{
-            if(e) throw e
-            res.json(r)
-        })
+        const r = await _User2.default.newUser(empresa,dados)
+        res.json(r)
     }
 
-    listUsers(req,res){
+    async listUsers(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const status = parseInt(req.params.status)
-        _User2.default.listUsers(status,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
-    }  
-
-    userData(req,res){
-        const userId = parseInt(req.params.userId)
-        _User2.default.userData(userId,(e,r)=>{
-            if(e) throw e
-            res.json(r)
-        })
+        const r = await _User2.default.listUsers(empresa,status)
+        res.json(r)
     }
 
-    editUser(req,res){
-       
-        const userId = {"id":parseInt(req.params.userId)}
+    async userData(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const userId = parseInt(req.params.userId)
+        const r = await _User2.default.userData(empresa,userId)
+        res.json(r)
+    }
+
+    async editUser(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const userId = parseInt(req.params.userId)
         const userData = req.body
-        _User2.default.editUser(userId,userData,(e,r)=>{
-            if(e) throw e
-            res.json(r)
-        })
+        const r = await _User2.default.editUser(empresa,userId,userData)
+        res.json(r)
     }
 
     //EQUIPES
-    novaEquipe(req,res){
+    async novaEquipe(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const dados = req.body
-        _User2.default.novaEquipe(dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.novaEquipe(empresa,dados)
+        res.json(r)
     }
 
-    listEquipes(req,res){
+    async listEquipes(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const status = parseInt(req.params.status);
-        _User2.default.listEquipes(status,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.listEquipes(empresa,status)
+        res.json(r)
     }
 
-    dadosEquipe(req,res){
+    async dadosEquipe(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idEquipe = parseInt(req.params.idEquipe)
-        _User2.default.dadosEquipe(idEquipe,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.dadosEquipe(empresa,idEquipe)
+        res.json(r)
     }
 
-    editEquipe(req,res){
-        const idEquipe = {"id":parseInt(req.params.idEquipe)}
+    async editEquipe(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const idEquipe = parseInt(req.params.idEquipe)
         const dados = req.body
-        _User2.default.editEquipe(idEquipe,dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.editEquipe(empresa,idEquipe,dados)
+        res.json(r)
     }
 
 
     //CARGOS
-    novoCargo(req,res){
+    async novoCargo(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const dados = req.body
-        _User2.default.novoCargo(dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.novoCargo(empresa,dados)
+        res.json(r)
     }
 
-    listCargos(req,res){
+    async listCargos(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const status = parseInt(req.params.status);
-        _User2.default.listCargos(status,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.listCargos(empresa,status)
+        res.json(r)
     }
 
-    dadosCargo(req,res){
+    async dadosCargo(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idCargo = parseInt(req.params.idCargo)
-        _User2.default.dadosCargo(idCargo,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.dadosCargo(empresa,idCargo)
+        res.json(r)
     }
 
-    editCargo(req,res){        
-        const idCargo = {"id":parseInt(req.params.idCargo)}
+    async editCargo(req,res){   
+        const empresa = await _User2.default.getEmpresa(req)     
+        const idCargo = parseInt(req.params.idCargo)
         const dados = req.body
-        _User2.default.editCargo(idCargo,dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.editCargo(empresa,idCargo,dados)
+        res.json(r)
     }
 
     //NÍVEIS DE ACESSO
-    novoNivel(req,res){
+    async novoNivel(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const dados = req.body
-        _User2.default.novoNivel(dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.novoNivel(empresa,dados)
+        res.json(r)
     }
 
-    listNiveis(req,res){
+    async listNiveis(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const status = parseInt(req.params.status);
-        _User2.default.listNiveis(status,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const niveis = await _User2.default.listNiveis(empresa,status)
+        res.json(niveis)
     }
 
-    dadosNivel(req,res){
+    async dadosNivel(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
         const idNivel = parseInt(req.params.idNivel)
-        _User2.default.dadosNivel(idNivel,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.dadosNivel(empresa,idNivel)
+        res.json(r)
     }
-
-    editNivel(req,res){
-        const idNivel = {"id":parseInt(req.params.idNivel)}
+    async editNivel(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const idNivel = parseInt(req.params.idNivel)
         const dados = req.body
-        _User2.default.editNivel(idNivel,dados,(e,r)=>{
-            if(e) throw e
-
-            res.json(r)
-        })
+        const r = await _User2.default.editNivel(empresa,idNivel,dados)
+        res.json(r)
     }
     
 
