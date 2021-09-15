@@ -4,6 +4,7 @@ var _util = require('util'); var _util2 = _interopRequireDefault(_util);
 var _fs = require('fs'); var _fs2 = _interopRequireDefault(_fs);
 var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
 var _Cronometro = require('../models/Cronometro'); var _Cronometro2 = _interopRequireDefault(_Cronometro);
+var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 //const asteriskServer = 'http://35.202.102.245:8088'
 //const asteriskServer = 'asterisk'
 //const asteriskServer = 'localhost'
@@ -16,8 +17,9 @@ class AsteriskController{
         const data = req.body.date
         const hora = req.body.time
         const ramal = req.body.ramal
-        const uniqueid = req.body.uniqueid       
-        const server = await _Asterisk2.default.setRecord(empresa,data,hora,ramal,uniqueid)
+        const uniqueid = req.body.uniqueid  
+        const numero = req.body.numero   
+        const server = await _Asterisk2.default.setRecord(empresa,data,hora,ramal,uniqueid,numero)
         res.json(server[0].ip) 
     }
 
@@ -27,7 +29,20 @@ class AsteriskController{
         if(action=='voz'){
             const empresa = dados.empresa
             const numero = dados.numero
-            const saudacao = await _Discador2.default.saudadacao(empresa,numero)
+            const voz = await _Discador2.default.saudadacao(empresa,numero)
+
+            const hora = _moment2.default.call(void 0, ).format("HH")
+            let periodo='bom-dia'
+            if(hora<=12){
+                periodo='bom-dia'
+            }else if(hora<=18){
+                periodo='boa-tarde'
+            }else{  
+                periodo='boa-noite'
+            }
+            const saudacao=`${voz}-${periodo}`
+
+
             console.log('agi:voz',`Empresa: ${empresa},numero: ${numero}, saida: ${saudacao}`)
             res.json(saudacao)   
         }
@@ -89,6 +104,7 @@ class AsteriskController{
             const empresa = dados.empresa          
             const numero = dados.numero
             const motivo = dados.motivo
+            const abandonada = dados.abandonada
             const chamada = await _Discador2.default.dadosAtendimento_byNumero(empresa,numero)
             console.log('agi:desligou',`Empresa: ${empresa},numero: ${numero},motivo:${motivo}, saida: ${chamada}`)
             if(chamada.length==0){
@@ -120,11 +136,16 @@ class AsteriskController{
                 await _Discador2.default.tabulaChamada(empresa.idAtendimento,contatado,tabulacao,observacoes,produtivo,ramal,idNumero,removeNumero)
                 //Removendo ligacao do historico de chamadas_simultaneas
                 await _Discador2.default.clearCallbyId(empresa,idAtendimento)    
+                if(abandonada==true){
+                    await _Discador2.default.removeChamadaSimultanea(empresa,idAtendimento)
+                }
                 res.json(true);
             }else{
                 await _Discador2.default.desligaChamadaNumero(empresa,numero)
                 res.json(true);
             }
+
+           
         }
     }
 

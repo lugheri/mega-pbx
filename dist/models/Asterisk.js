@@ -61,14 +61,13 @@ class Asterisk{
 
 
     //######################Configuração do Asterisk######################
-    async setRecord(empresa,data,hora,ramal,uniqueid){
+    async setRecord(empresa,data,hora,ramal,uniqueid,numero){
         await this.setUniqueid(empresa,ramal,uniqueid)
         const sql = `INSERT INTO ${empresa}_dados.records
-                                (date,date_record,time_record,ramal,uniqueid)
-                         VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}')`
+                                (date,date_record,time_record,ramal,uniqueid,numero)
+                         VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}','${numero}')`
         await this.querySync(sql)
-        return await this.servidorWebRTC(empresa)
-        
+        return await this.servidorWebRTC(empresa)        
     }
 
     async setUniqueid(empresa,ramal,uniqueid){

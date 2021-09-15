@@ -1,6 +1,7 @@
 import connect from '../Config/dbConnection';
 import csv from 'csvtojson';
 import { Parser } from 'json2csv';
+import utf8 from 'utf8';
 import fs from "fs";
 import Campanhas from '../models/Campanhas'
 import moment from 'moment';
@@ -18,7 +19,7 @@ class Mailing{
 
     //Abre o csv do mailing a ser importado
     async abreCsv(path,delimitador,callback){
-        await csv({delimiter:delimitador}).fromFile(path).then(callback)
+        await csv({delimiter:delimitador}).fromFile(path,'binary').then(callback)
     }
 
     async criarTabelaMailing(empresa,keys,nome,nomeTabela,header,filename,delimitador){
@@ -163,7 +164,7 @@ class Mailing{
         for(let i=0; i<campos.length; i++){
           
             let nomeCampo=campos[i].name.replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
-            let nomeOriginal=campos[i].name
+            let nomeOriginal=campos[i].name.replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
             let apelido = campos[i].apelido
             if(header==0){
                 nomeCampo=`campo_${i+1}`
@@ -177,6 +178,7 @@ class Mailing{
             sql +=`(${idBase},'${nomeCampo}','${nomeOriginal}','${apelido}','${campos[i].tipo}',1,${ordem})`
             if((i+1)<campos.length){ sql +=', '}
         }
+        //console.log("configuraTipoCampos",sql)
         await this.querySync(sql)
     }
 
@@ -303,8 +305,12 @@ class Mailing{
             sqlData+=`${indiceReg},`  
             for(let f=0; f<fields.length; f++){
                 let valor=jsonFile[0][fields[f]]
+                //sqlData+=`'${valor.replace(" ", "_")
+                //                  .replace("/", "_")
+                //                 .normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")}'`
                 sqlData+=`'${valor.replace(/'/gi,'')}'`
-               
+                //sqlData+=`'${valor.replace("/", "-").normalize("NFD").replace(/[^a-zA-Z0-9]/g, " ")}'`
+                
                 if(f>=fields.length-1){
                     sqlData+=``;
                 }else{
@@ -362,10 +368,13 @@ class Mailing{
         } 
         
         let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'
+        
 
-      
+
         await this.querySync(sqlData)
-        await this.querySync(queryNumeros)      
+        await this.querySync(queryNumeros)   
+        
+        
        
         let tR = await this.totalReg(tabelaDados)//Nome da empresa ja incluido no nome da tabela
         let tN = await this.totalNumeros(tabelaNumeros)//Nome da empresa ja incluido no nome da tabela
@@ -390,6 +399,7 @@ class Mailing{
                           pronto=1 
                     WHERE id='${idBase}'`           
             fs.unlinkSync(file)//Removendo Arquivo
+            //console.log("sql final",sql)
             await this.querySync(sql)           
         }
         

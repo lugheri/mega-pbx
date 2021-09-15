@@ -131,6 +131,17 @@ class Gravacao{
                       WHERE id=${idGravacao}`
         return await this.querySync(sql)
     }
+
+    async numeroDiscadoByUniqueid(empresa,uniqueid){
+        const sql = `SELECT numero_discado AS numero
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE uniqueid=${uniqueid}`
+        const n =  await this.querySync(sql)
+        if(n.length==0){
+            return 0
+        }
+        return n[0].numero
+    }
 }
 
 exports. default = new Gravacao();

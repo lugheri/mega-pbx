@@ -4,6 +4,7 @@ import util from 'util';
 import fs from 'fs';
 import Discador from '../models/Discador';
 import Cronometro from '../models/Cronometro';
+import moment from 'moment';
 //const asteriskServer = 'http://35.202.102.245:8088'
 //const asteriskServer = 'asterisk'
 //const asteriskServer = 'localhost'
@@ -16,8 +17,9 @@ class AsteriskController{
         const data = req.body.date
         const hora = req.body.time
         const ramal = req.body.ramal
-        const uniqueid = req.body.uniqueid       
-        const server = await Asterisk.setRecord(empresa,data,hora,ramal,uniqueid)
+        const uniqueid = req.body.uniqueid  
+        const numero = req.body.numero   
+        const server = await Asterisk.setRecord(empresa,data,hora,ramal,uniqueid,numero)
         res.json(server[0].ip) 
     }
 
@@ -27,7 +29,20 @@ class AsteriskController{
         if(action=='voz'){
             const empresa = dados.empresa
             const numero = dados.numero
-            const saudacao = await Discador.saudadacao(empresa,numero)
+            const voz = await Discador.saudadacao(empresa,numero)
+
+            const hora = moment().format("HH")
+            let periodo='bom-dia'
+            if(hora<=12){
+                periodo='bom-dia'
+            }else if(hora<=18){
+                periodo='boa-tarde'
+            }else{  
+                periodo='boa-noite'
+            }
+            const saudacao=`${voz}-${periodo}`
+
+
             console.log('agi:voz',`Empresa: ${empresa},numero: ${numero}, saida: ${saudacao}`)
             res.json(saudacao)   
         }
@@ -89,6 +104,7 @@ class AsteriskController{
             const empresa = dados.empresa          
             const numero = dados.numero
             const motivo = dados.motivo
+            const abandonada = dados.abandonada
             const chamada = await Discador.dadosAtendimento_byNumero(empresa,numero)
             console.log('agi:desligou',`Empresa: ${empresa},numero: ${numero},motivo:${motivo}, saida: ${chamada}`)
             if(chamada.length==0){
@@ -120,11 +136,16 @@ class AsteriskController{
                 await Discador.tabulaChamada(empresa.idAtendimento,contatado,tabulacao,observacoes,produtivo,ramal,idNumero,removeNumero)
                 //Removendo ligacao do historico de chamadas_simultaneas
                 await Discador.clearCallbyId(empresa,idAtendimento)    
+                if(abandonada==true){
+                    await Discador.removeChamadaSimultanea(empresa,idAtendimento)
+                }
                 res.json(true);
             }else{
                 await Discador.desligaChamadaNumero(empresa,numero)
                 res.json(true);
             }
+
+           
         }
     }
 

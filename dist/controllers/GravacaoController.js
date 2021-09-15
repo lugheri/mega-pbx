@@ -16,7 +16,7 @@ class GravacaoController{
         
         for(let i=0; i<gravacoes.length; ++i){
             const retorno={}
-            let ouvir = `${servidor}gravacoes/${empresa}/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].origem}_${gravacoes[i].uniqueid}.wav`
+            let ouvir = `${servidor}gravacoes/${empresa}/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].numero}_${gravacoes[i].uniqueid}.wav`
             let baixar = `${servidor}gravacao.php?empresa=${empresa}&id=${gravacoes[i].uniqueid}`
             retorno["idGravacao"]=gravacoes[i].id
             retorno["data"]=gravacoes[i].data
@@ -57,6 +57,14 @@ class GravacaoController{
         }
         const server = await _Asterisk2.default.getDomain(empresa)
         const pasta = infoGravacao[0].date_record
+        let numero=0
+        if((infoGravacao[0].numero==null)||(infoGravacao[0].numero=="")){
+            numero=await _Gravacao2.default.numeroDiscadoByUniqueid(empresa,infoGravacao[0].uniqueid)
+            
+        }else{
+            numero=infoGravacao[0].numero
+        }
+        
         const arquivo = `${infoGravacao[0].time_record}_${infoGravacao[0].ramal}_${infoGravacao[0].uniqueid}.wav`
         const link = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
         res.json(link)               

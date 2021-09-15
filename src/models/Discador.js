@@ -684,13 +684,14 @@ class Discador{
     }
 
     async saudadacao(empresa,numero){
+        let saudacao = 'masculino'
         let sql = `SELECT id_campanha 
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE numero='${numero}' ORDER BY id DESC LIMIT 1`
         const ch = await this.querySync(sql)
         
         if(ch.length==0){
-            return 'alo_masculino';
+            return saudacao;
         }
 
         const idCampanha = ch[0].id_campanha
@@ -698,7 +699,14 @@ class Discador{
                  FROM ${empresa}_dados.campanhas_discador
                 WHERE idCampanha='${idCampanha}'`        
         const s = await this.querySync(sql)
-        return s[0].saudacao
+        if((s[0].saudacao=="")||
+           (s[0].saudacao==null)||
+           (s[0].saudacao=="undefined")||
+           (s[0].saudacao==undefined)){
+            return saudacao;
+        }
+        saudacao=s[0].saudacao
+        return saudacao
     }
     
    /** 
@@ -1103,6 +1111,14 @@ class Discador{
             await this.querySync(sql)
         }
 
+        if(estado==3){
+            //teste de remover agente do asterisk quando deslogado
+            sql = `UPDATE ${connect.db.asterisk}.queue_members
+                      SET paused=1 
+                    WHERE membername=${agente}`
+            await this.querySync(sql)  
+        }
+
         if(estado==4){
             //teste de remover agente do asterisk quando deslogado
             sql = `UPDATE ${connect.db.asterisk}.queue_members
@@ -1167,8 +1183,16 @@ class Discador{
     //Desliga Chamada
     async desligaChamadaNumero(empresa,numero){      
         const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
-                  SET desligada=1 
+                  SET desligada=1
                 WHERE numero=${numero}`
+        await this.querySync(sql)
+        return true
+    }
+
+    //Desliga Chamada
+    async removeChamadaSimultanea(empresa,idAtendimento){      
+        const sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                      WHERE id=${idAtendimento}`
         await this.querySync(sql)
         return true
     }
