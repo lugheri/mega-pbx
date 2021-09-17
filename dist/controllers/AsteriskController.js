@@ -73,31 +73,37 @@ class AsteriskController{
             const empresa = dados.empresa
             const uniqueid = dados.numero 
             const numero = dados.numero
+            const tipoChamada = dados.tipoChamada
             let ch = dados.ramal;
-                ch = ch.split("-");
-                ch = ch[0].split("/")
+            ch = ch.split("-");
+            ch = ch[0].split("/")
             const ramal = ch[1]
-            const r = await _Asterisk2.default.answer(empresa,uniqueid,numero,ramal)
-            console.log('agi:answer',`Empresa: ${empresa},numero: ${numero},uniqueid:${uniqueid},ramal:${ramal}, saida: ${r}`)
-            await _Cronometro2.default.saiuDaFila(empresa,numero)
-            const dadosAtendimento = await _Discador2.default.dadosAtendimento_byNumero(empresa,numero)
-            if(dadosAtendimento.length==0){
-                res.json(false);
-                return false
-            }
-            const idCampanha = dadosAtendimento[0].id_campanha
-            const idMailing = dadosAtendimento[0].id_mailing
-            const idRegistro = dadosAtendimento[0].id_registro 
-            const uniqueid_Reg = dadosAtendimento[0].uniqueid  
-           
 
-            await _Discador2.default.alterarEstadoAgente(empresa,ramal,3,0)
-            await _Discador2.default.atendeChamada(empresa,ramal)
-            //atualizando ramal na chamada simultanea
+            if(tipoChamada=="manual"){
+                await _Discador2.default.alterarEstadoAgente(empresa,ramal,3,0)
+            }else{               
+                const r = await _Asterisk2.default.answer(empresa,uniqueid,numero,ramal)
+                console.log('agi:answer',`Empresa: ${empresa},numero: ${numero},uniqueid:${uniqueid},ramal:${ramal}, saida: ${r}`)
+                await _Cronometro2.default.saiuDaFila(empresa,numero)
+                const dadosAtendimento = await _Discador2.default.dadosAtendimento_byNumero(empresa,numero)
+                if(dadosAtendimento.length==0){
+                    res.json(false);
+                    return false
+                }
+                const idCampanha = dadosAtendimento[0].id_campanha
+                const idMailing = dadosAtendimento[0].id_mailing
+                const idRegistro = dadosAtendimento[0].id_registro 
+                const uniqueid_Reg = dadosAtendimento[0].uniqueid  
             
-            //iniciou chamada
-            await _Cronometro2.default.iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,numero,ramal,uniqueid_Reg)
-            res.json(true);
+
+                await _Discador2.default.alterarEstadoAgente(empresa,ramal,3,0)
+                await _Discador2.default.atendeChamada(empresa,ramal)
+                //atualizando ramal na chamada simultanea
+                
+                //iniciou chamada
+                await _Cronometro2.default.iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,numero,ramal,uniqueid_Reg)
+                res.json(true);
+            }
         } 
         
         if(action=='desligou'){//Quando abandona fila  

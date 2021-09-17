@@ -48,9 +48,16 @@ class DiscadorController{
             const campanhasAtivas = await _Discador2.default.campanhasAtivas(empresa);  
             //console.log(`campanhasAtivas:${empresa}`,campanhasAtivas)
             if(campanhasAtivas.length === 0){
+                //console.log('')  
+          
+                //console.log('[!]',`Empresa: ${empresa},  ..................................STOP[!]`)       
+                //console.log(`[!] ${empresa} Alert:`,'Nenhuma campanha ativa!') 
+                //console.log('') 
+
                 await this.debug('[!]','Nenhuma campanha ativa![!]',empresa)
-                await this.dial(clientesAtivos,res)
-                return false
+               //await this.dial(clientesAtivos,res)
+               //return false;
+               //console.log('continuando....')
             }
             //percorrendo campanhas ativas
             for(let i=0; i<campanhasAtivas.length; i++){
@@ -258,6 +265,7 @@ class DiscadorController{
         //checa blacklists
 
         //Inserção do numero na lista campanhas_tabulacao
+        //console.log(`${empresa},${idCampanha},${idMailing},${idRegistro},${idNumero},${numero},${tabela_numeros}`)
         const rn = await _Discador2.default.registraNumero(empresa,idCampanha,idMailing,idRegistro,idNumero,numero,tabela_numeros)
         //console.log(`registraNumero:${empresa}`,rn)
 
@@ -295,6 +303,7 @@ class DiscadorController{
              
             /*
             * INICIAR Discagem */
+            //console.log('DISCAGEM EFETUADA',`EMPRESA: ${empresa} NUMERO: ${numero} FILA: ${nomeFila} `)
             const dataCall=await _Discador2.default.discar(empresa,0,numero,nomeFila)
             ////console.log('Ligando...',`Modo: ${parametrosDiscador[0].tipo_discagem} idReg:${idRegistro} Numero: ${numero}`)
            
@@ -494,7 +503,8 @@ class DiscadorController{
                   
         }else{
             produtivo=0
-        }        
+        } 
+        console.log('__________________TABULANDO CHAMADA_______________________')       
         const r = await _Discador2.default.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal,id_numero,removeNumero)
         res.json(r); 
     }

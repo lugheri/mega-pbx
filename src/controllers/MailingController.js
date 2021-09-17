@@ -55,7 +55,8 @@ class MailingController{
                 let data=[]
                 for(let d=0; d<10; d++){
                     if(d<=(jsonFile.length-1)){
-                        let value=jsonFile[d][title[i]]                                                                 
+                        let value=jsonFile[d][title[i]]
+                                                                 
                         data.push(value)
                     }                    
                 }
