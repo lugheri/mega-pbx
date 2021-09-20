@@ -53,8 +53,9 @@ class AsteriskController{
         }
         if(action=='set_queue'){//Quando reconhece a voz humana
             const empresa = dados.empresa
+            const idAtendimento= dados.idAtendimento
             const numero = dados.numero 
-            const dadosAtendimento = await Discador.setaRegistroNaFila(empresa,numero)
+            const dadosAtendimento = await Discador.setaRegistroNaFila(empresa,idAtendimento)
             if(dadosAtendimento===false){
                 res.json(false) 
                 return false
@@ -70,10 +71,19 @@ class AsteriskController{
         }
         
         if(action=='answer'){//Quando ligacao eh atendida pelo agente
-            const empresa = dados.empresa
+            const empresa = dados.empresa            
             const uniqueid = dados.numero 
             const numero = dados.numero
             const tipoChamada = dados.tipoChamada
+
+            let idAtendimento
+            if(tipoChamada=="POWER"){
+                idAtendimento = dados.idAtendimento
+            }else{                
+                const da = Discador.dadosAtendimento_byNumero(empresa,numero);
+                idAtendimento = da[0].id;
+            }
+
             let ch = dados.ramal;
             ch = ch.split("-");
             ch = ch[0].split("/")
@@ -82,10 +92,10 @@ class AsteriskController{
             if(tipoChamada=="manual"){
                 await Discador.alterarEstadoAgente(empresa,ramal,3,0)
             }else{               
-                const r = await Asterisk.answer(empresa,uniqueid,numero,ramal)
-                console.log('agi:answer',`Empresa: ${empresa},numero: ${numero},uniqueid:${uniqueid},ramal:${ramal}, saida: ${r}`)
+                const r = await Asterisk.answer(empresa,uniqueid,idAtendimento,ramal)
+                console.log('agi:answer',`Empresa: ${empresa},idAtendimento: ${idAtendimento}, numero: ${numero},uniqueid:${uniqueid},ramal:${ramal}, saida: ${r}`)
                 await Cronometro.saiuDaFila(empresa,numero)
-                const dadosAtendimento = await Discador.dadosAtendimento_byNumero(empresa,numero)
+                const dadosAtendimento = await Discador.dadosAtendimento(empresa,idAtendimento)
                 if(dadosAtendimento.length==0){
                     res.json(false);
                     return false
@@ -107,11 +117,12 @@ class AsteriskController{
         } 
         
         if(action=='desligou'){//Quando abandona fila  
-            const empresa = dados.empresa          
+            const empresa = dados.empresa    
+            const idAtendimento = dados.idAtendimento      
             const numero = dados.numero
             const motivo = dados.motivo
             const abandonada = dados.abandonada
-            const chamada = await Discador.dadosAtendimento_byNumero(empresa,numero)
+            const chamada = await Discador.dadosAtendimento(empresa,idAtendimento)
             console.log('agi:desligou',`Empresa: ${empresa},numero: ${numero},motivo:${motivo}, saida: ${chamada}`)
             if(chamada.length==0){
                 res.json(false);
@@ -119,7 +130,6 @@ class AsteriskController{
             }
             const fila = chamada[0].na_fila
             if(fila==1){
-                const idAtendimento =chamada[0].id          
                 const idRegistro=chamada[0].id_registro
                 const idNumero=chamada[0].id_numero
                 const idCampanha=chamada[0].id_campanha

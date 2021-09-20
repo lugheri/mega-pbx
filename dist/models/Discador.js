@@ -9,7 +9,7 @@ class Discador{
     async debug(title="",msg="",empresa){
         const debug=await this.mode(empresa)       
         if(debug==1){
-            //console.log(`${title}`,msg)
+            console.log(`${title}`,msg)
         }
     }
     querySync(sql){
@@ -22,7 +22,7 @@ class Discador{
     }
     async mode(empresa){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - mode','Empresa nao recebida')
+            console.log('{[(!)]} - mode','Empresa nao recebida')
             return false
         }
         const sql = `SELECT debug 
@@ -42,7 +42,7 @@ class Discador{
     //Registrando chamadas simultaneas atuais no log 
     async registrarChamadasSimultaneas(empresa){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - registrarChamadasSimultaneas','Empresa nao recebida')
+            console.log('{[(!)]} - registrarChamadasSimultaneas','Empresa nao recebida')
             return false
         }
 
@@ -64,7 +64,7 @@ class Discador{
     //Conta as chamadas simultaneas
     async chamadasSimultaneas(empresa,parametro){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - chamadasSimultaneas','Empresa nao recebida')
+            console.log('{[(!)]} - chamadasSimultaneas','Empresa nao recebida')
             return false
         }
         let filter=""
@@ -90,7 +90,7 @@ class Discador{
     //Remove apenas as chamadas nao tratadas do power dentro da regra de limite disponivel
     async clearCalls(empresa){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - clearCalls','Empresa nao recebida')
+            console.log('{[(!)]} - clearCalls','Empresa nao recebida')
             return false
         }
 
@@ -130,7 +130,7 @@ class Discador{
                 WHERE idCampanha=${idCampanha} 
                   AND idMailing=${idMailing} 
                   AND idRegistro=${idRegistro}
-                  AND produtivo <> 1`
+                  AND (produtivo IS NULL OR produtivo=0)`
         await this.querySync(sql)
         //Grava no histórico de atendimento
         await this.registraHistoricoAtendimento(empresa,0,idCampanha,idMailing,idRegistro,id_numero,0,0,tipo_ligacao,numero,tabulacao,observacoes,contatado)
@@ -149,7 +149,7 @@ class Discador{
 
     async clearCallsCampanhas(empresa,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - clearCallsCampanhas','Empresa nao recebida')
+            console.log('{[(!)]} - clearCallsCampanhas','Empresa nao recebida')
             return false
         }
 
@@ -190,7 +190,7 @@ class Discador{
 
     async clearCallsAgent(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - clearCallsAgent','Empresa nao recebida')
+            console.log('{[(!)]} - clearCallsAgent','Empresa nao recebida')
             return false
         }
 
@@ -225,7 +225,7 @@ class Discador{
 
     async clearCallbyId(empresa,idAtendimento){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - clearCallbyId','Empresa nao recebida')
+            console.log('{[(!)]} - clearCallbyId','Empresa nao recebida')
             return false
         }
 
@@ -262,7 +262,7 @@ class Discador{
     //Verifica se existem campanhas ativas
     async campanhasAtivas(empresa){   
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - campanhasAtivas','Empresa nao recebida')
+            console.log('{[(!)]} - campanhasAtivas','Empresa nao recebida')
             return false
         }
 
@@ -277,7 +277,7 @@ class Discador{
     //Checando se a campanha possui fila de agentes configurada
     async filasCampanha(empresa,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - filasCampanha','Empresa nao recebida')
+            console.log('{[(!)]} - filasCampanha','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . PASSO 1.4',`Verifica a fila da Campanha`,empresa)
@@ -288,7 +288,7 @@ class Discador{
     //Verifica mailings atribuidos na campanha
     async verificaMailing(empresa,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - verificaMailing','Empresa nao recebida')
+            console.log('{[(!)]} - verificaMailing','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . PASSO 1.5',`Verifica se existe mailing adicionado`,empresa)
@@ -300,7 +300,7 @@ class Discador{
     //Verifica se o mailing da campanha esta pronto para discar
     async mailingConfigurado(empresa,idMailing){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - mailingConfigurado','Empresa nao recebida')
+            console.log('{[(!)]} - mailingConfigurado','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . . PASSO 1.6',`Verifica se existe mailing configurado`,empresa)
@@ -312,7 +312,7 @@ class Discador{
     //Verifica se a campanha possui Agendamento
     async agendamentoCampanha(empresa,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - agendamentoCampanha','Empresa nao recebida')
+            console.log('{[(!)]} - agendamentoCampanha','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . . . PASSO 1.7',`Verifica se existe mailing possui Agendamento`,empresa)
@@ -325,7 +325,7 @@ class Discador{
     //Verifica se hoje esta dentro da data de agendamento de uma campanha
     async agendamentoCampanha_data(empresa,idCampanha,hoje){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - agendamentoCampanha_data','Empresa nao recebida')
+            console.log('{[(!)]} - agendamentoCampanha_data','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . . . . PASSO 1.8',`Verifica se a campanha esta dentro da data de agendamento`,empresa)
@@ -337,7 +337,7 @@ class Discador{
     //Verifica se agora esta dentro do horário de agendamento de uma campanha
     async agendamentoCampanha_horario(empresa,idCampanha,hora){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - agendamentoCampanha_data','Empresa nao recebida')
+            console.log('{[(!)]} - agendamentoCampanha_data','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . . . . . PASSO 1.8.1',`Verifica se a campanha esta dentro do horario de agendamento`,empresa)                                
@@ -359,7 +359,7 @@ class Discador{
     //Verificando se existem agentes na fila
     async agentesNaFila(empresa,idFila){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - agentesNaFila','Empresa nao recebida')
+            console.log('{[(!)]} - agentesNaFila','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . . . . . PASSO 2.1 - Verificando se existem agentes na fila','',empresa) 
@@ -371,7 +371,7 @@ class Discador{
     //Verificando se existem agentes disponiveis na fila
     async agentesDisponiveis(empresa,idFila){  
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - agentesDisponiveis','Empresa nao recebida')
+            console.log('{[(!)]} - agentesDisponiveis','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . . . . . . PASSO 2.2 - Verificando se os agentes estao logados e disponiveis','',empresa) 
@@ -387,7 +387,7 @@ class Discador{
     //Recuperando os parametros do discador
     async parametrosDiscador(empresa,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - parametrosDiscador','Empresa nao recebida')
+            console.log('{[(!)]} - parametrosDiscador','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . . . . . . . PASSO 2.3 - Verificando configuração do discador','',empresa)
@@ -398,7 +398,7 @@ class Discador{
     //Contanto total de chamadas simultaneas 
     async qtdChamadasSimultaneas(empresa,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - qtdChamadasSimultaneas','Empresa nao recebida')
+            console.log('{[(!)]} - qtdChamadasSimultaneas','Empresa nao recebida')
             return false
         }
         const sql = `SELECT COUNT(id) AS total 
@@ -410,7 +410,7 @@ class Discador{
     //Modo novo de filtragem que adiciona os ids dos registros na tabela de tabulacao a medida que forem sendo trabalhados
     async filtrarRegistro(empresa,idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscagem,ordemDiscagem){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - filtrarRegistro','Empresa nao recebida')
+            console.log('{[(!)]} - filtrarRegistro','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . . . . . . . . . PASSO 2.5 - Verificando se existem registros disponíveis','',empresa)
@@ -465,7 +465,7 @@ class Discador{
 
     async checaNumeroOcupado(empresa,numero){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - checaNumeroOcupado','Empresa nao recebida')
+            console.log('{[(!)]} - checaNumeroOcupado','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . . . . . . . . . . PASSO 2.6 - Verificando se o numero selecionado já esta em atendimento','',empresa)
@@ -490,7 +490,7 @@ class Discador{
     **/
     async registraNumero(empresa,idCampanha,idMailing,idRegistro,idNumero,numero,tabela_numeros){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - registraNumero','Empresa nao recebida')
+            console.log('{[(!)]} - registraNumero','Empresa nao recebida')
             return false
         }
         let sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
@@ -519,7 +519,7 @@ class Discador{
     //Seleciona um agente disponivel
     async agenteDisponivel(empresa,idFila){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - agenteDisponivel','Empresa nao recebida')
+            console.log('{[(!)]} - agenteDisponivel','Empresa nao recebida')
             return false
         }
         const sql = `SELECT ramal 
@@ -539,7 +539,7 @@ class Discador{
     //Registra chamada simultanea
     async registraChamada(empresa,ramal,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila,tratado,atendido){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - registraChamada','Empresa nao recebida')
+            console.log('{[(!)]} - registraChamada','Empresa nao recebida')
             return false
         }
         const hoje = _moment2.default.call(void 0, ).format("YMMDDHHmmss")
@@ -582,13 +582,12 @@ class Discador{
                                  ${atendido},
                                  0,
                                  0)`
-        await this.querySync(sql)  
-        return true
+        return await this.querySync(sql)  
     }   
 
     async filtrosDiscagem(empresa,idCampanha,idMailing){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - filtrosDiscagem','Empresa nao recebida')
+            console.log('{[(!)]} - filtrosDiscagem','Empresa nao recebida')
             return false
         }
         let sql = `SELECT tipo,valor,regiao
@@ -606,20 +605,19 @@ class Discador{
         return await this.querySync(sql)
     }*/
     //Atualiza registros em uma fila de espera
-    async setaRegistroNaFila(empresa,numero){   
+    async setaRegistroNaFila(empresa,idAtendimento){   
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - setaRegistroNaFila','Empresa nao recebida')
+            console.log('{[(!)]} - setaRegistroNaFila','Empresa nao recebida')
             return false
         }    
         let sql = `SELECT id,id_campanha,id_mailing,id_registro
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
-                    WHERE numero='${numero}' 
+                    WHERE id='${idAtendimento}' 
                     ORDER BY id DESC LIMIT 1`
         const dadosAtendimento = await this.querySync(sql)
         if(dadosAtendimento.length==0){
             return false
-        }
-        const idAtendimento = dadosAtendimento[0].id
+        }       
         sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                         SET na_fila=1, tratado=1 
                       WHERE id=${idAtendimento}`
@@ -629,7 +627,7 @@ class Discador{
 
     async saudadacao(empresa,numero){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - saudacao','Empresa nao recebida')
+            console.log('{[(!)]} - saudacao','Empresa nao recebida')
             return false
         }
         let saudacao = 'masculino'
@@ -662,7 +660,7 @@ class Discador{
     **/
     async atualizaStatus(empresa,idCampanha,msg,estado){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - atualizaStatus','Empresa nao recebida')
+            console.log('{[(!)]} - atualizaStatus','Empresa nao recebida')
             return false
         }
         //verificando se a campanha ja possui status
@@ -670,11 +668,11 @@ class Discador{
         await this.debug('[!]','',empresa)
         await this.debug('[!]',`Campanha: ${idCampanha} msg: ${msg} `,empresa)
         await this.debug('[!]','',empresa)
-        //console.log('')  
+        console.log('')  
           
-        //console.log('[!]',`Empresa: ${empresa}, Campanha: ${idCampanha} ..................................STOP[!]`)       
-        //console.log(`[!] ${empresa} Alert:`,msg) 
-        //console.log('')  
+        console.log('[!]',`Empresa: ${empresa}, Campanha: ${idCampanha} ..................................STOP[!]`)       
+        console.log(`[!] ${empresa} Alert:`,msg) 
+        console.log('')  
 
         if(statusCampanha.length==0){
             //Caso nao, insere o status
@@ -694,7 +692,7 @@ class Discador{
     //Status atual de uma campanha 
     async statusCampanha(empresa,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - statusCampanha','Empresa nao recebida')
+            console.log('{[(!)]} - statusCampanha','Empresa nao recebida')
             return false
         }
         const sql =`SELECT * 
@@ -705,9 +703,9 @@ class Discador{
 
     
     /*DISCAR*/
-    async discar(empresa,ramal,numero,fila){
+    async discar(empresa,ramal,numero,fila,idAtendimento,saudacao){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - discar','Empresa nao recebida')
+            console.log('{[(!)]} - discar','Empresa nao recebida')
             return false
         }
         await this.debug(' . . . . . . . . . . . . . . PASSO 3.4 - Discando','',empresa)
@@ -725,7 +723,7 @@ class Discador{
             let fila=0
         }
                 
-        _Asterisk2.default.discar(empresa,fila,server,user,pass,modo,ramal,numero,async (e,call)=>{
+        _Asterisk2.default.discar(empresa,fila,idAtendimento,saudacao,server,user,pass,modo,ramal,numero,async (e,call)=>{
             if(e) throw e 
 
             await this.debug('Data Call',call,empresa)  
@@ -742,10 +740,10 @@ class Discador{
     //Registra o histórico de atendimento de uma chamada
     async registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_registro,id_numero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - registrarHistoricoAtendimento','Empresa nao recebida')
+            console.log('{[(!)]} - registrarHistoricoAtendimento','Empresa nao recebida')
             return false
         }
-        //console.log('registra atendimento')
+        console.log('registra atendimento')
         const sql = `INSERT INTO ${empresa}_dados.historico_atendimento 
                                 (data,hora,protocolo,campanha,mailing,id_registro,id_numero,agente,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado) 
                          VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_registro},${id_numero},${ramal},'${uniqueid}','${tipo_ligacao}','${numero}',${tabulacao},'${observacoes}','${contatado}')`
@@ -762,11 +760,6 @@ class Discador{
         if(dadosAtendimento.length === 0){
             return false
         }
-
-       
-
-
-
 
         //Dados do atendimento
         const tabelaNumero = dadosAtendimento[0].tabela_numeros
@@ -790,9 +783,6 @@ class Discador{
 
        
 
-       
-        
-        
         let estado =0
         let desc_estado  =""
         if(produtivo==1){
@@ -800,7 +790,7 @@ class Discador{
             desc_estado='Já Trabalhado'
            
 
-            //console.log(`estado produtivo`,estado)
+            console.log(`estado produtivo`,estado)
             //Verifica se todos os numeros do registro ja estao marcados na tabulacao
             sql = `SELECT id,numero 
                      FROM ${empresa}_mailings.${tabelaNumero} 
@@ -831,6 +821,7 @@ class Discador{
                               status_tabulacao=${status_tabulacao}, 
                               produtivo='${produtivo}', 
                               discando=0
+                              campanha_${idCampanha}=-1
                         WHERE id_registro = ${idRegistro}`
             await this.querySync(sql)
         }else{
@@ -866,8 +857,9 @@ class Discador{
                 FROM ${empresa}_dados.tabulacoes_status 
                WHERE id=${status_tabulacao}` 
          const st = await this.querySync(sql)    
-         const maxTentativas   = st[0].maxTentativas  
-         if(st.length!=0){            
+        let maxTentativas = 1
+         if(st.length!=0){     
+            maxTentativas   = st[0].maxTentativas         
             const horario = st[0].tempoRetorno;
             let time = horario.split(':');
             let horas = parseInt(time[0]*60)
@@ -935,7 +927,7 @@ class Discador{
     //Muda o status do agente
     async alterarEstadoAgente(empresa,agente,estado,pausa){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - alterarEstadoAgente','Empresa nao recebida')
+            console.log('{[(!)]} - alterarEstadoAgente','Empresa nao recebida')
             return false
         }
         //Recuperando estado anterior do agente
@@ -1136,7 +1128,7 @@ class Discador{
     //Retorna o status de pausa do agente
     async infoEstadoAgente(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - infoEstadoAgente','Empresa nao recebida')
+            console.log('{[(!)]} - infoEstadoAgente','Empresa nao recebida')
             return false
         }
         const sql = `SELECT * 
@@ -1152,7 +1144,7 @@ class Discador{
     //Desliga Chamada
     async desligaChamada(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - desligaChamada','Empresa nao recebida')
+            console.log('{[(!)]} - desligaChamada','Empresa nao recebida')
             return false
         }
         let sql = `SELECT * 
@@ -1174,7 +1166,7 @@ class Discador{
     //Desliga Chamada
     async desligaChamadaNumero(empresa,numero){      
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - desligaChamadaNumero','Empresa nao recebida')
+            console.log('{[(!)]} - desligaChamadaNumero','Empresa nao recebida')
             return false
         }
         const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
@@ -1187,7 +1179,7 @@ class Discador{
     //Desliga Chamada
     async removeChamadaSimultanea(empresa,idAtendimento){     
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - removeChamadaSimultanea','Empresa nao recebida')
+            console.log('{[(!)]} - removeChamadaSimultanea','Empresa nao recebida')
             return false
         } 
         const sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
@@ -1207,7 +1199,7 @@ class Discador{
     //Retorna as informações da chamada pelo número discador
     async dadosAtendimento_byNumero(empresa,numero){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - dadosAtendimento_byNumero','Empresa nao recebida')
+            console.log('{[(!)]} - dadosAtendimento_byNumero','Empresa nao recebida')
             return false
         }
         //Separando a campanha que o agente pertence
@@ -1220,7 +1212,7 @@ class Discador{
     //Retorna as informações da chamada pelo id de atendimento
     async dadosAtendimento(empresa,idAtendimento){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - dadosAtendimento','Empresa nao recebida')
+            console.log('{[(!)]} - dadosAtendimento','Empresa nao recebida')
             return false
         }
         //Separando a campanha que o agente pertence
@@ -1238,10 +1230,10 @@ class Discador{
     //Retorna o estado atual do agente
     async statusRamal(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - statusRamal','Empresa nao recebida')
+            console.log('{[(!)]} - statusRamal','Empresa nao recebida')
             return false
         }
-        //console.log(empresa,ramal)
+        console.log(empresa,ramal)
         const sql = `SELECT estado 
                        FROM ${empresa}_dados.user_ramal 
                       WHERE ramal=${ramal}`        
@@ -1257,7 +1249,7 @@ class Discador{
     //Status de pausa do agente
     async infoPausaAgente(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - infoPausaAgente','Empresa nao recebida')
+            console.log('{[(!)]} - infoPausaAgente','Empresa nao recebida')
             return false
         }
         const sql = `SELECT * 
@@ -1270,7 +1262,7 @@ class Discador{
     //Recupera o tipo de idAtendimento
     async modoAtendimento(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - modoAtendimento','Empresa nao recebida')
+            console.log('{[(!)]} - modoAtendimento','Empresa nao recebida')
             return false
         }
         const sql = `SELECT m.id, m.modo_atendimento, m.id_campanha 
@@ -1284,7 +1276,7 @@ class Discador{
     //Informações da chamada a ser atendida
     async infoChamada_byIdAtendimento(empresa,idAtendimento){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - infoChamada_byIdAtendimento','Empresa nao recebida')
+            console.log('{[(!)]} - infoChamada_byIdAtendimento','Empresa nao recebida')
             return false
         }
         //Separando a campanha que o agente pertence
@@ -1342,7 +1334,7 @@ class Discador{
             }else{
                 apelido=campos_dados[i].apelido
             }  
-            //console.log('Info Chamada - Valor do Campo',campos_dados[i].campo)
+            console.log('Info Chamada - Valor do Campo',campos_dados[i].campo)
             sql = `SELECT ${campos_dados[i].campo} AS 'valor' 
                      FROM ${empresa}_mailings.${tabela_dados} 
                     WHERE id_key_base='${idReg}'` 
@@ -1382,7 +1374,7 @@ class Discador{
 
     async tabulacoesNumero(empresa,id,numero){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - tabulacoesNumero','Empresa nao recebida')
+            console.log('{[(!)]} - tabulacoesNumero','Empresa nao recebida')
             return false
         }
         const sql = `SELECT COUNT(produtivo) AS totalTabulacoes,
@@ -1399,7 +1391,7 @@ class Discador{
     //Retorna o valor do campo nome do registro caso exista
     async campoNomeRegistro(empresa,idMailing,idRegistro,tabelaDados){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - campoNomeRegistro','Empresa nao recebida')
+            console.log('{[(!)]} - campoNomeRegistro','Empresa nao recebida')
             return false
         }
         let sql = `SELECT campo 
@@ -1421,7 +1413,7 @@ class Discador{
     //Informações da chamada a ser atendida
     async infoChamada_byRamal(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - infoChamada_byRamal','Empresa nao recebida')
+            console.log('{[(!)]} - infoChamada_byRamal','Empresa nao recebida')
             return false
         }
         //Separando a campanha que o agente pertence
@@ -1476,7 +1468,7 @@ class Discador{
             }else{
                 apelido=campos_dados[i].apelido
             }  
-            //console.log('Valor do Campo',campos_dados[i].campo)
+            console.log('Valor do Campo',campos_dados[i].campo)
             let nomeCampo = campos_dados[i].campo.replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "");
             sql = `SELECT ${nomeCampo} AS 'valor' 
                      FROM ${empresa}_mailings.${tabela_dados} 
@@ -1509,7 +1501,7 @@ class Discador{
     //Atende a chamada, atualiza a chamada simultanea e retorna os dados da mesma com os históricos do registro
     async atendeChamada(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - atendeChamada','Empresa nao recebida')
+            console.log('{[(!)]} - atendeChamada','Empresa nao recebida')
             return false
         }
         //Separando a campanha que o agente pertence
@@ -1532,7 +1524,7 @@ class Discador{
 
     async dadosChamadaAtendida(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - dadosChamadaAtendida','Empresa nao recebida')
+            console.log('{[(!)]} - dadosChamadaAtendida','Empresa nao recebida')
             return false
         }
         //Separando a campanha que o agente pertence
@@ -1550,7 +1542,7 @@ class Discador{
 
     async infoChamada(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - infoChamada','Empresa nao recebida')
+            console.log('{[(!)]} - infoChamada','Empresa nao recebida')
             return false
         }
         let sql = `SELECT *
@@ -1562,7 +1554,7 @@ class Discador{
     //Dados do Agente
     async infoAgente(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - infoAgente','Empresa nao recebida')
+            console.log('{[(!)]} - infoAgente','Empresa nao recebida')
             return false
         }
         const sql = `SELECT id as ramal, nome 
@@ -1574,11 +1566,11 @@ class Discador{
      //Dados do Agente
      async infoRegistro(empresa,idMailing,idRegistro){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - infoRegistro','Empresa nao recebida')
+            console.log('{[(!)]} - infoRegistro','Empresa nao recebida')
             return false
         }
         const infoMailing = await _Mailing2.default.infoMailing(empresa,idMailing)
-        //console.log(infoMailing)
+        console.log(infoMailing)
         const tabela = infoMailing[0].tabela_dados
         const sql = `SELECT * 
                        FROM ${empresa}_mailings.${tabela} 
@@ -1589,7 +1581,7 @@ class Discador{
     //Retorna o histórico de atendimento do registro
     async historicoRegistro(empresa,idMailing,idReg){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - historicoRegistro','Empresa nao recebida')
+            console.log('{[(!)]} - historicoRegistro','Empresa nao recebida')
             return false
         }
         //recuperando numero 
@@ -1653,7 +1645,7 @@ class Discador{
     //Retorna o histórico de atendimento do agente
     async historicoChamadas(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - historicoChamadas','Empresa nao recebida')
+            console.log('{[(!)]} - historicoChamadas','Empresa nao recebida')
             return false
         }
         const sql = `SELECT nome_registro,
@@ -1671,7 +1663,7 @@ class Discador{
                       WHERE agente='${ramal}' 
                    ORDER BY h.id DESC
                       LIMIT 50`
-                     // //console.log('sql',sql)
+                      //console.log('sql',sql)
         return await this.querySync(sql)  
     }
 
@@ -1680,7 +1672,7 @@ class Discador{
     //Verifica Lista de tabulacao da campanha
     async tabulacoesCampanha(empresa,nome,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - tabulacoesCampanha','Empresa nao recebida')
+            console.log('{[(!)]} - tabulacoesCampanha','Empresa nao recebida')
             return false
         }
         let sql = `SELECT idListaTabulacao,maxTime 
@@ -1721,7 +1713,7 @@ class Discador{
     //Atualiza a chamada como tabulando
     async preparaRegistroParaTabulacao(empresa,idAtendimento){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - preparaRegistroParaTabulacao','Empresa nao recebida')
+            console.log('{[(!)]} - preparaRegistroParaTabulacao','Empresa nao recebida')
             return false
         }
         //Atualiza Chamada como tabulando 
@@ -1843,7 +1835,7 @@ class Discador{
                             if(e) throw e
 
                             camposRegistro += `"info_campanha":{"idCampanha":"${idCampanha}","nome":"${dadosCampanha[0].nome}","descricao":"${dadosCampanha[0].descricao}"}}`;
-                            //console.log(camposRegistro)
+                            console.log(camposRegistro)
                             callback(false,JSON.parse(camposRegistro))
                         })
                     })
@@ -1887,7 +1879,7 @@ class Discador{
 
     async log_chamadasSimultaneas(empresa,limit,tipo){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - log_chamadasSimultaneas','Empresa nao recebida')
+            console.log('{[(!)]} - log_chamadasSimultaneas','Empresa nao recebida')
             return false
         }
         const sql = `SELECT ${tipo} AS chamadas 

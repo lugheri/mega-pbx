@@ -251,6 +251,7 @@ class DashboardController{
         frases.push('Quanto mais curto menor!')
         frases.push('Eu sou uma pessoa que me julgo que tenho um bom julgamento!')
         frases.push('Eu acho que com certeza!')
+        frases.push('Só conseguimos ver até onde conseguimos enxergar!')
 
 
         let numero

@@ -110,28 +110,18 @@ class Asterisk{
     async machine(dados){
         //Dados recebidos pelo AGI do asterisk
         const empresa = dados.empresa
-        const numero = dados.numero
+        const idAtendimento = dados.idAtendimento
         const observacoes = dados.status
 
         //Verificando se o numero ja consta em alguma chamada simultanea
-        const chamada = await Discador.dadosAtendimento_byNumero(empresa,numero)
+        const chamada = await Discador.dadosAtendimento(empresa,idAtendimento)
         
         if(chamada.length!=0){     
-            const idAtendimento =chamada[0].id          
-            const id_registro=chamada[0].id_registro
             const id_numero=chamada[0].id_numero
-            const tabela_dados=chamada[0].tabela_dados
-            const tabela_numeros=chamada[0].tabela_numeros
-            const idCampanha=chamada[0].id_campanha
-            const idMailing=chamada[0].id_mailing
             const ramal=chamada[0].ramal
-            const protocolo=chamada[0].protocolo
             //Status de tabulacao referente ao nao atendido
-            const tabulacao = 0
             const contatado = 'N'
             const produtivo = 0
-            const uniqueid=chamada[0].uniqueid
-            const tipo_ligacao=chamada[0].tipo_ligacao
             const removeNumero=0
             //Tabula registro
             const status_tabulacao = 0
@@ -144,18 +134,18 @@ class Asterisk{
     }
 
     //Atendente atendeu chamada da fila
-    async answer(empresa,uniqueid,numero,ramal){
+    async answer(empresa,uniqueid,idAtendimento,ramal){
         //Dados recebidos pelo AGI       
         //console.log(`RAMAL DO AGENTE: ${ramal}`)
         //dados da campanha
         const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                         SET uniqueid='${uniqueid}',ramal='${ramal}', na_fila=0, atendido=1
-                      WHERE numero='${numero}'`// AND na_fila=1`  
+                      WHERE id='${idAtendimento}'`// AND na_fila=1`  
         return await this.querySync(sql)
     }   
 
     //######################DISCAR######################
-    discar(empresa,fila,server,user,pass,modo,ramal,numero,callback){
+    discar(empresa,fila,idAtendimento,saudacao,server,user,pass,modo,ramal,numero,callback){
         console.log(`recebendo ligacao ${numero}`)
         console.log(`ramal ${ramal}`)
         ari.connect(server, user, pass, (err,client)=>{
@@ -182,11 +172,16 @@ class Asterisk{
             "context"        : `${context}`,
             "priority"       : 1,
             "app"            : "",
-            "variables"      : {"EMPRESA":`${empresa}`,"FILA":`${fila}`},
+            "variables"      : {
+                                "EMPRESA":`${empresa}`,
+                                "FILA":`${fila}`,
+                                "ID_ATENDIMENTO":`${idAtendimento}`,
+                                "SAUDACAO":`${saudacao}`
+                               },
             "Async"          : true,
             "appArgs"        : "",
             "Callerid"       : `0${numero}`,//numero,
-            "timeout"        : -1, 
+            "timeout"        : 55, 
             //"channelId"      : '324234', 
             "otherChannelId" : ""
           }
