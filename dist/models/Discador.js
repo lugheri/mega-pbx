@@ -375,13 +375,17 @@ class Discador{
             return false
         }
         await this.debug(' . . . . . . . . PASSO 2.2 - Verificando se os agentes estao logados e disponiveis','',empresa) 
-        const sql = `SELECT ramal 
+        /*const sql = `SELECT ramal 
                        FROM ${empresa}_dados.agentes_filas 
                       WHERE fila='${idFila}'
                         AND estado!=4 
                         AND estado!=0 
                         AND estado!=5
-                        AND estado!=2`
+                        AND estado!=2`*/
+        const sql = `SELECT ramal 
+                       FROM ${empresa}_dados.agentes_filas 
+                      WHERE fila='${idFila}'
+                        AND estado=1`
         return await this.querySync(sql)       
     }
     //Recuperando os parametros do discador
@@ -430,22 +434,32 @@ class Discador{
                 WHERE valido=1 AND discando=0 AND campanha_${idCampanha}>0
             ORDER BY campanha_${idCampanha} ASC, id ${ordemDiscagem}`
         const n = await this.querySync(sql)
-        const idNumero   = n[0].id
-        const idRegistro = n[0].id_registro
-        const numero     = n[0].numero                 
+        console.log('--->Registros filtrados',n.length)
+        if(n.length>0){
+            const idNumero   = n[0].id
+            const idRegistro = n[0].id_registro
+            const numero     = n[0].numero                 
 
-        //CHECA SE O MESMO JA FOI TRABALHADO
-        sql = `SELECT id
-                FROM ${empresa}_mailings.campanhas_tabulacao_mailing
-                WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} AND idNumero=${idNumero} LIMIT 1`
-        const r = await this.querySync(sql)
-        //CASO NAO, INSERE O MESMO NO REGISTRO DE TABULACAO DA CAMPANHA
-        if(r.length==0){
-            sql = `INSERT INTO ${empresa}_mailings.campanhas_tabulacao_mailing
-                                (data,idCampanha,idMailing,idRegistro,selecoes_registro,idNumero,selecoes_numero,numeroDiscado,estado,desc_estado,max_tent_status,tentativas) 
-                        VALUES (now(),${idCampanha},${idMailing},${idRegistro},0,${idNumero},0,'${numero}',0,'pre selecao',1,0)`
-            await this.querySync(sql)
+            //CHECA SE O MESMO JA FOI TRABALHADO
+            sql = `SELECT id,max_tent_status
+                    FROM ${empresa}_mailings.campanhas_tabulacao_mailing
+                    WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} AND idNumero=${idNumero} LIMIT 1`
+            const r = await this.querySync(sql)
+            //CASO NAO, INSERE O MESMO NO REGISTRO DE TABULACAO DA CAMPANHA
+            if(r.length==0){
+                sql = `INSERT INTO ${empresa}_mailings.campanhas_tabulacao_mailing
+                                    (data,idCampanha,idMailing,idRegistro,selecoes_registro,idNumero,selecoes_numero,numeroDiscado,estado,desc_estado,max_tent_status,tentativas) 
+                            VALUES (now(),${idCampanha},${idMailing},${idRegistro},0,${idNumero},0,'${numero}',0,'pre selecao',1,0)`
+                await this.querySync(sql)
+            }
         }
+        /*testar
+        else{
+            sql = `UPDATE ${empresa}_mailings.${tabela_numeros}
+                      SET campanha_${idCampanha}=${r[0].max_tent_status}
+                    WHERE id=${r[0].id}`
+            await this.querySync(sql)
+        }*/
 
         //FILTRA REGISTRO PARA DISCAGEM
         sql = `SELECT n.id as idNumero,n.id_registro,n.numero 
@@ -703,7 +717,7 @@ class Discador{
 
     
     /*DISCAR*/
-    async discar(empresa,ramal,numero,fila,idAtendimento,saudacao){
+    async discar(empresa,ramal,numero,fila,idAtendimento,saudacao,aguarde){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             console.log('{[(!)]} - discar','Empresa nao recebida')
             return false
@@ -723,7 +737,7 @@ class Discador{
             let fila=0
         }
                 
-        _Asterisk2.default.discar(empresa,fila,idAtendimento,saudacao,server,user,pass,modo,ramal,numero,async (e,call)=>{
+        _Asterisk2.default.discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,async (e,call)=>{
             if(e) throw e 
 
             await this.debug('Data Call',call,empresa)  
@@ -820,7 +834,7 @@ class Discador{
                               contatado='${contatado}', 
                               status_tabulacao=${status_tabulacao}, 
                               produtivo='${produtivo}', 
-                              discando=0
+                              discando=0,
                               campanha_${idCampanha}=-1
                         WHERE id_registro = ${idRegistro}`
             await this.querySync(sql)
@@ -924,6 +938,7 @@ class Discador{
         return true;
     }
 
+   
     //Muda o status do agente
     async alterarEstadoAgente(empresa,agente,estado,pausa){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
@@ -1283,6 +1298,7 @@ class Discador{
         let sql = `SELECT id,
                           protocolo,
                           id_registro,
+                          id_numero,
                           tipo_discador,
                           id_campanha,
                           id_mailing,
@@ -1300,6 +1316,7 @@ class Discador{
         const idMailing = calldata[0].id_mailing
         const tipo_discador = calldata[0].tipo_discador
         const idReg = calldata[0].id_registro
+        const id_numero = calldata[0].id_numero
         const tabela_dados = calldata[0].tabela_dados
         const tabela_numeros = calldata[0].tabela_numeros
         const idCampanha = calldata[0].id_campanha
@@ -1308,11 +1325,13 @@ class Discador{
 
         //Seleciona os campos de acordo com a configuração da tela do agente
         //CAMPOS DE DADOS
-         sql = `SELECT id,campo,apelido
-                  FROM ${empresa}_dados.mailing_tipo_campo 
-                 WHERE idMailing=${idMailing}
-                   AND (tipo='dados' OR tipo='nome')
-              ORDER BY ordem ASC`;
+         sql = `SELECT cd.id,cd.campo,cd.apelido
+                  FROM ${empresa}_dados.mailing_tipo_campo AS cd
+                  JOIN ${empresa}_dados.campanhas_campos_tela_agente as cc ON cd.id=cc.idCampo
+                 WHERE cc.idMailing=${idMailing}
+                   AND cc.idCampanha=${idCampanha}
+                   AND (cd.tipo='dados' OR cd.tipo='nome')
+              ORDER BY cc.ordem ASC`;
        
         const campos_dados = await this.querySync(sql)
         //montando a query de busca dos dados
@@ -1352,14 +1371,10 @@ class Discador{
         for(let i=0; i<campos_numeros.length; i++){    
             info['numeros'].push(await this.tabulacoesNumero(empresa,campos_numeros[i].id,`0${campos_numeros[i].numero}`));
         }
-        sql = `SELECT id 
-                 FROM ${empresa}_mailings.${tabela_numeros} 
-                WHERE numero=${numero}`;
-        const idN=await this.querySync(sql)
-        if(idN.length != 0 ){
-            info['id_numeros_discado']=idN[0].id
-            info['numeros_discado']=numero
-        }
+       
+        info['id_numeros_discado']=id_numero
+        info['numeros_discado']=numero
+        
 
         
         sql = `SELECT id,nome,descricao 

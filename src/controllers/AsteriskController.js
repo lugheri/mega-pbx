@@ -16,10 +16,22 @@ class AsteriskController{
         const empresa = req.body.empresa
         const data = req.body.date
         const hora = req.body.time
-        const ramal = req.body.ramal
+        let ch = req.body.channel;
+                ch = ch.split("-");
+                ch = ch[0].split("/")
+        let user_ramal = ch[1]   
+        
+        if((user_ramal==undefined)||(user_ramal=="undefined")||(user_ramal===false)){
+            let rm = req.body.ramal;
+                rm = rm.split("-");
+                rm = rm[0].split("/")
+                user_ramal = rm[1]
+        }
+        
         const uniqueid = req.body.uniqueid  
         const numero = req.body.numero   
-        const server = await Asterisk.setRecord(empresa,data,hora,ramal,uniqueid,numero)
+        const callfilename = req.body.callfilename  
+        const server = await Asterisk.setRecord(empresa,data,hora,user_ramal,uniqueid,numero,callfilename)
         res.json(server[0].ip) 
     }
 
@@ -90,6 +102,8 @@ class AsteriskController{
             const ramal = ch[1]
 
             if(tipoChamada=="manual"){
+                //insere dados na chamada simultanea 
+                await Discador.registraChamada(empresa,ramal,0,'manual',tipoChamada,0,0,0,0,0,numero,0,1,1)       
                 await Discador.alterarEstadoAgente(empresa,ramal,3,0)
             }else{               
                 const r = await Asterisk.answer(empresa,uniqueid,idAtendimento,ramal)

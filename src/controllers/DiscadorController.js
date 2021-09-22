@@ -220,6 +220,8 @@ class DiscadorController{
             return false;
         }
 
+      
+
         //#6 Verifica se o numero selecionado ja nao esta em atendimento
         const numero = registro[0].numero
         const ocupado = await Discador.checaNumeroOcupado(empresa,numero)  
@@ -312,13 +314,16 @@ class DiscadorController{
                 periodo='boa-noite'
             }
             let saudacao
+            let aguarde
             if((parametrosDiscador[0].saudacao=="")||
                (parametrosDiscador[0].saudacao==null)||
                (parametrosDiscador[0].saudacao=="undefined")||
                (parametrosDiscador[0].saudacao==undefined)){
                 saudacao=`masculino-${periodo}`;
+                aguarde=`masculino-aguarde`
             }else{
                 saudacao=`${parametrosDiscador[0].saudacao}-${periodo}`
+                aguarde=`${parametrosDiscador[0].saudacao}-aguarde`
             }
 
             if(tipoDiscador=='preditivo'){
@@ -328,7 +333,7 @@ class DiscadorController{
                 return false;
             }
 
-            const dataCall=await Discador.discar(empresa,0,numero,nomeFila,idAtendimento,saudacao)
+            const dataCall=await Discador.discar(empresa,0,numero,nomeFila,idAtendimento,saudacao,aguarde)
             //console.log('Ligando...',`Modo: ${parametrosDiscador[0].tipo_discagem} idReg:${idRegistro} Numero: ${numero}`)
            
                   

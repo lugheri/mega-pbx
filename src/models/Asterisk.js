@@ -61,11 +61,11 @@ class Asterisk{
 
 
     //######################Configuração do Asterisk######################
-    async setRecord(empresa,data,hora,ramal,uniqueid,numero){
+    async setRecord(empresa,data,hora,ramal,uniqueid,numero,callfilename){
         await this.setUniqueid(empresa,ramal,uniqueid)
         const sql = `INSERT INTO ${empresa}_dados.records
-                                (date,date_record,time_record,ramal,uniqueid,numero)
-                         VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}','${numero}')`
+                                (date,date_record,time_record,ramal,uniqueid,numero,callfilename)
+                         VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}','${numero}','${callfilename}')`
         await this.querySync(sql)
         return await this.servidorWebRTC(empresa)        
     }
@@ -145,7 +145,7 @@ class Asterisk{
     }   
 
     //######################DISCAR######################
-    discar(empresa,fila,idAtendimento,saudacao,server,user,pass,modo,ramal,numero,callback){
+    discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,callback){
         console.log(`recebendo ligacao ${numero}`)
         console.log(`ramal ${ramal}`)
         ari.connect(server, user, pass, (err,client)=>{
@@ -154,9 +154,11 @@ class Asterisk{
           //Extension
           let context
           let endpoint
+          const prefix = 87721
           if(modo=='discador'){
             context = 'dialer'
-            endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
+            //endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.66.23:5060`
+            endpoint = `PJSIP/${prefix}0${numero}@megatrunk`
           }else{
             context = 'external'
             endpoint = `PJSIP/megatrunk/` 
@@ -176,11 +178,12 @@ class Asterisk{
                                 "EMPRESA":`${empresa}`,
                                 "FILA":`${fila}`,
                                 "ID_ATENDIMENTO":`${idAtendimento}`,
-                                "SAUDACAO":`${saudacao}`
+                                "SAUDACAO":`${saudacao}`,
+                                "AGUARDE":`${aguarde}`
                                },
             "Async"          : true,
             "appArgs"        : "",
-            "Callerid"       : `0${numero}`,//numero,
+            "callerid"       : `0${numero}`,//numero,
             "timeout"        : 55, 
             //"channelId"      : '324234', 
             "otherChannelId" : ""
