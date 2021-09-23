@@ -1,4 +1,5 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
+var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 
 class Gravacao{
     querySync(sql){
@@ -17,9 +18,11 @@ class Gravacao{
                             r.id,
                             r.ramal as origem,
                             r.uniqueid,
+                            r.callfilename,
                             h.agente as ramal,
                             h.protocolo,
-                            h.numero_discado AS numero,
+                            h.nome_registro,
+                            h.numero_discado AS numero,                            
                             tb.tabulacao,
                             tb.tipo,
                             tb.venda,
@@ -27,7 +30,7 @@ class Gravacao{
                             e.equipe,
                             t.tempo_total as duracao 
                        FROM ${empresa}_dados.records AS r 
-                  LEFT JOIN ${empresa}_dados.historico_atendimento AS h ON h.uniqueid=r.uniqueid 
+                       JOIN ${empresa}_dados.historico_atendimento AS h ON h.uniqueid=r.uniqueid 
                   LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id 
                   LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id 
                   LEFT JOIN ${empresa}_dados.tempo_ligacao AS t ON r.uniqueid=t.uniqueid 
@@ -49,6 +52,7 @@ class Gravacao{
             let minutos = parseInt(time[1]*60)
             let segundos = parseInt(time[2])
             let tempo = parseInt(horas+minutos+segundos)
+            
             //console.log(`tempo minimo: ${tempo}`)
             if(tempo>0){
                 filter += `AND t.tempo_total >= ${tempo}`
@@ -60,17 +64,26 @@ class Gravacao{
             let minutos = parseInt(time[1]*60)
             let segundos = parseInt(time[2])
             let tempo = horas+minutos+segundos
+
+            
             //console.log(`tempo maximo: ${tempo}`)
             if(tempo>0){
                 filter += ` AND t.tempo_total <= ${tempo}`
             }
         }
         //Data
+        let sepDate_de = de.split('/')
+        let data_de=`${sepDate_de[2]}-${sepDate_de[1]}-${sepDate_de[0]}`
+
+        let sepDate_ate = ate.split('/')
+        let data_ate=`${sepDate_ate[2]}-${sepDate_ate[1]}-${sepDate_ate[0]}`
+
+
         if(de){
-            filter += ` AND r.date >= "${de}"`
+            filter += ` AND r.date >= "${data_de}"`
         }
         if(ate){
-            filter += ` AND r.date <=  "${ate}"`
+            filter += ` AND r.date <=  "${data_ate}"`
         }
 
         if(buscarPor){
@@ -103,10 +116,12 @@ class Gravacao{
                             r.id,
                             r.ramal as origem,
                             r.uniqueid,
+                            r.callfilename,
                             h.tipo,
                             h.agente as ramal,
                             h.protocolo,
                             h.numero_discado AS numero,
+                            h.nome_registro,
                             tb.tabulacao,
                             tb.tipo,
                             tb.venda,
@@ -114,7 +129,7 @@ class Gravacao{
                             e.equipe,
                             t.tempo_total as duracao 
                        FROM ${empresa}_dados.records AS r 
-                  LEFT JOIN ${empresa}_dados.historico_atendimento AS h ON h.uniqueid=r.uniqueid 
+                       JOIN ${empresa}_dados.historico_atendimento AS h ON h.uniqueid=r.uniqueid 
                   LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id 
                   LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id 
                   LEFT JOIN ${empresa}_dados.tempo_ligacao AS t ON r.uniqueid=t.uniqueid 

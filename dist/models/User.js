@@ -98,7 +98,7 @@ class User{
         }
         sql = `INSERT INTO ${empresa}_dados.users
                            (criacao,nome,usuario,senha,nivelAcesso,cargo,equipe,reset,logado,status)
-                    VALUES (NOW(),'${dados.nome}','${dados.usuario}',md5('${dados.senha}'),'${dados.nivelAcesso}','${dados.cargo}','${dados.equipe}','${dados.reset}',0,'${dados.status}')`
+                    VALUES (NOW(),'${dados.nome}','${dados.usuario}',md5('${dados.senha}'),'${dados.nivelAcesso}','${dados.cargo}','${dados.equipe}','${dados.reset}',0,'1')`
         const u = await this.querySync(sql)
         const userId = u.insertId;
         //Cadastrando ramal

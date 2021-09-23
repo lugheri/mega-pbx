@@ -84,17 +84,21 @@ class AsteriskController{
         
         if(action=='answer'){//Quando ligacao eh atendida pelo agente
             const empresa = dados.empresa            
-            const uniqueid = dados.numero 
+            const uniqueid = dados.uniqueid 
             const numero = dados.numero
             const tipoChamada = dados.tipoChamada
+
+            console.log('tipoChamada',tipoChamada)
 
             let idAtendimento
             if(tipoChamada=="POWER"){
                 idAtendimento = dados.idAtendimento
             }else{                
-                const da = Discador.dadosAtendimento_byNumero(empresa,numero);
+                const da = await Discador.dadosAtendimento_byNumero(empresa,numero);
                 idAtendimento = da[0].id;
             }
+
+            
 
             let ch = dados.ramal;
             ch = ch.split("-");

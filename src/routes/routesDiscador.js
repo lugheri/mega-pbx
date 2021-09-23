@@ -27,6 +27,8 @@ module.exports = (routes) => {
     routes.post('/marcarRetorno',DiscadorController.marcarRetorno)
     //Pula registro
     routes.get('/pularChamada/:ramal',DiscadorController.pularChamada)
+    //Voltar Registro
+    routes.get('/voltaRegistro/:idHistorico',DiscadorController.voltaRegistro)    
     //Historico de Registro
     routes.get('/historicoRegistro/:idMailing/:idRegistro',DiscadorController.historicoRegistro)
     //Historico de Chamadas

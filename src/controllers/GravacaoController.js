@@ -16,7 +16,7 @@ class GravacaoController{
         
         for(let i=0; i<gravacoes.length; ++i){
             const retorno={}
-            let ouvir = `${servidor}gravacoes/${empresa}/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].numero}_${gravacoes[i].uniqueid}.wav`
+            let ouvir = `${servidor}gravacoes/${empresa}/${gravacoes[i].date_record}/${gravacoes[i].callfilename}.wav`
             let baixar = `${servidor}gravacao.php?empresa=${empresa}&id=${gravacoes[i].uniqueid}`
             retorno["idGravacao"]=gravacoes[i].id
             retorno["data"]=gravacoes[i].data
@@ -35,6 +35,7 @@ class GravacaoController{
             retorno["usuario"]=gravacoes[i].nome
             retorno["equipe"]=gravacoes[i].equipe
             retorno["numero"]=gravacoes[i].numero
+            retorno["nome_registro"]=gravacoes[i].nome_registro
             retorno["statusTabulacao"]=gravacoes[i].tabulacao
             retorno["tipoTabulacao"]=gravacoes[i].tipo
             retorno["venda"]=gravacoes[i].venda
@@ -65,7 +66,7 @@ class GravacaoController{
             numero=infoGravacao[0].numero
         }
         
-        const arquivo = `${infoGravacao[0].time_record}_${infoGravacao[0].ramal}_${infoGravacao[0].uniqueid}.wav`
+        const arquivo = `${infoGravacao[0].callfilename}.wav`
         const link = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
         res.json(link)               
     }
@@ -83,7 +84,7 @@ class GravacaoController{
         const servidor = `https://${server[0].ip}/api/`
         const resultBusca = []
         for(let i=0; i<gravacoes.length; ++i){
-            let ouvir = `${servidor}gravacoes/${empresa}/${gravacoes[i].date_record}/${gravacoes[i].time_record}_${gravacoes[i].origem}_${gravacoes[i].uniqueid}.wav`
+            let ouvir = `${servidor}gravacoes/${empresa}/${gravacoes[i].date_record}/${gravacoes[i].callfilename}.wav`
             let baixar = `${servidor}gravacao.php?empresa=${empresa}&id=${gravacoes[i].uniqueid}`
             const item={}
             item["idGravacao"]=gravacoes[i].id
@@ -103,6 +104,7 @@ class GravacaoController{
             item["usuario"]=gravacoes[i].nome
             item["equipe"]=gravacoes[i].equipe
             item["numero"]=gravacoes[i].numero
+            item["nome_registro"]=gravacoes[i].nome_registro
             item["statusTabulacao"]=gravacoes[i].tabulacao
             item["tipoTabulacao"]=gravacoes[i].tipo
             item["venda"]=gravacoes[i].venda
