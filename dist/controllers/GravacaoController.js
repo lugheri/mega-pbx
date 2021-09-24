@@ -18,6 +18,10 @@ class GravacaoController{
             const retorno={}
             let ouvir = `${servidor}gravacoes/${empresa}/${gravacoes[i].date_record}/${gravacoes[i].callfilename}.wav`
             let baixar = `${servidor}gravacao.php?empresa=${empresa}&id=${gravacoes[i].uniqueid}`
+            const idEmpresa = await _User2.default.codEmpresa(empresa)
+            const hash = Buffer.from(`${idEmpresa}:${gravacoes[i].id}`).toString('base64')
+            let compartilhar = `https://cloudcall.rec.br/${hash}`
+
             retorno["idGravacao"]=gravacoes[i].id
             retorno["data"]=gravacoes[i].data
 
@@ -41,7 +45,7 @@ class GravacaoController{
             retorno["venda"]=gravacoes[i].venda
             retorno["ouvir"]=ouvir
             retorno["baixar"]=baixar
-            retorno["compartilhar"]=ouvir
+            retorno["compartilhar"]=compartilhar
             listaGravacoes.push(retorno)
         } 
         
@@ -70,6 +74,51 @@ class GravacaoController{
         const link = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
         res.json(link)               
     }
+
+    async gravacaoCompartilhada(req,res){
+        const hash = req.params.hash
+        //const data = Buffer.from(hash).toString('base64')
+
+        const data = Buffer.from(hash, 'base64').toString('ascii').split(':');
+
+        const idEmpresa=data[0]
+        const idRec=data[1]
+
+        const empresa = await _Gravacao2.default.prefixEmpresa(idEmpresa)
+        if(empresa==false){
+            res.json({"error":true,"message":"Gravação não encontrada!"})
+            return false;
+        }
+
+        const gravacoes = await _Gravacao2.default.linkGravacao(empresa,idRec);
+        if(gravacoes.length==0){
+            res.json({"error":true,"message":"Gravação não encontrada!"})
+            return false;
+        }
+
+        const gravacao={}
+              gravacao["data"]=gravacoes[0].data
+              let duracao = gravacoes[0].duracao
+              let horas = Math.floor(duracao / 3600);
+              let minutos = Math.floor((duracao - (horas * 3600)) / 60);
+              let segundos = Math.floor(duracao % 60);
+              if(horas<=9){horas="0"+horas}
+              if(minutos<=9){minutos="0"+minutos}
+              if(segundos<=9){segundos="0"+segundos}
+
+              gravacao["duracao"]=`${horas}:${minutos}:${segundos}`
+              gravacao["protocolo"]=gravacoes[0].protocolo
+              gravacao["ramal"]=gravacoes[0].ramal
+              gravacao["usuario"]=gravacoes[0].nome
+              gravacao["equipe"]=gravacoes[0].equipe
+              gravacao["numero"]=gravacoes[0].numero
+              gravacao["nome_registro"]=gravacoes[0].nome_registro
+              gravacao["statusTabulacao"]=gravacoes[0].tabulacao
+              gravacao["tipoTabulacao"]=gravacoes[0].tipo
+
+              gravacao["link"]=`https://asterisk-dev.megaconecta.tec.br/api/gravacoes/${empresa}/${gravacoes[0].date_record}/${gravacoes[0].callfilename}.wav`
+        res.json(gravacao)
+    }
     
     async buscarGravacoes(req,res){
         const empresa = await _User2.default.getEmpresa(req)
@@ -86,6 +135,10 @@ class GravacaoController{
         for(let i=0; i<gravacoes.length; ++i){
             let ouvir = `${servidor}gravacoes/${empresa}/${gravacoes[i].date_record}/${gravacoes[i].callfilename}.wav`
             let baixar = `${servidor}gravacao.php?empresa=${empresa}&id=${gravacoes[i].uniqueid}`
+
+            const idEmpresa = await _User2.default.codEmpresa(empresa)
+            const hash = Buffer.from(`${idEmpresa}:${gravacoes[i].id}`).toString('base64')
+            let compartilhar = `https://cloudcall.rec.br/${hash}`
             const item={}
             item["idGravacao"]=gravacoes[i].id
             item["data"]=gravacoes[i].data
@@ -110,7 +163,7 @@ class GravacaoController{
             item["venda"]=gravacoes[i].venda
             item["ouvir"]=ouvir
             item["baixar"]=baixar
-            item["compartilhar"]=ouvir
+            item["compartilhar"]=compartilhar
 
             resultBusca.push(item)
         }          
@@ -130,5 +183,7 @@ class GravacaoController{
         const link = `https://${server[0].ip}/api/gravacao.php?empresa=${empresa}&id=${uniqueidarquivo}`
         res.json(link)               
     }
+
+   
 }
 exports. default = new GravacaoController();

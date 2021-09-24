@@ -13,4 +13,6 @@ module.exports = (routes) => {
 
     //Baixar Gravacao
     routes.get('/baixarGravacao/:idGravacao',_GravacaoController2.default.baixarGravacao)
+
+    
 }

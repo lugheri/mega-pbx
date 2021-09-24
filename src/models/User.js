@@ -22,6 +22,14 @@ class User{
                        AND status=1`
         return await this.querySync(sql) 
     }
+
+    async codEmpresa(empresa){
+        const sql = `SELECT client_number
+                      FROM accounts
+                     WHERE prefix='${empresa}'`
+        const code = await this.querySync(sql) 
+        return code[0].client_number
+    }
     
     async findUser(empresa,usuario){
       

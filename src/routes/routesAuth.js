@@ -1,12 +1,15 @@
 import authMiddleware from '../middlewares/auth';
 import SessionController from '../controllers/SessionController';
 import AsteriskController from '../controllers/AsteriskController';
+import GravacaoController from '../controllers/GravacaoController';
 
 module.exports = (routes) => {
     
     routes.get('/listaCampos', (req, res) =>{
         res.send('API no ar')
     })
+    //Link de  Gravacao
+    routes.get('/gravacaoCompartilhada/:hash', GravacaoController.gravacaoCompartilhada)
     
     //AUTENTICAÇÃO
     routes.post('/login', SessionController.store);

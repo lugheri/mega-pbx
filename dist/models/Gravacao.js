@@ -80,10 +80,10 @@ class Gravacao{
 
 
         if(de){
-            filter += ` AND r.date >= "${data_de}"`
+            filter += ` AND r.date >= "${data_de} 00:00:00"`
         }
         if(ate){
-            filter += ` AND r.date <=  "${data_ate}"`
+            filter += ` AND r.date <=  "${data_ate} 23:59:59"`
         }
 
         if(buscarPor){
@@ -136,7 +136,7 @@ class Gravacao{
                   LEFT JOIN ${empresa}_dados.tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
                       WHERE 1=1 ${filter}`
         //console.log(buscarPor)
-        //console.log(sql)
+        console.log(sql)
         return await this.querySync(sql)
     }
 
@@ -156,6 +156,47 @@ class Gravacao{
             return 0
         }
         return n[0].numero
+    }
+
+    async prefixEmpresa(idEmpresa){
+        const sql = `SELECT prefix
+                       FROM clients.accounts
+                      WHERE client_number=${idEmpresa}`
+        const e = await this.querySync(sql)
+
+        if(e.length == 0){
+            return false
+        }
+
+        return e[0].prefix
+    }
+
+    async linkGravacao(empresa,idRec){
+        const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,
+                            r.date_record,
+                            r.time_record,
+                            r.id,
+                            r.ramal as origem,
+                            r.uniqueid,
+                            r.callfilename,
+                            h.agente as ramal,
+                            h.protocolo,
+                            h.nome_registro,
+                            h.numero_discado AS numero,                            
+                            tb.tabulacao,
+                            tb.tipo,
+                            tb.venda,
+                            u.nome,
+                            e.equipe,
+                            t.tempo_total as duracao 
+                       FROM ${empresa}_dados.records AS r 
+                       JOIN ${empresa}_dados.historico_atendimento AS h ON h.uniqueid=r.uniqueid 
+                  LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id 
+                  LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id 
+                  LEFT JOIN ${empresa}_dados.tempo_ligacao AS t ON r.uniqueid=t.uniqueid 
+                  LEFT JOIN ${empresa}_dados.tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
+                      WHERE r.id=${idRec}`
+        return await this.querySync(sql)
     }
 }
 

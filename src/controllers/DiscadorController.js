@@ -44,6 +44,20 @@ class DiscadorController{
             const cc = await Discador.clearCalls(empresa) 
             //console.log(`clearCalls:${empresa}`,cc)
 
+            //# - VERIFICA SE POSSUI RETORNOS AGENDADOS
+            const hoje = moment().format("Y-MM-DD")
+            const hora = moment().format("HH:mm:ss")
+
+            //console.log('Verificando retornos para', `${hoje} as ${hora}`)
+            const agendamento = await Discador.checaAgendamento(empresa,hoje,hora);
+            if(agendamento.length >= 1){
+                //console.log('Iniciando agendamento!')
+                //seta registro para agente
+                await Discador.abreRegistroAgendado(empresa,agendamento[0].id)       
+                
+                
+            }
+
             //#3 Verifica se existem campanhas ativas
             const campanhasAtivas = await Discador.campanhasAtivas(empresa);  
             //console.log(`campanhasAtivas:${empresa}`,campanhasAtivas)
@@ -209,6 +223,8 @@ class DiscadorController{
             await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
             return false;
         }
+
+        
 
         //#5 Verifica se existem registros nao trabalhados ou com o nº de tentativas abaixo do limite
         const registro = await Discador.filtrarRegistro(empresa,idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscagem,ordemDiscagem)
@@ -542,7 +558,8 @@ class DiscadorController{
     async voltaRegistro(req,res){
         const empresa = await User.getEmpresa(req)
         const idHistorico = req.params.idHistorico
-        return await Discador.voltaRegistro(empresa,idHistorico)
+        const r =  await Discador.voltaRegistro(empresa,idHistorico)
+        res.json(r)
     }
     
 
@@ -613,6 +630,51 @@ class DiscadorController{
 
         //Retorna os status de tabulacao da campanha
         res.json(tabulacoesCampanha)
+    }
+
+    async linkGravacao(req,res){
+        const hash = req.params.hash
+        //const data = Buffer.from(hash).toString('base64')
+
+        const data = Buffer.from(hash, 'base64').toString('ascii').split(':');
+
+        const idEmpresa=data[0]
+        const idRec=data[1]
+
+        const empresa = await Gravacoes.prefixEmpresa(idEmpresa)
+        if(empresa==false){
+            res.json({"error":true,"message":"Gravação não encontrada!"})
+            return false;
+        }
+
+        const gravacoes = await Gravacoes.linkRec(empresa,idRec);
+        if(gravacoes.length==0){
+            res.json({"error":true,"message":"Gravação não encontrada!"})
+            return false;
+        }
+
+        const gravacao={}
+              gravacao["data"]=gravacoes[0].data
+              let duracao = gravacoes[0].duracao
+              let horas = Math.floor(duracao / 3600);
+              let minutos = Math.floor((duracao - (horas * 3600)) / 60);
+              let segundos = Math.floor(duracao % 60);
+              if(horas<=9){horas="0"+horas}
+              if(minutos<=9){minutos="0"+minutos}
+              if(segundos<=9){segundos="0"+segundos}
+
+              gravacao["duracao"]=`${horas}:${minutos}:${segundos}`
+              gravacao["protocolo"]=gravacoes[0].protocolo
+              gravacao["ramal"]=gravacoes[0].ramal
+              gravacao["usuario"]=gravacoes[0].nome
+              gravacao["equipe"]=gravacoes[0].equipe
+              gravacao["numero"]=gravacoes[0].numero
+              gravacao["nome_registro"]=gravacoes[0].nome_registro
+              gravacao["statusTabulacao"]=gravacoes[0].tabulacao
+              gravacao["tipoTabulacao"]=gravacoes[0].tipo
+
+              gravacao["link"]=`https://asterisk-dev.megaconecta.tec.br/api/gravacoes/${empresa}/${gravacoes[0].date_record}/${gravacoes[0].callfilename}.wav`
+        res.json(gravacao)
     }
 
 
@@ -745,13 +807,25 @@ class DiscadorController{
             produtivo=0
         } 
 
+
+
         const atendimento = await Discador.dadosAtendimento(empresa,idAtendimento)
         if(atendimento.length==0){
             res.json(false);
             return false
         }
         const id_numero = atendimento[0].id_numero
+        const id_registro = atendimento[0].id_registro
+       
         const removeNumero = 0
+
+        const campanha = atendimento[0].id_campanha
+        const mailing= atendimento[0].id_mailing
+
+        
+        await Discador.agendandoRetorno(empresa,ramal,campanha,mailing,id_numero,id_registro,numero,data,hora)
+        
+        
         const r = await Discador.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal,id_numero,removeNumero)
         res.json(r);
     }

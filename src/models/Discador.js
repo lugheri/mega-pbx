@@ -763,6 +763,100 @@ class Discador{
                          VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_registro},${id_numero},${ramal},'${uniqueid}','${tipo_ligacao}','${numero}',${tabulacao},'${observacoes}','${contatado}')`
         return await this.querySync(sql)          
     }  
+
+    async agendandoRetorno(empresa,ramal,campanha,mailing,id_numero,id_registro,numero,data,hora){
+        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
+            //console.log('{[(!)]} - tabulaChamada','Empresa nao recebida')
+            return false
+        }
+        
+        const sql = `INSERT INTO ${empresa}_dados.campanhas_agendamentos
+                                 (data,ramal,campanha,mailing,id_numero,id_registro,numero,data_retorno,hora_retorno,tratado)
+                          VALUES (NOW(),${ramal},${campanha},${mailing},${id_numero},${id_registro},${numero},'${data}','${hora},0)`
+        return await this.querySync(sql)          
+    }
+
+    async checaAgendamento(empresa,data,hora){
+        const sql = `SELECT a.id 
+                       FROM ${empresa}_dados.campanhas_agendamentos AS a 
+                       JOIN ${empresa}_dados.user_ramal AS u ON u.ramal=a.ramal 
+                      WHERE u.estado=1 AND a.data_retorno <= '${data}' AND a.hora_retorno<='${hora}' AND a.tratado=0
+                      ORDER BY id ASC
+                      LIMIT 1`
+        return await this.querySync(sql)
+    }
+
+    async abreRegistroAgendado(empresa,idAgendamento){
+        let sql = `SELECT *
+                       FROM ${empresa}_dados.campanhas_agendamentos 
+                      WHERE id=${idAgendamento}`
+        const a = await this.querySync(sql)
+        const ramal=a[0].ramal
+        const protocolo=0
+        const tipo_ligacao='discador'
+        const tipo_discador='preview'
+        const modo_atendimento='auto'
+        const id_campanha=a[0].campanha
+        const id_mailing=a[0].mailing
+        
+        const infoMailing = await Mailing.infoMailing(empresa,id_mailing)
+
+        const tabela_dados = infoMailing[0].tabela_dados
+        const tabela_numeros = infoMailing[0].tabela_numeros
+        
+        const id_registro=a[0].id_registro
+        const id_numero=a[0].id_numero
+        const numero=a[0].numero
+        const fila='0'
+        const tratado=1
+        const atendido=0
+        const na_fila=0
+        const falando=1
+
+        sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
+                                    (data,ramal,protocolo,tipo_ligacao,tipo_discador,modo_atendimento,
+                                    id_campanha,
+                                    id_mailing,
+                                    tabela_dados,
+                                    tabela_numeros,
+                                    id_registro,
+                                    id_numero,
+                                    numero,
+                                    fila,
+                                    tratado,
+                                    atendido,
+                                    na_fila,
+                                    falando) 
+                            VALUES (now(),
+                                    '${ramal}',
+                                    '${protocolo}',
+                                    '${tipo_ligacao}',
+                                    '${tipo_discador}',
+                                    '${modo_atendimento}',
+                                    '${id_campanha}',
+                                    '${id_mailing}',
+                                    '${tabela_dados}',
+                                    '${tabela_numeros}',
+                                    ${id_registro},
+                                    ${id_numero},
+                                    ${numero},
+                                    ${fila},
+                                    ${tratado},
+                                    ${atendido},
+                                    ${na_fila},
+                                    ${falando})`
+            //console.log('sql insert',sql)                        
+            await this.querySync(sql)
+
+            await this.alterarEstadoAgente(empresa,ramal,3,0)
+
+            sql = `UPDATE ${empresa}_dados.campanhas_agendamentos 
+                      SET tratado=1 
+                    WHERE id=${idAgendamento}`
+            await this.querySync(sql)
+            return true;
+
+    }   
                         
     async tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal,idNumero,removeNumero){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
@@ -1300,6 +1394,7 @@ class Discador{
                           id_registro,
                           id_numero,
                           tipo_discador,
+                          modo_atendimento,
                           id_campanha,
                           id_mailing,
                           numero,
@@ -1319,6 +1414,7 @@ class Discador{
         const id_numero = calldata[0].id_numero
         const tabela_dados = calldata[0].tabela_dados
         const tabela_numeros = calldata[0].tabela_numeros
+        const modo_atendimento= calldata[0].modo_atendimento
         const idCampanha = calldata[0].id_campanha
         const protocolo = calldata[0].protocolo
         const numero = calldata[0].numero
@@ -1339,6 +1435,7 @@ class Discador{
               info['idAtendimento']=idAtendimento
               info['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)
               info['tipo_discador']=tipo_discador
+              info['modo_atendimento']=modo_atendimento
               info['idMailing']=idMailing              
               info['idMailing']=idMailing
               info['protocolo']=protocolo
@@ -1546,7 +1643,7 @@ class Discador{
         let sql = `SELECT id 
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE ramal='${ramal}' 
-                      AND (tipo_ligacao='discador')`
+                      AND (tipo_ligacao='discador' OR tipo_ligacao='retorno')`
             //discador='power' OR tipo_discador='preview' OR tipo_discador='clicktocall')`
         const calldata = await this.querySync(sql)
         if(calldata.length==0){
@@ -1696,59 +1793,66 @@ class Discador{
         }
        
         const ramal=h[0].agente
-        const protocolo=h[0].protocolo
-        const tipo='discador'
-        const tipoDiscador='clicktocall'
-        const modoAtendimento='auto'
-        const idCampanha=h[0].campanha
-        const idMailing=h[0].mailing
 
-        const infoMailing = await Mailing.infoMailing(empresa,idMailing)
-        const tabela_dados=infoMailing[0].tabela_dados
-        const tabela_numeros=infoMailing[0].tabela_numeros
+        //verifica se o agente nao esta em atendimento
+        const estado = await this.statusRamal(empresa,ramal)
 
-        const id_reg=h[0].id_registro
-        const id_numero=h[0].id_numero
-        const numero=h[0].numero_discado
-        const fila=''
-        const tratado=1
-        const atendido=0
+        //console.log('ramal',ramal)
+        //console.log(estado)
+
+        if(estado==3){
+            return false
+        }
+
+        //Removendo outras chamadas do agente
+        sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+               WHERE ramal='${ramal}'`
+        //console.log('sql delete',sql)
+        await this.querySync(sql)
+        //console.log(h[0].mailing)
+        const infoMailing = await Mailing.infoMailing(empresa,h[0].mailing)
+
+        const tabela_dados = infoMailing[0].tabela_dados
+        const tabela_numeros = infoMailing[0].tabela_numeros
 
         sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
-                                (data,ramal,protocolo,tipo_ligacao,tipo_discador,modo_atendimento,
-                                 id_campanha,
-                                 id_mailing,
-                                 tabela_dados,
-                                 tabela_numeros,
-                                 id_registro,
-                                 id_numero,
-                                 numero,
-                                 fila,
-                                 tratado,
-                                 atendido,
-                                 na_fila,
-                                 falando) 
-                         VALUES (now(),
-                                 '${ramal}',
-                                 '${protocolo}',
-                                 '${tipo}',
-                                 '${tipoDiscador}',
-                                 '${modoAtendimento}',
-                                 '${idCampanha}',
-                                 '${idMailing}',
-                                 '${tabela_dados}',
-                                 '${tabela_numeros}',
-                                 ${id_reg},
-                                 ${id_numero},
-                                 '0${numero}',
-                                 '${fila}',
-                                 ${tratado},
-                                 ${atendido},
-                                 0,
-                                 0)`
-        await this.querySync(sql)
+                                    (data,ramal,protocolo,tipo_ligacao,tipo_discador,modo_atendimento,
+                                    id_campanha,
+                                    id_mailing,
+                                    tabela_dados,
+                                    tabela_numeros,
+                                    id_registro,
+                                    id_numero,
+                                    numero,
+                                    fila,
+                                    tratado,
+                                    atendido,
+                                    na_fila,
+                                    falando) 
+                            VALUES (now(),
+                                    '${ramal}',
+                                    '${h[0].protocolo}',
+                                    'discador',
+                                    'clicktocall',
+                                    'manual',
+                                    '${h[0].campanha}',
+                                    '${h[0].mailing}',
+                                    '${tabela_dados}',
+                                    '${tabela_numeros}',
+                                    ${h[0].id_registro},
+                                    ${h[0].id_numero},
+                                    ${h[0].numero_discado},
+                                    '',
+                                    1,
+                                    0,
+                                    0,
+                                    0)`
+                                  //  //console.log('sql insert',sql)                        
+            await this.querySync(sql)
 
-        await this.alterarEstadoAgente(empresa,ramal,5,0)
+            await this.alterarEstadoAgente(empresa,ramal,5,0)
+            //console.log(estado)
+        
         return true;
     }
 
