@@ -364,14 +364,18 @@ class Mailing{
                     let numero_completo  = numeroCompleto.replace(" ", "").replace("/", "").replace(/[^0-9]/g, "")
 
                   
-                   
+                console.log('numero_completo',numero_completo)
 
-                    let dddC = numero_completo.slice(0,2)                   
+                    let dddC = numero_completo.slice(0,2)     
+                    console.log('dddC',dddC)
+
                     let duplicado = 0 //await this.checaDuplicidade(numeroCompleto,tabelaNumeros)
                 
                     //Inserindo ddd e numero na query
                     const infoN = this.validandoNumero(dddC,numero_completo)
-                    sqlNumbers+=` (${idBase},${indiceReg},${dddC},'${numero_completo}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+
+
+                    sqlNumbers+=` (${idBase},${indiceReg},${infoN['ddd']},'${numero_completo}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
                   
                     //idNumber++
                 }
@@ -384,7 +388,7 @@ class Mailing{
         let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'
         
         
-        console.log('queryNumeros',queryNumeros)
+        //console.log('queryNumeros',queryNumeros)
         await this.querySync(sqlData)
         await this.querySync(queryNumeros)   
         
@@ -425,10 +429,12 @@ class Mailing{
         let error='ok'
         let valido = 1
         let tipo=""
+        let dddCorrigido=ddd
         //validando uf
         if(uf=='er'){
             error = 'DDD invalido'
             valido=0
+            dddCorrigido=0
         }
         let digitos = numeroCompleto.slice(2,3)
         //validando numero
@@ -452,6 +458,7 @@ class Mailing{
                 }
             }
         }
+        info['ddd']=dddCorrigido
         info['uf']=uf
         info['tipo']=tipo
         info['valido']=valido
