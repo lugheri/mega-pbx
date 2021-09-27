@@ -384,7 +384,7 @@ class DiscadorController{
         const estado = 1//Estado do Agente: 1=Disponível;2=Em Pausa;3=Falando;4=Indisponível;
         const pausa = 0//Caso o estado do agente seja igual a 2 informa o cod da pausa 
         await _Discador2.default.alterarEstadoAgente(empresa,ramal,estado,pausa)
-        await _Cronometro2.default.iniciaDiscador(empresa,ramal)
+        //await Cronometro.iniciaDiscador(empresa,ramal)
         res.json(true);
     }
     //Retorna o estado atual do agente
@@ -400,6 +400,16 @@ class DiscadorController{
               status['client']=client
         res.json(status);
     }
+
+    async statusDeChamadaManual(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const ramal = req.params.ramal
+        const estado = 6
+        const pausa = 0
+        await _Discador2.default.alterarEstadoAgente(empresa,ramal,estado,estado)
+        res.json(true);
+    }
+
     //Parando o Discador do agente
     async pararDiscador(req,res){
         const empresa = await _User2.default.getEmpresa(req)
@@ -407,7 +417,7 @@ class DiscadorController{
         const estado = 4//Estado do Agente: 1=Disponível;2=Em Pausa;3=Falando;4=Indisponível;
         const pausa = 0//Caso o estado do agente seja igual a 2 informa o cod da pausa 
         await _Discador2.default.alterarEstadoAgente(empresa,ramal,estado,pausa)
-        await _Cronometro2.default.pararDiscador(empresa,ramal)
+        
         res.json(true);               
     }
     //Verifica o modo de atendimento assim que uma nova chamada eh recebida 
@@ -701,8 +711,7 @@ class DiscadorController{
         const descricao = infoPausa[0].descricao
         const tempo = infoPausa[0].tempo
             
-        await _Discador2.default.alterarEstadoAgente(empresa,ramal,2,idPausa)
-        const tempoPausa = await _Cronometro2.default.entrouEmPausa(empresa,idPausa,ramal)
+        await _Discador2.default.alterarEstadoAgente(empresa,ramal,2,idPausa)       
         res.send(true)
         
     }
@@ -770,7 +779,6 @@ class DiscadorController{
         const empresa = await _User2.default.getEmpresa(req)
         const ramal = req.body.ramal
         await _Discador2.default.alterarEstadoAgente(empresa,ramal,1,0)
-        await _Cronometro2.default.saiuDaPausa(empresa,ramal)
         res.send(true)
     }
     
@@ -827,6 +835,7 @@ class DiscadorController{
         
         
         const r = await _Discador2.default.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal,id_numero,removeNumero)
+        
         res.json(r);
     }
     

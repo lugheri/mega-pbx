@@ -13,27 +13,25 @@ class Cronometro{
 
     //TEMPO DE ESPERA (OCIOSIDADE)
     //Inicia contagem do tempo de espera do agente ao iniciar o discador
-    async iniciaDiscador(empresa,ramal){
-        const sql = `INSERT INTO ${empresa}_dados.tempo_espera
+    async iniciaOciosidade(empresa,ramal){
+        const sql = `INSERT INTO ${empresa}_dados.tempo_ociosidade
                                  (idAgente,entrada) 
                           VALUES (${ramal},now())`
         return await this.querySync(sql);
     }
     //Encerra a contagem de ociosidade do sistema ao sair do discador
-    async pararDiscador(empresa,ramal){
-        const sql = `UPDATE ${empresa}_dados.tempo_espera 
+    async pararOciosidade(empresa,ramal){
+        const sql = `UPDATE ${empresa}_dados.tempo_ociosidade 
                         SET saida=NOW(), 
                             tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW())
                       WHERE idAgente=${ramal} AND saida is null`
         return await this.querySync(sql);
     }
-    //Inicia contagem do tempo de espera do agente ao iniciar a tabulacao
-    async iniciaTabulacao(empresa,ramal){
-        const sql = `INSERT INTO ${empresa}_dados.tempo_espera 
-                                 (idAgente,entrada) 
-                          VALUES (${ramal},now())`
-        return await this.querySync(sql);
-    }
+
+
+
+
+   
     //Encerra a contagem de ociosidade do sistema ao concluir a tabulacao
     async encerrouTabulacao(empresa,idCampanha,ramal){
         const sql = `UPDATE ${empresa}_dados.tempo_espera 
@@ -86,6 +84,7 @@ class Cronometro{
                           VALUES (${idCampanha},${idMailing},${idRegistro},${numero},${ramal},${uniqueid},now())`
         return await this.querySync(sql);
     }
+    
     //Encerra contagem do tempo de atendimento
     async saiuLigacao(empresa,idCampanha,numero,ramal){
         const sql = `UPDATE ${empresa}_dados.tempo_ligacao 
@@ -96,7 +95,13 @@ class Cronometro{
     } 
    
 
-    
+     //Inicia contagem do tempo de espera do agente ao iniciar a tabulacao
+    /* async iniciaTabulacao(empresa,ramal){
+        const sql = `INSERT INTO ${empresa}_dados.tempo_espera 
+                                 (idAgente,entrada) 
+                          VALUES (${ramal},now())`
+        return await this.querySync(sql);
+    }*/
 
     //TEMPO DE TABULACAO (Ociosidade)
     async iniciaTabulacao(empresa,idCampanha,idMailing,idRegistro,numero,ramal){

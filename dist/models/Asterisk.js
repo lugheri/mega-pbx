@@ -184,7 +184,7 @@ class Asterisk{
             "Async"          : true,
             "appArgs"        : "",
             "callerid"       : `0${numero}`,//numero,
-            "timeout"        : 55, 
+            "timeout"        : 60, 
             //"channelId"      : '324234', 
             "otherChannelId" : ""
           }

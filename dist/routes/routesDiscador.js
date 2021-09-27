@@ -9,6 +9,8 @@ module.exports = (routes) => {
     routes.get('/iniciarDiscador/:ramal',_DiscadorController2.default.iniciarDiscador)
     //Status do ramal
     routes.get('/statusRamal/:ramal',_DiscadorController2.default.statusRamal)
+    //Status de chamada manual
+    routes.get('/statusDeChamadaManual/:ramal',_DiscadorController2.default.statusDeChamadaManual)
     //pararDiscador
     routes.get('/pararDiscador/:ramal',_DiscadorController2.default.pararDiscador)
     //Chamada atendida

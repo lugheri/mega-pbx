@@ -252,6 +252,7 @@ class DashboardController{
         frases.push('Eu sou uma pessoa que me julgo que tenho um bom julgamento!')
         frases.push('Eu acho que com certeza!')
         frases.push('Só conseguimos ver até onde conseguimos enxergar!')
+        frases.push('Toda vez que eu vejo o site da Amazon eu lembro da Amazon!')
 
 
         let numero

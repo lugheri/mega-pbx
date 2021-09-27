@@ -161,10 +161,12 @@ class Mailing{
         let sql=`INSERT INTO ${empresa}_dados.mailing_tipo_campo 
                             (idMailing,campo,nome_original_campo,apelido,tipo,conferido,ordem) 
                      VALUES `;
+       
+
         for(let i=0; i<campos.length; i++){
-          
-            let nomeCampo=campos[i].name.replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
-            let nomeOriginal=campos[i].name.replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
+          //console.log(campos[i].name)
+            let nomeCampo=campos[i].name.replace("-", "_").replace(" ", "_").replace("/", "_").replace(/[^a-zA-Z0-9]/g, "")
+            let nomeOriginal=campos[i].name//.replace("-", "_").replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
             let apelido = campos[i].apelido
             if(header==0){
                 nomeCampo=`campo_${i+1}`
@@ -178,7 +180,7 @@ class Mailing{
             sql +=`(${idBase},'${nomeCampo}','${nomeOriginal}','${apelido}','${campos[i].tipo}',1,${ordem})`
             if((i+1)<campos.length){ sql +=', '}
         }
-        //console.log("configuraTipoCampos",sql)
+        
         await this.querySync(sql)
     }
 
@@ -190,7 +192,7 @@ class Mailing{
         let fieldsTb=[]//array dos campos que irao para query
         
         for(let i = 0; i <fields.length;i++){
-            fieldsTb.push(fields[i].replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, ""))
+            fieldsTb.push(fields[i].replace("-", "_").replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, ""))
         } 
 
         //fieldsTb=fields
@@ -268,6 +270,8 @@ class Mailing{
                                 FROM ${empresa}_dados.mailing_tipo_campo 
                                WHERE idMailing=${idBase} 
                                  AND tipo='ddd_e_telefone'`
+
+                       
         const fieldCompleto = await this.querySync(sql_completo)   
         
         if(field_ddd.length>0){              
@@ -285,6 +289,8 @@ class Mailing{
         }        
 
         const totalTelefones = fieldNumeros.length+fieldCompleto.length
+
+       
         
         if(limit>=totalTelefones){
             limit=limit/totalTelefones
@@ -292,7 +298,7 @@ class Mailing{
         if(limit<=min){
             limit = min
         }
-        console.log('Rate real',limit)
+        //console.log('Rate real',limit)
 
         //console.log('Limite',limit)
         //Populando a query
@@ -329,12 +335,14 @@ class Mailing{
             if(type_ddd!=""){               
                 ddd = jsonFile[0][type_ddd].replace(/[^0-9]/g, "")
             }
+
+            
             
             for(let i=0; i<type_numero.length; i++){//Numeros
                 let numero = jsonFile[0][type_numero[i]]
                 if(numero){ 
                     
-                    let numeroCompleto = ddd.replace(" ", "").replace("/", "").replace(/[^0-9]/g, "")+numero.replace(" ", "").replace("/", "").replace(/[^0-9]/g, "")                    
+                    let numeroCompleto = ddd.replace("-", "").ddd.replace(" ", "").replace("/", "").replace(/[^0-9]/g, "")+numero.replace(" ", "").replace("/", "").replace(/[^0-9]/g, "")                    
                     let duplicado = 0//await this.checaDuplicidade(numeroCompleto,tabelaNumeros)
                     //Inserindo ddd e numero na query
                     const infoN = this.validandoNumero(ddd,numeroCompleto)
@@ -342,14 +350,20 @@ class Mailing{
                     //idNumber++
                 }
             }
-
+            //console.log('type_completo',type_completo)
         
             for(let nc=0; nc<type_completo.length; nc++){//Numeros
-                let numeroCompleto = jsonFile[0][type_completo[nc]]            
+                console.log('type_completo[nc]',type_completo[nc])
+                console.log('jsonFile[0]',jsonFile[0])
+                let numeroCompleto = jsonFile[0][type_completo[nc]]      
+                
+              //  console.log('numero_completo',numeroCompleto)
     
                 if(numeroCompleto){
 
                     let numero_completo  = numeroCompleto.replace(" ", "").replace("/", "").replace(/[^0-9]/g, "")
+
+                  
                    
 
                     let dddC = numero_completo.slice(0,2)                   
@@ -369,7 +383,8 @@ class Mailing{
         
         let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'
         
-
+        
+        //console.log('queryNumeros',queryNumeros)
 
         await this.querySync(sqlData)
         await this.querySync(queryNumeros)   

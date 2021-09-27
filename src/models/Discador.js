@@ -206,18 +206,19 @@ class Discador{
         const tabelaNumeros = infoChamada[0].tabela_numeros
         const idMailing = infoChamada[0].id_mailing
 
-        //verifica tabulacao da campanha
+        //Setando registro como disponivel na tabela de tabulacoes
         sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
                   SET estado=0, desc_estado='Disponivel'
                 WHERE idCampanha=${idCampanha} AND idNumero=${idNumero} AND idMailing=${idMailing} AND produtivo <> 1`
         await this.querySync(sql)
 
-         //Libera numero na base de numeros
+         //Atualiza o status do numero como nao discando
          sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
                    SET discando=0   
                  WHERE id=${idNumero}`
         await this.querySync(sql)
 
+        //Remove o numero da chamada simultanea
         sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                      WHERE ramal=${ramal}`
         await this.querySync(sql)
@@ -565,6 +566,7 @@ class Discador{
                                  protocolo,
                                  tipo_ligacao,
                                  tipo_discador,
+                                 retorno,
                                  modo_atendimento,
                                  id_campanha,
                                  id_mailing,
@@ -583,6 +585,7 @@ class Discador{
                                  '${protocolo}',
                                  '${tipo}',
                                  '${tipoDiscador}',
+                                 0,
                                  '${modoAtendimento}',
                                  '${idCampanha}',
                                  '${idMailing}',
@@ -772,7 +775,7 @@ class Discador{
         
         const sql = `INSERT INTO ${empresa}_dados.campanhas_agendamentos
                                  (data,ramal,campanha,mailing,id_numero,id_registro,numero,data_retorno,hora_retorno,tratado)
-                          VALUES (NOW(),${ramal},${campanha},${mailing},${id_numero},${id_registro},${numero},'${data}','${hora},0)`
+                          VALUES (NOW(),${ramal},${campanha},${mailing},${id_numero},${id_registro},${numero},'${data}','${hora}:00',0)`
         return await this.querySync(sql)          
     }
 
@@ -814,7 +817,7 @@ class Discador{
         const falando=1
 
         sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
-                                    (data,ramal,protocolo,tipo_ligacao,tipo_discador,modo_atendimento,
+                                    (data,ramal,protocolo,tipo_ligacao,tipo_discador,retorno,modo_atendimento,
                                     id_campanha,
                                     id_mailing,
                                     tabela_dados,
@@ -832,6 +835,7 @@ class Discador{
                                     '${protocolo}',
                                     '${tipo_ligacao}',
                                     '${tipo_discador}',
+                                    1,
                                     '${modo_atendimento}',
                                     '${id_campanha}',
                                     '${id_mailing}',
@@ -839,7 +843,7 @@ class Discador{
                                     '${tabela_numeros}',
                                     ${id_registro},
                                     ${id_numero},
-                                    ${numero},
+                                    '0${numero}',
                                     ${fila},
                                     ${tratado},
                                     ${atendido},
@@ -956,7 +960,7 @@ class Discador{
         }  
 
         
-        
+        Cronometro.encerrouTabulacao(empresa,idCampanha,numero,ramal,status_tabulacao)
        
 
          //Tempo de volta do registro 
@@ -1041,34 +1045,30 @@ class Discador{
         }
         //Recuperando estado anterior do agente
         const estadoAnterior = await this.infoEstadoAgente(empresa,agente)
-        
+
         //zerando cronometro do estado anterior
+
         let sql
-        if(estadoAnterior==2){//Caso o agente venha de uma pausa            
-            //Removeo agente da lista dos agentes pausados
+        //REMOVENDO AGENTE DE PAUSA
+        if(estadoAnterior==2){//Caso o agente venha de uma pausa    
+            //Remove o agente da lista dos agentes pausados
             sql = `DELETE FROM ${empresa}_dados.agentes_pausados 
                          WHERE ramal='${agente}'`
             await this.querySync(sql)
+
             //Atualiza Log
             sql = `UPDATE ${empresa}_dados.log_pausas 
                       SET termino=now(), ativa=0 
                     WHERE ramal='${agente}' AND ativa=1`
             await this.querySync(sql)
-            await Cronometro.saiuDaPausa(empresa,agente)
+            await Cronometro.saiuDaPausa(empresa,agente)    
         }
-       
-        
+
+        //MUDANDO O STATUS PARA DISPONIVEL
         if(estado==1){//disponibiliza o ramal do agente no asterisk
-            
-            this.clearCallsAgent(empresa,agente)
-            sql = `SELECT idPausa 
-                     FROM ${empresa}_dados.agentes_filas 
-                    WHERE ramal=${agente} LIMIT 1` 
-            const r = await this.querySync(sql)
-            let statusPausa=0
-            if(r.length==1){
-                statusPausa=r[0].idPausa
-            }
+            //Remove qualquer chamada anterior presa com o agente
+            this.clearCallsAgent(empresa,agente)           
+
             //verifica se o agente tinha solicidado saida do discador em ligacao
             sql = `SELECT deslogado 
                      FROM ${empresa}_dados.user_ramal 
@@ -1078,13 +1078,15 @@ class Discador{
             if(user.length>=1){
                 deslogar = user[0].deslogado
             }
-            
+
+            //Caso o agente tenha solicitado o logout
             if(deslogar==1){
+                //Atualiza o status do agente como indisponivel no asterisk
                 sql = `UPDATE ${connect.db.asterisk}.queue_members 
                           SET paused=1 
                         WHERE membername=${agente}`
                 await this.querySync(sql)  
-               //Atualizando o novo estado do agente        
+               //Atualizando o novo estado do agente como        
                 sql = `UPDATE ${empresa}_dados.agentes_filas 
                           SET estado=4, idPausa=0 
                         WHERE ramal=${agente}` 
@@ -1093,22 +1095,39 @@ class Discador{
                           SET estado=4, deslogado=0 
                         WHERE userId=${agente}`
                 await this.querySync(sql)
+                Cronometro.pararOciosidade(empresa,agente)
                 return false;
             }
-           
-            if(estadoAnterior==2){
+       
+        
+            //Caso o agente venha de uma pausa dentro da valicadao do novo status 1
+            if(estadoAnterior==2){ //Remove a pausa do agente no asterisk   
                 sql = `UPDATE ${connect.db.asterisk}.queue_members 
                           SET paused=0 
                         WHERE membername=${agente}`
                 await this.querySync(sql)  
+                Cronometro.iniciaOciosidade(empresa,agente)
             }else{
-                if((statusPausa==0)||(statusPausa==null)){
+                sql = `SELECT idPausa 
+                         FROM ${empresa}_dados.agentes_filas 
+                        WHERE ramal=${agente} 
+                     ORDER BY idPausa DESC
+                        LIMIT 1` 
+                const r = await this.querySync(sql)
+                let statusPausa=0
+                if(r.length==1){
+                    statusPausa=r[0].idPausa
+                }
+
+                //Caso nenhuma pausa tenha sido pré setada
+                if((statusPausa==0)||(statusPausa==null)){//Disponibiliza o agente no ASTERISK
                     sql = `UPDATE ${connect.db.asterisk}.queue_members 
                               SET paused=0 
-                            WHERE membername=${agente}`
+                           WHERE membername=${agente}`
                     await this.querySync(sql)  
-                }else{                         
-                    //dados da pausa
+
+                    Cronometro.iniciaOciosidade(empresa,agente)
+                }else{//Caso contrário, pausa o mesmo                         
                     sql = `SELECT * 
                              FROM ${empresa}_dados.pausas 
                             WHERE id=${statusPausa}`
@@ -1145,27 +1164,34 @@ class Discador{
                               SET estado=2 
                             WHERE userId=${agente}`
                     await this.querySync(sql)
+                    Cronometro.pararOciosidade(empresa,agente)
+                    Cronometro.entrouEmPausa(empresa,idPausa,agente)
                     return false
                 }
-            }            
+            }           
         }
 
+
         if(estado==2){//Caso o agente va para uma pausa
-            
+           //Caso o agente solicite uma pausa durante um atendimento (estado 3)
             if(estadoAnterior==3){
-                //Atualizando o novo estado do agente        
+                //Mantem o estado 3 do agente, porem registra a pausa na fila do agente 
                 sql = `UPDATE ${empresa}_dados.agentes_filas 
                           SET estado=${estadoAnterior}, 
                               idPausa=${pausa}
                         WHERE ramal=${agente}` 
-                await this.querySync(sql)
+                await this.querySync(sql) 
+
                 sql = `UPDATE ${empresa}_dados.user_ramal
                           SET estado=${estadoAnterior}
                         WHERE userId=${agente}`
                 await this.querySync(sql)
                 return false
-            }
+            }   
+            
+            //Limpa as chamadas presas com o agente caso existam
             this.clearCallsAgent(empresa,agente)
+
             //dados da pausa
             sql = `SELECT * 
                      FROM ${empresa}_dados.pausas
@@ -1175,13 +1201,16 @@ class Discador{
             const nomePausa = infoPausa[0].nome
             const descricaoPausa = infoPausa[0].descricao
             const tempo = infoPausa[0].tempo
+
             //pausa agente no asterisk
             sql = `UPDATE ${connect.db.asterisk}.queue_members 
                       SET paused=1 
                     WHERE membername='${agente}'`    
             await this.querySync(sql)
+
             let agora = moment().format("HH:mm:ss")
             let resultado = moment(agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
+            
             //insere na lista dos agentes pausados
             sql = `INSERT INTO ${empresa}_dados.agentes_pausados 
                                (data,ramal,inicio,termino,idPausa,nome,descricao)
@@ -1193,14 +1222,17 @@ class Discador{
                                (ramal,idPausa,data,inicio,ativa)
                         VALUES ('${agente}',${idPausa},now(),now(),1)`
             await this.querySync(sql)
+            Cronometro.pararOciosidade(empresa,agente)
+            Cronometro.entrouEmPausa(empresa,idPausa,agente)
         }
 
         if(estado==3){
-            //teste de remover agente do asterisk quando deslogado
+            //Retira o agente do asterisk quando o mesmo esta em ligacao
             sql = `UPDATE ${connect.db.asterisk}.queue_members
                       SET paused=1 
                     WHERE membername=${agente}`
             await this.querySync(sql)  
+            Cronometro.pararOciosidade(empresa,agente)
         }
 
         if(estado==4){
@@ -1217,8 +1249,10 @@ class Discador{
                 await this.querySync(sql)
                 return false
             }
+            Cronometro.pararOciosidade(empresa,agente)
             this.clearCallsAgent(empresa,agente)
-        }
+        }  
+          
         
         //Atualizando o novo estado do agente        
         sql = `UPDATE ${empresa}_dados.agentes_filas 
@@ -1394,6 +1428,7 @@ class Discador{
                           id_registro,
                           id_numero,
                           tipo_discador,
+                          retorno,
                           modo_atendimento,
                           id_campanha,
                           id_mailing,
@@ -1435,6 +1470,11 @@ class Discador{
               info['idAtendimento']=idAtendimento
               info['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)
               info['tipo_discador']=tipo_discador
+              if(calldata[0].retorno==1){
+                info['retorno']=true
+              }else{
+                info['retorno']=false
+              }
               info['modo_atendimento']=modo_atendimento
               info['idMailing']=idMailing              
               info['idMailing']=idMailing
@@ -1816,7 +1856,7 @@ class Discador{
         const tabela_numeros = infoMailing[0].tabela_numeros
 
         sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
-                                    (data,ramal,protocolo,tipo_ligacao,tipo_discador,modo_atendimento,
+                                    (data,ramal,protocolo,tipo_ligacao,tipo_discador,retorno,modo_atendimento,
                                     id_campanha,
                                     id_mailing,
                                     tabela_dados,
@@ -1834,6 +1874,7 @@ class Discador{
                                     '${h[0].protocolo}',
                                     'discador',
                                     'clicktocall',
+                                    0,
                                     'manual',
                                     '${h[0].campanha}',
                                     '${h[0].mailing}',
