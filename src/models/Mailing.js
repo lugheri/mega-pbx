@@ -403,14 +403,13 @@ class Mailing{
             if(telefones[i].valido==0){
                 //verifica se existe cpf
                 if(colunaCPF!=""){
-                    cpf = telefones[i].colunaCPF
+                    let cpf = telefones[i].colunaCPF
+                    console.log('cpf',cpf)
                     //verifica id do registro deste cpf que é valido
 
                     //atualiza o id do registro com o id do registro valido deste cpf
                 }
             }
-
-
             //DDD 
             let ddd = 0 
             if(col_ddd!=""){               
@@ -463,9 +462,7 @@ class Mailing{
                    
         await this.querySync(sql) 
         //continua o tratamento dos numeros        
-        await this.separaNumeros(empresa,idBase,dataTab,numTab)
-        
-        
+        await this.separaNumeros(empresa,idBase,dataTab,numTab)        
     }  
 
     async selecionaNumeroBase(empresa,tabelaDados,colunaCPF,colunaDDD,colunaNumero,colunaNumeroCompleto){
@@ -502,7 +499,6 @@ class Mailing{
         if(min>=total){
             min=total
         }
-
         if(total>=800000){
             max=1000
         }else if(total>=400000){
