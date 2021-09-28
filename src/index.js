@@ -12,5 +12,5 @@ const httpServer = http.createServer(app);
 DiscadorController.dial()
 
 
-httpServer.listen(3000,()=>console.log('Servidor de testes online'));
+httpServer.listen(3000,()=>console.log('Servidor de testes online!'));
 
