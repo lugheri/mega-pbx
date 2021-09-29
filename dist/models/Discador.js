@@ -386,7 +386,7 @@ class Discador{
         const sql = `SELECT ramal 
                        FROM ${empresa}_dados.agentes_filas 
                       WHERE fila='${idFila}'
-                        AND estado=1`
+                        AND (estado=1 OR estado=3 OR estado=5)`
         return await this.querySync(sql)       
     }
     //Recuperando os parametros do discador
@@ -1467,7 +1467,15 @@ class Discador{
         const campos_dados = await this.querySync(sql)
         //montando a query de busca dos dados
         const info = {};
+              
+        
               info['idAtendimento']=idAtendimento
+              //Integração
+
+              
+              info['integracao']=await this.integracoes(empresa,idAtendimento,idCampanha)    
+              
+              
               info['listaTabulacao']=await _Campanhas2.default.checklistaTabulacaoCampanha(empresa,idCampanha)
               info['tipo_discador']=tipo_discador
               if(calldata[0].retorno==1){
@@ -1475,6 +1483,7 @@ class Discador{
               }else{
                 info['retorno']=false
               }
+
               info['modo_atendimento']=modo_atendimento
               info['idMailing']=idMailing              
               info['idMailing']=idMailing
@@ -1560,6 +1569,27 @@ class Discador{
                 WHERE id_key_base=${idRegistro}`
         const nome = await this.querySync(sql)
         return nome[0].nome
+    }
+
+    async campoCpfRegistro(empresa,idMailing,idRegistro,tabelaDados){
+        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
+            //console.log('{[(!)]} - campoNomeRegistro','Empresa nao recebida')
+            return false
+        }
+        let sql = `SELECT campo 
+                     FROM ${empresa}_dados.mailing_tipo_campo 
+                    WHERE idMailing=${idMailing}
+                      AND tipo='cpf'`
+        const campoNome = await this.querySync(sql)
+        if(campoNome.length==0){
+            return false
+        }
+        const campo = campoNome[0].campo
+        sql = `SELECT ${campo} as cpf
+                 FROM ${empresa}_mailings.${tabelaDados}
+                WHERE id_key_base=${idRegistro}`
+        const nome = await this.querySync(sql)
+        return nome[0].cpf
     }
 
     //Informações da chamada a ser atendida
@@ -1852,8 +1882,15 @@ class Discador{
         //console.log(h[0].mailing)
         const infoMailing = await _Mailing2.default.infoMailing(empresa,h[0].mailing)
 
-        const tabela_dados = infoMailing[0].tabela_dados
-        const tabela_numeros = infoMailing[0].tabela_numeros
+        let tabela_dados = ''
+        let tabela_numeros = ''
+
+        if(infoMailing.length>0){
+            tabela_dados = infoMailing[0].tabela_dados
+            tabela_numeros = infoMailing[0].tabela_numeros
+        }
+
+        
 
         sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
                                     (data,ramal,protocolo,tipo_ligacao,tipo_discador,retorno,modo_atendimento,
@@ -1954,7 +1991,56 @@ class Discador{
     }
 
 
+    //INTEGRAÇÕES
+    async integracoes(empresa,idAtendimento,idCampanha){
+        //Verifica se existe integração criada
+        let sql = `SELECT idIntegracao 
+                     FROM ${empresa}_dados.campanhas_integracoes 
+                    WHERE idCampanha=${idCampanha}`
+        const i = await this.querySync(sql)
 
+       
+
+        if(i.length==0){
+            return {"status":false}
+        }
+
+        sql = `SELECT *
+                 FROM ${empresa}_dados.campanhas_integracoes_disponiveis 
+                WHERE id=${i[0].idIntegracao}` 
+        const info = await this.querySync(sql)
+        let url = await this.trataUrlIntegracao(empresa,idAtendimento,info[0].url)
+
+        const  infoInt={}
+               infoInt['status']=true
+               infoInt['modo']=info[0].modoAbertura
+               infoInt['link']=url
+        return infoInt;
+    }   
+
+    async trataUrlIntegracao(empresa,idAtendimento,url){
+        //informacoes do mailing 
+        let sql = `SELECT id_registro,id_numero,ramal,id_campanha,id_mailing,tabela_dados,tabela_numeros,numero
+                     FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                    WHERE id=${idAtendimento}`
+        const dadosAtendimento = await this.querySync(sql)
+
+        //Dados do Mailing
+
+        const cpf = await this.campoCpfRegistro(empresa,dadosAtendimento[0].id_mailing,dadosAtendimento[0].id_registro,dadosAtendimento[0].tabela_dados)
+        const ramal = dadosAtendimento[0].ramal
+        const numeroDiscado = dadosAtendimento[0].numero
+        const idCampanha = dadosAtendimento[0].id_campanha
+        const nomeCliente = await this.campoNomeRegistro(empresa,dadosAtendimento[0].id_mailing,dadosAtendimento[0].id_registro,dadosAtendimento[0].tabela_dados)
+
+        const link = url.replace('{CPF}',cpf)
+                        .replace('{RAMAL}',ramal)
+                        .replace('{NUMERO_DISCADO}',numeroDiscado)
+                        .replace('{ID_CAMPANHA}',idCampanha)
+                        .replace('{NOME_CLIENTE}',nomeCliente)
+
+        return link;
+    }
 
 
 

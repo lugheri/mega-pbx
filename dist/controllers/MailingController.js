@@ -92,7 +92,9 @@ class MailingController{
             res.json(true)
             let idKey = 1
             let transferRate=1
-            await _Mailing2.default.importaDados_e_NumerosBase(empresa,idBase,jsonFile,file,header,tabData,tabNumbers,idKey,transferRate)
+            const fileOriginal=jsonFile
+            await _Mailing2.default.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,tabData,tabNumbers,idKey,transferRate)
+            //await Mailing.importaDados_e_NumerosBase(empresa,idBase,jsonFile,file,header,tabData,tabNumbers,idKey,transferRate)
         }) 
     }
     

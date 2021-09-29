@@ -169,7 +169,10 @@ class Mailing{
 
         for(let i=0; i<campos.length; i++){
           //console.log(campos[i].name)
-            let nomeCampo=campos[i].name.replace("-", "_").replace(" ", "_").replace("/", "_").replace(/[^a-zA-Z0-9]/g, "")
+            let nomeCampo=campos[i].name.replace(" ", "_")
+                                        .replace("/", "_")
+                                        .normalize("NFD")
+                                        .replace(/[^a-zA-Z0-9]/g, "");
             let nomeOriginal=campos[i].name//.replace("-", "_").replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
             let apelido = campos[i].apelido
             if(header==0){
@@ -188,7 +191,8 @@ class Mailing{
         await this.querySync(sql)
     }
 
-    async importarDadosMailing(empresa,idBase,jsonFile,file,header,dataTab,numTab,idKey,transferRate){
+    async importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,idKey,transferRate){
+        
         //Tabela para importação dos dados
         const tabelaDados = `${empresa}_mailings.${dataTab}`
         //contador de erros
@@ -216,9 +220,14 @@ class Mailing{
 
         //Le o total de registros a serem importados
         const totalBase = jsonFile.length
-
+        let rateInicial=0
+        if(transferRate==1){
+            rateInicial=totalBase
+        }else{
+            rateInicial=transferRate
+        }
         //Calcula o rate de transferencia
-        const rate = await this.calcRate(totalBase,100,5000,transferRate,1)
+        const rate = await this.calcRate(totalBase,100,5000,rateInicial,1)
         
         //Iniciar query de importação
         let sqlData=`INSERT INTO ${tabelaDados}
@@ -232,6 +241,12 @@ class Mailing{
                               WHERE idMailing=${idBase}
                                 AND tipo='cpf'`
         const col_cpf = await this.querySync(sql_col_cpf)
+
+        //Cria indice na coluna de cpf caso o mesmo exista
+        if(col_cpf.length>=1){
+            const sqlIndex = `ALTER TABLE ${tabelaDados} ADD FULLTEXT INDEX ${col_cpf[0].colCPF} (${col_cpf[0].colCPF})`;
+            await this.querySync(sqlIndex)
+        }
 
         //Iniciar separação dos registros
 
@@ -285,10 +300,7 @@ class Mailing{
             indice++
             //Removendo campos importados do arquivo carregado 
             jsonFile.shift()  
-        }
-        
-       
-            
+        }            
         //Executa a query de insersão de dados       
         await this.querySync(sqlData)
                 
@@ -298,30 +310,27 @@ class Mailing{
         //atualiza no resumo do mailing
         let sql = `UPDATE ${empresa}_dados.mailings 
                       SET configurado=1, 
-                          totalReg='${totalReg}'
+                          totalReg='${totalReg}',
+                          totalNumeros='0'
                     WHERE id='${idBase}'`
         await this.querySync(sql)        
 
         //Verificando restantes para reexecução
         if(jsonFile.length>0){
             //continua a importação dos dados
-            await importarDadosMailing(empresa,idBase,jsonFile,file,header,dataTab,numTab,indice,rate)
-        }else{
-           //Remove o arquivo importado
-           fs.unlinkSync(file)//Removendo Arquivo
-           
-           //Inicia separação dos numeros    
-           await this.separaNumeros(empresa,idBase,dataTab,numTab,1)     
+            await this.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,indice,rate)
+        }else{           
+            //Inicia separação dos numeros    
+            this.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
+                let idKey = 1
+                let transferRate=1
+                const fileOriginal=jsonFile
+                await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)  
+            }) 
         }
     }
     
-    async separaNumeros(empresa,idBase,dataTab,numTab){
-        console.log('tabelaDados',dataTab)
-        console.log('tabelaNumeros',numTab)
-        
-        const totalDadosBase = await this.totalRegBaseDados(empresa,idBase)
-        console.log(totalDadosBase)
-        
+    async separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,indice,transferRate){       
         //Verifica se o numero possui cpf
         let colunaCPF=""
         const sql_col_cpf = `SELECT nome_original_campo as colCPF
@@ -359,9 +368,10 @@ class Mailing{
                                  AND tipo='ddd_e_telefone'`                       
         const col_numeroCompleto = await this.querySync(col_sql_completo)
 
-        console.log('colunaDDD',col_ddd)
+        /*console.log('colunaDDD',col_ddd)
         console.log('colunaNumero',col_numeros)
         console.log('colunaNumeroCompleto',col_numeroCompleto[0].campo)
+        console.log('jsonFile',jsonFile)*/
         
         if(col_ddd.length>0){
             colunaDDD=col_ddd[0].campo
@@ -377,11 +387,127 @@ class Mailing{
             }
         } 
 
+        //Inicia a query
+        let sqlNumbers=`INSERT INTO ${empresa}_mailings.${numTab}
+                                   (id_mailing,id_registro,ddd,numero,uf,tipo,valido,duplicado,erro,tentativas,status_tabulacao,contatado,produtivo)
+                            VALUES `;
+
+        //Calcula o rate de transferencia
+        const totalBase = jsonFile.length
+        let rateInicial=0
+        if(transferRate==1){
+            rateInicial=totalBase
+        }else{
+            rateInicial=transferRate
+        }
+
+        const rate = await this.calcRate(totalBase,100,5000,rateInicial,1)
+
+        //console.log('totalBase',totalBase)
+        //console.log('rate',rate)
+
+        let idReg = indice
+
+        for(let i=0; i<rate; i++){
+            let idRegistro = (idBase * 1000000) + idReg
+            //verifica se existe cpf
+            if(colunaCPF!=""){
+                let cpf = jsonFile[0][colunaCPF]
+                    
+                //verifica id do registro deste cpf que é valido
+                const idReg_cpf = await this.checkIdReg_cpf(empresa,dataTab,colunaCPF,cpf)
+                 if(idReg_cpf!=false){
+                    //atualiza o id do registro com o id do registro valido deste cpf
+                     idRegistro=idReg_cpf
+                }
+            }
+            
+            //Separando Telefones
+            let ddd = 0 
+            if(colunaDDD!=""){               
+                ddd = jsonFile[0][colunaDDD].replace(/[^0-9]/g, "")
+                                            .replace("-", "")
+                                            .replace(" ", "")
+                                            .replace("/", "")
+                //console.log('DDD',ddd)         
+            }            
+            
+            for(let n=0; i<colunaNumero.length; n++){//Numeros
+                let numero = jsonFile[0][colunaNumero[n]].replace(/[^0-9]/g, "")
+                                                        .replace("-", "")
+                                                        .replace(" ", "")
+                                                        .replace("/", "")
+                if(numero){ 
+                    let numeroCompleto = ddd+numero     
+                  //  console.log('numero',numeroCompleto)              
+                    let duplicado = 0//await this.checaDuplicidade(numeroCompleto,tabelaNumeros)
+                    //Inserindo ddd e numero na query
+                    const infoN = this.validandoNumero(ddd,numeroCompleto)
+                    sqlNumbers+=` (${idBase},${idRegistro},${ddd},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+                }
+            }
+            
+            for(let nc=0; nc<colunaNumeroCompleto.length; nc++){//Numeros
+                let numeroCompleto = jsonFile[0][colunaNumeroCompleto[nc]]
+                //console.log('numeroCompleto',numeroCompleto)    
+                if(numeroCompleto){
+                    numeroCompleto.replace(/[^0-9]/g, "")
+                                  .replace("-", "")
+                                  .replace(" ", "")
+                                  .replace("/", "") 
+                    let dddC = numeroCompleto.slice(0,2)     
+                    let duplicado = 0 //await this.checaDuplicidade(numeroCompleto,tabelaNumeros)
+                    const infoN = this.validandoNumero(dddC,numeroCompleto)
+                    sqlNumbers+=` (${idBase},${idRegistro},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+                }
+            }
+            idReg++
+            jsonFile.shift()//Removendo campos importados do arquivo carregado   
+        } 
+        
+        let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'
+
+        //console.log('queryNumeros',queryNumeros)
+        await this.querySync(queryNumeros)   
+               
+        let tN = await this.totalNumeros(`${empresa}_mailings.${numTab}`)//Nome da empresa ja incluido no nome da tabela
+        let totalNumeros=tN[0].total
+        let sql = `UPDATE ${empresa}_dados.mailings 
+                      SET configurado=1, 
+                          totalNumeros='${totalNumeros}'
+                    WHERE id='${idBase}'`                   
+        await this.querySync(sql)        
+
+        //Verificando restantes para reexecução
+        if(jsonFile.length>0){
+            //console.log('Continuando separacao')
+            await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idReg,rate)    
+        }else{
+            //console.log('encerrando')
+            //gravando log
+            sql = `UPDATE ${empresa}_dados.mailings 
+                      SET termino_importacao=now(), 
+                          pronto=1 
+                    WHERE id='${idBase}'`           
+            fs.unlinkSync(file)//Removendo Arquivo
+            //console.log("sql final",sql)
+            await this.querySync(sql)           
+        }
+
+
+        //////////////////////////////////////
+
+        /*
+
         //Ler telefones do banco dos dados
-        const telefones = await this.selecionaNumeroBase(empresa,dataTab,colunaCPF,colunaDDD,colunaNumero,colunaNumeroCompleto)
+        const telefones = await this.selecionaNumeroBase(empresa,dataTab,colunaCPF,colunaDDD,colunaNumero,colunaNumeroCompleto,rate)
             
         if(telefones.length==0){
-            //concluido
+            //Remove o arquivo importado
+            fs.unlinkSync(file)//Removendo Arquivo
+           
+           //concluido
+            
             //gravando log
             let sql = `UPDATE ${empresa}_dados.mailings 
                       SET termino_importacao=now(), 
@@ -398,28 +524,34 @@ class Mailing{
         console.log('total telefone',telefones.length)
 
         for(let i=0; i<telefones.length; i++){
+            const num = telefones[i]
+
             let idReg=telefones[i].id_key_base    
+            //atualiza registros como tratados 
+            await this.trataRegBase(empresa,dataTab,idReg)      
             //CHECA SE NUMERO EH VALIDO
             if(telefones[i].valido==0){
                 //verifica se existe cpf
                 if(colunaCPF!=""){
-                    let cpf = telefones[i].colunaCPF
-                    console.log('cpf',cpf)
+                    let cpf =  num[`${colunaCPF}`]
+                    
                     //verifica id do registro deste cpf que é valido
-
-                    //atualiza o id do registro com o id do registro valido deste cpf
+                    const idReg_cpf = await this.checkIdReg_cpf(empresa,dataTab,colunaCPF,cpf)
+                    if(idReg_cpf!=false){
+                        //atualiza o id do registro com o id do registro valido deste cpf
+                        idReg=idReg_cpf
+                    }
                 }
             }
             //DDD 
             let ddd = 0 
-            if(col_ddd!=""){               
-                ddd = telefones[i].colunaDDD
-                     .replace(/[^0-9]/g, "")
-                     .replace("-", "")
-                     .replace(" ", "")
-                     .replace("/", "")
+            if(col_ddd!=""){   
+                ddd = num[`${colunaDDD}`].replace(/[^0-9]/g, "")
+                                         .replace("-", "")
+                                         .replace(" ", "")
+                                         .replace("/", "")
             }
-            const num = telefones[i]
+            
 
             if(col_numeros!=""){
                 for(let n=0; n<colunaNumero.length; n++){    
@@ -446,8 +578,7 @@ class Mailing{
                     sqlNumbers+=` (${idBase},${idReg},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
                 }   
             }
-            //atualiza registros como tratados 
-            await this.trataRegBase(empresa,dataTab,idReg)            
+                  
         }       
         let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'
         console.log('queryNumeros',queryNumeros)
@@ -462,10 +593,11 @@ class Mailing{
                    
         await this.querySync(sql) 
         //continua o tratamento dos numeros        
-        await this.separaNumeros(empresa,idBase,dataTab,numTab)        
+        await this.separaNumeros(empresa,idBase,dataTab,numTab)   
+        */     
     }  
 
-    async selecionaNumeroBase(empresa,tabelaDados,colunaCPF,colunaDDD,colunaNumero,colunaNumeroCompleto){
+    async selecionaNumeroBase(empresa,tabelaDados,colunaCPF,colunaDDD,colunaNumero,colunaNumeroCompleto,rate){
         let colCPF="";
         let colddd="";
         if(colunaCPF!=""){ colCPF=`${colunaCPF}, `}
@@ -483,7 +615,7 @@ class Mailing{
         const sql = `SELECT id_key_base,${colCPF}${colddd}${colNumero}${colNumeroCompleto}valido
                        FROM ${empresa}_mailings.${tabelaDados}
                       WHERE tratado=0
-                     LIMIT 25`
+                     LIMIT ${rate}`
         return await this.querySync(sql)
     }
 
@@ -529,6 +661,21 @@ class Mailing{
         }
         return true
     }
+
+    async checkIdReg_cpf(empresa,dataTab,colunaCPF,cpf){
+        const sql = `SELECT id_key_base
+                       FROM ${empresa}_mailings.${dataTab}
+                      WHERE ${colunaCPF}='${cpf}'
+                        AND valido=1
+                      LIMIT 1`
+        const idCPF = await this.querySync(sql)
+        if(idCPF.length==0){
+            return false
+        }
+        return idCPF[0].id_key_base
+    }
+
+    
 
 
 

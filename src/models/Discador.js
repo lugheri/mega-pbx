@@ -386,7 +386,7 @@ class Discador{
         const sql = `SELECT ramal 
                        FROM ${empresa}_dados.agentes_filas 
                       WHERE fila='${idFila}'
-                        AND estado=1`
+                        AND (estado=1 OR estado=3 OR estado=5)`
         return await this.querySync(sql)       
     }
     //Recuperando os parametros do discador
@@ -1511,7 +1511,7 @@ class Discador{
         //CAMPOS DE TELEFONE
          sql = `SELECT id, numero
                        FROM ${empresa}_mailings.${tabela_numeros}
-                      WHERE id_registro=${idReg} 
+                      WHERE id_registro='${idReg}'
                    ORDER BY id ASC`;
         const campos_numeros = await this.querySync(sql)
         for(let i=0; i<campos_numeros.length; i++){    
@@ -1663,7 +1663,7 @@ class Discador{
         //CAMPOS DE TELEFONE
          sql = `SELECT numero
                        FROM ${empresa}_mailings.${tabela_numeros}
-                      WHERE id_registro=${idReg} 
+                      WHERE id_registro='${idReg}'
                    ORDER BY id ASC`;
         const campos_numeros = await this.querySync(sql)
         for(let i=0; i<campos_numeros.length; i++){
@@ -1882,8 +1882,15 @@ class Discador{
         //console.log(h[0].mailing)
         const infoMailing = await Mailing.infoMailing(empresa,h[0].mailing)
 
-        const tabela_dados = infoMailing[0].tabela_dados
-        const tabela_numeros = infoMailing[0].tabela_numeros
+        let tabela_dados = ''
+        let tabela_numeros = ''
+
+        if(infoMailing.length>0){
+            tabela_dados = infoMailing[0].tabela_dados
+            tabela_numeros = infoMailing[0].tabela_numeros
+        }
+
+        
 
         sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
                                     (data,ramal,protocolo,tipo_ligacao,tipo_discador,retorno,modo_atendimento,
