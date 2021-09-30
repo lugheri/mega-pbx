@@ -1,0 +1,133 @@
+{
+  "sinteticos": {
+    "AgentesLogados":0,
+    "CampanhasAtivas":0,
+    "Produtivas":0,
+    "TotalDeChamadas": 55487,
+    "AnotherKpis": {
+      "TabulacoesProdutivas": 2345,
+      "TabulacoesImprodutivas": 3543,
+      "AgentesEmPausa": 54,
+      "AgentesEmLigacao": 78,
+      "AgentesDisponiveis": 45,
+      "LigacoesAbandonadasNoTotal": 96,
+      "NaoContatados": 789,
+      "Contatados": 789,
+      "ChamadasEmAtendimento": 45
+    }
+  },
+  "RealTimeChart": {
+    "Conectados": {
+      "data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    },
+    "Ligando": {
+      "data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    },
+    "Manuais": {
+      "data": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    }
+  },
+  "Campanhas": [
+    {
+      "nomeCampanha": "Campanha teste um",
+      "idCampanha": 2,
+      "statusCampanha": 3,
+      "descricaoCampanha": "campanha para teste na dashboard",
+      "ConversaoCampanha": 67,
+      "TabulacaoDeVendasCampanha": 1852,
+      "ChamadasAtendidasCampanha": 4562,
+      "TotalDeChamadasCampanha": 54687
+    },
+    {
+      "nomeCampanha": "Campanha teste um",
+      "idCampanha": 2,
+      "statusCampanha": 3,
+      "descricaoCampanha": "campanha para teste na dashboard",
+      "ConversaoCampanha": 67,
+      "Trabalhados": 1852,
+      "Improdutivas": 4562,
+      "Produtivas": 54687
+    },
+    {
+      "nomeCampanha": "Campanha teste um",
+      "idCampanha": 2,
+      "statusCampanha": 3,
+      "descricaoCampanha": "campanha para teste na dashboard",
+      "ConversaoCampanha": 67,
+      "TabulacaoDeVendasCampanha": 1852,
+      "ChamadasAtendidasCampanha": 4562,
+      "TotalDeChamadasCampanha": 54687
+    },
+    {
+      "nomeCampanha": "Campanha teste um",
+      "idCampanha": 2,
+      "statusCampanha": 3,
+      "descricaoCampanha": "campanha para teste na dashboard",
+      "ConversaoCampanha": 67,
+      "TabulacaoDeVendasCampanha": 1852,
+      "ChamadasAtendidasCampanha": 4562,
+      "TotalDeChamadasCampanha": 54687
+    }
+  ],
+  "Mailings": [
+    {
+      "nameMailing": "Mailing 9",
+      "data": {
+        "Produtivo": [76, 85, 101, 98, 87, 105, 91, 114, 94],
+        "Improdutivo": [76, 85, 101, 98, 87, 105, 91, 114, 94],
+        "NaoTrabalhado": [76, 85, 101, 98, 87, 105, 91, 114, 94]
+      }
+    },
+    {
+      "nameMailing": "Mailing 9",
+      "data": {
+        "Produtivo": [76, 85, 101, 98, 87, 105, 91, 114, 94],
+        "Improdutivo": [76, 85, 101, 98, 87, 105, 91, 114, 94],
+        "NaoTrabalhado": [76, 85, 101, 98, 87, 105, 91, 114, 94]
+      }
+    },
+    {
+      "nameMailing": "Mailing 9",
+      "data": {
+        "Produtivo": [76, 85, 101, 98, 87, 105, 91, 114, 94],
+        "Improdutivo": [76, 85, 101, 98, 87, 105, 91, 114, 94],
+        "NaoTrabalhado": [76, 85, 101, 98, 87, 105, 91, 114, 94]
+      }
+    },
+    {
+      "nameMailing": "Mailing 9",
+      "data": {
+        "Produtivo": [76, 85, 101, 98, 87, 105, 91, 114, 94],
+        "Improdutivo": [76, 85, 101, 98, 87, 105, 91, 114, 94],
+        "NaoTrabalhado": [76, 85, 101, 98, 87, 105, 91, 114, 94]
+      }
+    }
+  ],
+  "Agentes": [
+    {
+      "idAgente": 7,
+      "nomeAgente": "Guilherme Campos",
+      "ConversaoAgente": 75
+    },
+    {
+      "idAgente": 7,
+      "nomeAgente": "Guilherme Campos",
+      "ProdutividadeAgente": 75
+    },
+    {
+      "idAgente": 7,
+      "nomeAgente": "Guilherme Campos",
+      "ConversaoAgente": 75
+    },
+    {
+      "idAgente": 7,
+      "nomeAgente": "Guilherme Campos",
+      "ConversaoAgente": 75
+    },
+    {
+      "idAgente": 7,
+      "nomeAgente": "Guilherme Campos",
+      "ConversaoAgente": 75
+    }
+  ]
+}

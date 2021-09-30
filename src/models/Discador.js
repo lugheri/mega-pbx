@@ -31,6 +31,100 @@ class Discador{
         const mode = await this.querySync(sql);
         return mode[0].debug
     }
+    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    * INFORMAÇÕES DO DISCADOR / AGENTES
+    * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    */  
+    async agentesLogados(empresa){
+        const sql = `SELECT COUNT(id) AS logados
+                       FROM ${empresa}_dados.user_ramal
+                      WHERE (estado=1 OR
+                             estado=2 OR
+                             estado=3 OR
+                             estado=5 OR
+                             estado=6)`
+        const ul=await this.querySync(sql);
+        return ul[0].logados
+    }    
+
+    async agentesPorEstado(empresa,estado){
+        const sql = `SELECT COUNT(id) AS agentes
+                       FROM ${empresa}_dados.user_ramal
+                      WHERE estado=${estado}`
+        const ul=await this.querySync(sql);
+        return ul[0].agentes
+    }    
+
+    async chamadasProdutividade_CampanhasAtivas(empresa,statusProdutividade){
+        const sql = `SELECT COUNT(t.id) AS produtivas
+                       FROM ${empresa}_dados.campanhas AS c
+                       JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
+                         ON c.id=t.idCampanha
+                      WHERE c.estado=1 AND c.status=1 AND t.produtivo=${statusProdutividade};`
+        const p=await this.querySync(sql);
+        return p[0].produtivas
+    }
+
+    async chamadasProdutividade_porCampanha(empresa,idCampanha,statusProdutividade,idMailing){
+        const sql = `SELECT COUNT(id) AS produtivas
+                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing
+                      WHERE idCampanha=${idCampanha}
+                        AND produtivo=${statusProdutividade}
+                        AND idMailing=${idMailing};`
+        const p=await this.querySync(sql);
+        return p[0].produtivas
+    }
+
+    async chamadasProdutividade_porMailing(empresa,statusProdutividade,idMailing){
+        const sql = `SELECT COUNT(id) AS produtivas
+                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing
+                      WHERE produtivo=${statusProdutividade}
+                        AND idMailing=${idMailing};`
+        const p=await this.querySync(sql);
+        return p[0].produtivas
+    }
+    
+    async chamadasPorContato_CampanhasAtivas(empresa,statusContatado){
+        const sql = `SELECT COUNT(t.id) AS contatados
+                       FROM ${empresa}_dados.campanhas AS c
+                       JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
+                         ON c.id=t.idCampanha
+                    WHERE c.estado=1 AND c.status=1 AND t.contatado='${statusContatado}';`
+        const c=await this.querySync(sql);
+        return c[0].contatados
+    }
+
+    async totalChamadas_CampanhasAtivas(empresa){
+        const sql = `SELECT COUNT(t.id) AS chamadas
+                       FROM ${empresa}_dados.campanhas AS c
+                       JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
+                         ON c.id=t.idCampanha
+                      WHERE c.estado=1 AND c.status=1;`
+        const p=await this.querySync(sql);
+        return p[0].chamadas
+    }
+
+    async chamadasEmAtendimento(empresa){
+        const sql = `SELECT COUNT(id) AS chamadas
+                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                      WHERE falando=1`
+        const c=await this.querySync(sql);
+        return c[0].chamadas
+    }
+
+    async logChamadasSimultaneas(empresa,campo,limit){
+        let sql = `SELECT ${campo} as total 
+                    FROM ${empresa}_dados.log_chamadas_simultaneas
+                   ORDER BY id DESC 
+                   LIMIT ${limit}`
+        const c = await this.querySync(sql)
+        const logCh=[]
+        for(let i = 0; i < c.length; i++){
+            logCh.push(c[i].total)
+        }
+        return logCh
+    }  
+     
    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     * FUNCOES DO DISCADOOR
     * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

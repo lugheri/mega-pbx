@@ -30,6 +30,8 @@ class Campanhas{
                       ORDER BY status ASC, id ASC`
         return await this.querySync(sql)  
     }
+
+
     async listarCampanhasAtivas(empresa){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas 
@@ -297,7 +299,18 @@ class Campanhas{
     async listarMailingCampanha(empresa,idCampanha){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas_mailing 
-                      WHERE idCampanha=${idCampanha}`
+                      WHERE idCampanha=${idCampanha}
+                      LIMIT 1`
+        return await this.querySync(sql)
+    }
+
+    //Lista Mailings das campanhas ativas
+    async listarMailingCampanhasAtivas(empresa){
+        const sql = `SELECT m.id, m.nome, m.totalReg
+                       FROM ${empresa}_dados.mailings AS m 
+                       JOIN ${empresa}_dados.campanhas_mailing AS cm ON m.id=cm.idMailing
+                       JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha
+                      WHERE c.estado=1 AND c.status=1;`
         return await this.querySync(sql)
     }
 
@@ -863,6 +876,24 @@ class Campanhas{
         return await this.querySync(sql)
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     chamadasTravadas(callback){
         const sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE tratado is null`
         connect.banco.query(sql,callback)
@@ -881,10 +912,7 @@ class Campanhas{
     }
 
     //######################Gestão do Mailing das Campanhas ######################
-    mailingCampanha(idCampanha,callback){
-        const sql = `SELECT idMailing FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
-        connect.banco.query(sql,callback)
-    }
+    
 
     async campanhaDoMailing(empresa,idMailing){
         const sql = `SELECT m.idCampanha,c.nome 
@@ -915,6 +943,15 @@ class Campanhas{
                        JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
                        JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
                       WHERE c.estado=1 AND c.status=1`
+        return await this.querySync(sql)
+    }
+
+    async totalRegistrosCampanha(empresa,idCampanha){
+        const sql = `SELECT SUM(totalReg) AS total 
+                       FROM ${empresa}_dados.mailings as m 
+                       JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
+                       JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
+                      WHERE c.id=${idCampanha}`
         return await this.querySync(sql)
     }
 
@@ -1048,7 +1085,7 @@ class Campanhas{
 
     
     
-
+/*********************************
     
     //######################Funções para funcionamento do discador######################
     campanhasAtivasHabilitadas(callback){
@@ -1089,7 +1126,7 @@ class Campanhas{
                        FROM campanhas_horarios 
                        WHERE id_campanha = '${idCampanha}' AND hora_inicio <= '${hora}' AND hora_termino >='${hora}'`;
         connect.banco.query(sql,callback)
-    }
+    }*/
 
    
 }
