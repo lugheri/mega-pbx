@@ -38,13 +38,17 @@ class Discador{
     async agentesLogados(empresa){
         const sql = `SELECT COUNT(id) AS logados
                        FROM ${empresa}_dados.user_ramal
-                      WHERE (estado=1 OR
-                             estado=2 OR
-                             estado=3 OR
-                             estado=5 OR
-                             estado=6)`
+                      WHERE estado>=1`
         const ul=await this.querySync(sql);
         return ul[0].logados
+    }    
+    
+    async listarAgentesLogados(empresa){
+        const sql = `SELECT u.id,u.nome,u.usuario,r.estado
+                      FROM ${empresa}_dados.users AS u
+                      JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
+                     WHERE r.estado>=1;`
+        return await this.querySync(sql);
     }    
 
     async agentesPorEstado(empresa,estado){
@@ -56,30 +60,48 @@ class Discador{
     }    
 
     async chamadasProdutividade_CampanhasAtivas(empresa,statusProdutividade){
+        let queryFilter="";
+        if(statusProdutividade==1){
+            queryFilter=`AND t.produtivo=1`
+        }else{
+            queryFilter=`AND (t.produtivo=0 OR t.produtivo is null)`
+        }
+
         const sql = `SELECT COUNT(t.id) AS produtivas
                        FROM ${empresa}_dados.campanhas AS c
                        JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
                          ON c.id=t.idCampanha
-                      WHERE c.estado=1 AND c.status=1 AND t.produtivo=${statusProdutividade};`
+                      WHERE c.estado=1 AND c.status=1 ${queryFilter};`
         const p=await this.querySync(sql);
         return p[0].produtivas
     }
 
     async chamadasProdutividade_porCampanha(empresa,idCampanha,statusProdutividade,idMailing){
+        let queryFilter="";
+        if(statusProdutividade==1){
+            queryFilter=`AND produtivo=1`
+        }else{
+            queryFilter=`AND (produtivo=0 OR produtivo is null)`
+        }
         const sql = `SELECT COUNT(id) AS produtivas
                        FROM ${empresa}_mailings.campanhas_tabulacao_mailing
-                      WHERE idCampanha=${idCampanha}
-                        AND produtivo=${statusProdutividade}
-                        AND idMailing=${idMailing};`
+                      WHERE idCampanha=${idCampanha}                        
+                        AND idMailing=${idMailing}
+                        ${queryFilter};`
         const p=await this.querySync(sql);
         return p[0].produtivas
     }
 
     async chamadasProdutividade_porMailing(empresa,statusProdutividade,idMailing){
+        let queryFilter="";
+        if(statusProdutividade==1){
+            queryFilter=`AND produtivo=1`
+        }else{
+            queryFilter=`AND (produtivo=0 OR produtivo is null)`
+        }
         const sql = `SELECT COUNT(id) AS produtivas
                        FROM ${empresa}_mailings.campanhas_tabulacao_mailing
-                      WHERE produtivo=${statusProdutividade}
-                        AND idMailing=${idMailing};`
+                      WHERE idMailing=${idMailing} ${queryFilter};`
         const p=await this.querySync(sql);
         return p[0].produtivas
     }
@@ -92,6 +114,16 @@ class Discador{
                     WHERE c.estado=1 AND c.status=1 AND t.contatado='${statusContatado}';`
         const c=await this.querySync(sql);
         return c[0].contatados
+    }
+
+    async chamadasAbandonadas_CampanhasAtivas(empresa){
+        const sql = `SELECT COUNT(h.id) AS abandonadas
+                       FROM ${empresa}_dados.campanhas AS c
+                       JOIN ${empresa}_dados.historico_atendimento AS h
+                         ON c.id=h.campanha
+                      WHERE c.estado=1 AND c.status=1 AND h.obs_tabulacao='ABANDONADA';`
+        const a=await this.querySync(sql);
+        return a[0].abandonadas
     }
 
     async totalChamadas_CampanhasAtivas(empresa){
@@ -118,12 +150,60 @@ class Discador{
                    ORDER BY id DESC 
                    LIMIT ${limit}`
         const c = await this.querySync(sql)
-        const logCh=[]
-        for(let i = 0; i < c.length; i++){
-            logCh.push(c[i].total)
-        }
-        return logCh
+        return c[0].total
     }  
+
+
+
+    async diaAtual(){
+        const dia = moment().format("DD")
+        const m =  moment().format("M")-1
+        const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']                
+        return `${dia}, ${meses[m]}`
+    }
+
+
+    async totalAtendimentosAgente(empresa,idAgente){
+        const hoje = moment().format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS atendimentos
+                       FROM ${empresa}_dados.historico_atendimento 
+                       WHERE data='${hoje}' AND agente='${idAgente}'`
+        const a= await this.querySync(sql)
+        return a[0].atendimentos
+
+    }
+    
+    async chamadasProdutividade_Agente(empresa,statusProdutividade,idAgente){
+        let queryFilter="";
+        if(statusProdutividade==1){
+            queryFilter=`AND produtivo=1`
+        }else{
+            queryFilter=`AND (produtivo=0 OR produtivo is null)`
+        }
+
+        const hoje = moment().format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS atendimentos
+                       FROM ${empresa}_dados.historico_atendimento 
+                       WHERE data='${hoje}' AND agente='${idAgente}' ${queryFilter}`
+        const a= await this.querySync(sql)
+        return a[0].atendimentos
+
+    }
+    
+    async tempoFaladoAgente(empresa,idAgente){
+        const hoje = moment().format("Y-MM-DD")
+        const sql = `SELECT SUM(tempo_total) AS tempoFalado
+                       FROM ${empresa}_dados.tempo_ligacao
+                      WHERE idAgente = '${idAgente}'
+                        AND entrada >= '${hoje} 00:00:00' 
+                        AND saida <= '${hoje} 23:59:59'`; 
+        const t= await this.querySync(sql)
+        
+        if(t[0].tempoFalado==null){
+            return 0
+        }
+        return t[0].tempoFalado
+    }
      
    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     * FUNCOES DO DISCADOOR
@@ -144,14 +224,17 @@ class Discador{
         const chamadas_simultaneas = await this.chamadasSimultaneas(empresa,'todas')
         const chamadas_conectadas = await this.chamadasSimultaneas(empresa,'conectadas')
         const chamadas_manuais = await this.chamadasSimultaneas(empresa,'manuais')
+
+        
         //removendo do log chamadas do dia anterior
         let sql = `DELETE FROM ${empresa}_dados.log_chamadas_simultaneas  
-                         WHERE DATA < DATE_SUB(NOW(), INTERVAL 1 DAY);`
+                         WHERE DATA < DATE_SUB(NOW(), INTERVAL 15 SECOND);`
         await this.querySync(sql)
         //Inserindo informacoes de chamadas para o grafico de chamadas simultaneas
         sql = `INSERT INTO ${empresa}_dados.log_chamadas_simultaneas 
-                           (data,total,conectadas) 
-                     VALUE (now(),${chamadas_simultaneas},${chamadas_conectadas})`
+                           (data,total,conectadas,manuais) 
+                     VALUE (now(),${chamadas_simultaneas},${chamadas_conectadas},${chamadas_manuais})`
+                    
         await this.querySync(sql)
         return true
     }
@@ -167,16 +250,20 @@ class Discador{
                 filter=` AND falando=1`
             break;
             case 'manuais':
-                filter=`AND tipo_ligacao='manual' AND falando=1`
+                filter=`AND tipo_discador='manual'`
+            break;
+            case 'total':
+                filter=""
             break;
             default:
                 filter=``
         }
         const sql = `SELECT COUNT(id) as total 
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
-                      WHERE uniqueid is not null
-                      ${filter}`
+                      WHERE 1=1
+                      ${filter} ORDER BY id DESC LIMIT 1`
         const r = await this.querySync(sql)
+        
         return r[0].total
     }
 
@@ -343,11 +430,13 @@ class Discador{
                   AND idNumero=${idNumero} AND produtivo <> 1`
         await this.querySync(sql)
 
-        //Libera numero na base de numeros
-        sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
-                  SET discando=0   
-             WHERE id=${idNumero}`
-        await this.querySync(sql)
+        if(tabelaNumeros!=0){
+            //Libera numero na base de numeros
+            sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
+                    SET discando=0   
+                WHERE id=${idNumero}`                
+            await this.querySync(sql)
+        }
 
         sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                 WHERE id=${idAtendimento}`
@@ -653,7 +742,10 @@ class Discador{
         }
         const hoje = moment().format("YMMDDHHmmss")
         const protocolo = hoje+'0'+ramal
-        const tipo = 'discador'
+        let tipo = 'discador'
+        if(tipoDiscador=="manual"){
+           tipo = 'manual'
+        }        
         const sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
                                 (data,
                                  ramal,
@@ -687,7 +779,7 @@ class Discador{
                                  '${tabela_numeros}',
                                  ${id_reg},
                                  ${id_numero},
-                                 '0${numero}',
+                                 '${numero}',
                                  '${fila}',
                                  ${tratado},
                                  ${atendido},
@@ -1396,12 +1488,15 @@ class Discador{
                   SET desligada=1 
                 WHERE id=${idAtendimento}`
         await this.querySync(sql)
+
+        //Para cronometro do atendimento
+        await Cronometro.saiuLigacao(empresa,infoChamada[0].id_campanha,infoChamada[0].numero,ramal)
         return infoChamada
 
     }
 
     //Desliga Chamada
-    async desligaChamadaNumero(empresa,numero){      
+    async desligaChamadaNumero(empresa,idcampanha,numero,ramal){      
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - desligaChamadaNumero','Empresa nao recebida')
             return false
@@ -1410,17 +1505,31 @@ class Discador{
                   SET desligada=1
                 WHERE numero=${numero}`
         await this.querySync(sql)
+
+        //Para cronometro do atendimento
+        await Cronometro.saiuLigacao(empresa,idcampanha,numero,ramal)
         return true
     }
 
     //Desliga Chamada
-    async removeChamadaSimultanea(empresa,idAtendimento){     
+    async removeChamadaSimultaneasAbandonadas(empresa,idAtendimento){     
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - removeChamadaSimultanea','Empresa nao recebida')
             return false
         } 
         const sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                       WHERE id=${idAtendimento} AND ramal=0`
+        await this.querySync(sql)
+        return true
+    }
+
+    async removeChamadaSimultaneas(empresa,idAtendimento){     
+        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
+            //console.log('{[(!)]} - removeChamadaSimultanea','Empresa nao recebida')
+            return false
+        } 
+        const sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                      WHERE id=${idAtendimento}`
         await this.querySync(sql)
         return true
     }

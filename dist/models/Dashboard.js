@@ -1,4 +1,6 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
+var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
+var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
 
 
 class Dashboard{
@@ -13,298 +15,157 @@ class Dashboard{
     }
 
     async painel(empresa){
-        const painel = {}
-        let sql
-        //USUARIOS
-        //Informações dos usuários
-        painel['usuarios'] = {}
-        //Usuarios ativos no momento
-        sql = `SELECT COUNT(id) AS logados 
-                 FROM ${empresa}_dados.user_ramal 
-                WHERE estado>=1`
-        const rows_usuariosLogados = await this.querySync(sql)
-        painel['usuarios']['usuariosLogados']=rows_usuariosLogados[0].logados
+        const agentesLogados = await _Discador2.default.agentesLogados(empresa)
+        const produtivas = await _Discador2.default.chamadasProdutividade_CampanhasAtivas(empresa,1)
+        const improdutivas = await _Discador2.default.chamadasProdutividade_CampanhasAtivas(empresa,0)
+        const totalChamadas = await _Discador2.default.totalChamadas_CampanhasAtivas(empresa)   
 
-        //Histórico de logins
-        sql = `SELECT COUNT(DISTINCT(user_id)) AS agentes, DATE_FORMAT (data,'%d/%m/%Y') AS dia 
-                 FROM ${empresa}_dados.registro_logins 
-             GROUP BY data 
-             ORDER BY data 
-                 DESC LIMIT 7`
-        const rows_historicoLogins = await this.querySync(sql)
-        painel['usuarios']['historicoLogins']=rows_historicoLogins
+        let percentual_improdutivas=0
+        let percentual_produtivas=0
+        if(totalChamadas!=0){
+            percentual_improdutivas = Math.round((improdutivas / totalChamadas)*100)
+            percentual_produtivas = Math.round((produtivas / totalChamadas)*100)
+        }       
 
-        //Resumo Agentes            
-        painel['usuarios']['totalPorEstado']={}
-        //Em Ligacao
-        sql = `SELECT COUNT(r.userId) AS total 
-                 FROM ${empresa}_dados.users AS u 
-                 LEFT JOIN ${empresa}_dados.user_ramal AS r ON r.userId=u.id
-                WHERE u.status=1 AND r.estado=3`
-        const rows_totalEmLigacao = await this.querySync(sql)
-        painel['usuarios']['totalPorEstado']['emLigacao']=rows_totalEmLigacao[0].total
-        //Em Pausa
-        sql = `SELECT COUNT(r.userId) AS total 
-                 FROM ${empresa}_dados.users AS u 
-                 LEFT JOIN ${empresa}_dados.user_ramal AS r ON r.userId=u.id 
-                WHERE u.status=1 AND r.estado=2`
-        const rows_totalEmPausa = await this.querySync(sql)
-        painel['usuarios']['totalPorEstado']['emPausa']=rows_totalEmPausa[0].total
-        //Disponíveis
-        sql = `SELECT COUNT(r.userId) AS total 
-                 FROM ${empresa}_dados.users AS u 
-                 LEFT JOIN ${empresa}_dados.user_ramal AS r ON r.userId=u.id
-                WHERE u.status=1 AND r.estado=1`
-        const rows_totalDisponivel = await this.querySync(sql)
-        painel['usuarios']['totalPorEstado']['disponivel']=rows_totalDisponivel[0].total
-
-        //Usuarios Em Ligacao
-        sql = `SELECT r.ramal,u.nome,e.equipe userId 
-                 FROM ${empresa}_dados.users AS u 
-                 LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id 
-                 LEFT JOIN ${empresa}_dados.user_ramal AS r ON r.userId=u.id 
-                 WHERE u.status=1 AND r.estado=3 LIMIT 6`
-        const rows_usuariosEmLigacao = await this.querySync(sql)
-        for(let i = 0; i < rows_usuariosEmLigacao.length; i++){
-            const ramal = rows_usuariosEmLigacao[i].ramal
-            sql=`SELECT TIMESTAMPDIFF (SECOND, entrada, NOW()) as tempo 
-                  FROM ${empresa}_dados.tempo_ligacao 
-                 WHERE idAgente=${ramal}  ORDER BY id DESC LIMIT 1`
-            const tempo = await this.querySync(sql)
-            if(tempo.length==0){
-                rows_usuariosEmLigacao[i]['tempo']=0
-            }else{
-                rows_usuariosEmLigacao[i]['tempo']=await this.converteSeg_tempo(tempo[0].tempo)
-            }                
-        }
-        painel['usuarios']['agentesEmLigacao']=rows_usuariosEmLigacao
-
-        //Usuarios Em Pausa
-        sql = `SELECT r.ramal,u.nome,e.equipe userId 
-                 FROM ${empresa}_dados.users AS u 
-                 LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id 
-                 LEFT JOIN ${empresa}_dados.user_ramal AS r ON r.userId=u.id 
-                 WHERE u.status=1 AND r.estado=2 LIMIT 6`
-        const rows_usuariosEmPausa = await this.querySync(sql)
-        for(let i = 0; i < rows_usuariosEmPausa.length; i++){
-            const ramal = rows_usuariosEmPausa[i].ramal
-            sql=`SELECT TIMESTAMPDIFF (SECOND, entrada, NOW()) as tempo 
-                   FROM ${empresa}_dados.tempo_pausa 
-                  WHERE idAgente=${ramal}  
-                  ORDER BY id DESC LIMIT 1`
-            const tempo = await this.querySync(sql)
-            if(tempo.length==0){
-                rows_usuariosEmPausa[i]['tempo']=0
-            }else{
-                rows_usuariosEmPausa[i]['tempo']=await this.converteSeg_tempo(tempo[0].tempo)
-            }                
-        }
-        painel['usuarios']['agentesEmPausa']=rows_usuariosEmPausa
-
-        //Usuarios disponíveis
-        sql = `SELECT r.ramal,u.nome,e.equipe userId 
-                 FROM ${empresa}_dados.users AS u 
-                 LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id
-                 LEFT JOIN ${empresa}_dados.user_ramal AS r ON r.userId=u.id
-                 WHERE u.status=1 AND r.estado=1 LIMIT 6`
-        const rows_usuariosDisponiveis = await this.querySync(sql)
-        for(let i = 0; i < rows_usuariosDisponiveis.length; i++){
-            const ramal = rows_usuariosDisponiveis[i].ramal
-            sql=`SELECT TIMESTAMPDIFF (SECOND, entrada, NOW()) as tempo 
-                   FROM ${empresa}_dados.tempo_espera 
-                   WHERE idAgente=${ramal}  ORDER BY id DESC LIMIT 1`
-            const tempo = await this.querySync(sql)
-            if(tempo.length==0){
-                rows_usuariosDisponiveis[i]['tempo']=0
-            }else{
-                rows_usuariosDisponiveis[i]['tempo']=await this.converteSeg_tempo(tempo[0].tempo)
-            }                
-        }
-        painel['usuarios']['agentesDisponiveis']=rows_usuariosDisponiveis
-
-        //CAMPANHAS
-        //Informações das campanhas ativas
-        painel['campanhas'] = {}
-        //Campanhas ativos no momento
-        sql = `SELECT COUNT(id) AS ativas 
-                 FROM ${empresa}_dados.campanhas WHERE estado=1 AND status=1`
-        const rows_campanhasAtivas = await this.querySync(sql)
-        painel['campanhas']['campanhasAtivas']=rows_campanhasAtivas[0].ativas
-
-        sql = `SELECT COUNT(DISTINCT campanha) AS campanhas, DATE_FORMAT (data,'%d/%m/%Y') AS dia 
-                 FROM ${empresa}_dados.historico_atendimento 
-                GROUP BY data 
-                ORDER BY data DESC 
-                LIMIT 7`
-        const rows_historicoCampanhas = await this.querySync(sql)
-        painel['campanhas']['historicoCampanhas']=rows_historicoCampanhas
-
-        //Resumo Campanhas            
-        painel['campanhas']['totalPorStatus']={}
-        //Discando
-        sql = `SELECT COUNT(s.id) AS total 
-                 FROM ${empresa}_dados.campanhas_status AS s
-                 JOIN ${empresa}_dados.campanhas AS c ON c.id=s.idCampanha 
-                WHERE c.status=1 AND c.estado=1 AND s.estado=1`
-        const rows_totalDiscando = await this.querySync(sql)
-        painel['campanhas']['totalPorStatus']['discando']=rows_totalDiscando[0].total
-        //Em Espera
-        sql = `SELECT COUNT(s.id) AS total 
-                 FROM ${empresa}_dados.campanhas_status AS s 
-                 JOIN ${empresa}_dados.campanhas AS c ON c.id=s.idCampanha 
-                WHERE c.status=1 AND c.estado=1 AND s.estado=2`
-        const rows_totalEmEspera = await this.querySync(sql)
-        painel['campanhas']['totalPorStatus']['emEspera']=rows_totalEmEspera[0].total
-        //Paradas
-        sql = `SELECT COUNT(s.id) AS total 
-                 FROM ${empresa}_dados.campanhas_status AS s 
-                 JOIN ${empresa}_dados.campanhas AS c ON c.id=s.idCampanha 
-                WHERE c.status=1 AND c.estado=1 AND s.estado=3`
-        const rows_totalParadas = await this.querySync(sql)
-        painel['campanhas']['totalPorStatus']['paradas']=rows_totalParadas[0].total
-
-        //Campanhas Discando
-        sql = `SELECT c.id,c.nome,c.descricao 
-                 FROM ${empresa}_dados.campanhas AS c 
-                 LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id=s.idCampanha 
-                 WHERE c.status=1 AND c.estado=1 AND s.estado = 1 
-                 LIMIT 6`
-        const rows_campanhasDiscando = await this.querySync(sql)
-        for(let i = 0; i < rows_campanhasDiscando.length; i++){
-            const idCampanha = rows_campanhasDiscando[i].id                
-            sql=`SELECT SUM(tempo_total) as tempo 
-                   FROM ${empresa}_dados.tempo_ligacao 
-                   WHERE idCampanha=${idCampanha} 
-                     AND tempo_total is not null`
-            const tempo = await this.querySync(sql)
-            if(tempo.length==0){
-                rows_campanhasDiscando[i]['tempo']=0
-            }else{
-                rows_campanhasDiscando[i]['tempo']=await this.converteSeg_tempo(tempo[0].tempo)
-            }                
-        }
-        painel['campanhas']['discando']=rows_campanhasDiscando
-
-        //Campanhas Aguardando
-        sql = `SELECT c.id,c.nome,c.descricao 
-                 FROM ${empresa}_dados.campanhas AS c 
-                 LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id=s.idCampanha 
-                 WHERE c.status=1 AND c.estado=1 AND s.estado = 2 LIMIT 6`
-        const rows_campanhasAguardando = await this.querySync(sql)
-        for(let i = 0; i < rows_campanhasAguardando.length; i++){
-            const idCampanha = rows_campanhasAguardando[i].id
-            sql=`SELECT TIMESTAMPDIFF (SECOND, saida, NOW()) as tempo 
-                   FROM ${empresa}_dados.tempo_ligacao 
-                   WHERE idCampanha=${idCampanha} AND saida is not null 
-                   ORDER BY id DESC 
-                   LIMIT 1`
-            const tempo = await this.querySync(sql)
-            if(tempo.length==0){
-                rows_campanhasAguardando[i]['tempo']=0
-            }else{
-                rows_campanhasAguardando[i]['tempo']=await this.converteSeg_tempo(tempo[0].tempo)
-            }                
-        }
-        painel['campanhas']['emPausa']=rows_campanhasAguardando
-
-        //Campanhas Paradas
-        sql = `SELECT c.id,c.nome,c.descricao
-                 FROM ${empresa}_dados.campanhas AS c 
-                 LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id=s.idCampanha
-                 WHERE c.status=1 AND c.estado=1 AND s.estado = 3 LIMIT 6`
-        const rows_campanhasParadas = await this.querySync(sql)
-        for(let i = 0; i < rows_campanhasParadas.length; i++){
-            const idCampanha = rows_campanhasParadas[i].id
-            sql=`SELECT TIMESTAMPDIFF (SECOND, saida, NOW()) as tempo 
-                   FROM ${empresa}_dados.tempo_ligacao 
-                   WHERE idCampanha=${idCampanha} AND saida is not null 
-                   ORDER BY id DESC 
-                   LIMIT 1`
-            const tempo = await this.querySync(sql)
-            if(tempo.length==0){
-                rows_campanhasParadas[i]['tempo']=0
-            }else{
-                rows_campanhasParadas[i]['tempo']=await this.converteSeg_tempo(tempo[0].tempo)
-            }                
-        }
-        painel['campanhas']['paradas']=rows_campanhasParadas
-
-        //STATUS MAILINGS
-        //Informaçoes dos mailings das campanhas ativas            
-        painel['statusMailings'] = {}
-        sql = `SELECT SUM(totalReg) AS total 
-                 FROM ${empresa}_dados.mailings as m 
-                 JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
-                 JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
-                 WHERE c.estado=1 AND c.status=1`
-        const rows_total_reg = await this.querySync(sql)
-        let total
-        if(rows_total_reg[0].total == null){
-            total = 0
-        }else{
-            total = parseInt(rows_total_reg[0].total)
-        }
-            
-        //Contatados
-        sql = `SELECT count(t.id) AS contatados 
-                FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
-                JOIN ${empresa}_dados.campanhas AS c ON c.id=t.idCampanha 
-               WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
-        const rows_jaContatados = await this.querySync(sql)
-        const contatados = parseInt(rows_jaContatados[0].contatados) 
-
-        //Nao Contatados
-        sql = `SELECT count(t.id) AS nao_contatados 
-                 FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
-                 JOIN ${empresa}_dados.campanhas AS c ON c.id=t.idCampanha 
-                 WHERE t.contatado='N' AND c.estado=1 AND c.status=1`
-        const rows_naoContatados = await this.querySync(sql)
-        const naoContatados = parseInt(rows_naoContatados[0].nao_contatados)
-        const trabalhados = contatados + naoContatados
-        let perc_trabalhados = 0
-        let perc_contatados = 0
-        let perc_naoContatados = 0
-
-        if(total!=0){
-            perc_trabalhados = parseFloat((trabalhados / total)*100).toFixed(1)
-            perc_contatados = parseFloat((contatados / total)*100).toFixed(1)
-            perc_naoContatados = parseFloat((naoContatados / total)*100).toFixed(1)
-        }   
+        const ag_Disponiveis = await _Discador2.default.agentesPorEstado(empresa,1)
+        const ag_emPausa = await _Discador2.default.agentesPorEstado(empresa,2)
+        const ag_emLigacao = await _Discador2.default.agentesPorEstado(empresa,3)        
+        const ag_emTela = await _Discador2.default.agentesPorEstado(empresa,5)
+        const ag_chamadaManual = await _Discador2.default.agentesPorEstado(empresa,6)
+        const naoContatados = await _Discador2.default.chamadasPorContato_CampanhasAtivas(empresa,'N')
+        const chamadasAbandonadas = await _Discador2.default.chamadasAbandonadas_CampanhasAtivas(empresa)
+        const contatados = await _Discador2.default.chamadasPorContato_CampanhasAtivas(empresa,'S')
+        const emAtendimento = await _Discador2.default.chamadasEmAtendimento(empresa)   
         
-        painel['statusMailings']['trabalhado'] = perc_trabalhados
-        painel['statusMailings']['contatados'] = perc_contatados
-        painel['statusMailings']['nao_contatados'] = perc_naoContatados    
-
-        //CHAMADAS SIMULTÃNEAS
-        //Informações das chamadas simultaneas
-        painel['chamadasSimultaneas'] = {}
-        const limit = 9
-        //TODAS
-        sql = `SELECT total 
-                 FROM ${empresa}_dados.log_chamadas_simultaneas 
-                 ORDER BY id DESC 
-                 LIMIT ${limit}`
-        const row_chamadasSimultaneas = await this.querySync(sql)
-        //CONECTADAS
-        sql = `SELECT conectadas 
-                 FROM ${empresa}_dados.log_chamadas_simultaneas 
-                 ORDER BY id DESC 
-                 LIMIT ${limit}`
-        const row_chamadasConectadas = await this.querySync(sql)
-        let totasChamadas = []
-        for(let i=0; i<row_chamadasSimultaneas.length; i++) {
-            totasChamadas[i] = row_chamadasSimultaneas[i].total
-        }
-
-        let chamadasConectadas = []
-        for(let i=0; i<row_chamadasConectadas.length; i++) {
-            chamadasConectadas[i] = row_chamadasConectadas[i].conectadas
-        }
-
-        painel['chamadasSimultaneas']['total'] = totasChamadas
-        painel['chamadasSimultaneas']['conectadas'] = chamadasConectadas    
+        /*
+        console.log('totalChamadas',totalChamadas)
+        console.log('improdutivas',improdutivas)
+        console.log('produtivas',produtivas)*/
         
-        return(painel)
+        const dash={}
+              dash['sinteticos']={}
+              dash['sinteticos']['AgentesLogados']=agentesLogados        
+              dash['sinteticos']['Improdutivas']=`${percentual_improdutivas}%`       
+              dash['sinteticos']['Produtivas']=`${percentual_produtivas}%`
+              dash['sinteticos']['TotalDeChamadas']=totalChamadas
+              dash['sinteticos']['AnotherKpis']={}
+              dash['sinteticos']['AnotherKpis']['TabulacoesProdutivas']=produtivas
+              dash['sinteticos']['AnotherKpis']['TabulacoesImprodutivas']=improdutivas
+              dash['sinteticos']['AnotherKpis']['AgentesEmPausa']=ag_emPausa
+              dash['sinteticos']['AnotherKpis']['AgentesEmLigacao']=ag_emLigacao+ag_chamadaManual+ag_emTela
+              dash['sinteticos']['AnotherKpis']['AgentesDisponiveis']=ag_Disponiveis
+              dash['sinteticos']['AnotherKpis']['LigacoesAbandonadasNoTotal']=chamadasAbandonadas
+              dash['sinteticos']['AnotherKpis']['NaoContatados']=naoContatados
+              dash['sinteticos']['AnotherKpis']['Contatados']=contatados
+              dash['sinteticos']['AnotherKpis']['ChamadasEmAtendimento']=emAtendimento       
+
+        const campanhasAtivas = await _Campanhas2.default.listarCampanhasAtivas(empresa)
+              
+            dash["Campanhas"]=[]
+            for(let i = 0; i<campanhasAtivas.length; i++) {
+                const campanha={}
+                const statusCampanha=await _Discador2.default.statusCampanha(empresa,campanhasAtivas[i].id)
+                const totalRegistros=await _Campanhas2.default.totalRegistrosCampanha(empresa,campanhasAtivas[i].id)
+                const idMailing = await _Campanhas2.default.listarMailingCampanha(empresa,campanhasAtivas[i].id) 
+                const Improdutivas=await _Discador2.default.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,0,idMailing[0].idMailing)
+                const Produtivas=await _Discador2.default.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,1,idMailing[0].idMailing)
+                const Trabalhados=Improdutivas+Produtivas
+                
+                let PercentualTrabalhado=0
+                if(totalRegistros[0].total!=0){
+                    PercentualTrabalhado=Math.round((Trabalhados / totalRegistros[0].total)*100)
+                }                
+
+               
+                campanha["nomeCampanha"]=campanhasAtivas[i].nome
+                campanha["idCampanha"]=campanhasAtivas[i].id
+                campanha["statusCampanha"]=statusCampanha[0].estado
+                campanha["descricaoCampanha"]=campanhasAtivas[i].descricao
+                campanha["PercentualTrabalhado"]=PercentualTrabalhado
+                campanha["Improdutivas"]=Improdutivas
+                campanha["Produtivas"]=Produtivas
+                campanha["Trabalhado"]=Trabalhados
+                dash["Campanhas"].push(campanha)
+
+            }
+
+        const mailings = await _Campanhas2.default.listarMailingCampanhasAtivas(empresa)
+            dash["Mailings"]=[]
+            for(let i = 0; i<mailings.length; i++) {
+                const mailing={}
+
+                const idMailing = mailings[i].id
+                const nomeMailing = mailings[i].nome
+                const totalRegistros=mailings[i].totalReg
+                const Improdutivas=await _Discador2.default.chamadasProdutividade_porMailing(empresa,0,idMailing)
+                const Produtivas=await _Discador2.default.chamadasProdutividade_porMailing(empresa,1,idMailing)
+                const trabalhado=Produtivas+Improdutivas
+
+                let perc_improdutivas=0
+                let perc_produtivas=0
+                let perc_trabalhado=0
+                if(totalRegistros!=0){
+                    perc_improdutivas=Math.round((Improdutivas / totalRegistros)*100)
+                    perc_produtivas=Math.round((Produtivas / totalRegistros)*100)
+                    perc_trabalhado=Math.round((trabalhado / totalRegistros)*100)
+                }                
+
+                mailing["nameMailing"]=nomeMailing
+                mailing["data"]={}
+                mailing["data"]["Produtivo"]=perc_produtivas
+                mailing["data"]["Improdutivo"]=perc_improdutivas
+                mailing["data"]["Trabalhados"]=perc_trabalhado
+                dash["Mailings"].push(mailing)
+            }
+           
+            dash["dia"]=await _Discador2.default.diaAtual()
+            dash["Agentes"]=[]
+            const agentes = await _Discador2.default.listarAgentesLogados(empresa)
+            for(let i = 0; i<agentes.length; i++) {
+                const idAgente=agentes[i].id
+                const totalAtendimento=await _Discador2.default.totalAtendimentosAgente(empresa,idAgente)
+                const Improdutivas=await _Discador2.default.chamadasProdutividade_Agente(empresa,0,idAgente)
+                const Produtivas=await _Discador2.default.chamadasProdutividade_Agente(empresa,1,idAgente)
+                const tempoFalado=await _Discador2.default.tempoFaladoAgente(empresa,idAgente)
+                let perc_improdutivas=0
+                let perc_produtivas=0
+                if(totalAtendimento!=0){
+                    perc_improdutivas=Math.round((Improdutivas / totalAtendimento)*100)
+                    perc_produtivas=Math.round((Produtivas / totalAtendimento)*100)
+                }
+
+
+                const agente={}
+                      agente["nomeAgente"]=agentes[i].nome
+                      agente["statusAgente"]=agentes[i].estado
+
+                      agente["produtivos"]={}
+                      agente["produtivos"]["porcentagem"]=perc_produtivas
+                      agente["produtivos"]["total"]=Produtivas
+
+                      agente["improdutivos"]={}
+                      agente["improdutivos"]["porcentagem"]=perc_improdutivas
+                      agente["improdutivos"]["total"]=Improdutivas
+
+                      agente["tempoFalado"]=await this.converteSeg_tempo(tempoFalado)
+                dash["Agentes"].push(agente)
+            }         
+              
+
+        return dash
+        
+    }
+
+    async realTimeCalls(empresa){       
+        const totais = await _Discador2.default.logChamadasSimultaneas(empresa,'total',1)
+        const conectadas = await _Discador2.default.logChamadasSimultaneas(empresa,'conectadas',1)
+        const manuais = await _Discador2.default.logChamadasSimultaneas(empresa,'manuais',1)
+        const realTime={}
+              realTime['RealTimeChart']={}
+              realTime['RealTimeChart']['Totais']=totais
+              realTime['RealTimeChart']['Conectados']=conectadas
+              realTime['RealTimeChart']['Manuais']=manuais
+        return realTime
     }
     
     async converteSeg_tempo(segundos_totais){

@@ -30,6 +30,8 @@ class Campanhas{
                       ORDER BY status ASC, id ASC`
         return await this.querySync(sql)  
     }
+
+
     async listarCampanhasAtivas(empresa){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas 
@@ -297,7 +299,19 @@ class Campanhas{
     async listarMailingCampanha(empresa,idCampanha){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas_mailing 
-                      WHERE idCampanha=${idCampanha}`
+                      WHERE idCampanha=${idCampanha}
+                      LIMIT 1`
+        return await this.querySync(sql)
+    }
+
+    //Lista Mailings das campanhas ativas
+    async listarMailingCampanhasAtivas(empresa){
+        const sql = `SELECT m.id, m.nome, m.totalReg
+                       FROM ${empresa}_dados.mailings AS m 
+                       JOIN ${empresa}_dados.campanhas_mailing AS cm ON m.id=cm.idMailing
+                       JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS c ON c.id=cm.idCampanha
+                   ORDER BY m.id DESC
+                      LIMIT 10;`
         return await this.querySync(sql)
     }
 
@@ -863,6 +877,24 @@ class Campanhas{
         return await this.querySync(sql)
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     chamadasTravadas(callback){
         const sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE tratado is null`
         _dbConnection2.default.banco.query(sql,callback)
@@ -881,10 +913,7 @@ class Campanhas{
     }
 
     //######################Gestão do Mailing das Campanhas ######################
-    mailingCampanha(idCampanha,callback){
-        const sql = `SELECT idMailing FROM campanhas_mailing WHERE idCampanha=${idCampanha}`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+    
 
     async campanhaDoMailing(empresa,idMailing){
         const sql = `SELECT m.idCampanha,c.nome 
@@ -915,6 +944,15 @@ class Campanhas{
                        JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
                        JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
                       WHERE c.estado=1 AND c.status=1`
+        return await this.querySync(sql)
+    }
+
+    async totalRegistrosCampanha(empresa,idCampanha){
+        const sql = `SELECT SUM(totalReg) AS total 
+                       FROM ${empresa}_dados.mailings as m 
+                       JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
+                       JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
+                      WHERE c.id=${idCampanha}`
         return await this.querySync(sql)
     }
 
@@ -1048,7 +1086,7 @@ class Campanhas{
 
     
     
-
+/*********************************
     
     //######################Funções para funcionamento do discador######################
     campanhasAtivasHabilitadas(callback){
@@ -1059,7 +1097,7 @@ class Campanhas{
         //3 - Parada
 
         const sql = `SELECT * FROM campanhas WHERE tipo = 'a' AND status = 1 AND estado = 1`
-        _dbConnection2.default.banco.query(sql,callback)
+        connect.banco.query(sql,callback)
     }
 
     //Verifica se uma determinada campanha tem mailing adicionado e configurado
@@ -1067,20 +1105,20 @@ class Campanhas{
         const sql = `SELECT m.id FROM campanhas_mailing AS cm 
                       JOIN mailings AS m ON m.id=cm.idMailing 
                       WHERE cm.idCampanha=${idCampanha} AND m.configurado=1`
-        _dbConnection2.default.banco.query(sql,callback)
+        connect.banco.query(sql,callback)
     }
 
     //Verifica se a campanha possui Agendamento
     agendamentoCampanha(idCampanha,callback){
         const sql = `SELECT id FROM campanhas_horarios WHERE id_campanha='${idCampanha}'`;
-        _dbConnection2.default.banco.query(sql,callback)
+        connect.banco.query(sql,callback)
     }
 
     //Verifica se hoje esta dentro da data de agendamento de uma campanha
     dataCampanha(idCampanha,hoje,callback){
         const sql = `SELECT id FROM campanhas_horarios 
                       WHERE id_campanha = '${idCampanha}' AND inicio <= '${hoje}' AND termino >='${hoje}'`;
-        _dbConnection2.default.banco.query(sql,callback)
+        connect.banco.query(sql,callback)
     }
 
     //Verifica se agora esta dentro do horário de agendamento de uma campanha
@@ -1088,8 +1126,8 @@ class Campanhas{
         const sql = `SELECT id 
                        FROM campanhas_horarios 
                        WHERE id_campanha = '${idCampanha}' AND hora_inicio <= '${hora}' AND hora_termino >='${hora}'`;
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+        connect.banco.query(sql,callback)
+    }*/
 
    
 }

@@ -5,6 +5,8 @@ module.exports = (routes) => {
     //Usuários em tempo real
     routes.get('/painel',_DashboardController2.default.painel)
 
+    routes.get('/realTimeCalls',_DashboardController2.default.realTimeCalls)
+
     routes.get('/usersRealTime',_DashboardController2.default.usersRealTime)
 
     //Qtd de usuarios dos ultimos dias

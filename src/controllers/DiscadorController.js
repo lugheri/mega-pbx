@@ -298,8 +298,9 @@ class DiscadorController{
            //console.log(`agenteDisponivel:${empresa}`,agenteDisponivel)
             if(agenteDisponivel==0){
                 return true;
-            }else{               
-                const regC=await Discador.registraChamada(empresa,agenteDisponivel,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,tratado,atendido)
+            }else{  
+                const numeroDiscado = `0${numero}`             
+                const regC=await Discador.registraChamada(empresa,agenteDisponivel,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numeroDiscado,nomeFila,tratado,atendido)
                 const idAtendimento = regC['insertId']
                //console.log(idAtendimento)
                //console.log(`registraChamada:${empresa}`,regC)
@@ -311,8 +312,9 @@ class DiscadorController{
         }else if(tipoDiscador=="power"){    
             //Registra chamada simultânea  
             const tratado=0
-            const atendido=0    
-            const regC = await Discador.registraChamada(empresa,0,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,tratado,atendido)
+            const atendido=0 
+            const numeroDiscado = `0${numero}`   
+            const regC = await Discador.registraChamada(empresa,0,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numeroDiscado,nomeFila,tratado,atendido)
             const idAtendimento = regC['insertId']
            //console.log('idAtendimento',idAtendimento)
            //console.log(`registraChamada:${empresa}`,regC)  
@@ -590,8 +592,8 @@ class DiscadorController{
             res.json(errors)
             return false
         };
-        //Para cronometro do atendimento
-        await Cronometro.saiuLigacao(empresa,dadosChamadaDesligada[0].id_campanha,dadosChamadaDesligada[0].numero,ramal)
+        
+        
         
         //Inicia verificacao se a chamada ja esta tabulada
         if(dadosChamadaDesligada[0].tabulado==1){

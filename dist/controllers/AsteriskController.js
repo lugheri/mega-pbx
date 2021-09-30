@@ -86,20 +86,8 @@ class AsteriskController{
             const empresa = dados.empresa            
             const uniqueid = dados.uniqueid 
             const numero = dados.numero
-            const tipoChamada = dados.tipoChamada
-
-            console.log('tipoChamada',tipoChamada)
-
-            let idAtendimento
-            if(tipoChamada=="POWER"){
-                idAtendimento = dados.idAtendimento
-            }else{                
-                const da = await _Discador2.default.dadosAtendimento_byNumero(empresa,numero);
-                idAtendimento = da[0].id;
-            }
-
+            const tipoChamada = dados.tipoChamada           
             
-
             let ch = dados.ramal;
             ch = ch.split("-");
             ch = ch[0].split("/")
@@ -108,8 +96,16 @@ class AsteriskController{
             if(tipoChamada=="manual"){
                 //insere dados na chamada simultanea 
                 await _Discador2.default.registraChamada(empresa,ramal,0,'manual',tipoChamada,0,0,0,0,0,numero,0,1,1)       
-                await _Discador2.default.alterarEstadoAgente(empresa,ramal,3,0)
-            }else{               
+                await _Discador2.default.alterarEstadoAgente(empresa,ramal,6,0)
+                await _Cronometro2.default.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
+            }else{   
+                let idAtendimento
+                if(tipoChamada=="POWER"){
+                    idAtendimento = dados.idAtendimento
+                }else{                
+                    const da = await _Discador2.default.dadosAtendimento_byNumero(empresa,numero);
+                    idAtendimento = da[0].id;
+                }            
                 const r = await _Asterisk2.default.answer(empresa,uniqueid,idAtendimento,ramal)
                 console.log('agi:answer',`Empresa: ${empresa},idAtendimento: ${idAtendimento}, numero: ${numero},uniqueid:${uniqueid},ramal:${ramal}, saida: ${r}`)
                 await _Cronometro2.default.saiuDaFila(empresa,numero)
@@ -129,17 +125,32 @@ class AsteriskController{
                 //atualizando ramal na chamada simultanea
                 
                 //iniciou chamada
-                await _Cronometro2.default.iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,numero,ramal,uniqueid_Reg)
-                res.json(true);
+                await _Cronometro2.default.iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,tipoChamada,numero,ramal,uniqueid_Reg)
+                
             }
+            res.json(true);
         } 
         
         if(action=='desligou'){//Quando abandona fila  
             const empresa = dados.empresa    
-            const idAtendimento = dados.idAtendimento      
+            let idAtendimento = dados.idAtendimento      
             const numero = dados.numero
             const motivo = dados.motivo
             const abandonada = dados.abandonada
+
+            console.log('empresa',empresa)
+            console.log('idAtendimento',idAtendimento)
+            console.log('numero',numero)
+            console.log('motivo',motivo)
+            console.log('abandonada',abandonada)
+
+            if(idAtendimento==0){
+                const da = await _Discador2.default.dadosAtendimento_byNumero(empresa,numero);
+                if(da.length!=0){
+                    idAtendimento = da[0].id;
+                }
+            }
+            //console.log('idAtendimento',idAtendimento)
             const chamada = await _Discador2.default.dadosAtendimento(empresa,idAtendimento)
             console.log('agi:desligou',`Empresa: ${empresa},numero: ${numero},motivo:${motivo}, saida: ${chamada}`)
             if(chamada.length==0){
@@ -147,10 +158,18 @@ class AsteriskController{
                 return false    
             }
             const fila = chamada[0].na_fila
+            console.log('tipo_discador',chamada[0].tipo_discador)
+            if(chamada[0].tipo_discador=='manual'){
+                await _Discador2.default.removeChamadaSimultaneas(empresa,idAtendimento)
+                await _Cronometro2.default.saiuLigacao(empresa,0,numero,chamada[0].ramal)
+                res.json(true);
+                return false 
+            }  
             if(fila==1){
                 const idRegistro=chamada[0].id_registro
                 const idNumero=chamada[0].id_numero
                 const idCampanha=chamada[0].id_campanha
+                const tipoChamado=chamada[0].tipo_discador
                 const idMailing=chamada[0].id_mailing
                 const ramal=chamada[0].ramal
                 const protocolo=chamada[0].protocolo
@@ -159,23 +178,30 @@ class AsteriskController{
                 const produtivo = 0
                 const uniqueid=chamada[0].uniqueid
                 const tipo_ligacao=chamada[0].tipo_ligacao
-                const observacoes = motivo
+                let observacoes = motivo
+                if(abandonada==true){
+                    observacoes="ABANDONADA";
+                }
+                
                 const removeNumero =0
 
                 //retira da fila e registra como abandonou fila
                 await _Cronometro2.default.saiuDaFila(empresa,numero)
                 //Registra histórico de chamada
+               
                 await _Discador2.default.registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,idRegistro,idNumero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado)
                 //Tabula registro
                 await _Discador2.default.tabulaChamada(empresa.idAtendimento,contatado,tabulacao,observacoes,produtivo,ramal,idNumero,removeNumero)
+                
                 //Removendo ligacao do historico de chamadas_simultaneas
-                await _Discador2.default.clearCallbyId(empresa,idAtendimento)    
+               await _Discador2.default.clearCallbyId(empresa,idAtendimento)    
+
                 if(abandonada==true){
-                    await _Discador2.default.removeChamadaSimultanea(empresa,idAtendimento)
+                    await _Discador2.default.removeChamadaSimultaneasAbandonadas(empresa,idAtendimento)
                 }
                 res.json(true);
             }else{
-                await _Discador2.default.desligaChamadaNumero(empresa,numero)
+                await _Discador2.default.desligaChamadaNumero(empresa,dadosAtendimento[0].id_campanha,numero,chamada[0].ramal)
                 res.json(true);
             }
 

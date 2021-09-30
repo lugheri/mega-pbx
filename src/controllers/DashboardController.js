@@ -12,6 +12,13 @@ class DashboardController{
         const panelData= await Dashboard.painel(empresa)
         res.json(panelData)
     }
+
+    async realTimeCalls(req,res){
+        const empresa = await User.getEmpresa(req)
+
+        const realTimeData= await Dashboard.realTimeCalls(empresa)
+        res.json(realTimeData)
+    }
     
     async usersRealTime(req,res){
         const empresa = await User.getEmpresa(req)

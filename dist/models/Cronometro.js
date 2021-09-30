@@ -78,10 +78,10 @@ class Cronometro{
 
     //TEMPO DE ATENDIMENTO 
     //Inicia contagem do tempo de atendimento
-    async iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,numero,ramal,uniqueid){
+    async iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,tipoChamada,numero,ramal,uniqueid){
         const sql = `INSERT INTO ${empresa}_dados.tempo_ligacao 
-                                 (idCampanha,idMailing,idRegistro,numero,idAgente,uniqueid,entrada) 
-                          VALUES (${idCampanha},${idMailing},${idRegistro},${numero},${ramal},${uniqueid},now())`
+                                 (idCampanha,idMailing,idRegistro,tipoDiscador,numero,idAgente,uniqueid,entrada) 
+                          VALUES (${idCampanha},${idMailing},${idRegistro},'${tipoChamada}',${numero},${ramal},${uniqueid},now())`
         return await this.querySync(sql);
     }
     

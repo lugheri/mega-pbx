@@ -16,24 +16,36 @@ class Dashboard{
 
     async painel(empresa){
         const agentesLogados = await Discador.agentesLogados(empresa)
-        const totalCampanhasAtivas = await Campanhas.totalCampanhasAtivas(empresa)
         const produtivas = await Discador.chamadasProdutividade_CampanhasAtivas(empresa,1)
         const improdutivas = await Discador.chamadasProdutividade_CampanhasAtivas(empresa,0)
-        const totalChamadas = await Discador.totalChamadas_CampanhasAtivas(empresa)
-        const percentual_produtivas = Math.round((produtivas / totalChamadas)*100)
+        const totalChamadas = await Discador.totalChamadas_CampanhasAtivas(empresa)   
+
+        let percentual_improdutivas=0
+        let percentual_produtivas=0
+        if(totalChamadas!=0){
+            percentual_improdutivas = Math.round((improdutivas / totalChamadas)*100)
+            percentual_produtivas = Math.round((produtivas / totalChamadas)*100)
+        }       
+
         const ag_Disponiveis = await Discador.agentesPorEstado(empresa,1)
         const ag_emPausa = await Discador.agentesPorEstado(empresa,2)
         const ag_emLigacao = await Discador.agentesPorEstado(empresa,3)        
         const ag_emTela = await Discador.agentesPorEstado(empresa,5)
         const ag_chamadaManual = await Discador.agentesPorEstado(empresa,6)
         const naoContatados = await Discador.chamadasPorContato_CampanhasAtivas(empresa,'N')
+        const chamadasAbandonadas = await Discador.chamadasAbandonadas_CampanhasAtivas(empresa)
         const contatados = await Discador.chamadasPorContato_CampanhasAtivas(empresa,'S')
-        const emAtendimento = await Discador.chamadasEmAtendimento(empresa)       
+        const emAtendimento = await Discador.chamadasEmAtendimento(empresa)   
+        
+        /*
+        console.log('totalChamadas',totalChamadas)
+        console.log('improdutivas',improdutivas)
+        console.log('produtivas',produtivas)*/
         
         const dash={}
               dash['sinteticos']={}
               dash['sinteticos']['AgentesLogados']=agentesLogados        
-              dash['sinteticos']['CampanhasAtivas']=totalCampanhasAtivas[0].total        
+              dash['sinteticos']['Improdutivas']=`${percentual_improdutivas}%`       
               dash['sinteticos']['Produtivas']=`${percentual_produtivas}%`
               dash['sinteticos']['TotalDeChamadas']=totalChamadas
               dash['sinteticos']['AnotherKpis']={}
@@ -42,68 +54,118 @@ class Dashboard{
               dash['sinteticos']['AnotherKpis']['AgentesEmPausa']=ag_emPausa
               dash['sinteticos']['AnotherKpis']['AgentesEmLigacao']=ag_emLigacao+ag_chamadaManual+ag_emTela
               dash['sinteticos']['AnotherKpis']['AgentesDisponiveis']=ag_Disponiveis
-              dash['sinteticos']['AnotherKpis']['LigacoesAbandonadasNoTotal']=0
+              dash['sinteticos']['AnotherKpis']['LigacoesAbandonadasNoTotal']=chamadasAbandonadas
               dash['sinteticos']['AnotherKpis']['NaoContatados']=naoContatados
               dash['sinteticos']['AnotherKpis']['Contatados']=contatados
-              dash['sinteticos']['AnotherKpis']['ChamadasEmAtendimento']=emAtendimento
-
-        const totais = await Discador.logChamadasSimultaneas(empresa,'total',20)
-        const conectadas = await Discador.logChamadasSimultaneas(empresa,'conectadas',20)
-        const manuais = await Discador.logChamadasSimultaneas(empresa,'manuais',20)
-              dash['RealTimeChart']={}
-              dash['RealTimeChart']['Totais']={}
-              dash['RealTimeChart']['Totais']['data']=totais
-              dash['RealTimeChart']['Conectados']={}
-              dash['RealTimeChart']['Conectados']['data']=conectadas
-              dash['RealTimeChart']['Manuais']={}
-              dash['RealTimeChart']['Manuais']['data']=manuais
+              dash['sinteticos']['AnotherKpis']['ChamadasEmAtendimento']=emAtendimento       
 
         const campanhasAtivas = await Campanhas.listarCampanhasAtivas(empresa)
               
-            dash["Campanhas"]={}
+            dash["Campanhas"]=[]
             for(let i = 0; i<campanhasAtivas.length; i++) {
+                const campanha={}
                 const statusCampanha=await Discador.statusCampanha(empresa,campanhasAtivas[i].id)
                 const totalRegistros=await Campanhas.totalRegistrosCampanha(empresa,campanhasAtivas[i].id)
                 const idMailing = await Campanhas.listarMailingCampanha(empresa,campanhasAtivas[i].id) 
                 const Improdutivas=await Discador.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,0,idMailing[0].idMailing)
                 const Produtivas=await Discador.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,1,idMailing[0].idMailing)
                 const Trabalhados=Improdutivas+Produtivas
-                const PercentualTrabalhado=Math.round((Trabalhados / totalRegistros[0].total)*100)
-                dash["Campanhas"]["nomeCampanha"]=campanhasAtivas[i].nome
-                dash["Campanhas"]["idCampanha"]=campanhasAtivas[i].id
-                dash["Campanhas"]["statusCampanha"]=statusCampanha[0].estado
-                dash["Campanhas"]["descricaoCampanha"]=campanhasAtivas[i].descricao
-                dash["Campanhas"]["totalRegistros"]=totalRegistros[0].total
-                dash["Campanhas"]["PercentualTrabalhado"]=`${PercentualTrabalhado}%`
-                dash["Campanhas"]["Improdutivas"]=Improdutivas
-                dash["Campanhas"]["Produtivas"]=Produtivas
-                dash["Campanhas"]["Trabalhado"]=Trabalhados
+                
+                let PercentualTrabalhado=0
+                if(totalRegistros[0].total!=0){
+                    PercentualTrabalhado=Math.round((Trabalhados / totalRegistros[0].total)*100)
+                }                
+
+               
+                campanha["nomeCampanha"]=campanhasAtivas[i].nome
+                campanha["idCampanha"]=campanhasAtivas[i].id
+                campanha["statusCampanha"]=statusCampanha[0].estado
+                campanha["descricaoCampanha"]=campanhasAtivas[i].descricao
+                campanha["PercentualTrabalhado"]=PercentualTrabalhado
+                campanha["Improdutivas"]=Improdutivas
+                campanha["Produtivas"]=Produtivas
+                campanha["Trabalhado"]=Trabalhados
+                dash["Campanhas"].push(campanha)
+
             }
 
         const mailings = await Campanhas.listarMailingCampanhasAtivas(empresa)
-            dash["Mailings"]={}
+            dash["Mailings"]=[]
             for(let i = 0; i<mailings.length; i++) {
+                const mailing={}
+
                 const idMailing = mailings[i].id
                 const nomeMailing = mailings[i].nome
                 const totalRegistros=mailings[i].totalReg
                 const Improdutivas=await Discador.chamadasProdutividade_porMailing(empresa,0,idMailing)
                 const Produtivas=await Discador.chamadasProdutividade_porMailing(empresa,1,idMailing)
+                const trabalhado=Produtivas+Improdutivas
 
-                dash["Mailings"]["nameMailing"]=nomeMailing
-                dash["Mailings"]["data"]={}
-                dash["Mailings"]["data"]["Produtivo"]=[]
-                dash["Mailings"]["data"]["Improdutivo"]=[]
-                dash["Mailings"]["data"]["NaoTrabalhado"]=[]
+                let perc_improdutivas=0
+                let perc_produtivas=0
+                let perc_trabalhado=0
+                if(totalRegistros!=0){
+                    perc_improdutivas=Math.round((Improdutivas / totalRegistros)*100)
+                    perc_produtivas=Math.round((Produtivas / totalRegistros)*100)
+                    perc_trabalhado=Math.round((trabalhado / totalRegistros)*100)
+                }                
+
+                mailing["nameMailing"]=nomeMailing
+                mailing["data"]={}
+                mailing["data"]["Produtivo"]=perc_produtivas
+                mailing["data"]["Improdutivo"]=perc_improdutivas
+                mailing["data"]["Trabalhados"]=perc_trabalhado
+                dash["Mailings"].push(mailing)
             }
+           
+            dash["dia"]=await Discador.diaAtual()
+            dash["Agentes"]=[]
+            const agentes = await Discador.listarAgentesLogados(empresa)
+            for(let i = 0; i<agentes.length; i++) {
+                const idAgente=agentes[i].id
+                const totalAtendimento=await Discador.totalAtendimentosAgente(empresa,idAgente)
+                const Improdutivas=await Discador.chamadasProdutividade_Agente(empresa,0,idAgente)
+                const Produtivas=await Discador.chamadasProdutividade_Agente(empresa,1,idAgente)
+                const tempoFalado=await Discador.tempoFaladoAgente(empresa,idAgente)
+                let perc_improdutivas=0
+                let perc_produtivas=0
+                if(totalAtendimento!=0){
+                    perc_improdutivas=Math.round((Improdutivas / totalAtendimento)*100)
+                    perc_produtivas=Math.round((Produtivas / totalAtendimento)*100)
+                }
 
-            dash["Agentes"]={}
-            dash["Agentes"]["idAgente"]=0
-            dash["Agentes"]["nomeAgente"]="NOME"
-            dash["Agentes"]["ProdutividadeAgente"]=75           
+
+                const agente={}
+                      agente["nomeAgente"]=agentes[i].nome
+                      agente["statusAgente"]=agentes[i].estado
+
+                      agente["produtivos"]={}
+                      agente["produtivos"]["porcentagem"]=perc_produtivas
+                      agente["produtivos"]["total"]=Produtivas
+
+                      agente["improdutivos"]={}
+                      agente["improdutivos"]["porcentagem"]=perc_improdutivas
+                      agente["improdutivos"]["total"]=Improdutivas
+
+                      agente["tempoFalado"]=await this.converteSeg_tempo(tempoFalado)
+                dash["Agentes"].push(agente)
+            }         
               
 
         return dash
         
+    }
+
+    async realTimeCalls(empresa){       
+        const totais = await Discador.logChamadasSimultaneas(empresa,'total',1)
+        const conectadas = await Discador.logChamadasSimultaneas(empresa,'conectadas',1)
+        const manuais = await Discador.logChamadasSimultaneas(empresa,'manuais',1)
+        const realTime={}
+              realTime['RealTimeChart']={}
+              realTime['RealTimeChart']['Totais']=totais
+              realTime['RealTimeChart']['Conectados']=conectadas
+              realTime['RealTimeChart']['Manuais']=manuais
+        return realTime
     }
     
     async converteSeg_tempo(segundos_totais){

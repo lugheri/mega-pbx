@@ -309,8 +309,9 @@ class Campanhas{
         const sql = `SELECT m.id, m.nome, m.totalReg
                        FROM ${empresa}_dados.mailings AS m 
                        JOIN ${empresa}_dados.campanhas_mailing AS cm ON m.id=cm.idMailing
-                       JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha
-                      WHERE c.estado=1 AND c.status=1;`
+                       JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS c ON c.id=cm.idCampanha
+                   ORDER BY m.id DESC
+                      LIMIT 10;`
         return await this.querySync(sql)
     }
 
