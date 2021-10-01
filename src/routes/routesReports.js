@@ -3,7 +3,7 @@ import ReportController from '../controllers/ReportController';
 module.exports = (routes) => {
     //RELATORIOS
     //Monitoramento de Agentes
-    routes.get('/monitoramentoAgente/:idUser/:idCampanha/:idEquipe',ReportController.monitoramentoAgente)
+    routes.get('/monitoramentoAgente/:idUser/:idEquipe',ReportController.monitoramentoAgente)
     //Monitoramento de Campanhas
     routes.get('/monitoramentoCampanha/:idCampanha',ReportController.monitoramentoCampanhas)
 

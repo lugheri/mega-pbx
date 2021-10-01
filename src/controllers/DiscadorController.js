@@ -16,6 +16,8 @@ class DiscadorController{
 
     //Discador
     async dial(clients,res){
+        
+
         let clientesAtivos
         if((clients === undefined)||(clients === null)||(clients === 0)){ 
             //Listando as empresas ativas
@@ -31,6 +33,16 @@ class DiscadorController{
              await this.debug(' ',' ',empresa)
              await this.debug('EMPRESA==>',empresa,empresa)
             //console.log('EMPRESA==>',empresa)
+            //Funcoes de controle
+            
+           
+
+            //Desloga todos usuarios as 23h59
+            const horaAtual = moment().format("HH:mm")
+            
+            if(horaAtual=='23:59'){
+                await User.logoffUsersExpire(empresa)
+            }
 
             await this.debug(empresa,'Iniciando Discador',empresa)
             //PASSO 1 - VERIFICAÇÃO
@@ -47,15 +59,14 @@ class DiscadorController{
             //# - VERIFICA SE POSSUI RETORNOS AGENDADOS
             const hoje = moment().format("Y-MM-DD")
             const hora = moment().format("HH:mm:ss")
+            
 
            //console.log('Verificando retornos para', `${hoje} as ${hora}`)
             const agendamento = await Discador.checaAgendamento(empresa,hoje,hora);
             if(agendamento.length >= 1){
                //console.log('Iniciando agendamento!')
                 //seta registro para agente
-                await Discador.abreRegistroAgendado(empresa,agendamento[0].id)       
-                
-                
+                await Discador.abreRegistroAgendado(empresa,agendamento[0].id) 
             }
 
             //#3 Verifica se existem campanhas ativas

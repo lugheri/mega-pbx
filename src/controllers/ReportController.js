@@ -4,11 +4,10 @@ import User from '../models/User';
 class ReportController{  
     async monitoramentoAgente(req,res){
         const empresa = await User.getEmpresa(req)
-        const idCampanha = parseInt(req.params.idCampanha)
-        const idEquipe = parseInt(req.params.idEquipe)
-        const idUser = parseInt(req.params.idUser)
-        const agentes = await Report.monitorarAgentes(empresa,idCampanha,idEquipe,idUser)
-        res.json(agentes)
+        const parametros = req.params
+        const monitoramentoAgentes = await Report.monitorarAgentes(empresa,parametros)
+        res.json(monitoramentoAgentes)
+
     }
 
     async monitoramentoCampanhas(req,res){
