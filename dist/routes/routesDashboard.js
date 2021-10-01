@@ -3,6 +3,8 @@
 module.exports = (routes) => {
     //Usuarios
     //Usuários em tempo real
+    routes.get('/nomeEmpresa',_DashboardController2.default.nomeEmpresa)
+
     routes.get('/painel',_DashboardController2.default.painel)
 
     routes.get('/realTimeCalls',_DashboardController2.default.realTimeCalls)

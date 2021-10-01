@@ -65,15 +65,27 @@ class Dashboard{
             for(let i = 0; i<campanhasAtivas.length; i++) {
                 const campanha={}
                 const statusCampanha=await _Discador2.default.statusCampanha(empresa,campanhasAtivas[i].id)
-                const totalRegistros=await _Campanhas2.default.totalRegistrosCampanha(empresa,campanhasAtivas[i].id)
                 const idMailing = await _Campanhas2.default.listarMailingCampanha(empresa,campanhasAtivas[i].id) 
                 const Improdutivas=await _Discador2.default.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,0,idMailing[0].idMailing)
                 const Produtivas=await _Discador2.default.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,1,idMailing[0].idMailing)
                 const Trabalhados=Improdutivas+Produtivas
+
+                //Trabalhadas na campanha no mailing atual
+                const totalRegistros=await _Campanhas2.default.totalRegistrosCampanha(empresa,campanhasAtivas[i].id)
+                const Improdutivas_mailingAtual = await _Discador2.default.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,0,idMailing[0].idMailing)
+                const Produtivas_mailingAtual = await _Discador2.default.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,1,idMailing[0].idMailing)
+                const Trabalhados_mailingAtual=Improdutivas_mailingAtual+Produtivas_mailingAtual
+                
+                console.log('Campanha',campanhasAtivas[i].nome)
+                console.log('totalRegistros',totalRegistros)
+                console.log('Improdutivas_mailingAtual',Improdutivas_mailingAtual)
+                console.log('Produtivas_mailingAtual',Produtivas_mailingAtual)
+                console.log('Trabalhados_mailingAtual',Trabalhados_mailingAtual)
+                
                 
                 let PercentualTrabalhado=0
                 if(totalRegistros[0].total!=0){
-                    PercentualTrabalhado=Math.round((Trabalhados / totalRegistros[0].total)*100)
+                    PercentualTrabalhado=Math.round((Trabalhados_mailingAtual / totalRegistros[0].total)*100)
                 }                
 
                
@@ -159,12 +171,10 @@ class Dashboard{
     async realTimeCalls(empresa){       
         const totais = await _Discador2.default.logChamadasSimultaneas(empresa,'total',1)
         const conectadas = await _Discador2.default.logChamadasSimultaneas(empresa,'conectadas',1)
-        const manuais = await _Discador2.default.logChamadasSimultaneas(empresa,'manuais',1)
         const realTime={}
               realTime['RealTimeChart']={}
-              realTime['RealTimeChart']['Totais']=totais
-              realTime['RealTimeChart']['Conectados']=conectadas
-              realTime['RealTimeChart']['Manuais']=manuais
+              realTime['RealTimeChart']['Ligando']=totais
+              realTime['RealTimeChart']['Falando']=conectadas
         return realTime
     }
     

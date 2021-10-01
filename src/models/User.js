@@ -87,6 +87,12 @@ class User{
         return empresa
     }
 
+    async nomeEmpresa(empresa){
+        const sql = `SELECT name FROM clients.accounts WHERE prefix='${empresa}'`
+        const e = await this.querySync(sql)
+        return e[0].name
+    }
+
     async totalAgentesLogados(empresa){
         const sql = `SELECT COUNT(id) AS total 
                        FROM ${empresa}_dados.users 

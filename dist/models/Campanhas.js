@@ -954,7 +954,7 @@ class Campanhas{
                        JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
                       WHERE c.id=${idCampanha}`
         return await this.querySync(sql)
-    }
+    }   
 
     async mailingsContatados(empresa){
         const sql = `SELECT count(t.id) AS contatados 

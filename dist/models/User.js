@@ -40,6 +40,16 @@ class User{
         return await this.querySync(sql) 
     }
 
+    async logoffUsersExpire(empresa){
+        let sql = `SELECT id FROM ${empresa}_dados.users WHERE logado>0 AND status=1`
+        const us = await this.querySync(sql)
+        for(let i=0; i<us.length; i++){
+            const agente = us[i].id
+            await this.registraLogin(empresa,agente,'logout')
+        }       
+        return true 
+    }
+
     async registraLogin(empresa,usuarioId,acao){
         let sql = `INSERT INTO ${empresa}_dados.registro_logins 
                                 (data,hora,user_id,acao) 
@@ -75,6 +85,12 @@ class User{
         const payload = _jsonwebtoken2.default.verify(authHeader, process.env.APP_SECRET);
         const empresa = payload.empresa
         return empresa
+    }
+
+    async nomeEmpresa(empresa){
+        const sql = `SELECT name FROM clients.accounts WHERE prefix='${empresa}'`
+        const e = await this.querySync(sql)
+        return e[0].name
     }
 
     async totalAgentesLogados(empresa){

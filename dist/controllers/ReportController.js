@@ -4,11 +4,10 @@ var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User
 class ReportController{  
     async monitoramentoAgente(req,res){
         const empresa = await _User2.default.getEmpresa(req)
-        const idCampanha = parseInt(req.params.idCampanha)
-        const idEquipe = parseInt(req.params.idEquipe)
-        const idUser = parseInt(req.params.idUser)
-        const agentes = await _Report2.default.monitorarAgentes(empresa,idCampanha,idEquipe,idUser)
-        res.json(agentes)
+        const parametros = req.params
+        const monitoramentoAgentes = await _Report2.default.monitorarAgentes(empresa,parametros)
+        res.json(monitoramentoAgentes)
+
     }
 
     async monitoramentoCampanhas(req,res){

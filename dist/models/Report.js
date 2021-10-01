@@ -1,4 +1,7 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
+var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
+var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
+var _Cronometro = require('../models/Cronometro'); var _Cronometro2 = _interopRequireDefault(_Cronometro);
 //import util from 'util'
 
 
@@ -12,7 +15,87 @@ class Report{
         })
     }
 
-    async monitorarAgentes(empresa,idCampanha,idEquipe,idUser){         
+    async monitorarAgentes(empresa,parametros){
+        const monitoramento=[]
+
+        const idUser = parametros.idUser
+        const idEquipe = parametros.idEquipe
+
+        let filters=""
+
+        //Checa se o usuario eh supervisor de alguma equipes
+        let sql = `SELECT COUNT(id) as equipes
+                     FROM ${empresa}_dados.users_equipes
+                    WHERE supervisor=${idUser}`
+        const es = await this.querySync(sql)
+        if(es[0].equipes!=0){
+            filters = ` AND eq.supervisor=${idUser} `
+        }
+
+        //filtra por equipe caso alguma tenha sido enviada
+        if(idEquipe>0){
+            filters = ` AND eq.id = ${idEquipe} `
+        }
+
+        sql = `SELECT us.id as ramal, us.nome, rm.estado as cod_estado, ea.estado, eq.equipe
+                 FROM ${empresa}_dados.users AS us 
+                 JOIN ${empresa}_dados.user_ramal AS rm ON rm.userID=us.id
+                 JOIN ${empresa}_dados.estadosAgente AS ea ON ea.cod=rm.estado
+            LEFT JOIN ${empresa}_dados.users_equipes AS eq ON eq.id=us.equipe
+                WHERE us.status=1 ${filters} ORDER BY rm.datetime_estado DESC`
+        const infoUsers = await this.querySync(sql)
+
+        for(let i = 0; i < infoUsers.length; i++){
+            const ramal = infoUsers[i].ramal
+            const nome = infoUsers[i].nome
+            const equipe = infoUsers[i].equipe
+            const codEstado = infoUsers[i].cod_estado
+            const estado = infoUsers[i].estado
+            const agente={}
+                  agente["ramal"]=ramal
+                  agente["estado"]=estado
+                  agente["cod_estado"]=codEstado
+                  agente["equipe"]=equipe
+                  agente["nome"]=nome
+
+            const tempoStatus=await this.tempoEstadoAgente(empresa,ramal)
+            const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+            const chamadasAtendidas=await _Discador2.default.chamadasAtendidas(empresa,ramal,hoje)
+            const campanha=await _Discador2.default.listarCampanhasAtivasAgente(empresa,ramal)
+            const TMT = await this.converteSeg_tempo(await _Cronometro2.default.tempoMedioAgente(empresa,ramal,'TMT',hoje))
+            const TMA = await this.converteSeg_tempo(await _Cronometro2.default.tempoMedioAgente(empresa,ramal,'TMA',hoje))
+            const TMO = await this.converteSeg_tempo(await _Cronometro2.default.tempoMedioAgente(empresa,ramal,'TMO',hoje))
+            const produtivos = await _Discador2.default.chamadasProdutividadeDia_porAgente(empresa,1,ramal,hoje)
+            const improdutivos = await _Discador2.default.chamadasProdutividadeDia_porAgente(empresa,0,ramal,hoje)
+
+                  agente["tempoStatus"]=tempoStatus
+                  agente["chamadasAtendidas"]=chamadasAtendidas
+                  agente["campanha"]=campanha
+                  agente["TMT"]=TMT
+                  agente["TMA"]=TMA
+                  agente["TMO"]=TMO
+                  agente["produtivos"]=produtivos
+                  agente["improdutivos"]=improdutivos
+            monitoramento.push(agente)
+        }
+        return monitoramento
+    }
+
+    async tempoEstadoAgente(empresa,ramal){
+        let tempo=0
+        let sql = `SELECT TIMESTAMPDIFF (SECOND, datetime_estado, NOW()) as tempo
+                     FROM ${empresa}_dados.user_ramal 
+                    WHERE userId=${ramal}`
+        const t = await this.querySync(sql)
+        if(t.length>0){
+            tempo=t[0].tempo
+        }
+        
+        const tempoEstado = await this.converteSeg_tempo(tempo)
+        return tempoEstado
+    }
+
+    async monitorarAgentesOld(empresa,idCampanha,idEquipe,idUser){         
         let filter = ""
         if(idCampanha){
             filter += ` AND cf.idCampanha = ${idCampanha} `
@@ -679,68 +762,7 @@ class Report{
 
     
 
-    async tempoEstadoAgente(empresa,ramal,codEstado){
-        console.log('ramal',ramal)
-        console.log('codEstado',codEstado)
-        return new Promise (async(resolve,reject) =>{
-            let tempo = 0
-            if(codEstado==0){//Deslogado
-                const sql = `SELECT TIMESTAMPDIFF (SECOND, saida, NOW()) as tempo 
-                               FROM ${empresa}_dados.tempo_login 
-                              WHERE idAgente=${ramal} AND saida IS NOT NULL ORDER BY id DESC LIMIT 1`
-                const t = await this.querySync(sql)
-                if(t.length>0){
-                    tempo = t[0].tempo
-                }
-            }else if(codEstado==1){//Disponivel
-                const sql = `SELECT TIMESTAMPDIFF (SECOND, entrada, NOW()) as tempo 
-                               FROM ${empresa}_dados.tempo_espera 
-                              WHERE idAgente=${ramal} AND entrada IS NOT NULL 
-                              ORDER BY id DESC 
-                              LIMIT 1`
-                const t = await this.querySync(sql)
-                if(t.length>0){
-                    tempo = t[0].tempo
-                }
-            }else if(codEstado==2){//Pausado
-                const sql = `SELECT TIMESTAMPDIFF (SECOND, entrada, NOW()) as tempo 
-                               FROM ${empresa}_dados.tempo_pausa 
-                              WHERE idAgente=${ramal} AND entrada IS NOT NULL 
-                              ORDER BY id DESC 
-                              LIMIT 1`
-                const t = await this.querySync(sql)
-                if(t.length>0){
-                    tempo = t[0].tempo
-                }
-            }else if(codEstado==3){//Falando
-                const sql = `SELECT TIMESTAMPDIFF (SECOND, entrada, NOW()) as tempo 
-                               FROM ${empresa}_dados.tempo_ligacao 
-                              WHERE idAgente=${ramal} AND entrada IS NOT NULL 
-                              ORDER BY id DESC 
-                              LIMIT 1`
-                const t = await this.querySync(sql)
-                if(t.length>0){
-                    tempo = t[0].tempo
-                }
-            }else if(codEstado==4){//Indisponivel
-                const sql = `SELECT TIMESTAMPDIFF (SECOND, saida, NOW()) as tempo 
-                               FROM ${empresa}_dados.tempo_login 
-                              WHERE idAgente=${ramal} AND saida IS NOT NULL 
-                              ORDER BY id DESC 
-                              LIMIT 1`
-                const t = await this.querySync(sql)
-                if(t.length>0){
-                    tempo = t[0].tempo
-                }
-            }
-            console.log('tempo',tempo)
-           
-            const tempoEstado = await this.converteSeg_tempo(tempo)
-            
-            console.log('tempoEstado',tempoEstado)
-            resolve(tempoEstado);
-        })
-    }
+   
 
     async restantes(idCampanha){
         return new Promise ((resolve,reject) =>{

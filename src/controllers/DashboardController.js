@@ -6,6 +6,13 @@ import connect from '../Config/dbConnection'
 import Dashboard from '../models/Dashboard'
 
 class DashboardController{
+    async nomeEmpresa(req,res){
+        const empresa = await User.getEmpresa(req)
+
+        const nomeEmpresa= await User.nomeEmpresa(empresa)
+        res.json(nomeEmpresa)
+    }
+
     async painel(req,res){
         const empresa = await User.getEmpresa(req)
 

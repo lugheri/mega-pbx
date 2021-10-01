@@ -6,6 +6,13 @@ var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _int
 var _Dashboard = require('../models/Dashboard'); var _Dashboard2 = _interopRequireDefault(_Dashboard);
 
 class DashboardController{
+    async nomeEmpresa(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+
+        const nomeEmpresa= await _User2.default.nomeEmpresa(empresa)
+        res.json(nomeEmpresa)
+    }
+
     async painel(req,res){
         const empresa = await _User2.default.getEmpresa(req)
 

@@ -35,6 +35,8 @@ class Discador{
     * INFORMAÇÕES DO DISCADOR / AGENTES
     * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     */  
+
+    //INFORMACOES DO AGENTE
     async agentesLogados(empresa){
         const sql = `SELECT COUNT(id) AS logados
                        FROM ${empresa}_dados.user_ramal
@@ -57,7 +59,64 @@ class Discador{
                       WHERE estado=${estado}`
         const ul=await this.querySync(sql);
         return ul[0].agentes
-    }    
+    }  
+    
+    async campanhasAtivasAgente(empresa,agente){
+        const sql = `SELECT COUNT(c.id) AS campanhasAtivas
+                       FROM ${empresa}_dados.campanhas AS c
+                       JOIN ${empresa}_dados.campanhas_filas AS cf ON c.id=cf.idCampanha
+                       JOIN ${empresa}_dados.filas AS f ON cf.idFila=f.id
+                       JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=f.id
+                      WHERE c.estado=1 AND c.status=1 AND af.ramal=${agente}`
+        const c=await this.querySync(sql);
+        return c[0].campanhasAtivas
+    }
+
+    async listarCampanhasAtivasAgente(empresa,agente){
+        const sql = `SELECT c.nome AS campanhasAtivas
+                       FROM ${empresa}_dados.campanhas AS c
+                       JOIN ${empresa}_dados.campanhas_filas AS cf ON c.id=cf.idCampanha
+                       JOIN ${empresa}_dados.filas AS f ON cf.idFila=f.id
+                       JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=f.id
+                      WHERE c.estado=1 AND c.status=1 AND af.ramal=${agente}`
+        const ca = await this.querySync(sql);
+        if(ca.length==0){
+            return ""
+        }
+        let campanhas=""
+        for(let i = 0; i<ca.length; i++){
+            if(i>=1){
+                campanhas+=" / "
+            }
+            campanhas+=ca[i].campanhasAtivas
+        }
+
+        return campanhas
+    }
+
+    async chamadasProdutividadeDia_porAgente(empresa,statusProdutividade,idAgente,data){
+        let queryFilter="";
+        if(statusProdutividade==1){
+            queryFilter=`AND produtivo=1`
+        }else{
+            queryFilter=`AND (produtivo=0 OR produtivo is null)`
+        }
+        const sql = `SELECT COUNT(id) AS produtivas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${data}' AND agente=${idAgente};`
+        const p=await this.querySync(sql);
+        return p[0].produtivas
+    }
+
+    async chamadasAtendidas(empresa,ramal,data){
+        const sql = `SELECT COUNT(id) AS total
+                       FROM ${empresa}_dados.historico_atendimento 
+                      WHERE data='${data}' AND agente=${ramal}`
+        const ca = await this.querySync(sql)
+        return ca[0].total
+    }
+
+    //INFORMAÇÕES DE CAMPANHAS
 
     async chamadasProdutividade_CampanhasAtivas(empresa,statusProdutividade){
         let queryFilter="";
@@ -89,6 +148,7 @@ class Discador{
                         AND idMailing=${idMailing}
                         ${queryFilter};`
         const p=await this.querySync(sql);
+        console.log(sql)
         return p[0].produtivas
     }
 
@@ -105,6 +165,8 @@ class Discador{
         const p=await this.querySync(sql);
         return p[0].produtivas
     }
+
+    
     
     async chamadasPorContato_CampanhasAtivas(empresa,statusContatado){
         const sql = `SELECT COUNT(t.id) AS contatados
@@ -1278,7 +1340,7 @@ class Discador{
                         WHERE ramal=${agente}` 
                 await this.querySync(sql)
                 sql = `UPDATE ${empresa}_dados.user_ramal 
-                          SET estado=4, deslogado=0 
+                          SET estado=4, deslogado=0, datetime_estado=NOW() 
                         WHERE userId=${agente}`
                 await this.querySync(sql)
                 _Cronometro2.default.pararOciosidade(empresa,agente)
@@ -1347,7 +1409,7 @@ class Discador{
                             WHERE ramal=${agente}` 
                     await this.querySync(sql)
                     sql = `UPDATE ${empresa}_dados.user_ramal 
-                              SET estado=2 
+                              SET estado=2, datetime_estado=NOW() 
                             WHERE userId=${agente}`
                     await this.querySync(sql)
                     _Cronometro2.default.pararOciosidade(empresa,agente)
@@ -1369,7 +1431,7 @@ class Discador{
                 await this.querySync(sql) 
 
                 sql = `UPDATE ${empresa}_dados.user_ramal
-                          SET estado=${estadoAnterior}
+                          SET estado=${estadoAnterior}, datetime_estado=NOW()
                         WHERE userId=${agente}`
                 await this.querySync(sql)
                 return false
@@ -1430,7 +1492,7 @@ class Discador{
             if(estadoAnterior==3){
                 //Atualizando o novo estado do agente        
                 sql = `UPDATE ${empresa}_dados.user_ramal 
-                          SET deslogado=1 
+                          SET deslogado=1, datetime_estado=NOW() 
                         WHERE ramal=${agente}`
                 await this.querySync(sql)
                 return false
@@ -1447,7 +1509,7 @@ class Discador{
                 WHERE ramal=${agente}` 
         await this.querySync(sql)
         sql = `UPDATE ${empresa}_dados.user_ramal 
-                  SET estado=${estado} 
+                  SET estado=${estado}, datetime_estado=NOW() 
                 WHERE userId=${agente}`
         await this.querySync(sql)
 
@@ -1580,15 +1642,11 @@ class Discador{
             return false
         }
         //console.log(empresa,ramal)
-        const sql = `SELECT estado 
+        const sql = `SELECT estado, TIMESTAMPDIFF (SECOND, datetime_estado, NOW()) as tempo
                        FROM ${empresa}_dados.user_ramal 
                       WHERE ramal=${ramal}`        
-        const r = await this.querySync(sql)
-        if(r.length==0){
-            return false
-        }
-        
-        return r[0].estado 
+        return await this.querySync(sql)
+       
 
     }
 

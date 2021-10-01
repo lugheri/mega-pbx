@@ -1,4 +1,6 @@
 import Discador from '../models/Discador'
+import Campanhas from '../models/Campanhas'
+import Report from '../models/Report'
 import Pausas from '../models/Pausas'
 import User from '../models/User'
 import Clients from '../models/Clients';
@@ -13,6 +15,13 @@ class DiscadorController{
         }
     }
      
+
+    async campanhasAtivasAgente(req,res){
+        const empresa = await User.getEmpresa(req)
+        const agente = req.params.agente
+        const campanhas = await Discador.campanhasAtivasAgente(empresa,agente)
+        res.json(campanhas)
+    }
 
     //Discador
     async dial(clients,res){
@@ -362,8 +371,15 @@ class DiscadorController{
                 return false;
             }
 
-            const dataCall=await Discador.discar(empresa,0,numero,nomeFila,idAtendimento,saudacao,aguarde)
-           //console.log('Ligando...',`Modo: ${parametrosDiscador[0].tipo_discagem} idReg:${idRegistro} Numero: ${numero}`)
+            //Verifica se a campanha ainda esta ativa 
+            const ec = await Campanhas.dadosCampanha(empresa,idCampanha)
+            const estadosCampanha = ec[0].estado
+
+            if(estadosCampanha==1){
+                //Verifica se ainda existem agentes disponiveis
+                const dataCall=await Discador.discar(empresa,0,numero,nomeFila,idAtendimento,saudacao,aguarde)
+                //console.log('Ligando...',`Modo: ${parametrosDiscador[0].tipo_discagem} idReg:${idRegistro} Numero: ${numero}`)
+            }
            
                   
         }
@@ -384,10 +400,11 @@ class DiscadorController{
     async iniciarDiscador(req,res){
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
-        const estadoRamal = await Discador.statusRamal(empresa,ramal)
+        const er = await Discador.statusRamal(empresa,ramal)
+        const estadoRamal = er[0].estado
         
         //Verifica estado atual
-        if(await Discador.statusRamal(empresa,ramal)==1){
+        if(estadoRamal==1){
             const rt={}
                   rt['error']=true
                   rt['message']=`O agente ${ramal} já esta disponível!'`
@@ -407,8 +424,10 @@ class DiscadorController{
         const estadoRamal = await Discador.statusRamal(empresa,ramal)
         const estados=['deslogado','disponivel','em pausa','falando','indisponivel'];
         const status = {}
-              status['idEstado']=estadoRamal
-              status['estado']=estados[estadoRamal]
+              status['idEstado']=estadoRamal[0].estado
+              status['estado']=estados[estadoRamal[0].estado]
+              status['tempo']=await Report.converteSeg_tempo(estadoRamal[0].tempo) 
+
               const client = process.env.client_id
               status['client']=client
         res.json(status);
@@ -419,7 +438,7 @@ class DiscadorController{
         const ramal = req.params.ramal
         const estado = 6
         const pausa = 0
-        await Discador.alterarEstadoAgente(empresa,ramal,estado,estado)
+        await Discador.alterarEstadoAgente(empresa,ramal,estado,pausa)
         res.json(true);
     }
 
@@ -604,7 +623,7 @@ class DiscadorController{
             return false
         };
         
-        
+
         
         //Inicia verificacao se a chamada ja esta tabulada
         if(dadosChamadaDesligada[0].tabulado==1){

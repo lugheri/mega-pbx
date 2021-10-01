@@ -3,6 +3,8 @@ import DashboardController    from '../controllers/DashboardController';
 module.exports = (routes) => {
     //Usuarios
     //Usuários em tempo real
+    routes.get('/nomeEmpresa',DashboardController.nomeEmpresa)
+
     routes.get('/painel',DashboardController.painel)
 
     routes.get('/realTimeCalls',DashboardController.realTimeCalls)

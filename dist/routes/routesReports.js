@@ -3,7 +3,7 @@
 module.exports = (routes) => {
     //RELATORIOS
     //Monitoramento de Agentes
-    routes.get('/monitoramentoAgente/:idUser/:idCampanha/:idEquipe',_ReportController2.default.monitoramentoAgente)
+    routes.get('/monitoramentoAgente/:idUser/:idEquipe',_ReportController2.default.monitoramentoAgente)
     //Monitoramento de Campanhas
     routes.get('/monitoramentoCampanha/:idCampanha',_ReportController2.default.monitoramentoCampanhas)
 

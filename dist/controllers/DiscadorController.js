@@ -1,4 +1,6 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
+var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
+var _Report = require('../models/Report'); var _Report2 = _interopRequireDefault(_Report);
 var _Pausas = require('../models/Pausas'); var _Pausas2 = _interopRequireDefault(_Pausas);
 var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
 var _Clients = require('../models/Clients'); var _Clients2 = _interopRequireDefault(_Clients);
@@ -14,8 +16,17 @@ class DiscadorController{
     }
      
 
+    async campanhasAtivasAgente(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const agente = req.params.agente
+        const campanhas = await _Discador2.default.campanhasAtivasAgente(empresa,agente)
+        res.json(campanhas)
+    }
+
     //Discador
     async dial(clients,res){
+        
+
         let clientesAtivos
         if((clients === undefined)||(clients === null)||(clients === 0)){ 
             //Listando as empresas ativas
@@ -31,6 +42,16 @@ class DiscadorController{
              await this.debug(' ',' ',empresa)
              await this.debug('EMPRESA==>',empresa,empresa)
             //console.log('EMPRESA==>',empresa)
+            //Funcoes de controle
+            
+           
+
+            //Desloga todos usuarios as 23h59
+            const horaAtual = _moment2.default.call(void 0, ).format("HH:mm")
+            
+            if(horaAtual=='23:59'){
+                await _User2.default.logoffUsersExpire(empresa)
+            }
 
             await this.debug(empresa,'Iniciando Discador',empresa)
             //PASSO 1 - VERIFICAÇÃO
@@ -47,15 +68,14 @@ class DiscadorController{
             //# - VERIFICA SE POSSUI RETORNOS AGENDADOS
             const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
             const hora = _moment2.default.call(void 0, ).format("HH:mm:ss")
+            
 
            //console.log('Verificando retornos para', `${hoje} as ${hora}`)
             const agendamento = await _Discador2.default.checaAgendamento(empresa,hoje,hora);
             if(agendamento.length >= 1){
                //console.log('Iniciando agendamento!')
                 //seta registro para agente
-                await _Discador2.default.abreRegistroAgendado(empresa,agendamento[0].id)       
-                
-                
+                await _Discador2.default.abreRegistroAgendado(empresa,agendamento[0].id) 
             }
 
             //#3 Verifica se existem campanhas ativas
@@ -351,8 +371,15 @@ class DiscadorController{
                 return false;
             }
 
-            const dataCall=await _Discador2.default.discar(empresa,0,numero,nomeFila,idAtendimento,saudacao,aguarde)
-           //console.log('Ligando...',`Modo: ${parametrosDiscador[0].tipo_discagem} idReg:${idRegistro} Numero: ${numero}`)
+            //Verifica se a campanha ainda esta ativa 
+            const ec = await _Campanhas2.default.dadosCampanha(empresa,idCampanha)
+            const estadosCampanha = ec[0].estado
+
+            if(estadosCampanha==1){
+                //Verifica se ainda existem agentes disponiveis
+                const dataCall=await _Discador2.default.discar(empresa,0,numero,nomeFila,idAtendimento,saudacao,aguarde)
+                //console.log('Ligando...',`Modo: ${parametrosDiscador[0].tipo_discagem} idReg:${idRegistro} Numero: ${numero}`)
+            }
            
                   
         }
@@ -373,10 +400,11 @@ class DiscadorController{
     async iniciarDiscador(req,res){
         const empresa = await _User2.default.getEmpresa(req)
         const ramal = req.params.ramal
-        const estadoRamal = await _Discador2.default.statusRamal(empresa,ramal)
+        const er = await _Discador2.default.statusRamal(empresa,ramal)
+        const estadoRamal = er[0].estado
         
         //Verifica estado atual
-        if(await _Discador2.default.statusRamal(empresa,ramal)==1){
+        if(estadoRamal==1){
             const rt={}
                   rt['error']=true
                   rt['message']=`O agente ${ramal} já esta disponível!'`
@@ -396,8 +424,10 @@ class DiscadorController{
         const estadoRamal = await _Discador2.default.statusRamal(empresa,ramal)
         const estados=['deslogado','disponivel','em pausa','falando','indisponivel'];
         const status = {}
-              status['idEstado']=estadoRamal
-              status['estado']=estados[estadoRamal]
+              status['idEstado']=estadoRamal[0].estado
+              status['estado']=estados[estadoRamal[0].estado]
+              status['tempo']=await _Report2.default.converteSeg_tempo(estadoRamal[0].tempo) 
+
               const client = process.env.client_id
               status['client']=client
         res.json(status);
@@ -408,7 +438,7 @@ class DiscadorController{
         const ramal = req.params.ramal
         const estado = 6
         const pausa = 0
-        await _Discador2.default.alterarEstadoAgente(empresa,ramal,estado,estado)
+        await _Discador2.default.alterarEstadoAgente(empresa,ramal,estado,pausa)
         res.json(true);
     }
 
@@ -593,7 +623,7 @@ class DiscadorController{
             return false
         };
         
-        
+
         
         //Inicia verificacao se a chamada ja esta tabulada
         if(dadosChamadaDesligada[0].tabulado==1){
