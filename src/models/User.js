@@ -64,7 +64,7 @@ class User{
             sql = `UPDATE ${empresa}_dados.users SET logado=1, ultimo_acesso=NOW() WHERE id=${usuarioId}`
             await this.querySync(sql) 
             
-            sql = `UPDATE ${empresa}_dados.user_ramal SET estado=4 WHERE userId=${usuarioId}`
+            sql = `UPDATE ${empresa}_dados.user_ramal SET estado=4, datetime_estado=NOW() WHERE userId=${usuarioId}`
             await this.querySync(sql) 
             return true
         }else{                
@@ -72,10 +72,10 @@ class User{
             sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0 WHERE ramal=${usuarioId}`
             await this.querySync(sql)
             
-            sql = `UPDATE ${empresa}_dados.users SET logado=0 WHERE id=${usuarioId}`
+            sql = `UPDATE ${empresa}_dados.users SET logado=0 WHERE id=${usuarioId}` 
             await this.querySync(sql)
 
-            sql = `UPDATE ${empresa}_dados.user_ramal SET estado=0 WHERE userId=${usuarioId}`
+            sql = `UPDATE ${empresa}_dados.user_ramal SET estado=0, datetime_estado=NOW() WHERE userId=${usuarioId}`
             await this.querySync(sql)
         } 
     }
