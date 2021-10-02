@@ -13,12 +13,13 @@ class ReportController{
     async monitoramentoCampanhas(req,res){
         const empresa = await _User2.default.getEmpresa(req)
         const idCampanha = parseInt(req.params.idCampanha)
-        _Report2.default.monitorarCampanhas(empresa,idCampanha,(e,campanhas)=>{
-            if(e) throw e;
-
-            res.send(campanhas);
-        })
+        const monitoramentoCampanhas = await _Report2.default.monitorarCampanhas(empresa,idCampanha)
+        res.send(monitoramentoCampanhas);
     }
+
+
+
+
 
 
 

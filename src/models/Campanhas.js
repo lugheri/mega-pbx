@@ -641,25 +641,55 @@ class Campanhas{
 
     //STATUS DE EVOLUCAO DE CAMPANHA
     async totalMailingsCampanha(empresa,idCampanha){
-        const sql = `SELECT SUM(totalNumeros) AS total 
+        const sql = `SELECT totalNumeros AS total, m.id AS idMailing
                       FROM ${empresa}_dados.mailings as m 
                       JOIN ${empresa}_dados.campanhas_mailing AS cm 
                         ON cm.idMailing=m.id 
                       WHERE cm.idCampanha=${idCampanha}`
-        const total_mailing= await this.querySync(sql)
-        if(total_mailing[0].total == null){
-            return 0
-        }
-        return parseInt(total_mailing[0].total)
+        return await this.querySync(sql)
+        
     }
 
-    async mailingsContatadosPorCampanha(empresa,idCampanha,status){
+    async mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,status){
         const sql = `SELECT count(id) AS total 
                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE contatado='${status}' AND idCampanha=${idCampanha}`
+                      WHERE contatado='${status}' AND idCampanha=${idCampanha} AND idMailing=${idMailing}`
         const total_mailing= await this.querySync(sql)
         return total_mailing[0].total
     }   
+
+    async mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,status){
+        let queryFilter="";
+        if(status==1){
+            queryFilter=`AND produtivo=1`
+        }else{
+            queryFilter=`AND (produtivo=0 OR produtivo is null)`
+        }
+        const sql = `SELECT count(id) AS total 
+                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                      WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${queryFilter}`
+        const total_mailing= await this.querySync(sql)
+        return total_mailing[0].total
+    }   
+
+    async dataUltimoRegMailingNaCampanha(empresa,idCampanha,idMailing){
+        const sql = `SELECT  DATE_FORMAT(data,'%d/%m/%Y') AS ultimaData
+                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                      WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ORDER BY data DESC`
+        const d= await this.querySync(sql)
+        if(d.length==0){
+            return ""
+        }
+        return d[0].ultimaData
+    }   
+
+    async mailingsAnteriores(empresa,idCampanha){
+        const sql = `SELECT DISTINCT idMailing 
+                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                      WHERE idCampanha=${idCampanha}`
+        return await this.querySync(sql);
+        
+    }
 
     //AGENDAMENTO DE CAMPANHAS
     //Agenda campanha
@@ -687,7 +717,7 @@ class Campanhas{
     }
    
     //#########  F I L A S  ############
-    async novaFila(empresa,nomeFila,descricao){
+    async novaFila(empresa,nomeFila,apelido,descricao){
         let sql = `SELECT id 
                      FROM ${empresa}_dados.filas 
                     WHERE nome='${nomeFila}'`
@@ -695,26 +725,34 @@ class Campanhas{
         if(r.length>=1){
             return false
         }
-        sql = `INSERT INTO ${empresa}_dados.filas (nome,descricao) VALUES('${nomeFila}','${descricao}')`
+        sql = `INSERT INTO ${empresa}_dados.filas (nome,apelido,descricao) VALUES('${nomeFila}','${apelido}','${descricao}')`
         await this.querySync(sql)
         return true
     }
 
     async listarFilas(empresa){
-        const sql = `SELECT * FROM ${empresa}_dados.filas`
+        const sql = `SELECT id,apelido as nome, descricao  FROM ${empresa}_dados.filas ORDER BY id DESC`
         return await this.querySync(sql)
     } 
 
     async dadosFila(empresa,idFila){
-        const sql = `SELECT * 
+        const sql = `SELECT id,apelido as nome, descricao 
                        FROM ${empresa}_dados.filas 
                       WHERE id=${idFila}`
         return await this.querySync(sql)
     } 
 
+    async nomeFila(empresa,idFila){
+        const sql = `SELECT nome 
+                       FROM ${empresa}_dados.filas 
+                      WHERE id=${idFila}`
+        const n = await this.querySync(sql)
+        return n[0].nome
+    } 
+
     async editarFila(empresa,idFila,dados){
         const sql = `UPDATE ${empresa}_dados.filas 
-                        SET nome='${dados.name}',
+                        SET apelido='${dados.name}',
                             descricao='${dados.description}' 
                         WHERE id='${idFila}'`
         return await this.querySync(sql)

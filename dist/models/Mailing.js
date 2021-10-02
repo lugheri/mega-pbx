@@ -93,6 +93,13 @@ class Mailing{
         return await this.querySync(sql)  
     }
 
+    async infoMailingAtivo(empresa,idMailing){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.mailings 
+                      WHERE id=${idMailing} AND pronto=1`
+        return await this.querySync(sql)  
+    }
+
     async tabelaMailing(empresa,idMailing){
         const sql = `SELECT tabela_dados, tabela_numeros 
                        FROM ${empresa}_dados.mailings

@@ -20,7 +20,15 @@ class DiscadorController{
         const empresa = await User.getEmpresa(req)
         const agente = req.params.agente
         const campanhas = await Discador.campanhasAtivasAgente(empresa,agente)
-        res.json(campanhas)
+        const hoje = moment().format("Y-MM-DD")
+        const clicks_chamadasManuais = await Discador.tentativasChamadasManuais(empresa,'clicks',hoje)
+        const chamadasManuais = await Discador.tentativasChamadasManuais(empresa,'chamadas',hoje)
+
+        const retorno={}
+              retorno["campanhasAtivas"]=campanhas
+              retorno["clicksChamadasManuais"]=clicks_chamadasManuais
+              retorno["ligacoesManuais"]=chamadasManuais
+        res.json(retorno)
     }
 
     //Discador
@@ -505,10 +513,25 @@ class DiscadorController{
     //Historico do id do registro
     async historicoRegistro(req,res){
         const empresa = await User.getEmpresa(req)
+        const estadoAgente = await User.estadoAgente(req)
+        if(estadoAgente>=6){
+            res.json([])
+            return false
+        }
+
         const idMailing = req.params.idMailing
         const idReg = req.params.idRegistro
         
         const historico = await Discador.historicoRegistro(empresa,idMailing,idReg)
+        res.json(historico)
+    }
+
+    async historicoChamadaManual(req,res){
+        const empresa = await User.getEmpresa(req)
+        const numero = req.params.numero
+        const agente = req.params.idAgente
+        
+        const historico = await Discador.historicoRegistroChamadaManual(empresa,numero,agente)
         res.json(historico)
     }
     //Historico do agente
@@ -524,6 +547,7 @@ class DiscadorController{
                 registro['dadosAtendimento']['protocolo']=historico[i].protocolo
                 registro['dadosAtendimento']['data']=historico[i].dia
                 registro['dadosAtendimento']['hora']=historico[i].horario
+                registro['dadosAtendimento']['discagem']=historico[i].tipo
                 registro['dadosAtendimento']['contatado']=historico[i].contatado
                 registro['dadosAtendimento']['produtivo']=historico[i].produtivo
                 registro['dadosAtendimento']['tabulacao']=historico[i].tabulacao
@@ -539,6 +563,22 @@ class DiscadorController{
             historicoRegistro.push(registro)
         }
         res.json(historicoRegistro)
+    }
+    async nomeContatoHistoico_byNumber(req,res){
+        const empresa = await User.getEmpresa(req)
+        const numero = req.params.numero
+        const nome = await Discador.nomeContatoHistoico_byNumber(empresa,numero)
+        
+        res.json(nome)
+    }
+
+    async gravaDadosChamadaManual(req,res){
+        const empresa = await User.getEmpresa(req)
+        const numero = req.body.numero
+        const nome = req.body.nome
+        const observacoes = req.body.observacoes
+        const r = await Discador.gravaDadosChamadaManual(empresa,numero,nome,observacoes)
+        res.json(r)
     }
 
     //Chama os status de tabulacao da chamada

@@ -1003,8 +1003,8 @@ class Discador{
 
    /*Funcoes auxiliares do dicador******************************************************************************/
     //Registra o histórico de atendimento de uma chamada
-    async registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_registro,id_numero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado){
-        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
+        async registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_registro,id_numero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado){
+            if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - registrarHistoricoAtendimento','Empresa nao recebida')
             return false
         }
@@ -1701,7 +1701,7 @@ class Discador{
         const calldata = await this.querySync(sql)
         if(calldata.length==0){
             return false
-        }
+        }       
         
         
         const idMailing = calldata[0].id_mailing
@@ -1715,6 +1715,12 @@ class Discador{
         const protocolo = calldata[0].protocolo
         const numero = calldata[0].numero
 
+        const info = {};
+        //Caso a chamada nao possua id de registro
+        if(idReg==0){
+            return "Chamada interna"
+        }
+
         //Seleciona os campos de acordo com a configuração da tela do agente
         //CAMPOS DE DADOS
          sql = `SELECT cd.id,cd.campo,cd.apelido
@@ -1727,7 +1733,7 @@ class Discador{
        
         const campos_dados = await this.querySync(sql)
         //montando a query de busca dos dados
-        const info = {};
+      
               
         
               info['idAtendimento']=idAtendimento
@@ -1974,7 +1980,7 @@ class Discador{
         let sql = `SELECT id 
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE ramal='${ramal}' 
-                      AND (tipo_ligacao='discador' OR tipo_ligacao='retorno')`
+                      AND (tipo_ligacao='discador' OR tipo_ligacao='retorno' OR tipo_ligacao='manual')`
             //discador='power' OR tipo_discador='preview' OR tipo_discador='clicktocall')`
         const calldata = await this.querySync(sql)
         if(calldata.length==0){
@@ -2028,22 +2034,32 @@ class Discador{
             //console.log('{[(!)]} - historicoRegistro','Empresa nao recebida')
             return false
         }
-        //recuperando numero 
-        const infoMailing = await Mailing.infoMailing(empresa,idMailing)
-        if(infoMailing.length==0){
-            return false
-        }
-        const tabela = infoMailing[0].tabela_numeros
-        
-        //Listando todos os numeros do historico
-        let sql = `SELECT numero 
-                     FROM ${empresa}_mailings.${tabela} 
-                    WHERE id_registro=${idReg}`
-        const n = await this.querySync(sql) 
-        const historico=[]
+
+        //Caso o mailing seja 0 sera considerado como um historico de chamada manual
+        let sql
         let fNumeros=''
-        for(let num=0; num<n.length; num++){
-            fNumeros+=` AND numero_discado='0${n[num].numero}'`
+        const historico=[]
+        if(idMailing==0){           
+            const numero = idReg
+            fNumeros+=` AND numero_discado LIKE '%${numero}'`
+
+        }else{
+            //recuperando numero 
+            const infoMailing = await Mailing.infoMailing(empresa,idMailing)
+            if(infoMailing.length==0){
+                return false
+            }
+            const tabela = infoMailing[0].tabela_numeros
+            
+            //Listando todos os numeros do historico
+            sql = `SELECT numero 
+                        FROM ${empresa}_mailings.${tabela} 
+                        WHERE id_registro=${idReg}`
+            const n = await this.querySync(sql)            
+            
+            for(let num=0; num<n.length; num++){
+                fNumeros+=` AND numero_discado='0${n[num].numero}'`
+            }
         }
 
         sql = `SELECT nome_registro,
@@ -2086,6 +2102,28 @@ class Discador{
         return historico  
     }
 
+    async historicoRegistroChamadaManual(empresa,numero,agente){
+        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
+            //console.log('{[(!)]} - historicoRegistro','Empresa nao recebida')
+            return false
+        }        
+        let sql = `SELECT nome_registro,numero_discado,agente,                    
+                      DATE_FORMAT (data,'%d/%m/%Y') AS dia,
+                      DATE_FORMAT (hora,'%H:%i') AS horario,
+                      obs_tabulacao
+                 FROM ${empresa}_dados.historico_atendimento AS h 
+            LEFT JOIN ${empresa}_dados.tabulacoes_status AS t ON t.id=h.status_tabulacao 
+                WHERE agente=${agente} AND numero_discado LIKE '%${numero}'
+             ORDER BY h.id DESC 
+                LIMIT 20`
+        const dados = await this.querySync(sql)
+        if(dados.length==0){
+            return []
+        }
+       
+        return dados  
+    }
+
     //Retorna o histórico de atendimento do agente
     async historicoChamadas(empresa,ramal){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
@@ -2097,6 +2135,7 @@ class Discador{
                             numero_discado,
                             agente,
                             protocolo,
+                            h.tipo,
                             DATE_FORMAT (data,'%d/%m/%Y') AS dia,
                             DATE_FORMAT (hora,'%H:%i:%s') AS horario,
                             h.contatado,
@@ -2110,6 +2149,62 @@ class Discador{
                       LIMIT 50`
                      
         return await this.querySync(sql)  
+    }
+
+    async nomeContatoHistoico_byNumber(empresa,numero){
+        const sql = `SELECT nome_registro 
+                       FROM ${empresa}_dados.historico_atendimento 
+                      WHERE numero_discado LIKE '%${numero}' 
+                        AND nome_registro IS NOT NULL                      
+                      ORDER BY id DESC
+                      LIMIT 1`
+                     console.log(sql)
+        const n = await this.querySync(sql)
+        if(n.length==0){
+            return ""
+        }
+        return n[0].nome_registro  
+    }
+
+    async gravaDadosChamadaManual(empresa,numero,nome,observacoes){
+        let sql = `SELECT id 
+                 FROM ${empresa}_dados.historico_atendimento 
+                WHERE numero_discado LIKE '%${numero}'
+                ORDER BY id DESC
+                LIMIT 1`
+        const h =  await this.querySync(sql)
+        if(h.length==0){
+            return false
+        }
+        if(nome!=""){
+            sql = `UPDATE ${empresa}_dados.historico_atendimento  
+                    SET nome_registro='${nome}'
+                    WHERE id=${h[0].id}`
+            await this.querySync(sql)
+        }
+        if(observacoes!=""){
+            sql = `UPDATE ${empresa}_dados.historico_atendimento  
+                    SET obs_tabulacao='${observacoes}'
+                    WHERE id=${h[0].id}`
+            await this.querySync(sql)
+        }
+        return true
+    }    
+
+    async tentativasChamadasManuais(empresa,tipo,data){
+        let sql
+        if(tipo=="clicks"){
+            sql = `SELECT COUNT(id) AS total 
+                     FROM ${empresa}_dados.historico_atendimento
+                    WHERE tipo='manual' AND data='${data}'`
+        }
+        if(tipo=="chamadas"){
+            sql = `SELECT COUNT(id) AS total 
+                     FROM ${empresa}_dados.tempo_ligacao
+                    WHERE tipoDiscador='manual' AND entrada>='${data} 00:00:00' AND saida<='${data} 23:59:59'`
+        }
+        const t = await this.querySync(sql)
+        return t[0].total
     }
 
     async voltaRegistro(empresa,idHistorico){

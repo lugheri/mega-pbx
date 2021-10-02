@@ -35,8 +35,14 @@ module.exports = (routes) => {
     routes.get('/voltaRegistro/:idHistorico',DiscadorController.voltaRegistro)    
     //Historico de Registro
     routes.get('/historicoRegistro/:idMailing/:idRegistro',DiscadorController.historicoRegistro)
+    //Historico de Registro
+    routes.get('/historicoChamadaManual/:numero/:idAgente',DiscadorController.historicoChamadaManual)
     //Historico de Chamadas
     routes.get('/historicoChamadas/:ramal',DiscadorController.historicoChamadas)
+    //Nome Contato Historico
+    routes.get('/nomeContato/:numero', DiscadorController.nomeContatoHistoico_byNumber)
+    //Salva Nome e Obs Chamada Manual
+    routes.post('/gravaDadosChamadaManual', DiscadorController.gravaDadosChamadaManual)
 
     
 

@@ -1,4 +1,5 @@
 import Campanhas from '../models/Campanhas';
+import Mailing from '../models/Mailing';
 import Pausas from '../models/Pausas';
 import User from '../models/User'
 import Discador from '../models/Discador';
@@ -434,26 +435,77 @@ class CampanhasController{
     //Status da evolucao do mailing na campanha
     async statusEvolucaoCampanha(req,res){
         const empresa = await User.getEmpresa(req)
-
-        const idCampanha = parseInt(req.params.idCampanha)
-        const total = await Campanhas.totalMailingsCampanha(empresa,idCampanha)
-        const contatados = await Campanhas.mailingsContatadosPorCampanha(empresa,idCampanha,'S')
-        const naoContatados = await Campanhas.mailingsContatadosPorCampanha(empresa,idCampanha,'N')
-        const trabalhados = contatados + naoContatados                    
-        
         let perc_trabalhados = 0
         let perc_contatados = 0
         let perc_naoContatados = 0
+        let total=0
+        let idMailing=0
+
+        const idCampanha = parseInt(req.params.idCampanha)
+
+        //Calcula a evolução da campanha com base no mailing ativo no momento
+        const m = await Campanhas.totalMailingsCampanha(empresa,idCampanha)
+        if(m.length>=0){
+            total=m[0].total
+            idMailing=m[0].idMailing
+        }
+        console.log('total registros',total)        
+        const contatados = await Campanhas.mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,'S')
+        const naoContatados = await Campanhas.mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,'N')
+        const trabalhados = contatados + naoContatados  
+        
+        console.log('total contatados',contatados)  
+        console.log('total naoContatados',naoContatados)  
+        console.log('total trabalhados',trabalhados)  
+        
+        
+       
         if(total!=0){
-            perc_trabalhados = parseFloat((trabalhados / total)*100).toFixed(1)
-            perc_contatados = parseFloat((contatados / total)*100).toFixed(1)
-            perc_naoContatados = parseFloat((naoContatados / total)*100).toFixed(1)                        
+            perc_trabalhados=Math.round((trabalhados / total)*100)
+            perc_contatados=Math.round((contatados / total)*100)
+            perc_naoContatados=Math.round((naoContatados / total)*100)                   
         }       
         const retorno={}
               retorno['trabalhado']=parseFloat(perc_trabalhados)
               retorno['contatados']=parseFloat(perc_contatados)
               retorno['nao_contatados']=parseFloat(perc_naoContatados)
         res.json(retorno)
+    }
+
+    async historicoMailingsCampanha(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idCampanha = parseInt(req.params.idCampanha)
+
+        const mailings = []
+        const ma = await Campanhas.mailingsAnteriores(empresa,idCampanha)
+
+        for(let i=0;i<ma.length;i++){
+            const idMailing = ma[i].idMailing
+            const info = await Mailing.infoMailingAtivo(empresa,idMailing)            
+           
+            const produtivos = await Campanhas.mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,1)
+            const improdutivos = await Campanhas.mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,0)
+
+            const data =  await Campanhas.dataUltimoRegMailingNaCampanha(empresa,idCampanha,idMailing)
+
+            let total = improdutivos+produtivos
+            let nome = "Informações Removidas"
+            if(info.length>0){               
+                total=info[0].totalNumeros
+                nome=info[0].nome
+            }
+            const trabalhados = produtivos+improdutivos
+            const infoMailing = {}
+                  infoMailing["id"]=idMailing
+                  infoMailing["nome"]=nome
+                  infoMailing["data"]=data
+                  infoMailing["nao_trabalhados"]=total-trabalhados
+                  infoMailing["produtivos"]=produtivos
+                  infoMailing["improdutivos"]=improdutivos
+
+                  mailings.push(infoMailing)
+        }
+        res.json(mailings)
     }
 
     //AGENDAMENTO
@@ -556,7 +608,7 @@ class CampanhasController{
     //#########  F I L A S            ############
     async criarFila(req,res){
         const empresa = await User.getEmpresa(req)
-        const name = req.body.name
+        const apelido = req.body.name
         const description = req.body.description
         const musiconhold = req.body.musiconhold
         const strategy = req.body.strategy
@@ -566,15 +618,17 @@ class CampanhasController{
         const maxlen = req.body.maxlen
         const monitorType = 'mixmonitor'
         const monitorFormat = 'wav'
-        const r = await Campanhas.novaFila(empresa,name,description)
+
+        const nomeFila = `${empresa}@${apelido.replace(" ","_").replace("/", "_")}`
+        const r = await Campanhas.novaFila(empresa,nomeFila,apelido,description)
         if(r==false){
             const rt={}
             rt['error']=true
-            rt['message']=`Já existe uma fila criada com o nome '${name}'`
+            rt['message']=`Já existe uma fila criada com o nome '${apelido}'`
             res.send(rt)
             return false            
         }
-        const asterisk = await Filas.criarFila(empresa,name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat)
+        const asterisk = await Filas.criarFila(empresa,nomeFila,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat)
         res.send(asterisk)
     }
 
@@ -624,8 +678,7 @@ class CampanhasController{
     async removerFila(req,res){
         const empresa = await User.getEmpresa(req)
         const idFila = req.params.idFila
-        const dadosFila = await Campanhas.dadosFila(empresa,idFila)
-        const nomeFila=dadosFila[0].nome
+        const nomeFila = await Campanhas.nomeFila(empresa,idFila)
         await Campanhas.removerFila(empresa,idFila)
         await Filas.removerFila(empresa,nomeFila)
         res.send(true)

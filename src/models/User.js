@@ -2,6 +2,7 @@ import connect from '../Config/dbConnection';
 
 import jwt from 'jsonwebtoken';
 import md5 from 'md5';
+import Discador from './Discador';
 
 class User{
     querySync(sql){
@@ -85,6 +86,16 @@ class User{
         const payload = jwt.verify(authHeader, process.env.APP_SECRET);
         const empresa = payload.empresa
         return empresa
+    }
+
+    async estadoAgente(req){
+        const authHeader = req.headers.authorization;
+        const payload = jwt.verify(authHeader, process.env.APP_SECRET);
+        const ramal = payload.userId
+        const empresa = payload.empresa
+        const estadoRamal = await Discador.statusRamal(empresa,ramal)        
+        
+        return estadoRamal[0].estado
     }
 
     async nomeEmpresa(empresa){

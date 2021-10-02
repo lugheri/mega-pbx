@@ -2,6 +2,7 @@
 
 var _jsonwebtoken = require('jsonwebtoken'); var _jsonwebtoken2 = _interopRequireDefault(_jsonwebtoken);
 var _md5 = require('md5'); var _md52 = _interopRequireDefault(_md5);
+var _Discador = require('./Discador'); var _Discador2 = _interopRequireDefault(_Discador);
 
 class User{
     querySync(sql){
@@ -64,7 +65,7 @@ class User{
             sql = `UPDATE ${empresa}_dados.users SET logado=1, ultimo_acesso=NOW() WHERE id=${usuarioId}`
             await this.querySync(sql) 
             
-            sql = `UPDATE ${empresa}_dados.user_ramal SET estado=4 WHERE userId=${usuarioId}`
+            sql = `UPDATE ${empresa}_dados.user_ramal SET estado=4, datetime_estado=NOW() WHERE userId=${usuarioId}`
             await this.querySync(sql) 
             return true
         }else{                
@@ -72,10 +73,10 @@ class User{
             sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0 WHERE ramal=${usuarioId}`
             await this.querySync(sql)
             
-            sql = `UPDATE ${empresa}_dados.users SET logado=0 WHERE id=${usuarioId}`
+            sql = `UPDATE ${empresa}_dados.users SET logado=0 WHERE id=${usuarioId}` 
             await this.querySync(sql)
 
-            sql = `UPDATE ${empresa}_dados.user_ramal SET estado=0 WHERE userId=${usuarioId}`
+            sql = `UPDATE ${empresa}_dados.user_ramal SET estado=0, datetime_estado=NOW() WHERE userId=${usuarioId}`
             await this.querySync(sql)
         } 
     }
@@ -85,6 +86,16 @@ class User{
         const payload = _jsonwebtoken2.default.verify(authHeader, process.env.APP_SECRET);
         const empresa = payload.empresa
         return empresa
+    }
+
+    async estadoAgente(req){
+        const authHeader = req.headers.authorization;
+        const payload = _jsonwebtoken2.default.verify(authHeader, process.env.APP_SECRET);
+        const ramal = payload.userId
+        const empresa = payload.empresa
+        const estadoRamal = await _Discador2.default.statusRamal(empresa,ramal)        
+        
+        return estadoRamal[0].estado
     }
 
     async nomeEmpresa(empresa){

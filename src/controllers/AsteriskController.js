@@ -81,6 +81,39 @@ class AsteriskController{
             console.log('agi:set_queue',`Empresa: ${empresa},numero: ${numero}, saida: ${dadosAtendimento}`)
             res.json(true)            
         }
+        if(action=='handcall'){//Quando ligacao eh manual, preview ou click-to-call
+            const empresa = dados.empresa            
+            const uniqueid = dados.uniqueid 
+            const numero = dados.numero
+            let ch = dados.ramal;
+            ch = ch.split("-");
+            ch = ch[0].split("/")
+            const ramal = ch[1]
+            const tipoDiscador = dados.tipoDiscador
+            const estadoAgente = dados.estadoAgente
+
+            const idCampanha = 0
+            const modoAtendimento = 'manual'
+            const idMailing = 0
+            const tabela_dados = 0
+            const tabela_numeros = 0
+            const id_reg = 0
+            const id_numero = 0
+            const fila = 0
+            const tratado = 1
+            const atendido = 0
+
+            const protocolo=0
+            const tabulacao=0
+            const observacoes=""
+            const contatado=0
+            
+            const r = await Discador.registraChamada(empresa,ramal,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila,tratado,atendido)
+            await Discador.alterarEstadoAgente(empresa,ramal,6,0)
+            await Discador.registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_reg,id_numero,ramal,uniqueid,tipoDiscador,numero,tabulacao,observacoes,contatado)
+                                
+            res.json(r['insertId'])
+        }
         
         if(action=='answer'){//Quando ligacao eh atendida pelo agente
             const empresa = dados.empresa            
@@ -94,9 +127,9 @@ class AsteriskController{
             const ramal = ch[1]
 
             if(tipoChamada=="manual"){
-                //insere dados na chamada simultanea 
-                await Discador.registraChamada(empresa,ramal,0,'manual',tipoChamada,0,0,0,0,0,numero,0,1,1)       
-                await Discador.alterarEstadoAgente(empresa,ramal,6,0)
+                let idAtendimento = dados.idAtendimento
+                const r = await Asterisk.answer(empresa,uniqueid,idAtendimento,ramal)    
+                await Discador.alterarEstadoAgente(empresa,ramal,7,0)
                 await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             }else{   
                 let idAtendimento

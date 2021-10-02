@@ -12,7 +12,7 @@ module.exports = (routes) => {
     //STATUS ATUAL DA CAMPANHA
     routes.get('/statusCampanha/:id',CampanhasController.statusCampanha)
     routes.get('/statusEvolucaoCampanha/:idCampanha',CampanhasController.statusEvolucaoCampanha)//Status de evolução do consumo do mailing da campanha
-    
+    routes.get('/historicoMailingsCampanha/:idCampanha',CampanhasController.historicoMailingsCampanha)
     //OPERACOES DE CRIACAO E EDICAO DE CAMPANHA (CRUD)
     routes.post('/criarCampanha',CampanhasController.criarCampanha)
     routes.get('/listarCampanhas',CampanhasController.listarCampanhas)
