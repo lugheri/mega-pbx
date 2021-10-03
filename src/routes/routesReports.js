@@ -2,11 +2,21 @@ import ReportController from '../controllers/ReportController';
 
 module.exports = (routes) => {
     //RELATORIOS
+    //Relatório de Pausas
+    routes.post('/relatorioPausas',ReportController.relatorioPausas)
     //Monitoramento de Agentes
     routes.get('/monitoramentoAgente/:idUser/:idEquipe',ReportController.monitoramentoAgente)
+
+
+    
+    
     //Monitoramento de Campanhas
     routes.get('/monitoramentoCampanha/:idCampanha',ReportController.monitoramentoCampanhas)
-
+    
+    //Detalhamento de Chamadas
+    routes.post('/detalhamentoChamadas',ReportController.detalhamentoChamadas)
+    //LoginXLogout
+    routes.post('/loginXLogout',ReportController.loginXLogout)
 
     //Lista de Campanhas ativas
     routes.get('/filtroCampanhas', ReportController.filtroCampanhas)

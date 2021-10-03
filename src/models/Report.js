@@ -15,6 +15,69 @@ class Report{
         })
     }
 
+    //Funcoes auxiliares 
+    async filtrarAgentes(empresa,dataInicio,dataFinal,status,estado,ramal,login,pagina){
+        let filter=""       
+        let reg=5
+        let pag=(pagina-1)*reg
+       //Filtrando data de entrada/saida do agente
+        if((dataInicio!=false)||(dataInicio!="")){filter+=` AND u.criacao>='${dataInicio} 00:00:00'`;}
+        if((dataFinal!=false)||(dataFinal!="")){filter+=` AND u.criacao<='${dataFinal} 23:59:59'`;}
+
+        if((status!=false)||(status!="")){filter+=` AND u.status=${status}`;}
+        if((estado!=false)||(estado!="")){filter+=` AND r.estado=${estado}`;}
+        if((ramal!=false)||(ramal!="")){filter+=` AND u.id=${ramal}`;}
+        if((login!=false)||(login!="")){filter+=` AND u.logado=${login}`;}
+
+        const sql = `SELECT u.id, u.nome 
+                       FROM ${empresa}_dados.users AS u
+                       JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
+                      WHERE 1=1 ${filter}
+                      LIMIT ${pag},${reg}`
+        const users = await this.querySync(sql)
+        return users
+    }
+
+    async calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,agente){
+        let filter=""       
+        
+        //Filtrando data de entrada/saida do agente
+        if((dataInicio!=false)||(dataInicio!="")){filter+=` AND entrada>='${dataInicio} 00:00:00'`;}
+        if((dataFinal!=false)||(dataFinal!="")){filter+=` AND saida<='${dataFinal} 23:59:59'`;}
+
+        if((idPausa!=false)||(idPausa!="")){filter+=` AND idPausa=${idPausa}`;}
+        if((agente!=false)||(agente!="")){filter+=` AND idAgente=${agente}`;}
+
+        const sql = `SELECT SUM(tempo_total) AS tempo
+                       FROM ${empresa}_dados.tempo_pausa 
+                      WHERE 1=1 ${filter}`
+        const t = await this.querySync(sql)
+        return t[0].tempo
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     async monitorarAgentes(empresa,parametros){
         const monitoramento=[]
         const idUser = parametros.idUser
@@ -110,9 +173,6 @@ class Report{
                 WHERE c.id=${idCampanha}`
         const infoCampanha = await this.querySync(sql)
 
-
-
-
         const monitoramentoCampanha = {}
               monitoramentoCampanha["nomeDaCampanha"]=infoCampanha[0].nome
               monitoramentoCampanha["CampanhaRodando"]=infoCampanha[0].estado
@@ -157,9 +217,10 @@ class Report{
               monitoramentoCampanha["DadosAgente"]["Falando"]=0
               monitoramentoCampanha["DadosAgente"]["Pausados"]=0
           
-        return monitoramentoCampanha
-        
+        return monitoramentoCampanha        
     }
+
+
 
 
 
@@ -717,6 +778,7 @@ class Report{
 
     async converteSeg_tempo(segundos_totais){
         return new Promise((resolve, reject)=>{
+            if((segundos_totais==null)||(segundos_totais=="")||(segundos_totais==false)){segundos_totais=0}
             let horas = Math.floor(segundos_totais / 3600);
             let minutos = Math.floor((segundos_totais - (horas * 3600)) / 60);
             let segundos = Math.floor(segundos_totais % 60);

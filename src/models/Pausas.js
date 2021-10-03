@@ -76,7 +76,7 @@ class Pausas{
     }
 
     //Listar pausa
-    async listarPausas(empresa,idLista){
+    async listarPausas(empresa){
         const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE idLista=1 AND status=1`
         return await this.querySync(sql)
     }  
