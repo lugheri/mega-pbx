@@ -108,7 +108,8 @@ class Discador{
         return p[0].produtivas
     }
 
-    async chamadasAtendidas(empresa,ramal,data){
+    async chamadasAtendidas(empresa,ramal,campanha,dataI,dataF){
+        
         const sql = `SELECT COUNT(id) AS total
                        FROM ${empresa}_dados.historico_atendimento 
                       WHERE data='${data}' AND agente=${ramal}`

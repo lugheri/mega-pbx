@@ -158,6 +158,17 @@ class Gravacao{
         return n[0].numero
     }
 
+    async linkByUniqueid(empresa,uniqueid){
+        const sql = `SELECT callfilename,date_record
+                       FROM ${empresa}_dados.records
+                      WHERE uniqueid=${uniqueid}`
+        const g =  await this.querySync(sql)
+        if(g.length==0){
+            return 0
+        }
+        return g
+    }
+
     async prefixEmpresa(idEmpresa){
         const sql = `SELECT prefix
                        FROM clients.accounts

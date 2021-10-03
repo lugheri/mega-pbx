@@ -31,6 +31,30 @@ class Campanhas{
         return await this.querySync(sql)  
     }
 
+    async infoCampanha(empresa,idCampanha){
+        const sql = `SELECT c.nome, s.estado,
+                            DATE_FORMAT(h.inicio,'%d/%m/%Y') AS dataInicio,
+                            DATE_FORMAT(h.hora_inicio,'%H:%i') AS horaInicio,
+                            DATE_FORMAT(h.termino,'%d/%m/%Y') AS dataTermino,
+                            DATE_FORMAT(h.hora_termino,'%H:%i') AS horaTermino
+                    FROM ${empresa}_dados.campanhas AS c 
+                    JOIN ${empresa}_dados.campanhas_horarios AS h ON c.id=h.id_campanha
+                    JOIN ${empresa}_dados.campanhas_status AS s ON s.idCampanha=c.id
+                    WHERE c.id=${idCampanha}`
+        return await this.querySync(sql)
+   }
+
+    async nomeCampanhas(empresa,idCampanha){
+        const sql = `SELECT * 
+                       FROM ${empresa}_dados.campanhas 
+                      WHERE id=${idCampanha}`
+        const c = await this.querySync(sql)
+        if(c.length==0){
+            return ""
+        }
+        return c[0].nome
+    }
+
 
     async listarCampanhasAtivas(empresa){
         const sql = `SELECT * 
@@ -658,6 +682,7 @@ class Campanhas{
         return total_mailing[0].total
     }   
 
+   
     async mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,status){
         let queryFilter="";
         if(status==1){

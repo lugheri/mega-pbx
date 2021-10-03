@@ -129,7 +129,7 @@ class AsteriskController{
             if(tipoChamada=="manual"){
                 let idAtendimento = dados.idAtendimento
                 const r = await Asterisk.answer(empresa,uniqueid,idAtendimento,ramal)    
-                await Discador.alterarEstadoAgente(empresa,ramal,7,0)
+                //await Discador.alterarEstadoAgente(empresa,ramal,7,0)
                 await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             }else{   
                 let idAtendimento

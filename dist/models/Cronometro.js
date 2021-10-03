@@ -126,20 +126,7 @@ class Cronometro{
 
 
 
-    //Contagem dos tempos médios
-    async tempoMedioAgente(empresa,agente,tempoMedido,hoje){
-        let tabela
-        if(tempoMedido=="TMT"){tabela = 'tempo_tabulacao'}//Tempo médio de Tabulacao
-        if(tempoMedido=="TMA"){tabela = 'tempo_ligacao'}//Tempo médio de Atendimento
-        if(tempoMedido=="TMO"){tabela = 'tempo_ociosidade'}//Tempo médio de Ociosidade
-
-        const sql = `SELECT AVG(tempo_total) as tempoMedio 
-                       FROM ${empresa}_dados.${tabela} 
-                      WHERE idAgente=${agente}
-                        AND entrada>= '${hoje} 00:00:00' AND saida <= '${hoje} 23:59:59'`
-        const tm = await this.querySync(sql)
-        return Math.floor(tm[0].tempoMedio);
-    }
+    
 
 
 

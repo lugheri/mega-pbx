@@ -96,8 +96,13 @@ class GravacaoController{
             return false;
         }
 
-        const gravacao={}
-              gravacao["data"]=gravacoes[0].data
+        const gravacao=[]
+        const dataG = {}
+              dataG['title']="Data Gravação"
+              dataG["value"]=gravacoes[0].data
+              gravacao.push(dataG)
+              
+
               let duracao = gravacoes[0].duracao
               let horas = Math.floor(duracao / 3600);
               let minutos = Math.floor((duracao - (horas * 3600)) / 60);
@@ -106,18 +111,51 @@ class GravacaoController{
               if(minutos<=9){minutos="0"+minutos}
               if(segundos<=9){segundos="0"+segundos}
 
-              gravacao["duracao"]=`${horas}:${minutos}:${segundos}`
-              gravacao["protocolo"]=gravacoes[0].protocolo
-              gravacao["ramal"]=gravacoes[0].ramal
-              gravacao["usuario"]=gravacoes[0].nome
-              gravacao["equipe"]=gravacoes[0].equipe
-              gravacao["numero"]=gravacoes[0].numero
-              gravacao["nome_registro"]=gravacoes[0].nome_registro
-              gravacao["statusTabulacao"]=gravacoes[0].tabulacao
-              gravacao["tipoTabulacao"]=gravacoes[0].tipo
-
-              gravacao["link"]=`https://asterisk-dev.megaconecta.tec.br/api/gravacoes/${empresa}/${gravacoes[0].date_record}/${gravacoes[0].callfilename}.wav`
-        res.json(gravacao)
+              
+              const nameEmpresa = {}
+                    nameEmpresa['title']="Empresa"
+                    nameEmpresa["value"]=await _User2.default.nomeEmpresa(empresa)
+                    gravacao.push(nameEmpresa)
+              const duracaoGrav = {}
+                    duracaoGrav['title']="Tempo de Duração"
+                    duracaoGrav["value"]=`${horas}:${minutos}:${segundos}`
+                    gravacao.push(duracaoGrav)
+              const protocolo = {}
+                    protocolo['title']="Protocolo"
+                    protocolo["value"]=gravacoes[0].protocolo
+                    gravacao.push(protocolo)
+              const ramal = {}
+                    ramal['title']="Ramal do Agente"
+                    ramal["value"]=gravacoes[0].ramal
+                    gravacao.push(ramal)
+              const usuario = {}
+                    usuario['title']="Nome do Agente"
+                    usuario["value"]=gravacoes[0].nome
+                    gravacao.push(usuario)
+              const equipe = {}
+                    equipe['title']="Equipe do agente"
+                    equipe["value"]=gravacoes[0].equipe
+                    gravacao.push(equipe)
+              const numero = {}
+                    numero['title']="Número Discado"
+                    numero["value"]=gravacoes[0].numero
+                    gravacao.push(numero)
+              const nome_registro = {}
+                    nome_registro['title']="Nome do Cliente"
+                    nome_registro["value"]=gravacoes[0].nome_registro
+                    gravacao.push(nome_registro)
+              const statusTabulacao = {}
+                    statusTabulacao['title']="Status de Tabulação"
+                    statusTabulacao["value"]=gravacoes[0].tabulacao
+                    gravacao.push(statusTabulacao)
+              const tipoTabulacao = {}
+                    tipoTabulacao['title']="Tipo de Tabulação"
+                    tipoTabulacao["value"]=gravacoes[0].tipo
+                    gravacao.push(tipoTabulacao)
+                    const link = {}
+                           link["arquivo"]=`https://asterisk-dev.megaconecta.tec.br/api/gravacoes/${empresa}/${gravacoes[0].date_record}/${gravacoes[0].callfilename}.wav`
+                           gravacao.push(link)
+             res.json(gravacao)
     }
     
     async buscarGravacoes(req,res){

@@ -93,6 +93,18 @@ class Tabulacoes{
                       WHERE id=${idStatus}`
         return await this.querySync(sql);
     }
+
+    async nomeStatus(empresa,idStatus){
+        const sql = `SELECT tabulacao 
+                       FROM ${empresa}_dados.tabulacoes_status 
+                      WHERE id=${idStatus}`
+        const t = await this.querySync(sql);
+       
+        if(t.length==0){
+            return ""
+        }
+        return t[0].tabulacao;
+    }
     //Editar status
     async editarStatusTabulacao(empresa,idStatus,valores){
         const idLista = valores.idLista

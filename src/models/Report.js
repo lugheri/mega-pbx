@@ -1,7 +1,5 @@
 import connect from '../Config/dbConnection';
-import moment from 'moment';
-import Discador from '../models/Discador';
-import Cronometro from '../models/Cronometro';
+
 //import util from 'util'
 
 
@@ -16,26 +14,63 @@ class Report{
     }
 
     //Funcoes auxiliares 
-    async filtrarAgentes(empresa,dataInicio,dataFinal,status,estado,ramal,login,pagina){
+   //FILTROS
+    async filtrarAgentes(empresa,dataInicio,dataFinal,status,estado,ramal,equipe,login,pagina){
         let filter=""       
-        let reg=5
+        let reg=20
         let pag=(pagina-1)*reg
        //Filtrando data de entrada/saida do agente
         if((dataInicio!=false)||(dataInicio!="")){filter+=` AND u.criacao>='${dataInicio} 00:00:00'`;}
         if((dataFinal!=false)||(dataFinal!="")){filter+=` AND u.criacao<='${dataFinal} 23:59:59'`;}
 
-        if((status!=false)||(status!="")){filter+=` AND u.status=${status}`;}
+        if((status===1)||(status===0)){filter+=` AND u.status=${status}`;}
         if((estado!=false)||(estado!="")){filter+=` AND r.estado=${estado}`;}
         if((ramal!=false)||(ramal!="")){filter+=` AND u.id=${ramal}`;}
-        if((login!=false)||(login!="")){filter+=` AND u.logado=${login}`;}
+        if((equipe!=false)||(equipe!="")){filter+=` AND u.equipe=${equipe}`;}
+        if((login===1)||(login===0)){filter+=` AND u.logado=${login}`;}
 
         const sql = `SELECT u.id, u.nome 
                        FROM ${empresa}_dados.users AS u
                        JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
                       WHERE 1=1 ${filter}
                       LIMIT ${pag},${reg}`
+                      //console.log('filtrarAgentes',sql)
         const users = await this.querySync(sql)
+      
         return users
+    }
+
+    async filtroEquipes(empresa){
+        const sql = `SELECT id,equipe 
+                       FROM ${empresa}_dados.users_equipes 
+                      WHERE status=1`
+        return await this.querySync(sql)
+    }
+
+    async filtroCampanhas(empresa){
+        const sql = `SELECT id,nome 
+                       FROM ${empresa}_dados.campanhas 
+                      WHERE status=1 AND estado=1`
+        return await this.querySync(sql)
+    }
+
+    async filtroMailings(empresa){
+        const sql = `SELECT id,nome 
+                       FROM ${empresa}_dados.mailings 
+                      WHERE pronto=1 AND status=1`
+        return await this.querySync(sql)
+    }   
+
+    async infoAgente(empresa,agente){
+        const sql = `SELECT us.id as ramal, us.nome, rm.estado as cod_estado, ea.estado, eq.equipe
+                       FROM ${empresa}_dados.users AS us 
+                       JOIN ${empresa}_dados.user_ramal AS rm ON rm.userID=us.id
+                       JOIN ${empresa}_dados.estadosAgente AS ea ON ea.cod=rm.estado
+                  LEFT JOIN ${empresa}_dados.users_equipes AS eq ON eq.id=us.equipe
+                      WHERE us.id=${agente}`
+                      
+        const user = await this.querySync(sql)
+        return user
     }
 
     async calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,agente){
@@ -53,94 +88,7 @@ class Report{
                       WHERE 1=1 ${filter}`
         const t = await this.querySync(sql)
         return t[0].tempo
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    async monitorarAgentes(empresa,parametros){
-        const monitoramento=[]
-        const idUser = parametros.idUser
-        const idEquipe = parametros.idEquipe
-
-        let filters=""
-        //Checa se o usuario eh supervisor de alguma equipes
-        let sql = `SELECT COUNT(id) as equipes
-                     FROM ${empresa}_dados.users_equipes
-                    WHERE supervisor=${idUser}`
-        const es = await this.querySync(sql)
-        if(es[0].equipes!=0){
-            filters = ` AND eq.supervisor=${idUser} `
-        }
-
-        //filtra por equipe caso alguma tenha sido enviada
-        if(idEquipe>0){
-            filters = ` AND eq.id = ${idEquipe} `
-        }
-
-        sql = `SELECT us.id as ramal, us.nome, rm.estado as cod_estado, ea.estado, eq.equipe
-                 FROM ${empresa}_dados.users AS us 
-                 JOIN ${empresa}_dados.user_ramal AS rm ON rm.userID=us.id
-                 JOIN ${empresa}_dados.estadosAgente AS ea ON ea.cod=rm.estado
-            LEFT JOIN ${empresa}_dados.users_equipes AS eq ON eq.id=us.equipe
-                WHERE us.status=1 ${filters} ORDER BY rm.datetime_estado DESC`
-        const infoUsers = await this.querySync(sql)
-
-        for(let i = 0; i < infoUsers.length; i++){
-            const ramal = infoUsers[i].ramal
-            const nome = infoUsers[i].nome
-            const equipe = infoUsers[i].equipe
-            const codEstado = infoUsers[i].cod_estado
-            const estado = infoUsers[i].estado
-            const agente={}
-                  agente["ramal"]=ramal
-                  agente["estado"]=estado
-                  agente["cod_estado"]=codEstado
-                  agente["equipe"]=equipe
-                  agente["nome"]=nome
-
-            const tempoStatus=await this.tempoEstadoAgente(empresa,ramal)
-            const hoje = moment().format("Y-MM-DD")
-            const chamadasAtendidas=await Discador.chamadasAtendidas(empresa,ramal,hoje)
-            const campanha=await Discador.listarCampanhasAtivasAgente(empresa,ramal)
-            const TMT = await this.converteSeg_tempo(await Cronometro.tempoMedioAgente(empresa,ramal,'TMT',hoje))
-            const TMA = await this.converteSeg_tempo(await Cronometro.tempoMedioAgente(empresa,ramal,'TMA',hoje))
-            const TMO = await this.converteSeg_tempo(await Cronometro.tempoMedioAgente(empresa,ramal,'TMO',hoje))
-            const produtivos = await Discador.chamadasProdutividadeDia_porAgente(empresa,1,ramal,hoje)
-            const improdutivos = await Discador.chamadasProdutividadeDia_porAgente(empresa,0,ramal,hoje)
-
-                  agente["tempoStatus"]=tempoStatus
-                  agente["chamadasAtendidas"]=chamadasAtendidas
-                  agente["campanha"]=campanha
-                  agente["TMT"]=TMT
-                  agente["TMA"]=TMA
-                  agente["TMO"]=TMO
-                  agente["produtivos"]=produtivos
-                  agente["improdutivos"]=improdutivos
-            monitoramento.push(agente)
-        }
-        return monitoramento
-    }
+    }  
 
     async tempoEstadoAgente(empresa,ramal){
         let tempo=0
@@ -156,85 +104,292 @@ class Report{
         return tempoEstado
     }
 
-    async monitorarCampanhas(empresa,idCampanha){
-        if(!idCampanha){
-            return {}
+    async chamadasSimultaneas(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero){
+        let filter=""
+        if((dataI!=false)||(dataI!="")){filter+=` AND c.data>='${dataI} 00:00:00'`;}else{filter+=` AND c.data>='${hoje} 00:00:00'`;}
+        if((dataF!=false)||(dataF!="")){filter+=` AND c.data<='${dataF} 23:59:59'`;}else{filter+=` AND c.data<='${hoje} 23:59:59'`;}
+        if((ramal!=false)||(ramal!="")){filter+=` AND c.ramal=${ramal}`;}
+        if((equipe!=false)||(equipe!="")){filter+=` AND u.equipe=${equipe}`;}
+        if((campanha!=false)||(campanha!="")){filter+=` AND c.id_campanha=${campanha}`;}
+        if((mailing!=false)||(mailing!="")){filter+=` AND c.id_mailing=${mailing}`;}
+        if((numero!=false)||(numero!="")){filter+=` AND c.numero LIKE '%${numero}%'`;}
+        
+        const sql = `SELECT c.ramal,u.nome,c.uniqueid,
+                            DATE_FORMAT(c.data,'%d/%m/%Y') AS dataCall,
+                            DATE_FORMAT(c.data,'%H:%i') AS horaCall,
+                            c.tipo_ligacao,c.id_campanha,c.numero, c.falando,c.desligada,c.tabulando,c.tabulado
+                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas AS c
+                  LEFT JOIN ${empresa}_dados.users AS u ON c.ramal=u.id
+                      WHERE tipo_ligacao='discador' `
+        //console.log('chamadasSimultaneas',sql)
+        const c = await this.querySync(sql)     
+        return c   
+    }
+
+    async chamadasRealizadas(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina){
+        let filter=""
+        if((dataI!=false)||(dataI!="")){filter+=` AND h.data>='${dataI}'`;}else{filter+=` AND h.data>='${hoje}'`;}
+        if((dataF!=false)||(dataF!="")){filter+=` AND h.data<='${dataF}'`;}else{filter+=` AND h.data<='${hoje}'`;}
+        if((ramal!=false)||(ramal!="")){filter+=` AND h.agente=${ramal}`;}
+        if((equipe!=false)||(equipe!="")){filter+=` AND u.equipe=${equipe}`;}
+        if((campanha!=false)||(campanha!="")){filter+=` AND h.campanha=${campanha}`;}
+        if((mailing!=false)||(mailing!="")){filter+=` AND h.mailing=${mailing}`;}
+        if((numero!=false)||(numero!="")){filter+=` AND h.numero_discado LIKE '%${numero}%'`;}
+        if((tipo!=false)||(tipo!="")){filter+=` AND h.tipo = '${tipo}'`;}
+        if((contatados!=false)||(contatados!="")){
+            if(contatados==1){
+                filter+=` AND h.contatado='S'`
+            }else{
+                filter+=` AND (h.contatado='N' OR h.contatado='0'  OR h.contatado is null)`
+            }
         }
+        if((produtivo!=false)||(produtivo!="")){
+            if(produtivo==1){
+                filter+=` AND h.produtivo=1`
+            }else{
+                filter+=` AND (h.contatado=0  OR h.contatado is null)`
+            }
+        }
+        if((tipo!=false)||(tipo!="")){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
 
-        //Informações da campanha
-        let sql = `SELECT c.nome, s.estado,
-                          DATE_FORMAT(h.inicio,'%d/%m/%Y') AS dataInicio,
-                          DATE_FORMAT(h.hora_inicio,'%H:%i') AS horaInicio,
-                          DATE_FORMAT(h.termino,'%d/%m/%Y') AS dataTermino,
-                          DATE_FORMAT(h.hora_termino,'%H:%i') AS horaTermino
-                     FROM ${empresa}_dados.campanhas AS c 
-                     JOIN ${empresa}_dados.campanhas_horarios AS h ON c.id=h.id_campanha
-                     JOIN ${empresa}_dados.campanhas_status AS s ON s.idCampanha=c.id
-                WHERE c.id=${idCampanha}`
-        const infoCampanha = await this.querySync(sql)
+       //Paginacao   
+        let reg=20
+        let pag=(pagina-1)*reg
+        
+        const sql = `SELECT h.agente,u.nome,DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall,h.hora,h.uniqueid,h.campanha,h.tipo,h.numero_discado,h.contatado,h.produtivo,h.status_tabulacao
+                       FROM ${empresa}_dados.historico_atendimento AS h
+                  LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
+                      WHERE 1=1 ${filter} LIMIT ${pag},${reg}`
+        //console.log('chamadasRealizadas',sql)
+        return await this.querySync(sql)        
+    }
 
-        const monitoramentoCampanha = {}
-              monitoramentoCampanha["nomeDaCampanha"]=infoCampanha[0].nome
-              monitoramentoCampanha["CampanhaRodando"]=infoCampanha[0].estado
-              monitoramentoCampanha["DataCampanha"]=`${infoCampanha[0].dataInicio} - ${infoCampanha[0].dataTermino}`
-              monitoramentoCampanha["ChamadasAtendidasNoTotal"]=0
-              monitoramentoCampanha["TabulacaoDeVendasNoTotal"]=0
-              monitoramentoCampanha["ChamadasEmAtendimento"]=0
-              monitoramentoCampanha["ChamadasNãoAtendidas"]=0
-              monitoramentoCampanha["Conversao"]="0%"
-              monitoramentoCampanha["Cronograma"]=`${infoCampanha[0].horaInicio} - ${infoCampanha[0].horaTermino}`
-              monitoramentoCampanha["TempoMedioDeAtendimento"]="00:00:00"
+    async timeCall(empresa,uniqueid){
+        let sql = `SELECT id,saida 
+                       FROM ${empresa}_dados.tempo_ligacao
+                      WHERE uniqueid=${uniqueid}
+                      LIMIT 1`
+        const t = await this.querySync(sql)
+        if(t.length==0){
+            return 0
+        }
+        const saida = t[0].saida
+        let tempoSaida = 'saida'
+        if(saida==null){
+            tempoSaida = 'NOW()' 
+        }
+        sql = `SELECT TIMESTAMPDIFF (SECOND, entrada, ${tempoSaida}) as tempo
+                 FROM ${empresa}_dados.tempo_ligacao 
+                WHERE id=${t[0].id}`
+        //console.log('timeCall',sql)
+        const d = await this.querySync(sql)
+        return d[0].tempo
+    }
 
-              monitoramentoCampanha["DadosCampanhaPorcentagem"]={}
-              monitoramentoCampanha["DadosCampanhaPorcentagem"]["Trabalhado"]=0
-              monitoramentoCampanha["DadosCampanhaPorcentagem"]["Produtivo"]=0
-              monitoramentoCampanha["DadosCampanhaPorcentagem"]["Improdutivo"]=0
+    async chamadasAtendidas(empresa,ramal,campanha,dataI,dataF,hoje){
+        let filter=""
+        if((dataI!=false)||(dataI!="")){filter+=` AND data>='${dataI}'`;}else{filter+=` AND data>='${hoje}'`;}
+        if((dataF!=false)||(dataF!="")){filter+=` AND data<='${dataF}'`;}else{filter+=` AND data<='${hoje}'`;}
+        if((campanha!=false)||(campanha!="")){filter+=` AND campanha=${campanha}`;}
+        if((ramal!=false)||(ramal!="")){filter+=` AND agente=${ramal}`;}
+        
+        const sql = `SELECT COUNT(id) AS total
+                       FROM ${empresa}_dados.historico_atendimento 
+                      WHERE 1=1 ${filter}`
+                      //console.log('chamadasAtendidas',sql)
+        const ca = await this.querySync(sql)
+        
+        return ca[0].total
+    }
 
-              monitoramentoCampanha["ConsolidadoDodia"]={}
-              monitoramentoCampanha["ConsolidadoDodia"]["TotalDeChamadas"]={}
-              monitoramentoCampanha["ConsolidadoDodia"]["TotalDeChamadas"]["total"]=0
-              monitoramentoCampanha["ConsolidadoDodia"]["TotalDeChamadas"]["labelChart"]=[]
-              monitoramentoCampanha["ConsolidadoDodia"]["TotalDeChamadas"]["dataChart"]=[]
+    //Contagem dos tempos médios
+    async tempoMedioAgente(empresa,agente,tempoMedido,idCampanha,dataI,dataF,hoje){
+        let filter=""
+        if((dataI!=false)||(dataI!="")){filter+=` AND entrada>='${dataI} 00:00:00'`;}else{filter+=` AND entrada>='${hoje} 00:00:00'`;}
+        if((dataF!=false)||(dataF!="")){filter+=` AND saida<='${dataF} 23:59:59'`;}else{filter+=` AND saida<='${hoje} 23:59:59'`;}
+        if((idCampanha!=false)||(idCampanha!="")){filter+=` AND idCampanha=${idCampanha}`;}
+        if((agente!=false)||(agente!="")){filter+=` AND idAgente=${agente}`;}
+        
+        
+        let tabela
+        if(tempoMedido=="TMT"){tabela = 'tempo_tabulacao'}//Tempo médio de Tabulacao
+        if(tempoMedido=="TMA"){tabela = 'tempo_ligacao'}//Tempo médio de Atendimento
+        if(tempoMedido=="TMO"){tabela = 'tempo_ociosidade'}//Tempo médio de Ociosidade
 
-              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasCompletadasHoje"]={}
-              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasCompletadasHoje"]["total"]=0
-              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasCompletadasHoje"]["labelChart"]=[]
-              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasCompletadasHoje"]["dataChart"]=[]
-
-              monitoramentoCampanha["ConsolidadoDodia"]["TabulacaoDeVendasHoje"]={}
-              monitoramentoCampanha["ConsolidadoDodia"]["TabulacaoDeVendasHoje"]["total"]=0
-              monitoramentoCampanha["ConsolidadoDodia"]["TabulacaoDeVendasHoje"]["labelChart"]=[]
-              monitoramentoCampanha["ConsolidadoDodia"]["TabulacaoDeVendasHoje"]["dataChart"]=[]
-
-              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasAbandonadas"]={}
-              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasAbandonadas"]["total"]=0
-              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasAbandonadas"]["labelChart"]=[]
-              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasAbandonadas"]["dataChart"]=[]
-
-              monitoramentoCampanha["DadosAgente"]={}
-              monitoramentoCampanha["DadosAgente"]["indisponiveis"]=0
-              monitoramentoCampanha["DadosAgente"]["Disponiveis"]=0
-              monitoramentoCampanha["DadosAgente"]["Falando"]=0
-              monitoramentoCampanha["DadosAgente"]["Pausados"]=0
-          
-        return monitoramentoCampanha        
+        const sql = `SELECT AVG(tempo_total) as tempoMedio 
+                       FROM ${empresa}_dados.${tabela} 
+                      WHERE 1=1 ${filter}`
+                      //console.log('tempoMedioAgente',sql)
+        const tm = await this.querySync(sql)
+        return Math.floor(tm[0].tempoMedio);
     }
 
 
+    async chamadasProdutividade(empresa,statusProdutividade,idAgente,idCampanha,dataI,dataF,hoje){
+        let filter="";
+        if((dataI!=false)||(dataI!="")){filter+=` AND data>='${dataI}'`;}else{filter+=` AND data>='${hoje}'`;}
+        if((dataF!=false)||(dataF!="")){filter+=` AND data<='${dataF}'`;}else{filter+=` AND data<='${hoje}'`;}
+        if((idCampanha!=false)||(idCampanha!="")){filter+=` AND campanha=${idCampanha}`;}
+        if((idAgente!=false)||(idAgente!="")){filter+=` AND agente=${idAgente}`;}
 
-
-
-
-
-    
-    
-    async monitorarCampanhasOld(empresa,idCampanha,callback){
-        if(idCampanha>=1){
-            this.monitoramentoCampanhaIndividual(empresa,idCampanha,callback)
+        if(statusProdutividade==1){
+            filter+=` AND produtivo=1`
         }else{
-            this.monitoramentoCampanhaGeral(empresa,callback)
+            filter+=` AND (produtivo=0 OR produtivo is null)`
         }
+        const sql = `SELECT COUNT(id) AS produtivas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE 1=1 ${filter};`
+                      //console.log('chamadasProdutividade',sql)
+        const p=await this.querySync(sql);
+        return p[0].produtivas
     }
+
+    async chamadasAtendidasCampanha(empresa,campanha){
+        const sql = `SELECT COUNT(id) AS atendidas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE agente>0 AND campanha=${campanha}`
+        const a=await this.querySync(sql);
+        return a[0].atendidas
+    }
+
+    async chamadasProdutivaCampanha(empresa,campanha){
+        const sql = `SELECT COUNT(id) AS produtivas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE produtivo=1 AND campanha=${campanha}`
+        const a=await this.querySync(sql);
+        return a[0].produtivas
+    }
+
+    async chamadasEmAtendimentoCampanha(empresa,campanha){
+        const sql = `SELECT COUNT(id) AS atendidas
+                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                      WHERE falando=1 AND id_campanha=${campanha}`
+            const a=await this.querySync(sql);
+            return a[0].atendidas
+    }
+
+    async chamadasNaoAtendidasCampanha(empresa,campanha){
+        const sql = `SELECT COUNT(id) AS nao_atendidas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE agente=0 AND campanha=${campanha}`
+        const na=await this.querySync(sql);
+        return na[0].nao_atendidas
+    }
+
+    async chamadasContatadasCampanha(empresa,idCampanha){
+        const sql = `SELECT COUNT(id) AS contatados
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE contatado='S' AND campanha=${idCampanha}`
+        const c=await this.querySync(sql);
+        return c[0].contatados
+    }
+
+    async TempoMedioDeAtendimentoCampanha(empresa,idCampanha){
+        const sql = `SELECT AVG(tempo_total) as tempoMedio 
+                       FROM ${empresa}_dados.tempo_ligacao
+                      WHERE idCampanha=${idCampanha}`
+        const tm=await this.querySync(sql);
+        return tm[0].tempoMedio
+    }
+
+    async mailingsProdutivosPorCampanha(empresa,idCampanha,idMailing,status){
+        let filter = "";
+        if(status==1){
+            filter+=` AND produtivo=1`
+        }else{
+            filter+=` AND (produtivo=0 OR produtivo is null)`
+        }
+        const sql = `SELECT count(id) AS total 
+                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                      WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${filter}`
+        const total_mailing= await this.querySync(sql)
+        return total_mailing[0].total
+    }   
+
+    async totalChamadasDia(empresa,idCampanha,hoje){
+        const sql = `SELECT COUNT(id) AS chamadas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}' AND campanha=${idCampanha}`
+        const c=await this.querySync(sql);
+        return c[0].chamadas
+    }
+
+    async totalChamadas_UltimosDias(empresa,idCampanha,hoje){
+        const sql = `SELECT DISTINCT DATE_FORMAT(data,'%d/%m/%Y') AS dataCall, COUNT(id) AS chamadas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE campanha=${idCampanha} AND data<'${hoje}' GROUP BY dataCall
+                      ORDER BY dataCall ASC LIMIT 7`
+        return await this.querySync(sql);
+    }
+
+
+    async totalChamadasCompletadasDia(empresa,idCampanha,hoje){
+        const sql = `SELECT COUNT(id) AS chamadas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}' AND agente>0 AND campanha=${idCampanha}`
+        const c = await this.querySync(sql);
+        return c[0].chamadas
+    }
+    async ChamadasCompletadas_UltimosDias(empresa,idCampanha,hoje){
+        const sql = `SELECT DISTINCT DATE_FORMAT(data,'%d/%m/%Y') AS dataCall, COUNT(id) AS chamadas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE campanha=${idCampanha} AND agente>0 AND data<'${hoje}' GROUP BY dataCall
+                      ORDER BY dataCall ASC LIMIT 7`
+        return await this.querySync(sql);
+    }
+
+    
+    async totalTabulacoesVendaDia(empresa,idCampanha,hoje){
+        const sql = `SELECT COUNT(h.id) AS chamadas
+                       FROM ${empresa}_dados.historico_atendimento AS h
+                       JOIN ${empresa}_dados.tabulacoes_status AS t ON h.status_tabulacao=t.id
+                      WHERE h.data='${hoje}' AND h.campanha=${idCampanha} AND t.venda=1`
+        const c=await this.querySync(sql);
+        return c[0].chamadas
+    }
+    async totalChamadasVendas_UltimosDias(empresa,idCampanha,hoje){
+        const sql = `SELECT DISTINCT DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall, COUNT(h.id) AS chamadas
+                       FROM ${empresa}_dados.historico_atendimento AS h
+                       JOIN ${empresa}_dados.tabulacoes_status AS t ON h.status_tabulacao=t.id
+                      WHERE campanha=${idCampanha} AND data<'${hoje}' GROUP BY dataCall
+                      ORDER BY dataCall ASC LIMIT 7`
+        return await this.querySync(sql);
+    }
+
+    async totalChamadasAbandonadasDia(empresa,idCampanha,hoje){
+        const sql = `SELECT COUNT(id) AS abandonadas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}' AND obs_tabulacao='ABANDONADA' AND campanha=${idCampanha}`
+        const a=await this.querySync(sql);
+        return a[0].abandonadas
+    }
+    async totalChamadasAbandonadas_UltimosDias(empresa,idCampanha,hoje){
+        const sql = `SELECT DISTINCT DATE_FORMAT(data,'%d/%m/%Y') AS dataCall, COUNT(id) AS chamadas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE campanha=${idCampanha} AND data<'${hoje}' AND obs_tabulacao='ABANDONADA' GROUP BY dataCall
+                      ORDER BY dataCall ASC LIMIT 7`
+        return await this.querySync(sql);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+
 
     async monitoramentoCampanhaIndividual(empresa,idCampanha,callback){
         let sql=`SELECT c.id, c.nome, DATE_FORMAT(h.inicio,'%d/%m/%Y') AS dataInicio,DATE_FORMAT(h.hora_inicio,'%H:%i') AS horaInicio , DATE_FORMAT(h.termino,'%d/%m/%Y') AS dataTermino,DATE_FORMAT(h.hora_termino,'%H:%i') AS horaTermino 
@@ -776,7 +931,7 @@ class Report{
         })
     }
 
-    async converteSeg_tempo(segundos_totais){
+ converteSeg_tempo(segundos_totais){
         return new Promise((resolve, reject)=>{
             if((segundos_totais==null)||(segundos_totais=="")||(segundos_totais==false)){segundos_totais=0}
             let horas = Math.floor(segundos_totais / 3600);
@@ -795,19 +950,7 @@ class Report{
 
     //REVISAR
     
-    async filtroCampanhas(empresa){
-        const sql = `SELECT id,nome 
-                       FROM ${empresa}_dados.campanhas 
-                      WHERE status=1 AND estado=1`
-        return await this.querySync(sql)
-    }
-    
-    async filtroEquipes(empresa){
-        const sql = `SELECT id,equipe 
-                       FROM ${empresa}_dados.users_equipes 
-                      WHERE status=1`
-        return await this.querySync(sql)
-    }
+   
 
     
 

@@ -1,6 +1,13 @@
 import Report from '../models/Report';
+import Campanhas from '../models/Campanhas'
+import Asterisk from '../models/Asterisk';
+import Gravacao from '../models/Gravacao'
 import User from '../models/User';
 import Pausas from '../models/Pausas';
+import moment from 'moment';
+import Discador from '../models/Discador';
+import Cronometro from '../models/Cronometro';
+import Tabulacoes from '../models/Tabulacoes'
 
 class ReportController{  
     async relatorioPausas(req,res){
@@ -8,17 +15,19 @@ class ReportController{
         const dataInicio  = req.body.dataInicio
         const dataFinal  = req.body.dataFinal
         const ramal = req.body.ramal
+        const equipe = req.body.ramal
         const logados = req.body.logados
         const pagina = req.body.pagina
+        const status = req.body.status
 
         const relatorioPausas = []       
-        const agentesAtivos = await Report.filtrarAgentes(empresa,dataInicio,dataFinal,1,false,ramal,logados,pagina)
+        const agentesAtivos = await Report.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina)
        
         for(let i=0; i<agentesAtivos.length; i++){
             const agente = {}
             const idAgente = agentesAtivos[i].id
-                  agente['ramal']=idAgente
-                  agente['nomeAgente']=agentesAtivos[i].nome
+                  agente['Ramal']=idAgente
+                  agente['Agente']=agentesAtivos[i].nome
                   //Listar pausas 
                   const pausas = await Pausas.listarPausas(empresa)
                   for(let p=0; p<pausas.length;p++){
@@ -27,14 +36,14 @@ class ReportController{
                       agente[`${pausas[p].nome}`] = await Report.converteSeg_tempo(tempoPausa)
                   }
             const totalPausasAgente = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,false,idAgente)
-                  agente['total']=await Report.converteSeg_tempo(totalPausasAgente)
+                  agente['Total']=await Report.converteSeg_tempo(totalPausasAgente)
             
             relatorioPausas.push(agente)
         }
         //Ultima Linha
         const linhaFinal = {}
-              linhaFinal['ramal']="Total"
-              linhaFinal["nomeAgente"]=""
+              linhaFinal['Ramal']="Total"
+              linhaFinal["Agente"]=""
               const pausas = await Pausas.listarPausas(empresa)
               for(let p=0; p<pausas.length;p++){
                 const idPausa = pausas[p].id                     
@@ -42,48 +51,294 @@ class ReportController{
                 linhaFinal[`${pausas[p].nome}`] = await Report.converteSeg_tempo(tempoPausa)
               }
         const totalPausas = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,false,false)
-              linhaFinal["total"]= await Report.converteSeg_tempo(totalPausas)
+              linhaFinal["Total"]= await Report.converteSeg_tempo(totalPausas)
         
         relatorioPausas.push(linhaFinal)
 
         return res.json(relatorioPausas)
     }
+    async detalhamentoChamadas(req,res){
+        const empresa = await User.getEmpresa(req)
+        const dataInicio  = req.body.dataInicio
+        const dataFinal  = req.body.dataFinal
+        const ramal = req.body.ramal
+        const equipe = req.body.ramal
+        const campanha = req.body.campanha
+        const mailing = req.body.mailing
+        const numero = req.body.numero 
+        const tipo = req.body.tipo         
+        const contatados = req.body.contatados
+        const produtivo = req.body.produtivo
+        const tabulacao = req.body.tabulacao
+        const pagina = req.body.pagina
+        const hoje = moment().format("Y-MM-DD")
 
+        const detChamadas = []
 
+        const chamadasSimultaneas = await Report.chamadasSimultaneas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero)
+        let status = "Encerrada"
+        for(let i = 0;i<chamadasSimultaneas.length; i++) {            
+            const callSim={}
+                  callSim['ramal']=chamadasSimultaneas[i].ramal 
+                  callSim['agente']=chamadasSimultaneas[i].nome
+                  callSim['data']=chamadasSimultaneas[i].dataCall
+                  callSim['hora']=chamadasSimultaneas[i].horaCall
+                  callSim['duracao']=await Report.converteSeg_tempo(await Report.timeCall(empresa,chamadasSimultaneas[i].uniqueid))
+                  callSim['campanha']=await Campanhas.nomeCampanhas(empresa,chamadasSimultaneas[i].id_campanha)
+                  callSim['tipo']=chamadasSimultaneas[i].tipo_ligacao
+                  callSim['telefone']=chamadasSimultaneas[i].numero
+                  callSim['contatado']=""
+                  callSim['produtivo']=""
+                  callSim['tabulacao']=""
+                  if(chamadasSimultaneas[i].falando==1){
+                      status="Em Atendimento"
+                  }else{
+                     if((chamadasSimultaneas[i].desligada==1)||(chamadasSimultaneas[i].tabulando==1)||(chamadasSimultaneas[i].tabulado==1)){
+                        status="Finalizando..."
+                     }else{
+                        status="Chamando..."
+                     }
+                  }
+                  callSim['status']=status
+                  let gravacao = " - "
+                  const linkGrav = await Gravacao.linkByUniqueid(empresa,chamadasSimultaneas[i].uniqueid)
+                  if(linkGrav!=0){ 
+                    const server = await Asterisk.getDomain(empresa)
+                    const pasta = linkGrav[0].date_record
+                    
+                    const arquivo = `${linkGrav[0].callfilename}.wav`
+                    gravacao = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
+                  }
+                  callSim['gravacao']=gravacao
+            detChamadas.push(callSim)
+        }
+        const chamadas = await Report.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina)
 
+        for(let i = 0;i<chamadas.length; i++) {
+            const call={}
+                  call['ramal']=chamadas[i].agente
+                  call['agente']=chamadas[i].nome
+                  call['data']=chamadas[i].dataCall
+                  call['hora']=chamadas[i].hora
+                  call['duracao']=await Report.converteSeg_tempo(await Report.timeCall(empresa,chamadas[i].uniqueid))
+                  call['campanha']=await Campanhas.nomeCampanhas(empresa,chamadas[i].campanha)
+                  call['tipo']=chamadas[i].tipo
+                  call['telefone']=chamadas[i].numero_discado
+                  if(chamadas[i].contatado==1){
+                    call['contatado']='Sim'
+                  }else{
+                    call['contatado']='Não'
+                  }
+                  if(chamadas[i].produtivo==1){
+                    call['produtivo']='Sim'
+                  }else{
+                    call['produtivo']='Não'
+                  }                 
+                  call['tabulacao']=await Tabulacoes.nomeStatus(empresa,chamadas[i].status_tabulacao) 
+                  call['status']='Encerrada'
+                  let gravacao = " - "
+                  const linkGrav = await Gravacao.linkByUniqueid(empresa,chamadas[i].uniqueid)
+                  if(linkGrav!=0){ 
+                    const server = await Asterisk.getDomain(empresa)
+                    const pasta = linkGrav[0].date_record
+                    
+                    const arquivo = `${linkGrav[0].callfilename}.wav`
+                    gravacao = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
+                  }
+                  call['gravacao']=gravacao
 
-
-
-
-    
-
+            detChamadas.push(call)
+        }
+        res.json(detChamadas)
+    }
 
     async monitoramentoAgente(req,res){
         const empresa = await User.getEmpresa(req)
-        const parametros = req.params
-        const monitoramentoAgentes = await Report.monitorarAgentes(empresa,parametros)
+        const dataInicio  = req.body.dataInicio
+        const dataFinal  = req.body.dataFinal
+        const ramal = req.body.ramal
+        const idCampanha = req.body.campanha
+        const equipe = req.body.equipe
+        const logados = req.body.logados
+        const pagina = req.body.pagina
+        const status = req.body.status
+
+        const monitoramentoAgentes = []
+        const agentesAtivos = await Report.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina)
+        for(let i=0; i<agentesAtivos.length; i++){
+            const idAgente = agentesAtivos[i].id
+            const infoUser = await Report.infoAgente(empresa,idAgente);
+            const nome = infoUser[0].nome
+            const equipe = infoUser[0].equipe
+            const codEstado = infoUser[0].cod_estado
+            const estado = infoUser[0].estado
+            
+            const agente={}
+                  agente["ramal"]=idAgente
+                  agente["estado"]=estado
+                  agente["cod_estado"]=codEstado
+                  agente["equipe"]=equipe
+                  agente["nome"]=nome
+
+            const tempoStatus=await Report.tempoEstadoAgente(empresa,idAgente)
+            const hoje = moment().format("Y-MM-DD")
+            const chamadasAtendidas=await Report.chamadasAtendidas(empresa,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+            const campanha = await Discador.listarCampanhasAtivasAgente(empresa,idAgente)
+            const TMT = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMT',idCampanha,dataInicio,dataFinal,hoje))
+            const TMA = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMA',idCampanha,dataInicio,dataFinal,hoje))
+            const TMO = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMO',idCampanha,dataInicio,dataFinal,hoje))
+            const produtivos = await Report.chamadasProdutividade(empresa,1,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+            const improdutivos = await Report.chamadasProdutividade(empresa,0,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+
+                  agente["tempoStatus"]=tempoStatus
+                  agente["chamadasAtendidas"]=chamadasAtendidas
+                  agente["campanha"]=campanha
+                  agente["TMT"]=TMT
+                  agente["TMA"]=TMA
+                  agente["TMO"]=TMO
+                  agente["produtivos"]=produtivos
+                  agente["improdutivos"]=improdutivos
+
+            monitoramentoAgentes.push(agente)
+        }
         res.json(monitoramentoAgentes)
     }
 
     async monitoramentoCampanhas(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.idCampanha)
-        const monitoramentoCampanhas = await Report.monitorarCampanhas(empresa,idCampanha)
-        res.send(monitoramentoCampanhas);
+
+        const infoCampanha = await Campanhas.infoCampanha(empresa,idCampanha)
+        const hoje = moment().format("Y-MM-DD")
+        const monitoramentoCampanha = {}
+              monitoramentoCampanha["nomeDaCampanha"]=infoCampanha[0].nome
+              monitoramentoCampanha["CampanhaRodando"]=infoCampanha[0].estado
+              monitoramentoCampanha["DataCampanha"]=`${infoCampanha[0].dataInicio} - ${infoCampanha[0].dataTermino}`
+              monitoramentoCampanha["ChamadasAtendidasNoTotal"]=await Report.chamadasAtendidasCampanha(empresa,idCampanha)
+              monitoramentoCampanha["ChamadasProdutivasNoTotal"]=await Report.chamadasProdutivaCampanha(empresa,idCampanha)
+              monitoramentoCampanha["ChamadasEmAtendimento"]=await Report.chamadasEmAtendimentoCampanha(empresa,idCampanha)
+              monitoramentoCampanha["ChamadasNãoAtendidas"]=await Report.chamadasNaoAtendidasCampanha(empresa,idCampanha)
+              monitoramentoCampanha["Contatados"]=await Report.chamadasContatadasCampanha(empresa,idCampanha)
+              monitoramentoCampanha["Cronograma"]=`${infoCampanha[0].horaInicio} - ${infoCampanha[0].horaTermino}`
+              monitoramentoCampanha["TempoMedioDeAtendimento"]=await Report.converteSeg_tempo(await Report.TempoMedioDeAtendimentoCampanha(empresa,idCampanha))
+
+              monitoramentoCampanha["DadosCampanhaPorcentagem"]={}
+
+              let perc_trabalhados = 0
+              let perc_produtivos = 0
+              let perc_improdutivos = 0
+              let total=0
+              let idMailing=0
+
+              const m = await Campanhas.totalMailingsCampanha(empresa,idCampanha)
+              if(m.length>=0){
+                  total=m[0].total
+                  idMailing=m[0].idMailing
+              }     
+              const produtivo = await Report.mailingsProdutivosPorCampanha(empresa,idCampanha,idMailing,1)
+              const Improdutivos = await Report.mailingsProdutivosPorCampanha(empresa,idCampanha,idMailing,0)
+              const trabalhados = produtivo + Improdutivos  
+                          
+              
+             
+              if(total!=0){
+                  perc_trabalhados=Math.round((trabalhados / total)*100)
+                  perc_produtivos=Math.round((produtivo / total)*100)
+                  perc_improdutivos=Math.round((Improdutivos / total)*100)           
+              }
+
+
+
+
+              monitoramentoCampanha["DadosCampanhaPorcentagem"]["Trabalhado"]=perc_trabalhados
+              monitoramentoCampanha["DadosCampanhaPorcentagem"]["Produtivo"]=perc_produtivos            
+              monitoramentoCampanha["DadosCampanhaPorcentagem"]["Improdutivo"]=perc_improdutivos
+
+              monitoramentoCampanha["ConsolidadoDodia"]={}
+              monitoramentoCampanha["ConsolidadoDodia"]["TotalDeChamadas"]={}
+              monitoramentoCampanha["ConsolidadoDodia"]["TotalDeChamadas"]["total"]=await Report.totalChamadasDia(empresa,idCampanha,hoje)
+              
+              const TotalDeChamadas_labelChart=[]
+              const TotalDeChamadas_dataChart=[]              
+              const TotalDeChamadas_resumo = await Report.totalChamadas_UltimosDias(empresa,idCampanha,hoje)
+              for(let i=0; i<TotalDeChamadas_resumo.length; i++){
+                  const label = TotalDeChamadas_resumo[i].dataCall
+                  TotalDeChamadas_labelChart.push(label)
+                  const value = TotalDeChamadas_resumo[i].chamadas 
+                  TotalDeChamadas_dataChart.push(value)
+              }
+              monitoramentoCampanha["ConsolidadoDodia"]["TotalDeChamadas"]["labelChart"]=TotalDeChamadas_labelChart
+              monitoramentoCampanha["ConsolidadoDodia"]["TotalDeChamadas"]["dataChart"]=TotalDeChamadas_dataChart
+
+              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasCompletadasHoje"]={}
+              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasCompletadasHoje"]["total"]= await Report.totalChamadasCompletadasDia(empresa,idCampanha,hoje)
+              
+              const ChamadasCompletadasHoje_labelChart=[]
+              const ChamadasCompletadasHoje_dataChart=[]              
+              const ChamadasCompletadas_resumo = await Report.ChamadasCompletadas_UltimosDias(empresa,idCampanha,hoje)
+              for(let i=0; i<ChamadasCompletadas_resumo.length; i++){
+                  const label = ChamadasCompletadas_resumo[i].dataCall
+                  ChamadasCompletadasHoje_labelChart.push(label)
+                  const value = ChamadasCompletadas_resumo[i].chamadas 
+                  ChamadasCompletadasHoje_dataChart.push(value)
+              }
+              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasCompletadasHoje"]["labelChart"]=ChamadasCompletadasHoje_labelChart
+              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasCompletadasHoje"]["dataChart"]=ChamadasCompletadasHoje_dataChart
+
+              monitoramentoCampanha["ConsolidadoDodia"]["TabulacaoDeVendasHoje"]={}
+              monitoramentoCampanha["ConsolidadoDodia"]["TabulacaoDeVendasHoje"]["total"]=await Report.totalTabulacoesVendaDia(empresa,idCampanha,hoje)
+              
+              const ChamadasVendasHoje_labelChart=[]
+              const ChamadasVendasHoje_dataChart=[]              
+              const ChamadasVendas_resumo = await Report.totalChamadasVendas_UltimosDias(empresa,idCampanha,hoje)
+              for(let i=0; i<ChamadasVendas_resumo.length; i++){
+                  const label = ChamadasVendas_resumo[i].dataCall
+                  ChamadasVendasHoje_labelChart.push(label)
+                  const value = ChamadasVendas_resumo[i].chamadas 
+                  ChamadasVendasHoje_dataChart.push(value)
+              }
+              monitoramentoCampanha["ConsolidadoDodia"]["TabulacaoDeVendasHoje"]["labelChart"]=ChamadasVendasHoje_labelChart
+              monitoramentoCampanha["ConsolidadoDodia"]["TabulacaoDeVendasHoje"]["dataChart"]=ChamadasVendasHoje_dataChart
+
+              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasAbandonadas"]={}
+              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasAbandonadas"]["total"]= await Report.totalChamadasAbandonadasDia(empresa,idCampanha,hoje)
+              
+              const ChamadasAbandonadasHoje_labelChart=[]
+              const ChamadasAbandonadasHoje_dataChart=[]              
+              const ChamadasAbandonadas_resumo = await Report.totalChamadasAbandonadas_UltimosDias(empresa,idCampanha,hoje)
+              for(let i=0; i<ChamadasAbandonadas_resumo.length; i++){
+                  const label = ChamadasAbandonadas_resumo[i].dataCall
+                  ChamadasAbandonadasHoje_labelChart.push(label)
+                  const value = ChamadasAbandonadas_resumo[i].chamadas 
+                  ChamadasAbandonadasHoje_dataChart.push(value)
+              }
+              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasAbandonadas"]["labelChart"]=ChamadasAbandonadasHoje_labelChart
+              monitoramentoCampanha["ConsolidadoDodia"]["ChamadasAbandonadas"]["dataChart"]=ChamadasAbandonadasHoje_dataChart
+
+              monitoramentoCampanha["DadosAgente"]={}
+              monitoramentoCampanha["DadosAgente"]["indisponiveis"]=await Discador.agentesPorEstado(empresa,1)
+              monitoramentoCampanha["DadosAgente"]["Disponiveis"]=await Discador.agentesPorEstado(empresa,4)
+              monitoramentoCampanha["DadosAgente"]["Falando"]=await Discador.agentesPorEstado(empresa,3)
+              monitoramentoCampanha["DadosAgente"]["Pausados"]=await Discador.agentesPorEstado(empresa,2)
+        res.send(monitoramentoCampanha);
     }
+
+
+
+
+
+
 
     
 
-    async detalhamentoChamadas(req,res){
-        const empresa = await User.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
-        const ramal = req.body.ramal
-        const campanha = req.body.campanha
-        const numero = req.body.numero
 
-    }
+    
 
+    
+
+    
+
+   
     async loginXLogout(req,res){
         const empresa = await User.getEmpresa(req)
         const dataInicio  = req.body.dataInicio
@@ -97,12 +352,11 @@ class ReportController{
 
 
 
-
-    async filtroCampanhas(req,res){
+    async filtroAgentes(req,res){
         const empresa = await User.getEmpresa(req)
-        const campanhas = await Report.filtroCampanhas(empresa)
-        res.json(campanhas)
-    } 
+        const agentes = await Report.filtrarAgentes(empresa,0,0,1,false,0,0,false,1)
+        res.json(agentes)
+    }
     
     async filtroEquipes(req,res){
         const empresa = await User.getEmpresa(req)
@@ -110,7 +364,21 @@ class ReportController{
         res.json(equipes)
     }
 
+    async filtroCampanhas(req,res){
+        const empresa = await User.getEmpresa(req)
+        const campanhas = await Report.filtroCampanhas(empresa)
+        res.json(campanhas)
+    } 
+
+    async filtroMailings(req,res){
+        const empresa = await User.getEmpresa(req)
+        const mailings = await Report.filtroMailings(empresa)
+        res.json(mailings)
+    } 
     
+
+    
+
 
     
     
