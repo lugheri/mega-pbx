@@ -109,7 +109,7 @@ class Discador{
     }
 
     async chamadasAtendidas(empresa,ramal,campanha,dataI,dataF){
-        
+
         const sql = `SELECT COUNT(id) AS total
                        FROM ${empresa}_dados.historico_atendimento 
                       WHERE data='${data}' AND agente=${ramal}`
@@ -632,7 +632,7 @@ class Discador{
         const sql = `SELECT ramal 
                        FROM ${empresa}_dados.agentes_filas 
                       WHERE fila='${idFila}'
-                        AND (estado=1 OR estado=3 OR estado=5)`
+                        AND estado=1`
         return await this.querySync(sql)       
     }
     //Recuperando os parametros do discador
@@ -1501,6 +1501,15 @@ class Discador{
             Cronometro.pararOciosidade(empresa,agente)
             this.clearCallsAgent(empresa,agente)
         }  
+
+        if(estado==6){
+             //teste de remover agente do asterisk quando deslogado
+             sql = `UPDATE ${connect.db.asterisk}.queue_members
+                       SET paused=1 
+                     WHERE membername=${agente}`
+            await this.querySync(sql)  
+            
+        }
           
         
         //Atualizando o novo estado do agente        

@@ -81,8 +81,48 @@ class Campanhas{
                             estado=${valores.estado},
                             status=${valores.status} 
                       WHERE id=${idCampanha}`
+
+        await atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)              
+
+
         return await this.querySync(sql)  
     }
+
+    //Atualiza os status dos agentes da campanha de acordo com o status da mesma
+    async atualizaMembrosFilaCampanha(empresa,estado,idCampanha){
+        //Fila da campanha 
+        const sql = `SELECT idFila, nomeFila 
+                       FROM ${empresa}_dados.campanhas_filas 
+                      WHERE idCampanha=${idCampanha}`
+        const fila = await this.querySync(sql)
+        if(fila.length==0){
+            return false;
+        }
+        const idFila=fila[0].idFila
+        const nomeFila=fila[0].nomeFila
+
+        if(estado==1){
+            //Retira pausa do asterisk dos agentes disponiveis no sistema
+            sql = `SELECT ramal 
+                     FROM ${empresa}_dados.agentes_filas
+                    WHERE fila=${idFila}
+                      AND estado=1`
+            const agentes=await this.querySync(sql)
+            for(let i=0; i<agentes.length; i++){
+                const agente = agentes[i].ramal
+                sql = `UPDATE ${connect.db.asterisk}.queue_members 
+                          SET paused=0 
+                        WHERE membername='${agente}'`
+                await this.querySync(sql)  
+            }
+        }else{
+            //Pausa os agentes no asterisk
+            sql = `UPDATE ${connect.db.asterisk}.queue_members 
+                      SET paused=1 
+                        WHERE queue_name='${nomeFila}'`
+            await this.querySync(sql) 
+        }
+    } 
 
     //Remove Campanha
     //A campanha é removida quando seu status é setado para zero
@@ -255,13 +295,13 @@ class Campanhas{
         return await this.querySync(sql)   
     }    
     //Incluir fila a campanhas
-    async addFila(empresa,idCampanha,idFila,nomeFila){
+    async addFila(empresa,idCampanha,idFila,apelido,nomeFila){
         let sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
                     WHERE idCampanha=${idCampanha}`
         await this.querySync(sql)  
         sql = `INSERT INTO ${empresa}_dados.campanhas_filas 
-                          (idCampanha,idFila,nomeFila) 
-                   VALUES (${idCampanha},${idFila},'${nomeFila}')`
+                          (idCampanha,idFila,nomeFila,apelido) 
+                   VALUES (${idCampanha},${idFila},'${nomeFila}','${apelido}')`
         return await this.querySync(sql)   
     }
 
@@ -761,7 +801,7 @@ class Campanhas{
     } 
 
     async dadosFila(empresa,idFila){
-        const sql = `SELECT id,apelido as nome, descricao 
+        const sql = `SELECT id,apelido as nome, nome as nomeFila, descricao 
                        FROM ${empresa}_dados.filas 
                       WHERE id=${idFila}`
         return await this.querySync(sql)

@@ -177,6 +177,28 @@ class Dashboard{
               realTime['RealTimeChart']['Falando']=conectadas
         return realTime
     }
+
+    async realTimeCallsCampain(empresa,idCampanha){           
+        let sql = `SELECT COUNT(id) as total 
+                     FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                    WHERE id_campanha=${idCampanha}
+                 ORDER BY id DESC LIMIT 1`
+        const t = await this.querySync(sql)
+        const totais = t[0].total
+
+        sql = `SELECT COUNT(id) as conectadas 
+                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                      WHERE id_campanha=${idCampanha} AND falando=1 
+                      ORDER BY id DESC LIMIT 1`
+        const c = await this.querySync(sql)
+        const conectadas = c[0].conectadas
+
+        const realTime={}
+              realTime['RealTimeChart']={}
+              realTime['RealTimeChart']['Ligando']=totais
+              realTime['RealTimeChart']['Falando']=conectadas
+        return realTime
+    }
     
     async converteSeg_tempo(segundos_totais){
         return new Promise((resolve, reject)=>{

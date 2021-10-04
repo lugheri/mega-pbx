@@ -209,6 +209,10 @@ class ReportController{
         const idCampanha = parseInt(req.params.idCampanha)
 
         const infoCampanha = await Campanhas.infoCampanha(empresa,idCampanha)
+        if(infoCampanha.length==0){
+            res.json({})
+            return false
+        }
         const hoje = moment().format("Y-MM-DD")
         const monitoramentoCampanha = {}
               monitoramentoCampanha["nomeDaCampanha"]=infoCampanha[0].nome
@@ -219,9 +223,10 @@ class ReportController{
               monitoramentoCampanha["ChamadasEmAtendimento"]=await Report.chamadasEmAtendimentoCampanha(empresa,idCampanha)
               monitoramentoCampanha["ChamadasNãoAtendidas"]=await Report.chamadasNaoAtendidasCampanha(empresa,idCampanha)
               monitoramentoCampanha["Contatados"]=await Report.chamadasContatadasCampanha(empresa,idCampanha)
+              monitoramentoCampanha["Agressividade"]=await Report.agressividadeCampanha(empresa,idCampanha)
               monitoramentoCampanha["Cronograma"]=`${infoCampanha[0].horaInicio} - ${infoCampanha[0].horaTermino}`
               monitoramentoCampanha["TempoMedioDeAtendimento"]=await Report.converteSeg_tempo(await Report.TempoMedioDeAtendimentoCampanha(empresa,idCampanha))
-
+              
               monitoramentoCampanha["DadosCampanhaPorcentagem"]={}
 
               let perc_trabalhados = 0
@@ -321,6 +326,14 @@ class ReportController{
               monitoramentoCampanha["DadosAgente"]["Falando"]=await Discador.agentesPorEstado(empresa,3)
               monitoramentoCampanha["DadosAgente"]["Pausados"]=await Discador.agentesPorEstado(empresa,2)
         res.send(monitoramentoCampanha);
+    }
+
+    async atualizaAgressividade(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idCampanha  = req.params.idCampanha
+        const agressividade  = req.body.agressividade 
+        await Report.atualizaAgressividade(empresa,idCampanha,agressividade)
+        res.json(true)
     }
 
 

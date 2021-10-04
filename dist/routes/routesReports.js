@@ -10,8 +10,8 @@ module.exports = (routes) => {
     routes.post('/monitoramentoAgente',_ReportController2.default.monitoramentoAgente)
     //Monitoramento de Campanhas
     routes.get('/monitoramentoCampanha/:idCampanha',_ReportController2.default.monitoramentoCampanhas)
-
-
+    //Atualiza Agressividade
+    routes.patch('/atualizaAgressividade/:idCampanha',_ReportController2.default.atualizaAgressividade)
     
     
     

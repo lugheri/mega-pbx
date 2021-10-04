@@ -209,6 +209,10 @@ class ReportController{
         const idCampanha = parseInt(req.params.idCampanha)
 
         const infoCampanha = await _Campanhas2.default.infoCampanha(empresa,idCampanha)
+        if(infoCampanha.length==0){
+            res.json({})
+            return false
+        }
         const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
         const monitoramentoCampanha = {}
               monitoramentoCampanha["nomeDaCampanha"]=infoCampanha[0].nome
@@ -219,9 +223,10 @@ class ReportController{
               monitoramentoCampanha["ChamadasEmAtendimento"]=await _Report2.default.chamadasEmAtendimentoCampanha(empresa,idCampanha)
               monitoramentoCampanha["ChamadasNãoAtendidas"]=await _Report2.default.chamadasNaoAtendidasCampanha(empresa,idCampanha)
               monitoramentoCampanha["Contatados"]=await _Report2.default.chamadasContatadasCampanha(empresa,idCampanha)
+              monitoramentoCampanha["Agressividade"]=await _Report2.default.agressividadeCampanha(empresa,idCampanha)
               monitoramentoCampanha["Cronograma"]=`${infoCampanha[0].horaInicio} - ${infoCampanha[0].horaTermino}`
               monitoramentoCampanha["TempoMedioDeAtendimento"]=await _Report2.default.converteSeg_tempo(await _Report2.default.TempoMedioDeAtendimentoCampanha(empresa,idCampanha))
-
+              
               monitoramentoCampanha["DadosCampanhaPorcentagem"]={}
 
               let perc_trabalhados = 0
@@ -321,6 +326,14 @@ class ReportController{
               monitoramentoCampanha["DadosAgente"]["Falando"]=await _Discador2.default.agentesPorEstado(empresa,3)
               monitoramentoCampanha["DadosAgente"]["Pausados"]=await _Discador2.default.agentesPorEstado(empresa,2)
         res.send(monitoramentoCampanha);
+    }
+
+    async atualizaAgressividade(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const idCampanha  = req.params.idCampanha
+        const agressividade  = req.body.agressividade 
+        await _Report2.default.atualizaAgressividade(empresa,idCampanha,agressividade)
+        res.json(true)
     }
 
 

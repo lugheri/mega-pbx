@@ -285,6 +285,26 @@ class Report{
         return c[0].contatados
     }
 
+    async agressividadeCampanha(empresa,idCampanha){
+        const sql = `SELECT agressividade 
+                       FROM ${empresa}_dados.campanhas_discador
+                      WHERE idCampanha=${idCampanha}`
+        const c=await this.querySync(sql);
+        if(c.length==0){
+            return 0
+        }
+        return c[0].agressividade
+    }
+
+    async atualizaAgressividade(empresa,idCampanha,agressividade){
+        const sql = `UPDATE ${empresa}_dados.campanhas_discador 
+                        SET agressividade=${agressividade}
+                      WHERE idCampanha=${idCampanha}`
+        return await this.querySync(sql);
+
+    }
+
+
     async TempoMedioDeAtendimentoCampanha(empresa,idCampanha){
         const sql = `SELECT AVG(tempo_total) as tempoMedio 
                        FROM ${empresa}_dados.tempo_ligacao
@@ -372,6 +392,7 @@ class Report{
         return await this.querySync(sql);
     }
 
+   
 
 
 

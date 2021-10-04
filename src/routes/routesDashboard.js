@@ -9,6 +9,8 @@ module.exports = (routes) => {
 
     routes.get('/realTimeCalls',DashboardController.realTimeCalls)
 
+    routes.get('/realTimeCallsCampain/:idCampanha',DashboardController.realTimeCallsCampain)
+
     routes.get('/usersRealTime',DashboardController.usersRealTime)
 
     //Qtd de usuarios dos ultimos dias

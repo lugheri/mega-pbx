@@ -225,8 +225,9 @@ class CampanhasController{
         const infoFila=await _Campanhas2.default.dadosFila(empresa,idFila)
         
         if(infoFila.length>0){
-            const nomeFila=infoFila[0].nome
-            const r=await _Campanhas2.default.addFila(empresa,idCampanha,idFila,nomeFila)
+            const nome=infoFila[0].nome//Apelido
+            const nomeFila=infoFila[0].nomeFila//Nome Real da fila
+            const r=await _Campanhas2.default.addFila(empresa,idCampanha,idFila,nome,nomeFila)
             if(r.affectedRows==0){
                 res.json(false)
                 return false

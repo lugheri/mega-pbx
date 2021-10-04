@@ -54,10 +54,18 @@ class Filas{
 
      //Remove a fila
      async removerFila(empresa,nomeFila){
-        const sql = `DELETE FROM ${connect.db.asterisk}.queues WHERE name='${nomeFila}'`
+        let sql = `DELETE FROM ${connect.db.asterisk}.queues WHERE name='${nomeFila}'`
         await this.querySync(sql)
-        const sql2 = `DELETE FROM ${connect.db.asterisk}.queue_members WHERE queue_name='${nomeFila}'`
-        await this.querySync(sql2)
+        sql = `DELETE FROM ${connect.db.asterisk}.queue_members WHERE queue_name='${nomeFila}'`
+        await this.querySync(sql)
+    }
+
+    async filaCampanha(empresa,idCampanha){
+        const sql = `SELECT idFila, nomeFila 
+                       FROM ${empresa}_dados.campanhas_filas 
+                      WHERE idCampanha=${idCampanha}`
+        return await this.querySync(sql)
+        
     }
 
 

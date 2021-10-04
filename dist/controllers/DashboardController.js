@@ -26,6 +26,14 @@ class DashboardController{
         const realTimeData= await _Dashboard2.default.realTimeCalls(empresa)
         res.json(realTimeData)
     }
+
+    async realTimeCallsCampain(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const idCampanha = parseInt(req.params.idCampanha)
+
+        const realTimeDataCampain= await _Dashboard2.default.realTimeCallsCampain(empresa,idCampanha)
+        res.json(realTimeDataCampain)
+    }
     
     async usersRealTime(req,res){
         const empresa = await _User2.default.getEmpresa(req)
