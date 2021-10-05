@@ -51,13 +51,23 @@ class User{
         return true 
     }
 
-    async registraLogin(empresa,usuarioId,acao){
-        let sql = `INSERT INTO ${empresa}_dados.registro_logins 
-                                (data,hora,user_id,acao) 
-                         VALUES (NOW(),NOW(),${usuarioId},'${acao}')`
-        await this.querySync(sql) 
-
+    async registraLogin(empresa,usuarioId,acao){       
+        let sql
         if(acao=='login'){
+            //checa a ultima acao do agente 
+            sql = `SELECT acao FROM ${empresa}_dados.registro_logins WHERE user_id=${usuarioId} ORDER BY id DESC LIMIT 1`
+            const a = await this.querySync(sql)
+            if(a.length>0){
+               
+                //Caso a ultima acao tambem tenha sido um login, insere a informacao de logout antes do px login
+                if(a[0].acao=='login'){
+                    console.log('inserindo logout antes do login')
+                    sql = `INSERT INTO ${empresa}_dados.registro_logins 
+                                       (data,hora,user_id,acao) 
+                                VALUES (NOW(),NOW(),${usuarioId},'logout')`
+                    await this.querySync(sql) 
+                }
+            } 
             //Atualiza em todas as filas estado como 1
             sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=4 WHERE ramal=${usuarioId}`
             await this.querySync(sql) 
@@ -66,8 +76,7 @@ class User{
             await this.querySync(sql) 
             
             sql = `UPDATE ${empresa}_dados.user_ramal SET estado=4, datetime_estado=NOW() WHERE userId=${usuarioId}`
-            await this.querySync(sql) 
-            return true
+            await this.querySync(sql)            
         }else{                
             //Atualiza em todas as filas estado como 0
             sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0 WHERE ramal=${usuarioId}`
@@ -79,6 +88,12 @@ class User{
             sql = `UPDATE ${empresa}_dados.user_ramal SET estado=0, datetime_estado=NOW() WHERE userId=${usuarioId}`
             await this.querySync(sql)
         } 
+        console.log('inserindo login')
+        sql = `INSERT INTO ${empresa}_dados.registro_logins 
+                                (data,hora,user_id,acao) 
+                         VALUES (NOW(),NOW(),${usuarioId},'${acao}')`
+        await this.querySync(sql) 
+        return true
     }
 
     async getEmpresa(req){

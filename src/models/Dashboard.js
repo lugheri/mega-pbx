@@ -66,20 +66,14 @@ class Dashboard{
                 const campanha={}
                 const statusCampanha=await Discador.statusCampanha(empresa,campanhasAtivas[i].id)
                 const idMailing = await Campanhas.listarMailingCampanha(empresa,campanhasAtivas[i].id) 
-                const Improdutivas=await Discador.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,0,idMailing[0].idMailing)
-                const Produtivas=await Discador.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,1,idMailing[0].idMailing)
-                const Trabalhados=Improdutivas+Produtivas
 
-                //Trabalhadas na campanha no mailing atual
                 const totalRegistros=await Campanhas.totalRegistrosCampanha(empresa,campanhasAtivas[i].id)
                 const Improdutivas_mailingAtual = await Discador.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,0,idMailing[0].idMailing)
                 const Produtivas_mailingAtual = await Discador.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,1,idMailing[0].idMailing)
                 const Trabalhados_mailingAtual=Improdutivas_mailingAtual+Produtivas_mailingAtual
-                
-                console.log('Campanha',campanhasAtivas[i].nome)
+                const NaoTrabalhados_mailingAtual=totalRegistros[0].total-Trabalhados_mailingAtual  
+
                 console.log('totalRegistros',totalRegistros)
-                console.log('Improdutivas_mailingAtual',Improdutivas_mailingAtual)
-                console.log('Produtivas_mailingAtual',Produtivas_mailingAtual)
                 console.log('Trabalhados_mailingAtual',Trabalhados_mailingAtual)
                 
                 
@@ -92,11 +86,13 @@ class Dashboard{
                 campanha["nomeCampanha"]=campanhasAtivas[i].nome
                 campanha["idCampanha"]=campanhasAtivas[i].id
                 campanha["statusCampanha"]=statusCampanha[0].estado
+                campanha["descricaoStatusCampanha"]=statusCampanha[0].mensagem
                 campanha["descricaoCampanha"]=campanhasAtivas[i].descricao
                 campanha["PercentualTrabalhado"]=PercentualTrabalhado
-                campanha["Improdutivas"]=Improdutivas
-                campanha["Produtivas"]=Produtivas
-                campanha["Trabalhado"]=Trabalhados
+                campanha["Improdutivas"]=Improdutivas_mailingAtual
+                campanha["Produtivas"]=Produtivas_mailingAtual
+                campanha["Trabalhado"]=Trabalhados_mailingAtual
+                campanha["NaoTrabalhado"]=NaoTrabalhados_mailingAtual
                 dash["Campanhas"].push(campanha)
 
             }

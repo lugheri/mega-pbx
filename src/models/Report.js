@@ -73,6 +73,32 @@ class Report{
         return user
     }
 
+    async dadosLogin(empresa,idAgente,de,ate,acao,idLogin){
+        let sql
+        if(acao=="login"){
+            sql = `SELECT id,DATE_FORMAT(data,'%Y-%m-%d') as data, hora
+                     FROM ${empresa}_dados.registro_logins 
+                    WHERE user_id=${idAgente} AND acao='login' AND id>${idLogin} AND data>='${de}' AND data<='${ate}'
+                 ORDER BY id DESC`
+        }else{
+            sql = `SELECT id,DATE_FORMAT(data,'%Y-%m-%d') as data, hora
+                     FROM ${empresa}_dados.registro_logins 
+                    WHERE user_id=${idAgente} AND acao='${acao}' AND id>${idLogin} AND data>='${de}' AND data<='${ate}'
+                ORDER BY id ASC 
+                         LIMIT 1`
+        }
+        return await this.querySync(sql)
+    }
+
+    async infoEstadoAgente(empresa,ramal){        
+        const sql = `SELECT e.estado 
+                       FROM ${empresa}_dados.user_ramal AS r
+                       JOIN ${empresa}_dados.estadosAgente AS e ON r.estado=e.cod
+                      WHERE r.ramal='${ramal}'`
+        const e = await this.querySync(sql)
+        return e[0].estado
+    }
+
     async calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,agente){
         let filter=""       
         
@@ -185,6 +211,22 @@ class Report{
         const d = await this.querySync(sql)
         return d[0].tempo
     }
+
+    async totalChamadasRecebidas(empresa,idAgente,de,ate){
+        let sql = `SELECT SUM(tempo_total) AS tempo
+                     FROM ${empresa}_dados.tempo_ligacao
+                    WHERE idAgente=${idAgente} AND tipoDiscador='receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
+        const t = await this.querySync(sql)
+        return t[0].tempo
+    }
+
+    async totalChamadasRealizadas(empresa,idAgente,de,ate){
+        let sql = `SELECT SUM(tempo_total) AS tempo
+                     FROM ${empresa}_dados.tempo_ligacao
+                    WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
+        const t = await this.querySync(sql)
+        return t[0].tempo
+    }   
 
     async chamadasAtendidas(empresa,ramal,campanha,dataI,dataF,hoje){
         let filter=""

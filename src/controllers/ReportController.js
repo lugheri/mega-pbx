@@ -243,18 +243,13 @@ class ReportController{
               const produtivo = await Report.mailingsProdutivosPorCampanha(empresa,idCampanha,idMailing,1)
               const Improdutivos = await Report.mailingsProdutivosPorCampanha(empresa,idCampanha,idMailing,0)
               const trabalhados = produtivo + Improdutivos  
-                          
-              
+                                        
              
               if(total!=0){
                   perc_trabalhados=Math.round((trabalhados / total)*100)
                   perc_produtivos=Math.round((produtivo / total)*100)
                   perc_improdutivos=Math.round((Improdutivos / total)*100)           
               }
-
-
-
-
               monitoramentoCampanha["DadosCampanhaPorcentagem"]["Trabalhado"]=perc_trabalhados
               monitoramentoCampanha["DadosCampanhaPorcentagem"]["Produtivo"]=perc_produtivos            
               monitoramentoCampanha["DadosCampanhaPorcentagem"]["Improdutivo"]=perc_improdutivos
@@ -336,6 +331,71 @@ class ReportController{
         res.json(true)
     }
 
+    async loginXLogout(req,res){
+        const empresa = await User.getEmpresa(req)
+        const dataInicio  = req.body.dataInicio
+        const dataFinal  = req.body.dataFinal
+        const ramal = req.body.ramal
+        const estado = req.body.estado
+        const equipe = req.body.equipe
+        const logados = req.body.logados
+        const pagina = req.body.pagina
+        const status = req.body.status
+
+        const hoje = moment().format("Y-MM-DD")
+
+        const loginLogout = []
+        const agentes = await Report.filtrarAgentes(empresa,0,0,status,estado,ramal,equipe,logados,pagina)
+        let de = hoje
+        let ate = hoje
+
+        if((dataInicio!=false)||(dataInicio!="")){de=dataInicio;}
+        if((dataFinal!=false)||(dataFinal!="")){ate=dataFinal;}
+
+        for(let i = 0; i <agentes.length; i++){
+            const idAgente=agentes[i].id
+           
+            const login = await Report.dadosLogin(empresa,idAgente,de,ate,'login',0)
+            for(let l=0; l<login.length;l++) {
+                const llAgente = {}
+                      llAgente["ramal"]=idAgente
+                      llAgente["agente"]=agentes[i].nome
+                let dataLogin = `${login[l].data} ${login[l].hora}`
+                      llAgente["Login"]=moment(dataLogin, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
+
+                const logout = await Report.dadosLogin(empresa,idAgente,de,ate,'logout',login[l].id)
+                let dataLogout = moment().format("YYYY-MM-DD HH:mm:ss")
+                if(logout.length>0){
+                    dataLogout = `${logout[0].data} ${logout[0].hora}`
+                      llAgente["Logout"]=moment(dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
+                }else{
+                      llAgente["Logout"]=" - "
+                }
+                      
+                    const tl = moment(dataLogout,"YYYY-MM-DD HH:mm:ss").diff(moment(dataLogin,"YYYY-MM-DD HH:mm:ss"))
+                    const tempoLogado = moment.duration(tl).asSeconds()
+                        llAgente["Tempo Logado"]=await Report.converteSeg_tempo(tempoLogado)
+
+                const tempoChamadasRecebidas = await Report.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
+                      llAgente["Chamadas Recebidas"]=await Report.converteSeg_tempo(tempoChamadasRecebidas)
+
+                const tempoChamadasRealizadas = await Report.totalChamadasRealizadas(empresa,idAgente,dataLogin,dataLogout)                      
+                      llAgente["Chamadas Realizadas"]=await Report.converteSeg_tempo(tempoChamadasRealizadas)
+                      
+                const tempoEmChamadas=tempoChamadasRecebidas+tempoChamadasRealizadas
+                      llAgente["Tempo em Chamada"]=await Report.converteSeg_tempo(tempoEmChamadas)
+
+                const perc_servico = Math.floor((tempoEmChamadas/tempoLogado)*100)
+                      llAgente["% de Serviço"]=`${perc_servico}%`
+                
+                      llAgente["Status"]=await Report.infoEstadoAgente(empresa,idAgente)
+                loginLogout.push(llAgente)
+            }
+        }
+
+        res.json(loginLogout)
+    }
+
 
 
 
@@ -352,12 +412,7 @@ class ReportController{
     
 
    
-    async loginXLogout(req,res){
-        const empresa = await User.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
-        const tipoBusca  = req.body.tipoBusca
-    }
+   
 
 
 

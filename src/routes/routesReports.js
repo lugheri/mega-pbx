@@ -12,14 +12,8 @@ module.exports = (routes) => {
     routes.get('/monitoramentoCampanha/:idCampanha',ReportController.monitoramentoCampanhas)
     //Atualiza Agressividade
     routes.patch('/atualizaAgressividade/:idCampanha',ReportController.atualizaAgressividade)
-    
-    
-    
-    
-    
     //LoginXLogout
     routes.post('/loginXLogout',ReportController.loginXLogout)
-
     //FILTROS
     //Lista de Agentes
     routes.get('/filtroAgentes/', ReportController.filtroAgentes)
