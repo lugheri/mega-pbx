@@ -35,6 +35,8 @@ class UserController{
         res.json(r)
     }
 
+    
+
     //EQUIPES
     async novaEquipe(req,res){
         const empresa = await _User2.default.getEmpresa(req)
@@ -59,6 +61,7 @@ class UserController{
 
     async editEquipe(req,res){
         const empresa = await _User2.default.getEmpresa(req)
+        
         const idEquipe = parseInt(req.params.idEquipe)
         const dados = req.body
         const r = await _User2.default.editEquipe(empresa,idEquipe,dados)

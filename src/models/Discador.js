@@ -149,7 +149,7 @@ class Discador{
                         AND idMailing=${idMailing}
                         ${queryFilter};`
         const p=await this.querySync(sql);
-        console.log(sql)
+        // //console.log(sql)
         return p[0].produtivas
     }
 
@@ -292,12 +292,13 @@ class Discador{
         //removendo do log chamadas do dia anterior
         let sql = `DELETE FROM ${empresa}_dados.log_chamadas_simultaneas  
                          WHERE DATA < DATE_SUB(NOW(), INTERVAL 15 SECOND);`
+                         //console.log(sql)
         await this.querySync(sql)
         //Inserindo informacoes de chamadas para o grafico de chamadas simultaneas
         sql = `INSERT INTO ${empresa}_dados.log_chamadas_simultaneas 
                            (data,total,conectadas,manuais) 
                      VALUE (now(),${chamadas_simultaneas},${chamadas_conectadas},${chamadas_manuais})`
-                    
+                     //console.log(sql)
         await this.querySync(sql)
         return true
     }
@@ -733,7 +734,7 @@ class Discador{
        
         const sql = `SELECT id 
                         FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                        WHERE numero='0${numero}'`
+                        WHERE numero='${numero}'`
         const r = await this.querySync(sql)
         if(r.length==0){
             await this.debug(` . . . . . . . . . . . . . PASSO 2.6 - Numero ${numero} livre`,'',empresa)
@@ -1092,7 +1093,7 @@ class Discador{
                                     '${tabela_numeros}',
                                     ${id_registro},
                                     ${id_numero},
-                                    '0${numero}',
+                                    '${numero}',
                                     ${fila},
                                     ${tratado},
                                     ${atendido},
@@ -1169,7 +1170,7 @@ class Discador{
                 if(n.length==0){
                     sql = `INSERT INTO ${empresa}_mailings.campanhas_tabulacao_mailing 
                                       (data,numeroDiscado,agente,estado,desc_estado,contatado,tabulacao,produtivo,observacao,tentativas,max_time_retry,idRegistro,idMailing,idCampanha,idNumero)
-                               VALUES (now(),'0${numero}','${ramal}','${estado}','${desc_estado}','${contatado}',${status_tabulacao},'${produtivo}','${observacao}',1,0,${idRegistro},${idMailing},${idCampanha},${numbers[i].id})` 
+                               VALUES (now(),'${numero}','${ramal}','${estado}','${desc_estado}','${contatado}',${status_tabulacao},'${produtivo}','${observacao}',1,0,${idRegistro},${idMailing},${idCampanha},${numbers[i].id})` 
                     
                     await this.querySync(sql)
                 }
@@ -1263,7 +1264,7 @@ class Discador{
         //Grava informações no histórico de chamadas
         sql = `INSERT INTO ${empresa}_dados.historico_atendimento 
                             (data,hora,campanha,mailing,id_registro,id_numero,nome_registro,agente,protocolo,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado,produtivo) 
-                     VALUES (now(),now(),${idCampanha},${idMailing},${idRegistro},${idNumero},'${nome_registro}',${ramal},'${protocolo}','${uniqueid}','${tipo_ligacao}','0${numero}',${status_tabulacao},'${observacao}','${contatado}',${produtivo}) `
+                     VALUES (now(),now(),${idCampanha},${idMailing},${idRegistro},${idNumero},'${nome_registro}',${ramal},'${protocolo}','${uniqueid}','${tipo_ligacao}','${numero}',${status_tabulacao},'${observacao}','${contatado}',${produtivo}) `
         await this.querySync(sql)
 
        
@@ -1792,7 +1793,7 @@ class Discador{
                    ORDER BY id ASC`;
         const campos_numeros = await this.querySync(sql)
         for(let i=0; i<campos_numeros.length; i++){    
-            info['numeros'].push(await this.tabulacoesNumero(empresa,campos_numeros[i].id,`0${campos_numeros[i].numero}`));
+            info['numeros'].push(await this.tabulacoesNumero(empresa,campos_numeros[i].id,`${campos_numeros[i].numero}`));
         }
        
         info['id_numeros_discado']=id_numero
@@ -1944,7 +1945,7 @@ class Discador{
                    ORDER BY id ASC`;
         const campos_numeros = await this.querySync(sql)
         for(let i=0; i<campos_numeros.length; i++){
-            info['numeros'].push(`0${campos_numeros[i].numero}`);
+            info['numeros'].push(`${campos_numeros[i].numero}`);
         }
         info['numeros_discado']=numero
          sql = `SELECT id,nome,descricao 
@@ -2068,7 +2069,7 @@ class Discador{
             const n = await this.querySync(sql)            
             
             for(let num=0; num<n.length; num++){
-                fNumeros+=` AND numero_discado='0${n[num].numero}'`
+                fNumeros+=` AND numero_discado='${n[num].numero}'`
             }
         }
 
@@ -2168,7 +2169,7 @@ class Discador{
                         AND nome_registro IS NOT NULL                      
                       ORDER BY id DESC
                       LIMIT 1`
-                     console.log(sql)
+                     //console.log(sql)
         const n = await this.querySync(sql)
         if(n.length==0){
             return ""

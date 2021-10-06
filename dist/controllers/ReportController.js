@@ -15,7 +15,7 @@ class ReportController{
         const dataInicio  = req.body.dataInicio
         const dataFinal  = req.body.dataFinal
         const ramal = req.body.ramal
-        const equipe = req.body.ramal
+        const equipe = req.body.equipe
         const logados = req.body.logados
         const pagina = req.body.pagina
         const status = req.body.status
@@ -175,31 +175,53 @@ class ReportController{
             
             const agente={}
                   agente["ramal"]=idAgente
-                  agente["estado"]=estado
+                 let estadoAgente = codEstado
+                  if(codEstado==3){
+                    const tabulando = await _Report2.default.statusTabulacaoChamada(empresa,idAgente)
+                    if(tabulando==1){
+                        estadoAgente=3.5
+                    }
+
+                }else if(codEstado==6){
+                    const falando = await _Report2.default.statusAtendimentoChamada(empresa,idAgente)
+                    if(falando==1){
+                        estadoAgente=7
+                    }
+                }
+
+
+                  agente["estado"]=estadoAgente
                   agente["cod_estado"]=codEstado
                   agente["equipe"]=equipe
                   agente["nome"]=nome
+            let userCampanhas
+            if((estado!=false)||(estado!="")){
+                userCampanhas=true
+            }else{      
+                userCampanhas = await _Report2.default.usuarioCampanha(empresa,idAgente,idCampanha)
+            }
+            if(userCampanhas==true){
+                const tempoStatus=await _Report2.default.tempoEstadoAgente(empresa,idAgente)
+                const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+                const chamadasAtendidas=await _Report2.default.chamadasAtendidas(empresa,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+                const campanha = await _Discador2.default.listarCampanhasAtivasAgente(empresa,idAgente)
+                const TMT = await _Report2.default.converteSeg_tempo(await _Report2.default.tempoMedioAgente(empresa,idAgente,'TMT',idCampanha,dataInicio,dataFinal,hoje))
+                const TMA = await _Report2.default.converteSeg_tempo(await _Report2.default.tempoMedioAgente(empresa,idAgente,'TMA',idCampanha,dataInicio,dataFinal,hoje))
+                const TMO = await _Report2.default.converteSeg_tempo(await _Report2.default.tempoMedioAgente(empresa,idAgente,'TMO',idCampanha,dataInicio,dataFinal,hoje))
+                const produtivos = await _Report2.default.chamadasProdutividade(empresa,1,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+                const improdutivos = await _Report2.default.chamadasProdutividade(empresa,0,idAgente,idCampanha,dataInicio,dataFinal,hoje)
 
-            const tempoStatus=await _Report2.default.tempoEstadoAgente(empresa,idAgente)
-            const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
-            const chamadasAtendidas=await _Report2.default.chamadasAtendidas(empresa,idAgente,idCampanha,dataInicio,dataFinal,hoje)
-            const campanha = await _Discador2.default.listarCampanhasAtivasAgente(empresa,idAgente)
-            const TMT = await _Report2.default.converteSeg_tempo(await _Report2.default.tempoMedioAgente(empresa,idAgente,'TMT',idCampanha,dataInicio,dataFinal,hoje))
-            const TMA = await _Report2.default.converteSeg_tempo(await _Report2.default.tempoMedioAgente(empresa,idAgente,'TMA',idCampanha,dataInicio,dataFinal,hoje))
-            const TMO = await _Report2.default.converteSeg_tempo(await _Report2.default.tempoMedioAgente(empresa,idAgente,'TMO',idCampanha,dataInicio,dataFinal,hoje))
-            const produtivos = await _Report2.default.chamadasProdutividade(empresa,1,idAgente,idCampanha,dataInicio,dataFinal,hoje)
-            const improdutivos = await _Report2.default.chamadasProdutividade(empresa,0,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+                    agente["tempoStatus"]=tempoStatus
+                    agente["chamadasAtendidas"]=chamadasAtendidas
+                    agente["campanha"]=campanha
+                    agente["TMT"]=TMT
+                    agente["TMA"]=TMA
+                    agente["TMO"]=TMO
+                    agente["produtivos"]=produtivos
+                    agente["improdutivos"]=improdutivos
 
-                  agente["tempoStatus"]=tempoStatus
-                  agente["chamadasAtendidas"]=chamadasAtendidas
-                  agente["campanha"]=campanha
-                  agente["TMT"]=TMT
-                  agente["TMA"]=TMA
-                  agente["TMO"]=TMO
-                  agente["produtivos"]=produtivos
-                  agente["improdutivos"]=improdutivos
-
-            monitoramentoAgentes.push(agente)
+                monitoramentoAgentes.push(agente)
+            }
         }
         res.json(monitoramentoAgentes)
     }
@@ -243,18 +265,13 @@ class ReportController{
               const produtivo = await _Report2.default.mailingsProdutivosPorCampanha(empresa,idCampanha,idMailing,1)
               const Improdutivos = await _Report2.default.mailingsProdutivosPorCampanha(empresa,idCampanha,idMailing,0)
               const trabalhados = produtivo + Improdutivos  
-                          
-              
+                                        
              
               if(total!=0){
                   perc_trabalhados=Math.round((trabalhados / total)*100)
                   perc_produtivos=Math.round((produtivo / total)*100)
                   perc_improdutivos=Math.round((Improdutivos / total)*100)           
               }
-
-
-
-
               monitoramentoCampanha["DadosCampanhaPorcentagem"]["Trabalhado"]=perc_trabalhados
               monitoramentoCampanha["DadosCampanhaPorcentagem"]["Produtivo"]=perc_produtivos            
               monitoramentoCampanha["DadosCampanhaPorcentagem"]["Improdutivo"]=perc_improdutivos
@@ -336,6 +353,71 @@ class ReportController{
         res.json(true)
     }
 
+    async loginXLogout(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const dataInicio  = req.body.dataInicio
+        const dataFinal  = req.body.dataFinal
+        const ramal = req.body.ramal
+        const estado = req.body.estado
+        const equipe = req.body.equipe
+        const logados = req.body.logados
+        const pagina = req.body.pagina
+        const status = req.body.status
+
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+
+        const loginLogout = []
+        const agentes = await _Report2.default.filtrarAgentes(empresa,0,0,status,estado,ramal,equipe,logados,pagina)
+        let de = hoje
+        let ate = hoje
+
+        if((dataInicio!=false)||(dataInicio!="")){de=dataInicio;}
+        if((dataFinal!=false)||(dataFinal!="")){ate=dataFinal;}
+
+        for(let i = 0; i <agentes.length; i++){
+            const idAgente=agentes[i].id
+           
+            const login = await _Report2.default.dadosLogin(empresa,idAgente,de,ate,'login',0)
+            for(let l=0; l<login.length;l++) {
+                const llAgente = {}
+                      llAgente["ramal"]=idAgente
+                      llAgente["agente"]=agentes[i].nome
+                let dataLogin = `${login[l].data} ${login[l].hora}`
+                      llAgente["Login"]=_moment2.default.call(void 0, dataLogin, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
+
+                const logout = await _Report2.default.dadosLogin(empresa,idAgente,de,ate,'logout',login[l].id)
+                let dataLogout = _moment2.default.call(void 0, ).format("YYYY-MM-DD HH:mm:ss")
+                if(logout.length>0){
+                    dataLogout = `${logout[0].data} ${logout[0].hora}`
+                      llAgente["Logout"]=_moment2.default.call(void 0, dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
+                }else{
+                      llAgente["Logout"]=" - "
+                }
+                      
+                    const tl = _moment2.default.call(void 0, dataLogout,"YYYY-MM-DD HH:mm:ss").diff(_moment2.default.call(void 0, dataLogin,"YYYY-MM-DD HH:mm:ss"))
+                    const tempoLogado = _moment2.default.duration(tl).asSeconds()
+                        llAgente["Tempo Logado"]=await _Report2.default.converteSeg_tempo(tempoLogado)
+
+                const tempoChamadasRecebidas = await _Report2.default.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
+                      llAgente["Chamadas Recebidas"]=await _Report2.default.converteSeg_tempo(tempoChamadasRecebidas)
+
+                const tempoChamadasRealizadas = await _Report2.default.totalChamadasRealizadas(empresa,idAgente,dataLogin,dataLogout)                      
+                      llAgente["Chamadas Realizadas"]=await _Report2.default.converteSeg_tempo(tempoChamadasRealizadas)
+                      
+                const tempoEmChamadas=tempoChamadasRecebidas+tempoChamadasRealizadas
+                      llAgente["Tempo em Chamada"]=await _Report2.default.converteSeg_tempo(tempoEmChamadas)
+
+                const perc_servico = Math.floor((tempoEmChamadas/tempoLogado)*100)
+                      llAgente["% de Serviço"]=`${perc_servico}%`
+                
+                      llAgente["Status"]=await _Report2.default.infoEstadoAgente(empresa,idAgente)
+                loginLogout.push(llAgente)
+            }
+        }
+
+        res.json(loginLogout)
+    }
+
 
 
 
@@ -352,12 +434,7 @@ class ReportController{
     
 
    
-    async loginXLogout(req,res){
-        const empresa = await _User2.default.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
-        const tipoBusca  = req.body.tipoBusca
-    }
+   
 
 
 

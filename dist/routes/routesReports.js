@@ -12,14 +12,8 @@ module.exports = (routes) => {
     routes.get('/monitoramentoCampanha/:idCampanha',_ReportController2.default.monitoramentoCampanhas)
     //Atualiza Agressividade
     routes.patch('/atualizaAgressividade/:idCampanha',_ReportController2.default.atualizaAgressividade)
-    
-    
-    
-    
-    
     //LoginXLogout
     routes.post('/loginXLogout',_ReportController2.default.loginXLogout)
-
     //FILTROS
     //Lista de Agentes
     routes.get('/filtroAgentes/', _ReportController2.default.filtroAgentes)

@@ -249,11 +249,7 @@ class Mailing{
                                 AND tipo='cpf'`
         const col_cpf = await this.querySync(sql_col_cpf)
 
-        //Cria indice na coluna de cpf caso o mesmo exista
-        if(col_cpf.length>=1){
-            const sqlIndex = `ALTER TABLE ${tabelaDados} ADD FULLTEXT INDEX ${col_cpf[0].colCPF} (${col_cpf[0].colCPF})`;
-            await this.querySync(sqlIndex)
-        }
+        
 
         //Iniciar separação dos registros
 
@@ -326,7 +322,12 @@ class Mailing{
         if(jsonFile.length>0){
             //continua a importação dos dados
             await this.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,indice,rate)
-        }else{           
+        }else{     
+            //Cria indice na coluna de cpf caso o mesmo exista
+            if(col_cpf.length>=1){
+                const sqlIndex = `ALTER TABLE ${tabelaDados} ADD FULLTEXT INDEX ${col_cpf[0].colCPF} (${col_cpf[0].colCPF})`;
+                await this.querySync(sqlIndex)
+            }      
             //Inicia separação dos numeros    
             this.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
                 let idKey = 1

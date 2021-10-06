@@ -1,4 +1,5 @@
 import Asterisk from '../models/Asterisk';
+import Clients from '../models/Clients';
 import User from '../models/User';
 import util from 'util';
 import fs from 'fs';
@@ -57,6 +58,12 @@ class AsteriskController{
 
             console.log('agi:voz',`Empresa: ${empresa},numero: ${numero}, saida: ${saudacao}`)
             res.json(saudacao)   
+        }
+        if(action=='get_trunk'){
+            const empresa = dados.empresa
+            const register=[]
+            const trunk = await Clients.getTrunk(empresa)
+            res.json(trunk[0])   
         }
         if(action=='machine'){//Quando cai na caixa postal
             const r = await Asterisk.machine(dados)
@@ -128,7 +135,12 @@ class AsteriskController{
 
             if(tipoChamada=="manual"){
                 let idAtendimento = dados.idAtendimento
-                const r = await Asterisk.answer(empresa,uniqueid,idAtendimento,ramal)    
+               
+                if((idAtendimento==false)||(idAtendimento==0)||(idAtendimento=="")||(idAtendimento==undefined)){
+                    const da = await Discador.dadosAtendimento_byNumero(empresa,numero);
+                    idAtendimento = da[0].id;
+                }
+                const r = await Asterisk.manualAnswer(empresa,uniqueid,idAtendimento,ramal)    
                 //await Discador.alterarEstadoAgente(empresa,ramal,7,0)
                 await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             }else{   
@@ -241,6 +253,8 @@ class AsteriskController{
            
         }
     }
+
+   
 
 
     /////////////////////// testes ////////////////////////////////

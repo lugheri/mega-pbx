@@ -59,7 +59,17 @@ class Report{
                        FROM ${empresa}_dados.mailings 
                       WHERE pronto=1 AND status=1`
         return await this.querySync(sql)
-    }   
+    } 
+    
+    async usuarioCampanha(empresa,idAgente,idCampanha){
+        const sql = `SELECT c.id
+                       FROM ${empresa}_dados.campanhas AS c
+                       JOIN ${empresa}_dados.campanhas_filas as f ON c.id=f.idCampanha
+                       JOIN ${empresa}_dados.agentes_filas AS a ON a.fila=f.idFila
+                      WHERE a.ramal='${idAgente}' AND c.id=${idCampanha} LIMIT 1`
+        const u = await this.querySync(sql)
+        return u.length
+    }
 
     async infoAgente(empresa,agente){
         const sql = `SELECT us.id as ramal, us.nome, rm.estado as cod_estado, ea.estado, eq.equipe
@@ -71,6 +81,32 @@ class Report{
                       
         const user = await this.querySync(sql)
         return user
+    }
+
+    async dadosLogin(empresa,idAgente,de,ate,acao,idLogin){
+        let sql
+        if(acao=="login"){
+            sql = `SELECT id,DATE_FORMAT(data,'%Y-%m-%d') as data, hora
+                     FROM ${empresa}_dados.registro_logins 
+                    WHERE user_id=${idAgente} AND acao='login' AND id>${idLogin} AND data>='${de}' AND data<='${ate}'
+                 ORDER BY id DESC`
+        }else{
+            sql = `SELECT id,DATE_FORMAT(data,'%Y-%m-%d') as data, hora
+                     FROM ${empresa}_dados.registro_logins 
+                    WHERE user_id=${idAgente} AND acao='${acao}' AND id>${idLogin} AND data>='${de}' AND data<='${ate}'
+                ORDER BY id ASC 
+                         LIMIT 1`
+        }
+        return await this.querySync(sql)
+    }
+
+    async infoEstadoAgente(empresa,ramal){        
+        const sql = `SELECT e.estado 
+                       FROM ${empresa}_dados.user_ramal AS r
+                       JOIN ${empresa}_dados.estadosAgente AS e ON r.estado=e.cod
+                      WHERE r.ramal='${ramal}'`
+        const e = await this.querySync(sql)
+        return e[0].estado
     }
 
     async calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,agente){
@@ -164,6 +200,24 @@ class Report{
         return await this.querySync(sql)        
     }
 
+    async statusTabulacaoChamada(empresa,idAgente){
+        const sql = `SELECT id 
+                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                      WHERE ramal='${idAgente}' AND tabulando=1 AND desligada=1
+                      LIMIT 1`
+        const t = await this.querySync(sql)    
+        return t.length
+    }
+
+    async statusAtendimentoChamada(empresa,idAgente){
+        const sql = `SELECT id 
+                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                      WHERE ramal='${idAgente}' AND falando=1
+                      LIMIT 1`
+        const f = await this.querySync(sql) 
+        return f.length
+    }
+
     async timeCall(empresa,uniqueid){
         let sql = `SELECT id,saida 
                        FROM ${empresa}_dados.tempo_ligacao
@@ -185,6 +239,22 @@ class Report{
         const d = await this.querySync(sql)
         return d[0].tempo
     }
+
+    async totalChamadasRecebidas(empresa,idAgente,de,ate){
+        let sql = `SELECT SUM(tempo_total) AS tempo
+                     FROM ${empresa}_dados.tempo_ligacao
+                    WHERE idAgente=${idAgente} AND tipoDiscador='receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
+        const t = await this.querySync(sql)
+        return t[0].tempo
+    }
+
+    async totalChamadasRealizadas(empresa,idAgente,de,ate){
+        let sql = `SELECT SUM(tempo_total) AS tempo
+                     FROM ${empresa}_dados.tempo_ligacao
+                    WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
+        const t = await this.querySync(sql)
+        return t[0].tempo
+    }   
 
     async chamadasAtendidas(empresa,ramal,campanha,dataI,dataF,hoje){
         let filter=""

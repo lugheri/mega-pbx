@@ -59,7 +59,17 @@ class Report{
                        FROM ${empresa}_dados.mailings 
                       WHERE pronto=1 AND status=1`
         return await this.querySync(sql)
-    }   
+    } 
+    
+    async usuarioCampanha(empresa,idAgente,idCampanha){
+        const sql = `SELECT c.id
+                       FROM ${empresa}_dados.campanhas AS c
+                       JOIN ${empresa}_dados.campanhas_filas as f ON c.id=f.idCampanha
+                       JOIN ${empresa}_dados.agentes_filas AS a ON a.fila=f.idFila
+                      WHERE a.ramal='${idAgente}' AND c.id=${idCampanha} LIMIT 1`
+        const u = await this.querySync(sql)
+        return u.length
+    }
 
     async infoAgente(empresa,agente){
         const sql = `SELECT us.id as ramal, us.nome, rm.estado as cod_estado, ea.estado, eq.equipe
@@ -188,6 +198,24 @@ class Report{
                       WHERE 1=1 ${filter} LIMIT ${pag},${reg}`
         //console.log('chamadasRealizadas',sql)
         return await this.querySync(sql)        
+    }
+
+    async statusTabulacaoChamada(empresa,idAgente){
+        const sql = `SELECT id 
+                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                      WHERE ramal='${idAgente}' AND tabulando=1 AND desligada=1
+                      LIMIT 1`
+        const t = await this.querySync(sql)    
+        return t.length
+    }
+
+    async statusAtendimentoChamada(empresa,idAgente){
+        const sql = `SELECT id 
+                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                      WHERE ramal='${idAgente}' AND falando=1
+                      LIMIT 1`
+        const f = await this.querySync(sql) 
+        return f.length
     }
 
     async timeCall(empresa,uniqueid){

@@ -1,6 +1,7 @@
 import connect from '../Config/dbConnection'
 import Discador from '../models/Discador'
 import Campanhas from '../models/Campanhas'
+import Report from '../models/Report'
 
 
 class Dashboard{
@@ -145,6 +146,21 @@ class Dashboard{
 
                 const agente={}
                       agente["nomeAgente"]=agentes[i].nome
+                    let estadoAgente=agentes[i].estado
+                    if(estadoAgente==3){
+                        const tabulando = await Report.statusTabulacaoChamada(empresa,idAgente)
+                        if(tabulando==1){
+                            estadoAgente=3.5
+                        }
+
+                    }else if(estadoAgente==6){
+                        const falando = await Report.statusAtendimentoChamada(empresa,idAgente)
+                        if(falando==1){
+                            estadoAgente=7
+                        }
+                    }
+
+
                       agente["statusAgente"]=agentes[i].estado
 
                       agente["produtivos"]={}
@@ -169,7 +185,8 @@ class Dashboard{
         const conectadas = await Discador.logChamadasSimultaneas(empresa,'conectadas',1)
         const realTime={}
               realTime['RealTimeChart']={}
-              realTime['RealTimeChart']['Ligando']=totais
+              const ligando = totais - conectadas
+              realTime['RealTimeChart']['Ligando']=ligando
               realTime['RealTimeChart']['Falando']=conectadas
         return realTime
     }

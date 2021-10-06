@@ -15,7 +15,7 @@ class ReportController{
         const dataInicio  = req.body.dataInicio
         const dataFinal  = req.body.dataFinal
         const ramal = req.body.ramal
-        const equipe = req.body.ramal
+        const equipe = req.body.equipe
         const logados = req.body.logados
         const pagina = req.body.pagina
         const status = req.body.status
@@ -175,31 +175,53 @@ class ReportController{
             
             const agente={}
                   agente["ramal"]=idAgente
-                  agente["estado"]=estado
+                 let estadoAgente = codEstado
+                  if(codEstado==3){
+                    const tabulando = await Report.statusTabulacaoChamada(empresa,idAgente)
+                    if(tabulando==1){
+                        estadoAgente=3.5
+                    }
+
+                }else if(codEstado==6){
+                    const falando = await Report.statusAtendimentoChamada(empresa,idAgente)
+                    if(falando==1){
+                        estadoAgente=7
+                    }
+                }
+
+
+                  agente["estado"]=estadoAgente
                   agente["cod_estado"]=codEstado
                   agente["equipe"]=equipe
                   agente["nome"]=nome
+            let userCampanhas
+            if((estado!=false)||(estado!="")){
+                userCampanhas=true
+            }else{      
+                userCampanhas = await Report.usuarioCampanha(empresa,idAgente,idCampanha)
+            }
+            if(userCampanhas==true){
+                const tempoStatus=await Report.tempoEstadoAgente(empresa,idAgente)
+                const hoje = moment().format("Y-MM-DD")
+                const chamadasAtendidas=await Report.chamadasAtendidas(empresa,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+                const campanha = await Discador.listarCampanhasAtivasAgente(empresa,idAgente)
+                const TMT = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMT',idCampanha,dataInicio,dataFinal,hoje))
+                const TMA = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMA',idCampanha,dataInicio,dataFinal,hoje))
+                const TMO = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMO',idCampanha,dataInicio,dataFinal,hoje))
+                const produtivos = await Report.chamadasProdutividade(empresa,1,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+                const improdutivos = await Report.chamadasProdutividade(empresa,0,idAgente,idCampanha,dataInicio,dataFinal,hoje)
 
-            const tempoStatus=await Report.tempoEstadoAgente(empresa,idAgente)
-            const hoje = moment().format("Y-MM-DD")
-            const chamadasAtendidas=await Report.chamadasAtendidas(empresa,idAgente,idCampanha,dataInicio,dataFinal,hoje)
-            const campanha = await Discador.listarCampanhasAtivasAgente(empresa,idAgente)
-            const TMT = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMT',idCampanha,dataInicio,dataFinal,hoje))
-            const TMA = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMA',idCampanha,dataInicio,dataFinal,hoje))
-            const TMO = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMO',idCampanha,dataInicio,dataFinal,hoje))
-            const produtivos = await Report.chamadasProdutividade(empresa,1,idAgente,idCampanha,dataInicio,dataFinal,hoje)
-            const improdutivos = await Report.chamadasProdutividade(empresa,0,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+                    agente["tempoStatus"]=tempoStatus
+                    agente["chamadasAtendidas"]=chamadasAtendidas
+                    agente["campanha"]=campanha
+                    agente["TMT"]=TMT
+                    agente["TMA"]=TMA
+                    agente["TMO"]=TMO
+                    agente["produtivos"]=produtivos
+                    agente["improdutivos"]=improdutivos
 
-                  agente["tempoStatus"]=tempoStatus
-                  agente["chamadasAtendidas"]=chamadasAtendidas
-                  agente["campanha"]=campanha
-                  agente["TMT"]=TMT
-                  agente["TMA"]=TMA
-                  agente["TMO"]=TMO
-                  agente["produtivos"]=produtivos
-                  agente["improdutivos"]=improdutivos
-
-            monitoramentoAgentes.push(agente)
+                monitoramentoAgentes.push(agente)
+            }
         }
         res.json(monitoramentoAgentes)
     }

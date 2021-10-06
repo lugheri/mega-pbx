@@ -26,6 +26,9 @@ module.exports = (routes) => {
     //VERIFICA TOKEN AUTENTICADO
     routes.get('/authenticated', _SessionController2.default.validate);
 
+    
+    routes.get('/checkToken', _SessionController2.default.checkToken);
+
     //Logout
     routes.get('/logout', _SessionController2.default.logout)
 }

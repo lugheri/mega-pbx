@@ -8,6 +8,7 @@ var _Tabulacoes = require('../models/Tabulacoes'); var _Tabulacoes2 = _interopRe
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 var _Campanhas = require('./Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
 var _Discador = require('./Discador'); var _Discador2 = _interopRequireDefault(_Discador);
+var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 class Asterisk{
     querySync(sql){
@@ -144,33 +145,55 @@ class Asterisk{
         return await this.querySync(sql)
     }   
 
+    async manualAnswer(empresa,uniqueid,idAtendimento,ramal){
+        //Dados recebidos pelo AGI       
+        //console.log(`RAMAL DO AGENTE: ${ramal}`)
+        //dados da campanha
+        const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
+                        SET uniqueid='${uniqueid}',ramal='${ramal}', na_fila=0, atendido=1, falando=1 
+                      WHERE id='${idAtendimento}'`// AND na_fila=1`  
+        return await this.querySync(sql)
+    }   
+
+           
+
     //######################DISCAR######################
     discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,callback){
-        console.log(`recebendo ligacao ${numero}`)
-        console.log(`ramal ${ramal}`)
-        _ariclient2.default.connect(server, user, pass, (err,client)=>{
+        //console.log(`recebendo ligacao ${numero}`)
+        //console.log(`ramal ${ramal}`)
+        _ariclient2.default.connect(server, user, pass, async (err,client)=>{
           if(err) throw err         
 
           //Extension
           let context
           let endpoint
-          const prefix = 87721
+
+          const trunk = await _Clients2.default.getTrunk(empresa)
+
+          const prefix = trunk[0].tech_prefix         
+          const tronco = trunk[0].trunk
+          const type_dial = trunk[0].type_dial
+          //console.log(`trunk ${tronco}`)
+
+
           if(modo=='discador'){
             context = 'dialer'
             //endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.66.23:5060`
-            endpoint = `PJSIP/${prefix}55${numero}@megatrunk`
+            
+            endpoint = `PJSIP/${prefix}${type_dial}${numero}@${tronco}`
+            //console.log(endpoint)
           }else{
             context = 'external'
-            endpoint = `PJSIP/megatrunk/` 
+            endpoint = `PJSIP/${tronco}/` 
           }
-          console.log(`context: ${context}`)
-          console.log(`endpoint: ${endpoint}`)
-          console.log(`numero recebido: ${numero}`)
-          console.log(`Servidor: ${server}`)
+          //console.log(`context: ${context}`)
+          //console.log(`endpoint: ${endpoint}`)
+          //console.log(`numero recebido: ${numero}`)
+          //console.log(`Servidor: ${server}`)
 
           const options = {            
             "endpoint"       : `${endpoint}`,
-            "extension"      : `0${numero}`,
+            "extension"      : `${numero}`,
             "context"        : `${context}`,
             "priority"       : 1,
             "app"            : "",
@@ -217,54 +240,7 @@ class Asterisk{
     
 
 
-    
-    
-    //OLD
-    /*
-    ligar(server,user,pass,modo,ramal,numero,callback){
-        console.log(`recebendo ligacao ${numero}`)
-        console.log(`ramal ${ramal}`)
-        ari.connect(server, user, pass, (err,client)=>{
-          if(err) throw err         
-
-          //Extension
-          let context
-          let endpoint
-          if(modo=='discador'){
-            context = 'dialer'
-            endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
-          }else{
-            context = 'external'
-            endpoint = `PJSIP/megatrunk/` 
-          }
-          console.log(`context: ${context}`)
-          console.log(`endpoint: ${endpoint}`)
-          console.log(`numero recebido: ${numero}`)
-          console.log(`Servidor: ${server}`)
-
-          const options = {            
-            "endpoint"       : `${endpoint}`,
-            "extension"      : `0${numero}`,
-            "context"        : `${context}`,
-            "priority"       : 1,
-            "app"            : "",
-            "appArgs"        : "",
-            "Callerid"       : `0${numero}`,//numero,
-            "timeout"        : -1, 
-            //"channelId"      : '324234', 
-            "otherChannelId" : ""
-          }
-          client.channels.originate(options,callback)
-          //client.channel
-        })  
-    }
-*/
-
-
-
-    
-
-
+   
 
 
     ///////////////////////Funcoes de tabulacao automatica - AGI
@@ -305,163 +281,8 @@ class Asterisk{
         }) 
     }
 
-    ligarTeste(server,user,pass,modo,ramal,numero,res){
-        console.log(`recebendo ligacao de teste ${numero}`)
-        console.log(`ramal ${ramal}`)
-        console.log(`modo ${modo}`)
-        _ariclient2.default.connect(server, user, pass, (err,client)=>{
-            if(err) throw err         
-            //console.log(client)
-
-            //Extension
-            let context
-            let endpoint
-            if(modo=='discador'){
-                context = 'dialer'
-                endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
-                //endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`
-            }else{
-                context = 'external'
-                endpoint = `PJSIP/megatrunk/` 
-            }
-            /*console.log(`context: ${context}`)
-            console.log(`endpoint: ${endpoint}`)
-            console.log(`numero recebido: ${numero}`)
-            console.log(`Servidor: ${server}`)*/
-
-            const options = {            
-                "endpoint"       : `${endpoint}`,
-                "extension"      : `0${numero}`,
-                "context"        : `${context}`,
-                "priority"       : 1,
-                "app"            : "playback",
-                "appArgs"        : "beep",
-                "Callerid"       : `0${numero}`,//numero,
-                "timeout"        : 60, 
-                //"channelId"      : '324234', 
-                "otherChannelId" : ""
-            }
-            client.channels.originate(options,(e,r)=>{
-                if(e) throw e
-                
-                res.json(r)
-            })
-            /*
-            client.on('StasisStart',(event,channel)=>{
-                console.log(event)
-            })*/
-        })  
-    }
     
-    /*testLigacao(numero,ramal,callback){
-        const options = {port:5038, host:'35.239.60.116', login:'mega', password:'1234abc@', encoding: 'ascii'}
-        const amiio = AmiIo.createClient(options)
-        amiio.on('incorrectServer', function () {
-            console.log("Invalid AMI welcome message. Are you sure if this is AMI?");
-            process.exit();
-        });
-        amiio.on('connectionRefused', function(){
-            console.log("Connection refused.");
-            process.exit();
-        });
-        amiio.on('incorrectLogin', function () {
-            console.log("Incorrect login or password.");
-            process.exit();
-        });
-        amiio.on('event', function(event){
-            console.log('event:'+ event);
-        });
-        amiio.connect();
-        amiio.on('connected', function(){
-            console.log('connected');
-            
-            const action = new amiio.Action.Originate();
-
-            
-            action.Channel = 'PJSIP/megatrunk/sip:011930224168@35.199.98.221:5060'
-            action.Context='external'
-            action.Exten='011930224168'
-            action.Priority=1
-            action.Async=true
-            action.WaitEvent=true
     
-            amiioClient.send(action,(e,data)=>{
-                if(e) throw e 
-    
-                console.log(data)
-            })
-
-            setTimeout(function(){
-                amiio.disconnect();
-                amiio.on('disconnected', process.exit());
-            },30000);
-        });
-        
-        /*
-        const options = {port:5038, host:'35.239.60.116', login:'mega', password:'1234abc@', encoding: 'ascii'}
-        const cliente = amiio.createClient(options)
-        console.log(cliente)
-        */
-       //amiio.createClient() = amiio.createClient({port:8088, host:'35.239.60.116', login:'mega', password:'1234abc@', encoding: 'ascii'})
-        //console.log(amiio.createClient())
-        /*
-        const action = new amiio.Action.originate();
-        action.Channel = 'PJSIP/megatrunk/sip:011930224168@35.199.98.221:5060'
-        action.Context='external'
-        action.Exten='011930224168'
-        action.Priority=1
-        action.Async=true
-        action.WaitEvent=true
-
-        amiioClient.send(action,(e,data)=>{
-            if(e) throw e
-
-            console.log(data)
-        })*/
-
-
-        /*const sql = `SELECT * FROM asterisk_ari WHERE active=1`;
-        connect.banco.query(sql,(e,r)=>{
-          if(e) throw e
-
-            console.log(`Iniciando teste de ligacao para o nº ${numero} no ramal ${ramal}`)
-            
-            ari.connect(r[0].server, r[0].user, r[0].pass, (err,client)=>{
-              if(err) console.log(err)
-              
-              console.log(`numero recebido: ${numero}`)
-              console.log(`Servidor: ${r[0].server}`)
-    
-              const options = {
-                "endpoint"       : `PJSIP/megatrunk/sip:0${numero}@35.199.98.221:5060`,
-                "extension"      : `0${numero}`,
-                "context"        : 'external',
-                "priority"       : 1,
-                "app"            : "",
-                "appArgs"        : "",
-                "callerid"       : `0${numero}`,//numero,
-                "timeout"        : -1,                 
-                //"channelId"      : '324234', 
-                "otherChannelId" : ""
-              }
-              client.channels.originate(options,(err,result)=>{
-                if(err) throw err;
-                console.log({
-                    "id":result.id,
-                    "name":result.name,
-                    "state":result.state,
-                    "caller":result.caller,
-                    "accountcode":result.accountcode, 
-                    "dialplan":result.dialplan,
-                    "creationtime":result.creationtime,
-                    "language":result.language 
-                  })
-              })
-            })
-      
-        })*/
-        /*
-    }*/
 
     testPlayback(){
 

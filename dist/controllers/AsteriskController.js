@@ -1,4 +1,5 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _Asterisk = require('../models/Asterisk'); var _Asterisk2 = _interopRequireDefault(_Asterisk);
+var _Clients = require('../models/Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
 var _util = require('util'); var _util2 = _interopRequireDefault(_util);
 var _fs = require('fs'); var _fs2 = _interopRequireDefault(_fs);
@@ -57,6 +58,12 @@ class AsteriskController{
 
             console.log('agi:voz',`Empresa: ${empresa},numero: ${numero}, saida: ${saudacao}`)
             res.json(saudacao)   
+        }
+        if(action=='get_trunk'){
+            const empresa = dados.empresa
+            const register=[]
+            const trunk = await _Clients2.default.getTrunk(empresa)
+            res.json(trunk[0])   
         }
         if(action=='machine'){//Quando cai na caixa postal
             const r = await _Asterisk2.default.machine(dados)
@@ -128,7 +135,12 @@ class AsteriskController{
 
             if(tipoChamada=="manual"){
                 let idAtendimento = dados.idAtendimento
-                const r = await _Asterisk2.default.answer(empresa,uniqueid,idAtendimento,ramal)    
+               
+                if((idAtendimento==false)||(idAtendimento==0)||(idAtendimento=="")||(idAtendimento==undefined)){
+                    const da = await _Discador2.default.dadosAtendimento_byNumero(empresa,numero);
+                    idAtendimento = da[0].id;
+                }
+                const r = await _Asterisk2.default.manualAnswer(empresa,uniqueid,idAtendimento,ramal)    
                 //await Discador.alterarEstadoAgente(empresa,ramal,7,0)
                 await _Cronometro2.default.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             }else{   
@@ -241,6 +253,8 @@ class AsteriskController{
            
         }
     }
+
+   
 
 
     /////////////////////// testes ////////////////////////////////

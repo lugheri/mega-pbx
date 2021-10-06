@@ -82,7 +82,7 @@ class Campanhas{
                             status=${valores.status} 
                       WHERE id=${idCampanha}`
 
-        await atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)              
+        await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)              
 
 
         return await this.querySync(sql)  
@@ -91,7 +91,7 @@ class Campanhas{
     //Atualiza os status dos agentes da campanha de acordo com o status da mesma
     async atualizaMembrosFilaCampanha(empresa,estado,idCampanha){
         //Fila da campanha 
-        const sql = `SELECT idFila, nomeFila 
+        let sql = `SELECT idFila, nomeFila 
                        FROM ${empresa}_dados.campanhas_filas 
                       WHERE idCampanha=${idCampanha}`
         const fila = await this.querySync(sql)
@@ -775,7 +775,10 @@ class Campanhas{
     }
     //Ver Agendamento da campanha
     async verAgendaCampanha(empresa,idCampanha){
-        const sql = `SELECT * 
+        const sql = `SELECT id,id_campanha,
+                            DATE_FORMAT(inicio, '%Y-%m-%d') as inicio,
+                            DATE_FORMAT(termino, '%Y-%m-%d') as termino,
+                            hora_inicio,hora_termino
                        FROM ${empresa}_dados.campanhas_horarios 
                       WHERE id_campanha=${idCampanha}`
         return await this.querySync(sql)

@@ -26,12 +26,14 @@ class SessionController{
                 return res.json({WrongPassword: 'Senha errada!'})
             }else{
                 const acao='login'
+                const token = jwt.sign({userId:userData[0].id,empresa:empresa},process.env.APP_SECRET,{
+                    expiresIn:'12h'
+                })
+                await User.setToken(empresa,userData[0].id,token)
                 await User.registraLogin(empresa,userData[0].id,acao)
                 
                 res.json({                    
-                    token: jwt.sign({userId:userData[0].id,empresa:empresa},process.env.APP_SECRET,{
-                        expiresIn:'12h'
-                    })
+                    token: token
                 })
             }
         }
@@ -45,6 +47,17 @@ class SessionController{
         res.json(payload)
     }
 
+    async checkToken(req,res){
+        const authHeader = req.headers.authorization;
+        const payload = jwt.verify(authHeader, process.env.APP_SECRET);
+        const ramal = payload.userId
+        const empresa = payload.empresa
+       
+        const t = await User.checkToken(empresa,ramal,authHeader)
+        res.json(t)
+
+    }
+
     async logout(req,res){
         const authHeader = req.headers.authorization;
         const payload = jwt.verify(authHeader, process.env.APP_SECRET);
@@ -52,6 +65,7 @@ class SessionController{
         const empresa = payload.empresa
         const acao='logout'
 
+        await User.setToken(empresa,idUser,'')
         await User.registraLogin(empresa,idUser,acao)
 
         token: jwt.sign({userId:0,empresa:0},process.env.APP_SECRET,{

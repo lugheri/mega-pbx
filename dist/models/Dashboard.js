@@ -1,6 +1,7 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
 var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
 var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
+var _Report = require('../models/Report'); var _Report2 = _interopRequireDefault(_Report);
 
 
 class Dashboard{
@@ -66,20 +67,14 @@ class Dashboard{
                 const campanha={}
                 const statusCampanha=await _Discador2.default.statusCampanha(empresa,campanhasAtivas[i].id)
                 const idMailing = await _Campanhas2.default.listarMailingCampanha(empresa,campanhasAtivas[i].id) 
-                const Improdutivas=await _Discador2.default.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,0,idMailing[0].idMailing)
-                const Produtivas=await _Discador2.default.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,1,idMailing[0].idMailing)
-                const Trabalhados=Improdutivas+Produtivas
 
-                //Trabalhadas na campanha no mailing atual
                 const totalRegistros=await _Campanhas2.default.totalRegistrosCampanha(empresa,campanhasAtivas[i].id)
                 const Improdutivas_mailingAtual = await _Discador2.default.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,0,idMailing[0].idMailing)
                 const Produtivas_mailingAtual = await _Discador2.default.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,1,idMailing[0].idMailing)
                 const Trabalhados_mailingAtual=Improdutivas_mailingAtual+Produtivas_mailingAtual
-                
-                console.log('Campanha',campanhasAtivas[i].nome)
+                const NaoTrabalhados_mailingAtual=totalRegistros[0].total-Trabalhados_mailingAtual  
+
                 console.log('totalRegistros',totalRegistros)
-                console.log('Improdutivas_mailingAtual',Improdutivas_mailingAtual)
-                console.log('Produtivas_mailingAtual',Produtivas_mailingAtual)
                 console.log('Trabalhados_mailingAtual',Trabalhados_mailingAtual)
                 
                 
@@ -92,11 +87,13 @@ class Dashboard{
                 campanha["nomeCampanha"]=campanhasAtivas[i].nome
                 campanha["idCampanha"]=campanhasAtivas[i].id
                 campanha["statusCampanha"]=statusCampanha[0].estado
+                campanha["descricaoStatusCampanha"]=statusCampanha[0].mensagem
                 campanha["descricaoCampanha"]=campanhasAtivas[i].descricao
                 campanha["PercentualTrabalhado"]=PercentualTrabalhado
-                campanha["Improdutivas"]=Improdutivas
-                campanha["Produtivas"]=Produtivas
-                campanha["Trabalhado"]=Trabalhados
+                campanha["Improdutivas"]=Improdutivas_mailingAtual
+                campanha["Produtivas"]=Produtivas_mailingAtual
+                campanha["Trabalhado"]=Trabalhados_mailingAtual
+                campanha["NaoTrabalhado"]=NaoTrabalhados_mailingAtual
                 dash["Campanhas"].push(campanha)
 
             }
@@ -149,6 +146,21 @@ class Dashboard{
 
                 const agente={}
                       agente["nomeAgente"]=agentes[i].nome
+                    let estadoAgente=agentes[i].estado
+                    if(estadoAgente==3){
+                        const tabulando = await _Report2.default.statusTabulacaoChamada(empresa,idAgente)
+                        if(tabulando==1){
+                            estadoAgente=3.5
+                        }
+
+                    }else if(estadoAgente==6){
+                        const falando = await _Report2.default.statusAtendimentoChamada(empresa,idAgente)
+                        if(falando==1){
+                            estadoAgente=7
+                        }
+                    }
+
+
                       agente["statusAgente"]=agentes[i].estado
 
                       agente["produtivos"]={}
@@ -173,7 +185,8 @@ class Dashboard{
         const conectadas = await _Discador2.default.logChamadasSimultaneas(empresa,'conectadas',1)
         const realTime={}
               realTime['RealTimeChart']={}
-              realTime['RealTimeChart']['Ligando']=totais
+              const ligando = totais - conectadas
+              realTime['RealTimeChart']['Ligando']=ligando
               realTime['RealTimeChart']['Falando']=conectadas
         return realTime
     }

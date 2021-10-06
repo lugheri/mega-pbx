@@ -5,6 +5,8 @@ module.exports = (routes) => {
     //DISCADOR
     //novo Metodo do Discador
     routes.get('/teste_iniciandoDiscadorSistema',_DiscadorController2.default.dial)
+    //Teste Discagem
+    routes.get('/dialPowerTest/:ramal/:numero', _DiscadorController2.default.dialPowerTest)
     //campanhas do agente
     routes.get('/campanhasAtivasAgente/:agente',_DiscadorController2.default.campanhasAtivasAgente)
     //iniciarDiscador

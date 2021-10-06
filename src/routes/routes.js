@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import routesAuth from './routesAuth';
+import routesClients from './routesClients';
 import routesDashboard from './routesDashboard';
 import routesCampanhas from './routesCampanhas';
 import routesDiscador from './routesDiscador';
@@ -12,6 +13,7 @@ import routesConfig from './routesConfig';
 const routes = Router();
 
 routesAuth(routes)
+routesClients(routes)
 routesDashboard(routes)
 routesCampanhas(routes)
 routesDiscador(routes)
