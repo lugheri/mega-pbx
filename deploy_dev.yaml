@@ -83,7 +83,7 @@ spec:
     spec:      
       containers:
       - name: api
-        image: megaconecta/api-central:v0.0.437
+        image: megaconecta/api-central:v0.0.447
         #resources:
         #  limits:
         #    cpu: 0.1m
@@ -144,7 +144,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: megaconecta/frontendcentral:v110
+        image: megaconecta/frontendcentral:v116
         env:
         - name: TZ
           value: America/Sao_Paulo

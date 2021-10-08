@@ -17,7 +17,7 @@ class Report{
    //FILTROS
     async filtrarAgentes(empresa,dataInicio,dataFinal,status,estado,ramal,equipe,login,pagina){
         let filter=""       
-        let reg=20
+        let reg=30
         let pag=(pagina-1)*reg
        //Filtrando data de entrada/saida do agente
         if((dataInicio!=false)||(dataInicio!="")){filter+=` AND u.criacao>='${dataInicio} 00:00:00'`;}

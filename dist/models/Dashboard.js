@@ -161,7 +161,7 @@ class Dashboard{
                     }
 
 
-                      agente["statusAgente"]=agentes[i].estado
+                      agente["statusAgente"]=estadoAgente
 
                       agente["produtivos"]={}
                       agente["produtivos"]["porcentagem"]=perc_produtivas

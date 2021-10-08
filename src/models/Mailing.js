@@ -256,6 +256,7 @@ class Mailing{
         //Id do registro
         let indice = idKey
         const cpfs=[]//Array dos cpf a serem inseridos nesse loop
+        const verificarCPF = false //Inativa/Ativa a verificacao de CPF para mailings verticais
 
         //Iniciando o loop dos dados a serem inseridos de acordo com o transferRate
         for(let i=0; i<rate; i++){
@@ -263,7 +264,8 @@ class Mailing{
             let indiceReg = (idBase * 1000000) + indice
             let regValido=1//Flag de registro valido
             //Separa o cpf caso exista
-            if(col_cpf.length>=1){
+           
+            if((col_cpf.length>=1)&&(verificarCPF==true)){
                 let cpf = jsonFile[0][col_cpf[0].colCPF]
         
                 //Verifica se o cpf existe
@@ -324,7 +326,7 @@ class Mailing{
             await this.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,indice,rate)
         }else{     
             //Cria indice na coluna de cpf caso o mesmo exista
-            if(col_cpf.length>=1){
+            if((col_cpf.length>=1)&&(verificarCPF==true)){
                 const sqlIndex = `ALTER TABLE ${tabelaDados} ADD FULLTEXT INDEX ${col_cpf[0].colCPF} (${col_cpf[0].colCPF})`;
                 await this.querySync(sqlIndex)
             }      
@@ -333,12 +335,12 @@ class Mailing{
                 let idKey = 1
                 let transferRate=1
                 const fileOriginal=jsonFile
-                await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)  
+                await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate,verificarCPF)  
             }) 
         }
     }
     
-    async separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,indice,transferRate){       
+    async separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,indice,transferRate,verificarCPF){       
         //Verifica se o numero possui cpf
         let colunaCPF=""
         const sql_col_cpf = `SELECT nome_original_campo as colCPF
@@ -419,7 +421,7 @@ class Mailing{
         for(let i=0; i<rate; i++){
             let idRegistro = (idBase * 1000000) + idReg
             //verifica se existe cpf
-            if(colunaCPF!=""){
+            if((colunaCPF!="")&&(verificarCPF==true)){
                 let cpf = jsonFile[0][colunaCPF]
                     
                 //verifica id do registro deste cpf que é valido
@@ -489,7 +491,7 @@ class Mailing{
         //Verificando restantes para reexecução
         if(jsonFile.length>0){
             //console.log('Continuando separacao')
-            await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idReg,rate)    
+            await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idReg,rate,verificarCPF)    
         }else{
             //console.log('encerrando')
             //gravando log

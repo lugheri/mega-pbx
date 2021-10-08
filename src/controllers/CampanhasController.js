@@ -446,7 +446,7 @@ class CampanhasController{
 
         //Calcula a evolução da campanha com base no mailing ativo no momento
         const m = await Campanhas.totalMailingsCampanha(empresa,idCampanha)
-        if(m.length>=0){
+        if(m.length>0){
             total=m[0].total
             idMailing=m[0].idMailing
         }

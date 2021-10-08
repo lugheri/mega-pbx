@@ -49,7 +49,7 @@ class Discador{
         const sql = `SELECT u.id,u.nome,u.usuario,r.estado
                       FROM ${empresa}_dados.users AS u
                       JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
-                     WHERE r.estado>=1;`
+                     WHERE r.estado>=1 ORDER BY r.datetime_estado DESC;`
         return await this.querySync(sql);
     }    
 
@@ -222,7 +222,7 @@ class Discador{
         const dia = moment().format("DD")
         const m =  moment().format("M")-1
         const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']                
-        return `${dia}, ${meses[m]}`
+        return `${dia} de ${meses[m]}`
     }
 
 
@@ -400,7 +400,7 @@ class Discador{
 
         let sql = `SELECT id_campanha,tabela_numeros,id_numero,id_mailing
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
-                    WHERE id_campanha=${idCampanha}`
+                    WHERE id_campanha=${idCampanha} AND tipo_discador='power'`
         const infoChamada = await this.querySync(sql)
 
         for(let i=0; i<infoChamada.length; i++){
@@ -425,7 +425,7 @@ class Discador{
         }
 
         sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
-                WHERE id_campanha=${idCampanha} AND falando=0`
+                WHERE id_campanha=${idCampanha} AND falando=0 AND tipo_discador='power'`
         await this.querySync(sql)
         sql = `UPDATE ${empresa}_dados.campanhas_status
                   SET mensagem="..." 

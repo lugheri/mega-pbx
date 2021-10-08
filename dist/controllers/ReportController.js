@@ -175,8 +175,8 @@ class ReportController{
             
             const agente={}
                   agente["ramal"]=idAgente
-                 let estadoAgente = codEstado
-                  if(codEstado==3){
+                let estadoAgente = codEstado
+                if(codEstado==3){
                     const tabulando = await _Report2.default.statusTabulacaoChamada(empresa,idAgente)
                     if(tabulando==1){
                         estadoAgente=3.5
@@ -391,12 +391,12 @@ class ReportController{
                     dataLogout = `${logout[0].data} ${logout[0].hora}`
                       llAgente["Logout"]=_moment2.default.call(void 0, dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
                 }else{
-                      llAgente["Logout"]=" - "
+                      llAgente["Logout"]="Logado"
                 }
-                      
-                    const tl = _moment2.default.call(void 0, dataLogout,"YYYY-MM-DD HH:mm:ss").diff(_moment2.default.call(void 0, dataLogin,"YYYY-MM-DD HH:mm:ss"))
-                    const tempoLogado = _moment2.default.duration(tl).asSeconds()
-                        llAgente["Tempo Logado"]=await _Report2.default.converteSeg_tempo(tempoLogado)
+                
+                const tl = _moment2.default.call(void 0, dataLogout,"YYYY-MM-DD HH:mm:ss").diff(_moment2.default.call(void 0, dataLogin,"YYYY-MM-DD HH:mm:ss"))
+                const tempoLogado = _moment2.default.duration(tl).asSeconds()
+                      llAgente["Tempo Logado"]=await _Report2.default.converteSeg_tempo(tempoLogado)
 
                 const tempoChamadasRecebidas = await _Report2.default.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
                       llAgente["Chamadas Recebidas"]=await _Report2.default.converteSeg_tempo(tempoChamadasRecebidas)

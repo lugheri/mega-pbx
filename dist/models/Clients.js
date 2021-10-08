@@ -10,6 +10,31 @@ class Clients{
         })
     }
 
+    async newAccount(nomeEmpresa,prefixo,licenses,channelsUser,totalChannels, trunk, tech_prefix, type_dial, asterisk_server, asterisk_domain){
+        let sql = `INSERT INTO clients.clientes 
+                               (desde,nome,status)
+                        VALUES (now(),'${nomeEmpresa}',1)`
+        const e = await this.querySync(sql)
+        const accountId = e['insertId']
+
+        console.log('novaCONTA',accountId)
+
+        sql = `INSERT INTO clients.accounts  
+                                (client_number,date,name,prefix,licenses,channels_by_user,total_channels,trunk,tech_prefix,type_dial,asterisk_server,asterisk_domain)
+                         VALUES (${accountId},now(),'${nomeEmpresa}','${prefixo}','${licenses}',${channelsUser},${totalChannels},'${trunk}',${tech_prefix},${type_dial},'${asterisk_server},'${asterisk_domain}')`
+        await this.querySync(sql)
+        await createBD_dados(prefixo)
+        console.log('prefixo',prefixo)
+       
+        return true
+    }
+
+    async createBD_dados(empresa){
+        let sql = `CREATE DATABASE IF NOT EXISTS ${empresa}_dados;`
+        await this.querySync(sql)
+    }
+
+
     async clientesAtivos(){
         const sql = `SELECT prefix 
                        FROM clients.accounts 

@@ -127,7 +127,9 @@ class User{
         const ramal = payload.userId
         const empresa = payload.empresa
         const estadoRamal = await Discador.statusRamal(empresa,ramal)        
-        
+        if(estadoRamal.lenght==0){
+            return 0
+        }
         return estadoRamal[0].estado
     }
 

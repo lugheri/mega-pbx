@@ -246,7 +246,7 @@ class AsteriskController{
                 }
                 res.json(true);
             }else{
-                await Discador.desligaChamadaNumero(empresa,dadosAtendimento[0].id_campanha,numero,chamada[0].ramal)
+                await Discador.desligaChamadaNumero(empresa,chamada[0].id_campanha,numero,chamada[0].ramal)
                 res.json(true);
             }
 
