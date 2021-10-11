@@ -32,7 +32,7 @@ connect.poolEmpresa=_mysql22.default.createPool({
     password : user['pass'],
     database : db['clients'],
     waitForConnections: true,
-    connectionLimit: 10,
+    connectionLimit: 20,
     queueLimit: 0
 })
 /*

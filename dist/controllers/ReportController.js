@@ -18,10 +18,15 @@ class ReportController{
         const equipe = req.body.equipe
         const logados = req.body.logados
         const pagina = req.body.pagina
+        let registros = 20
+        if(req.body.totalRegistro==false){
+           registros = req.body.totalRegistro
+        }
         const status = req.body.status
+        
 
         const relatorioPausas = []       
-        const agentesAtivos = await _Report2.default.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina)
+        const agentesAtivos = await _Report2.default.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina,registros)
        
         for(let i=0; i<agentesAtivos.length; i++){
             const agente = {}
@@ -71,6 +76,10 @@ class ReportController{
         const produtivo = req.body.produtivo
         const tabulacao = req.body.tabulacao
         const pagina = req.body.pagina
+        let registros = 20
+        if(req.body.totalRegistro==false){
+           registros = req.body.totalRegistro
+        }
         const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
 
         const detChamadas = []
@@ -112,7 +121,7 @@ class ReportController{
                   callSim['gravacao']=gravacao
             detChamadas.push(callSim)
         }
-        const chamadas = await _Report2.default.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina)
+        const chamadas = await _Report2.default.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
 
         for(let i = 0;i<chamadas.length; i++) {
             const call={}
@@ -161,10 +170,14 @@ class ReportController{
         const equipe = req.body.equipe
         const logados = req.body.logados
         const pagina = req.body.pagina
+        let registros = 20
+        if(req.body.totalRegistro==false){
+           registros = req.body.totalRegistro
+        }
         const status = req.body.status
 
         const monitoramentoAgentes = []
-        const agentesAtivos = await _Report2.default.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina)
+        const agentesAtivos = await _Report2.default.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina,registros)
         for(let i=0; i<agentesAtivos.length; i++){
             const idAgente = agentesAtivos[i].id
             const infoUser = await _Report2.default.infoAgente(empresa,idAgente);
@@ -362,12 +375,17 @@ class ReportController{
         const equipe = req.body.equipe
         const logados = req.body.logados
         const pagina = req.body.pagina
+        let registros = 20
+        if(req.body.totalRegistro==false){
+           registros = req.body.totalRegistro
+        }
+        
         const status = req.body.status
 
         const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
 
         const loginLogout = []
-        const agentes = await _Report2.default.filtrarAgentes(empresa,0,0,status,estado,ramal,equipe,logados,pagina)
+        const agentes = await _Report2.default.filtrarAgentes(empresa,0,0,status,estado,ramal,equipe,logados,pagina,registros)
         let de = hoje
         let ate = hoje
 

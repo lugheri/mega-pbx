@@ -87,6 +87,7 @@ class MailingController{
         const tabData=infoMailing[0].tabela_dados
         const tabNumbers=infoMailing[0].tabela_numeros
 
+       
         await _Mailing2.default.configuraTipoCampos(empresa,idBase,header,tipoCampos)//Configura os tipos de campos
         _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
             res.json(true)
