@@ -20,6 +20,7 @@ class Clients{
       sql = `INSERT INTO clients.trunks 
                          (conta,ip_provider,tech_prefix,type_dial,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport) 
                   VALUES ('${conta}','${ip_provider}','${tech_prefix}','${type_dial}','${contact}',${qualify_frequency},${max_contacts},'${context}','${server_ip}','${dtmf_mode}','${force_rport}','${disallow}','${allow}','${rtp_symmetric}','${rewrite_contact}','${direct_media}','${allow_subscribe}','${transport}')`
+      await this.querySync(sql)
       return {"error":false,"message:":''}
    }
         
@@ -32,9 +33,7 @@ class Clients{
         const a = await this.querySync(sql)
 
         //Criando Identify 
-        sql = `INSERT INTO ${connect.db.asterisk}.ps_endpoint_id_ips
-                          (id,endpoint,match)
-                   VALUES ('${conta}','${conta}','${ip_provider}')`
+        sql = 'INSERT INTO '+connect.db.asterisk+'.ps_endpoint_id_ips (id,endpoint,`match`) VALUES ("'+conta+'","'+conta+'","'+ip_provider+'")'
         const i = await this.querySync(sql)
 
         //Criando Endpoint
@@ -75,6 +74,13 @@ class Clients{
                         allow_subscribe='${allow_subscribe}',
                         transport='${transport}'
                   WHERE conta='${conta}'`
+      await this.querySync(sql)
+
+      sql = `UPDATE clients.accounts
+                SET tech_prefix='${tech_prefix}',
+                    type_dial='${type_dial}'
+              WHERE trunk='${conta}'`
+      await this.querySync(sql)
       return true
     }
 
@@ -88,9 +94,7 @@ class Clients{
       const a = await this.querySync(sql)
 
       //Criando Identify 
-      sql = `UPDATE ${connect.db.asterisk}.ps_endpoint_id_ips
-                SET match='${ip_provider}'
-                WHERE id='${conta}'`
+      sql = 'UPDATE '+connect.db.asterisk+'.ps_endpoint_id_ips SET `match`="'+ip_provider+'" WHERE id="'+conta+'"'
       const i = await this.querySync(sql)
 
       //Criando Endpoint
@@ -193,13 +197,14 @@ class Clients{
               WHERE id=${idServer};`
       const is = await this.querySync(sql)
       const server={}
+            server['id']=is[0]['id']
             server['domain']=is[0]['nome']
             server['ip']=is[0]['ip']
       return server
 
     }
 
-    async newAccount(nomeEmpresa,prefixo,licenses,channelsUser,totalChannels, trunk, tech_prefix, type_dial,type_server){
+    async newAccount(nomeEmpresa,prefixo,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
         if(await this.checkPrefix(prefixo)>0){
             return {"error":true,"message":`O prefixo '${prefixo}' já existe!`}
         }
@@ -208,6 +213,7 @@ class Clients{
         if(server==false){
           return {"error":true,"message":`Nenhum servidor disponível`}
         }
+        const server_id = server['id']
         const asterisk_server_ip = server['ip']
         const asterisk_domain = server['domain']
         
@@ -230,6 +236,7 @@ class Clients{
                                          trunk,
                                    tech_prefix,
                                      type_dial,
+                                     server_id,
                                asterisk_server,
                                asterisk_domain,
                                         status)
@@ -242,7 +249,8 @@ class Clients{
                               ${totalChannels},
                                     '${trunk}',
                                 ${tech_prefix},
-                                  ${type_dial},
+                                 '${type_dial}',
+                                  ${server_id},
                           '${asterisk_server_ip}',
                           '${asterisk_domain}',
                                              0)`
@@ -986,7 +994,7 @@ class Clients{
     }
 
     async servers(empresa){
-        const sql = `SELECT asterisk_server, asterisk_domain 
+        const sql = `SELECT server_id, asterisk_server, asterisk_domain 
                        FROM clients.accounts 
                       WHERE prefix='${empresa}'`
         const servers = await this.querySync(sql)
@@ -1007,7 +1015,7 @@ class Clients{
       return await this.querySync(sql)
     }
 
-    async editarCliente(idCliente,nome,licenses,channels_by_user,total_channels,trunk,tech_prefix,type_dial,asterisk_server,asterisk_domain){
+    async editarCliente(idCliente,nome,licenses,channels_by_user,total_channels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain){
         let sql = `UPDATE clients.accounts
                       SET name='${nome}',
                           licenses=${licenses},
@@ -1016,6 +1024,7 @@ class Clients{
                           trunk='${trunk}',
                           tech_prefix=${tech_prefix},
                           type_dial='${type_dial}',
+                          server_id=${idServer},
                           asterisk_server='${asterisk_server}',
                           asterisk_domain='${asterisk_domain}'
                     WHERE client_number=${idCliente}`

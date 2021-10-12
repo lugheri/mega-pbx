@@ -189,7 +189,7 @@ class ClientsController{
         }
      
 
-        const clientes = await Clients.editarCliente(idCliente,nomeEmpresa,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,asterisk_server,asterisk_domain)
+        const clientes = await Clients.editarCliente(idCliente,nomeEmpresa,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain)
         res.json(true)
     }
     async desativarCliente(req,res){
