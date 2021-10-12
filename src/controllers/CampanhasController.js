@@ -620,7 +620,7 @@ class CampanhasController{
         const monitorType = 'mixmonitor'
         const monitorFormat = 'wav'
 
-        const nomeFila = `${empresa}@${apelido.replace(" ","_").replace("/", "_")}`
+        const nomeFila = `${empresa}-${apelido.replace(" ","_").replace("/", "_")}`
         const r = await Campanhas.novaFila(empresa,nomeFila,apelido,description)
         if(r==false){
             const rt={}

@@ -15,9 +15,9 @@ class Report{
 
     //Funcoes auxiliares 
    //FILTROS
-    async filtrarAgentes(empresa,dataInicio,dataFinal,status,estado,ramal,equipe,login,pagina){
+    async filtrarAgentes(empresa,dataInicio,dataFinal,status,estado,ramal,equipe,login,pagina,registros){
         let filter=""       
-        let reg=30
+        let reg=registros
         let pag=(pagina-1)*reg
        //Filtrando data de entrada/saida do agente
         if((dataInicio!=false)||(dataInicio!="")){filter+=` AND u.criacao>='${dataInicio} 00:00:00'`;}
@@ -162,7 +162,7 @@ class Report{
         return c   
     }
 
-    async chamadasRealizadas(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina){
+    async chamadasRealizadas(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros){
         let filter=""
         if((dataI!=false)||(dataI!="")){filter+=` AND h.data>='${dataI}'`;}else{filter+=` AND h.data>='${hoje}'`;}
         if((dataF!=false)||(dataF!="")){filter+=` AND h.data<='${dataF}'`;}else{filter+=` AND h.data<='${hoje}'`;}
@@ -189,7 +189,7 @@ class Report{
         if((tipo!=false)||(tipo!="")){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
 
        //Paginacao   
-        let reg=20
+        let reg=registros
         let pag=(pagina-1)*reg
         
         const sql = `SELECT h.agente,u.nome,DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall,h.hora,h.uniqueid,h.campanha,h.tipo,h.numero_discado,h.contatado,h.produtivo,h.status_tabulacao

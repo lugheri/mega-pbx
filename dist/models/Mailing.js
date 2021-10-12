@@ -168,6 +168,8 @@ class Mailing{
     }
 
     async configuraTipoCampos(empresa,idBase,header,campos){
+
+        console.log('campos',campos)
       
         let sql=`INSERT INTO ${empresa}_dados.mailing_tipo_campo 
                             (idMailing,campo,nome_original_campo,apelido,tipo,conferido,ordem) 
@@ -175,7 +177,6 @@ class Mailing{
        
 
         for(let i=0; i<campos.length; i++){
-          //console.log(campos[i].name)
             let nomeCampo=campos[i].name.replace(" ", "_")
                                         .replace("/", "_")
                                         .normalize("NFD")
@@ -370,6 +371,7 @@ class Mailing{
                               WHERE idMailing=${idBase} 
                                 AND tipo='telefone'`                                
         const col_numeros = await this.querySync(col_sql_numeros)
+        
 
         //verificando colunas de  ddd e numero
         const col_sql_completo = `SELECT nome_original_campo as campo 
@@ -423,7 +425,7 @@ class Mailing{
             //verifica se existe cpf
             if((colunaCPF!="")&&(verificarCPF==true)){
                 let cpf = jsonFile[0][colunaCPF]
-                    
+                    console.log('checou cpf')
                 //verifica id do registro deste cpf que é valido
                 const idReg_cpf = await this.checkIdReg_cpf(empresa,dataTab,colunaCPF,cpf)
                  if(idReg_cpf!=false){
@@ -441,12 +443,16 @@ class Mailing{
                                             .replace("/", "")
                 //console.log('DDD',ddd)         
             }            
+
+         
             
-            for(let n=0; i<colunaNumero.length; n++){//Numeros
-                let numero = jsonFile[0][colunaNumero[n]].replace(/[^0-9]/g, "")
-                                                        .replace("-", "")
-                                                        .replace(" ", "")
-                                                        .replace("/", "")
+            for(let n=0; n<colunaNumero.length; n++){//Numeros
+              
+                let numero = jsonFile[0][colunaNumero[n]]
+                numero.replace(/[^0-9]/g, "")
+                      .replace("-", "")
+                      .replace(" ", "")
+                      .replace("/", "")
                 if(numero){ 
                     let numeroCompleto = ddd+numero     
                   //  console.log('numero',numeroCompleto)              
@@ -454,6 +460,7 @@ class Mailing{
                     //Inserindo ddd e numero na query
                     const infoN = this.validandoNumero(ddd,numeroCompleto)
                     sqlNumbers+=` (${idBase},${idRegistro},${ddd},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+                   
                 }
             }
             
@@ -475,7 +482,9 @@ class Mailing{
             jsonFile.shift()//Removendo campos importados do arquivo carregado   
         } 
         
+        
         let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'
+      
 
         //console.log('queryNumeros',queryNumeros)
         await this.querySync(queryNumeros)   
@@ -890,7 +899,7 @@ class Mailing{
                     let duplicado = 0//await this.checaDuplicidade(numeroCompleto,tabelaNumeros)
                     //Inserindo ddd e numero na query
                     const infoN = this.validandoNumero(ddd,numeroCompleto)
-                    sqlNumbers+=` (${idBase},${indiceReg},${ddd},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+                    sqlNumbers+=` (${idBase},${indiceReg},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
                     //idNumber++
                 }
             }
@@ -935,6 +944,8 @@ class Mailing{
         
         await this.querySync(sqlData)
         await this.querySync(queryNumeros)   
+
+        console.log('queryNumeros',queryNumeros)
         
         
        
