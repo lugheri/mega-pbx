@@ -81,8 +81,8 @@ class Mailing{
     //Adiciona as informacoes do mailing na tabela de controle de mailings
     async addInfoMailing(empresa,nome,tableData,tableNumber,arquivo,header,delimitador){       
         const sql = `INSERT INTO ${empresa}_dados.mailings
-                               (data,nome,arquivo,header,delimitador,tabela_dados,tabela_numeros,configurado,repetidos,pronto,status) 
-                        VALUES (NOW(),'${nome}','${arquivo}',${header},'${delimitador}','${tableData}','${tableNumber}',0,0,0,1)`
+                               (data,nome,arquivo,header,delimitador,tabela_dados,tabela_numeros,configurado,repetidos,numerosInvalidos,pronto,status) 
+                        VALUES (NOW(),'${nome}','${arquivo}',${header},'${delimitador}','${tableData}','${tableNumber}',0,0,0,0,1)`
         return await this.querySync(sql)  
     }
 
@@ -412,9 +412,12 @@ class Mailing{
         }else{
             rateInicial=transferRate
         }
-
         const rate = await this.calcRate(totalBase,100,5000,rateInicial,1)
-
+        /*let rate=5
+        if(totalBase<=5){
+            rate = totalBase
+        }*/
+        
         //console.log('totalBase',totalBase)
         //console.log('rate',rate)
 
@@ -437,10 +440,12 @@ class Mailing{
             //Separando Telefones
             let ddd = 0 
             if(colunaDDD!=""){               
-                ddd = jsonFile[0][colunaDDD].replace(/[^0-9]/g, "")
-                                            .replace("-", "")
-                                            .replace(" ", "")
-                                            .replace("/", "")
+                ddd = jsonFile[0][colunaDDD]               
+
+                ddd.toString().replace(/[^0-9]/g, "")
+                   .replace("-", "")
+                   .replace(" ", "")
+                   .replace("/", "")
                 //console.log('DDD',ddd)         
             }            
 
@@ -449,7 +454,8 @@ class Mailing{
             for(let n=0; n<colunaNumero.length; n++){//Numeros
               
                 let numero = jsonFile[0][colunaNumero[n]]
-                numero.replace(/[^0-9]/g, "")
+                numero.toString()
+                      .replace(/[^0-9]/g, "")
                       .replace("-", "")
                       .replace(" ", "")
                       .replace("/", "")
@@ -458,8 +464,11 @@ class Mailing{
                   //  console.log('numero',numeroCompleto)              
                     let duplicado = 0//await this.checaDuplicidade(numeroCompleto,tabelaNumeros)
                     //Inserindo ddd e numero na query
+                    numeroCompleto= this.filterInt(numeroCompleto)
                     const infoN = this.validandoNumero(ddd,numeroCompleto)
-                    sqlNumbers+=` (${idBase},${idRegistro},${ddd},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+                    
+                    
+                    sqlNumbers+=`(${idBase},${idRegistro},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['message']}',0,0,0,0),`;
                    
                 }
             }
@@ -468,14 +477,18 @@ class Mailing{
                 let numeroCompleto = jsonFile[0][colunaNumeroCompleto[nc]]
                 //console.log('numeroCompleto',numeroCompleto)    
                 if(numeroCompleto){
-                    numeroCompleto.replace(/[^0-9]/g, "")
+                    numeroCompleto.toString()
+                                  .replace(/[^0-9]/g, "")
                                   .replace("-", "")
                                   .replace(" ", "")
                                   .replace("/", "") 
                     let dddC = numeroCompleto.slice(0,2)     
                     let duplicado = 0 //await this.checaDuplicidade(numeroCompleto,tabelaNumeros)
+                    numeroCompleto= this.filterInt(numeroCompleto)
                     const infoN = this.validandoNumero(dddC,numeroCompleto)
-                    sqlNumbers+=` (${idBase},${idRegistro},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
+                    
+                   
+                    sqlNumbers+=` (${idBase},${idRegistro},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['message']}',0,0,0,0),`;
                 }
             }
             idReg++
@@ -504,117 +517,24 @@ class Mailing{
         }else{
             //console.log('encerrando')
             //gravando log
+            const invalidos = await this.numerosInvalidos(empresa,numTab)
+
             sql = `UPDATE ${empresa}_dados.mailings 
                       SET termino_importacao=now(), 
-                          pronto=1 
+                          pronto=1,numerosInvalidos=${invalidos}
                     WHERE id='${idBase}'`           
             fs.unlinkSync(file)//Removendo Arquivo
             //console.log("sql final",sql)
             await this.querySync(sql)           
-        }
-
-
-        //////////////////////////////////////
-
-        /*
-
-        //Ler telefones do banco dos dados
-        const telefones = await this.selecionaNumeroBase(empresa,dataTab,colunaCPF,colunaDDD,colunaNumero,colunaNumeroCompleto,rate)
-            
-        if(telefones.length==0){
-            //Remove o arquivo importado
-            fs.unlinkSync(file)//Removendo Arquivo
-           
-           //concluido
-            
-            //gravando log
-            let sql = `UPDATE ${empresa}_dados.mailings 
-                      SET termino_importacao=now(), 
-                          pronto=1 
-                    WHERE id='${idBase}'`           
-            await this.querySync(sql)       
-            return true;
-        }
-
-        //Inicia montagem da query
-        let sqlNumbers=`INSERT INTO ${empresa}_mailings.${numTab}
-                                   (id_mailing,id_registro,ddd,numero,uf,tipo,valido,duplicado,erro,tentativas,status_tabulacao,contatado,produtivo)
-                            VALUES `;
-        console.log('total telefone',telefones.length)
-
-        for(let i=0; i<telefones.length; i++){
-            const num = telefones[i]
-
-            let idReg=telefones[i].id_key_base    
-            //atualiza registros como tratados 
-            await this.trataRegBase(empresa,dataTab,idReg)      
-            //CHECA SE NUMERO EH VALIDO
-            if(telefones[i].valido==0){
-                //verifica se existe cpf
-                if(colunaCPF!=""){
-                    let cpf =  num[`${colunaCPF}`]
-                    
-                    //verifica id do registro deste cpf que é valido
-                    const idReg_cpf = await this.checkIdReg_cpf(empresa,dataTab,colunaCPF,cpf)
-                    if(idReg_cpf!=false){
-                        //atualiza o id do registro com o id do registro valido deste cpf
-                        idReg=idReg_cpf
-                    }
-                }
-            }
-            //DDD 
-            let ddd = 0 
-            if(col_ddd!=""){   
-                ddd = num[`${colunaDDD}`].replace(/[^0-9]/g, "")
-                                         .replace("-", "")
-                                         .replace(" ", "")
-                                         .replace("/", "")
-            }
-            
-
-            if(col_numeros!=""){
-                for(let n=0; n<colunaNumero.length; n++){    
-                    let numero = num[`${colunaNumero[n]}`]
-                    const numeroCompleto = ddd+numero.replace(/[^0-9]/g, "")
-                                                     .replace("-", "")
-                                                     .replace(" ", "")
-                                                     .replace("/", "")  
-                    const infoN = this.validandoNumero(ddd,numeroCompleto) 
-                    const duplicado=0
-                    sqlNumbers+=` (${idBase},${idReg},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
-                }   
-            }            
-
-            if(col_numeroCompleto!=""){    
-                for(let nc=0; nc<colunaNumeroCompleto.length; nc++){                      
-                    let numeroCompleto = num[`${colunaNumeroCompleto[nc]}`].replace(/[^0-9]/g, "")
-                                                                           .replace("-", "")
-                                                                           .replace(" ", "")
-                                                                           .replace("/", "")   
-                    const dddC = numeroCompleto.slice(0,2)
-                    const infoN = this.validandoNumero(dddC,numeroCompleto)
-                    const duplicado=0
-                    sqlNumbers+=` (${idBase},${idReg},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['erro']}',0,0,0,0),`;
-                }   
-            }
-                  
         }       
-        let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'
-        console.log('queryNumeros',queryNumeros)
-        await this.querySync(queryNumeros)   
-
-        let tN = await this.totalNumeros(`${empresa}_mailings.${numTab}`)//Nome da empresa ja incluido no nome da tabela
-        let totalNumeros=tN[0].total
-        let sql = `UPDATE ${empresa}_dados.mailings 
-                      SET configurado=1, 
-                          totalNumeros='${totalNumeros}'
-                    WHERE id='${idBase}'`
-                   
-        await this.querySync(sql) 
-        //continua o tratamento dos numeros        
-        await this.separaNumeros(empresa,idBase,dataTab,numTab)   
-        */     
     }  
+
+    filterInt(value){
+        if(/^(\-|\+)?([0-9]+|Infinity)$/.test(value))
+            return Number(value);
+        return 0;
+    }
+
 
     async selecionaNumeroBase(empresa,tabelaDados,colunaCPF,colunaDDD,colunaNumero,colunaNumeroCompleto,rate){
         let colCPF="";
@@ -704,7 +624,7 @@ class Mailing{
 
 
 
-
+/*
     async importaDados_e_NumerosBase(empresa,idBase,jsonFile,file,header,dataTab,numTab,idKey,transferRate){
         const tabelaDados = `${empresa}_mailings.${dataTab}`
         const tabelaNumeros = `${empresa}_mailings.${numTab}` 
@@ -976,31 +896,36 @@ class Mailing{
             await this.querySync(sql)           
         }
         
-    }
+    }*/
 
     validandoNumero(ddd,numeroCompleto){
         const info = {}
+
         let uf = this.checaUF(ddd)
-        let error='ok'
+        let error=false
+        let message='ok'
         let valido = 1
         let tipo=""
         let dddCorrigido=ddd
         //validando uf
         if(uf=='er'){
-            error = 'DDD invalido'
+            message = 'DDD invalido'
+            error=true
             valido=0
             dddCorrigido='0'
         }
-        let digitos = numeroCompleto.slice(2,3)
+        let digitos = numeroCompleto.toString().slice(2,3)
         //validando numero
-        if((numeroCompleto.length<10)&&(numeroCompleto.length>11)){
-            error="numero inválido"
+        if((numeroCompleto.toString().length<10)&&(numeroCompleto.toString().length>11)){
+            message="numero inválido"
+            error=true
             valido=0
         }else{
-            if(numeroCompleto.length==10){
+            if(numeroCompleto.toString().length==10){
                 if(digitos>=6){
-                    error="Primeiro dígito inválido para fixo"
+                    message=`Primeiro dígito inválido para fixo numero`
                     valido=0
+                    error=true
                 }else{
                     tipo='fixo'
                 }
@@ -1008,8 +933,9 @@ class Mailing{
                 if(digitos>=7){
                     tipo='celular'
                 }else{
-                    error="Primeiro dígito inválido para celular"
+                    message=`Primeiro dígito inválido para celular `
                     valido=0
+                    error=true
                 }
             }
         }
@@ -1017,8 +943,18 @@ class Mailing{
         info['uf']=uf
         info['tipo']=tipo
         info['valido']=valido
-        info['erro']=error   
+        info['error']=error   
+        info['message']=message
         return info;
+    }
+
+    async numerosInvalidos(empresa,tabelaNumeros){
+        const sql = `SELECT COUNT(id) AS invalidos
+                       FROM  ${empresa}_mailings.${tabelaNumeros} 
+                      WHERE valido=0`
+                      console.log(sql)
+        const i = await this.querySync(sql)
+        return i[0].invalidos
     }
 
     checaUF(ddd){
