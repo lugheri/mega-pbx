@@ -79,6 +79,10 @@ class User{
             //Atualiza em todas as filas estado como 0
             sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0 WHERE ramal=${usuarioId}`
             await this.querySync(sql)
+
+            //Remove qualquer chamada presa do agente
+            sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas WHERE ramal='${usuarioId}'`
+            await this.querySync(sql)
             
             sql = `UPDATE ${empresa}_dados.users SET logado=0 WHERE id=${usuarioId}` 
             await this.querySync(sql)
