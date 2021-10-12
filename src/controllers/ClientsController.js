@@ -13,6 +13,7 @@ class ClientsController{
         const asterisk_server = req.body.asterisk_server
         const asterisk_domain = req.body.asterisk_domain
         const totalChannels = channelsUser*licenses
+        
         console.log(nomeEmpresa)
         const r = await Clients.newAccount(nomeEmpresa,prefixo,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,asterisk_server,asterisk_domain)
         res.json(r)

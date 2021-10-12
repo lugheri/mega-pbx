@@ -15,6 +15,7 @@ class Clients{
                                (desde,nome,status)
                         VALUES (now(),'${nomeEmpresa}',1)`
         const e = await this.querySync(sql)
+        console.log(e)
         const accountId = e['insertId']
 
         console.log('novaCONTA',accountId)
