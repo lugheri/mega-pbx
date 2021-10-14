@@ -213,6 +213,9 @@ class Discador{
                    ORDER BY id DESC 
                    LIMIT ${limit}`
         const c = await this.querySync(sql)
+        if(c.length==0){
+            return 0
+        }
         return c[0].total
     }  
 
@@ -655,7 +658,7 @@ class Discador{
         }
         const sql = `SELECT COUNT(id) AS total 
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                      WHERE id_campanha=${idCampanha}`
+                      WHERE id_campanha=${idCampanha} AND (atendido=1 OR falando=1)`
         return await this.querySync(sql)               
     }
 
@@ -678,15 +681,19 @@ class Discador{
         let sql 
          //VERIFICANDO NUMEROS NOVOS
          sql = `SELECT *
-                FROM ${empresa}_mailings.${tabela_numeros}
-                WHERE valido=1 AND discando=0 AND campanha_${idCampanha}>0
-            ORDER BY campanha_${idCampanha} ASC, id ${ordemDiscagem}`
+                  FROM ${empresa}_mailings.${tabela_numeros}
+                 WHERE valido=1 AND discando=0 AND campanha_${idCampanha}>0
+              ORDER BY selecionado ASC, campanha_${idCampanha} ASC, id ${ordemDiscagem}`
         const n = await this.querySync(sql)
         //console.log('--->Registros filtrados',n.length)
         if(n.length>0){
             const idNumero   = n[0].id
             const idRegistro = n[0].id_registro
-            const numero     = n[0].numero                 
+            const numero     = n[0].numero       
+            //atualiza o numero como discando
+
+            sql = `UPDATE ${empresa}_mailings.${tabela_numeros} SET selecionado=selecionado+1 WHERE id=${idNumero}`
+            await this.querySync(sql)
 
             //CHECA SE O MESMO JA FOI TRABALHADO
             sql = `SELECT id,max_tent_status
@@ -699,15 +706,26 @@ class Discador{
                                     (data,idCampanha,idMailing,idRegistro,selecoes_registro,idNumero,selecoes_numero,numeroDiscado,estado,desc_estado,max_tent_status,tentativas) 
                             VALUES (now(),${idCampanha},${idMailing},${idRegistro},0,${idNumero},0,'${numero}',0,'pre selecao',1,0)`
                 await this.querySync(sql)
+
+                //FILTRA REGISTRO PARA DISCAGEM
+                sql = `SELECT n.id as idNumero,n.id_registro,n.numero 
+                        FROM ${empresa}_mailings.${tabela_numeros} AS n 
+                    LEFT JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS t ON n.id=t.idNumero
+                        WHERE idMailing=${idMailing} 
+                        AND idCampanha=${idCampanha}
+                        AND idRegistro=${idRegistro}
+                        AND idNumero=${idNumero}
+                        AND numeroDiscado=${numero}
+                        AND estado=0 
+                        AND t.tentativas <= t.max_tent_status 
+                        AND TIMESTAMPDIFF (MINUTE, data, NOW()) >= max_time_retry
+                    ORDER BY t.tentativas ASC, n.id ${ordemDiscagem}
+                        LIMIT 1`
+
+                return await this.querySync(sql)  
+
             }
-        }
-        /*testar
-        else{
-            sql = `UPDATE ${empresa}_mailings.${tabela_numeros}
-                      SET campanha_${idCampanha}=${r[0].max_tent_status}
-                    WHERE id=${r[0].id}`
-            await this.querySync(sql)
-        }*/
+        }      
 
         //FILTRA REGISTRO PARA DISCAGEM
         sql = `SELECT n.id as idNumero,n.id_registro,n.numero 
@@ -886,7 +904,7 @@ class Discador{
             return false
         }       
         sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
-                        SET na_fila=1, tratado=1 
+                  SET na_fila=1, tratado=1 
                       WHERE id=${idAtendimento}`
         await this.querySync(sql)
         return dadosAtendimento
@@ -1778,9 +1796,12 @@ class Discador{
                 apelido=campos_dados[i].apelido
             }  
             //console.log('Info Chamada - Valor do Campo',campos_dados[i].campo)
-            sql = `SELECT ${campos_dados[i].campo} AS 'valor' 
+            let nomeCampo = campos_dados[i].campo.toString().replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "");
+               
+            sql = `SELECT ${nomeCampo} AS 'valor' 
                      FROM ${empresa}_mailings.${tabela_dados} 
                     WHERE id_key_base='${idReg}'` 
+                 
             let value = await this.querySync(sql)
             info['campos'][apelido]=value[0].valor
         }        

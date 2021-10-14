@@ -83,7 +83,7 @@ spec:
     spec:      
       containers:
       - name: api
-        image: megaconecta/api-central:v0.0.451
+        image: megaconecta/api-central:v0.0.474
         #resources:
         #  limits:
         #    cpu: 0.1m
@@ -116,8 +116,8 @@ spec:
 #  namespace: megadev-pbx
 #spec:
 #  scaleTargetRef:
-#    kind: Deployment
-#    name: api-deploy    
+#    kind: Service
+#    name: api-svc   
 #  minReplicas: 2
 #  maxReplicas: 10
 #  targetCPUUtilizationPercentage: 50
@@ -144,7 +144,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: megaconecta/frontendcentral:v116
+        image: megaconecta/frontendcentral:v123
         env:
         - name: TZ
           value: America/Sao_Paulo

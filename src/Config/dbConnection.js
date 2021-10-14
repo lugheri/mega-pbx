@@ -26,15 +26,16 @@ switch(environment){
 }
 const connect = ()=>{};
 connect.db=db
+
 connect.poolEmpresa=mysql.createPool({
     host:host,
     user : user['name'],
     password : user['pass'],
     database : db['clients'],
-    waitForConnections: true,
-    connectionLimit: 20,
-    queueLimit: 0
+    waitForConnections: false,
+    connectionLimit: 500
 })
+
 /*
 
 connect.db=db

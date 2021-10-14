@@ -35,15 +35,12 @@ class DiscadorController{
         const clientesAtivos = await _Clients2.default.clientesAtivos()
         for(let i=0;i<clientesAtivos.length;++i){
             const empresa = clientesAtivos[i].prefix          
-            
-            
-            //console.log(empresa)
             this.campanhasEmpresa(empresa)
-
         }
         setTimeout(async ()=>{
+            //console.log('next')
             await this.checkAccounts();
-        },3000)
+        },5000)
        
         
     }
@@ -387,11 +384,11 @@ class DiscadorController{
         await this.debug(' . . . . . . . . . . PASSO 2.4 - Calculando chamadas simultaneas x agentes disponiveis','',empresa)
         const limiteDiscagem = agentesDisponiveis.length * agressividade 
         const qtdChamadasSimultaneas = await _Discador2.default.qtdChamadasSimultaneas(empresa,idCampanha)
-       //console.log(`agressividade:${empresa}`,agressividade)
-       //console.log(`agentesDisponiveis:${empresa}`,agentesDisponiveis.length)
-       //console.log(`limiteDiscagem:${empresa}`,limiteDiscagem)
+        //console.log(`agressividade:${empresa}`,agressividade)
+        //console.log(`agentesDisponiveis:${empresa}`,agentesDisponiveis.length)
+        //console.log(`limiteDiscagem:${empresa}`,limiteDiscagem)
        
-       //console.log(`qtdChamadasSimultaneas:${empresa}`,qtdChamadasSimultaneas)
+        //console.log(`qtdChamadasSimultaneas:${empresa}`,qtdChamadasSimultaneas)
         if(qtdChamadasSimultaneas[0].total>=limiteDiscagem){
             let msg='Limite de chamadas simultâneas atingido, aumente a agressividade ou aguarde os agentes ficarem disponíveis'
             let estado = 2
@@ -597,9 +594,15 @@ class DiscadorController{
         const empresa = await _User2.default.getEmpresa(req)
         const ramal = req.params.ramal
         const estadoRamal = await _Discador2.default.statusRamal(empresa,ramal)
+        let estado = 0
+        if(estadoRamal.length>0){
+            if(estadoRamal[0].estado!=undefined){
+                estado=estadoRamal[0].estado
+            }
+        }
         const estados=['deslogado','disponivel','em pausa','falando','indisponivel'];
         const status = {}
-              status['idEstado']=estadoRamal[0].estado
+              status['idEstado']=estado
               status['estado']=estados[estadoRamal[0].estado]
               status['tempo']=await _Report2.default.converteSeg_tempo(estadoRamal[0].tempo) 
 

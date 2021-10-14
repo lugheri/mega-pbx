@@ -79,6 +79,10 @@ class User{
             //Atualiza em todas as filas estado como 0
             sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0 WHERE ramal=${usuarioId}`
             await this.querySync(sql)
+
+            //Remove qualquer chamada presa do agente
+            sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas WHERE ramal='${usuarioId}'`
+            await this.querySync(sql)
             
             sql = `UPDATE ${empresa}_dados.users SET logado=0 WHERE id=${usuarioId}` 
             await this.querySync(sql)
@@ -128,7 +132,9 @@ class User{
         const empresa = payload.empresa
         const estadoRamal = await _Discador2.default.statusRamal(empresa,ramal)        
         if(estadoRamal.lenght==0){
-            return 0
+            if(estadoRamal[0].estado==undefined){
+                return 0
+            }
         }
         return estadoRamal[0].estado
     }

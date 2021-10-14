@@ -132,7 +132,9 @@ class User{
         const empresa = payload.empresa
         const estadoRamal = await Discador.statusRamal(empresa,ramal)        
         if(estadoRamal.lenght==0){
-            return 0
+            if(estadoRamal[0].estado==undefined){
+                return 0
+            }
         }
         return estadoRamal[0].estado
     }

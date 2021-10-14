@@ -64,6 +64,7 @@ class Mailing{
                         contatado CHAR(2) NULL DEFAULT NULL COLLATE 'utf8_general_ci',
                         produtivo INT(11) NULL DEFAULT NULL, 
                         discando INT(11) NULL DEFAULT '0', 
+                        selecionado INT(11) NULL DEFAULT '0', 
                         PRIMARY KEY (id) USING BTREE,
                         INDEX ddd (ddd),
                         INDEX uf (uf),
@@ -169,7 +170,7 @@ class Mailing{
 
     async configuraTipoCampos(empresa,idBase,header,campos){
 
-        console.log('campos',campos)
+      
       
         let sql=`INSERT INTO ${empresa}_dados.mailing_tipo_campo 
                             (idMailing,campo,nome_original_campo,apelido,tipo,conferido,ordem) 
@@ -177,10 +178,13 @@ class Mailing{
        
 
         for(let i=0; i<campos.length; i++){
-            let nomeCampo=campos[i].name.replace(" ", "_")
-                                        .replace("/", "_")
-                                        .normalize("NFD")
-                                        .replace(/[^a-zA-Z0-9]/g, "");
+            let nomeCampo=campos[i].name
+
+            
+            nomeCampo.replace(" ", "_")
+                     .replace("/", "_")
+                     .normalize("NFD")
+                     .replace(/[^a-zA-Z0-9]/g, "");
             let nomeOriginal=campos[i].name//.replace("-", "_").replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
             let apelido = campos[i].apelido
             if(header==0){
@@ -290,7 +294,7 @@ class Mailing{
             for(let f=0; f<fields.length; f++){
                 //separa o valor da coluna na linha correspondente
                 let valor=jsonFile[0][fields[f]]
-                sqlData+=`'${valor.replace(/'/gi,'')}',`//Insere o valor formatado de cada coluna na query
+                sqlData+=`'${valor.toString().replace(/'/gi,'')}',`//Insere o valor formatado de cada coluna na query
             }
 
             sqlData+=`${regValido},`//CPF

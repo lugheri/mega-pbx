@@ -37,6 +37,7 @@ class AsteriskController{
     }
 
     async agi(req,res){
+        console.log('Iniciando AGI',req.body)
         const action = req.params.action
         const dados = req.body
         if(action=='voz'){
@@ -71,6 +72,7 @@ class AsteriskController{
             res.json(r);
         }
         if(action=='set_queue'){//Quando reconhece a voz humana
+           // console.log('Setando Queue',`Empresa: ${empresa},numero: ${numero}, saida: ${dadosAtendimento}`)
             const empresa = dados.empresa
             const idAtendimento= dados.idAtendimento
             const numero = dados.numero 

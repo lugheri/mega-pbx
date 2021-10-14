@@ -117,6 +117,7 @@ class Clients{
   async deleteRegisterTrunk(conta){
       let sql = `DELETE FROM clients.trunks 
                   WHERE conta='${conta}'`
+      await this.querySync(sql)
       return true
   }
   async deleteTrunk(conta){
