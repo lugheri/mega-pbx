@@ -15,13 +15,13 @@ class Clients{
       let sql = `SELECT id FROM clients.trunks WHERE conta='${conta}'`
       const r = await this.querySync(sql)
       if(r.length==1){
-        return {"error":true,"message:":`O Tronco ${conta} já existe!`}
+        return {"error":true,"message":`O Tronco ${conta} já existe!`}
       }
       sql = `INSERT INTO clients.trunks 
                          (conta,ip_provider,tech_prefix,type_dial,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport) 
                   VALUES ('${conta}','${ip_provider}','${tech_prefix}','${type_dial}','${contact}',${qualify_frequency},${max_contacts},'${context}','${server_ip}','${dtmf_mode}','${force_rport}','${disallow}','${allow}','${rtp_symmetric}','${rewrite_contact}','${direct_media}','${allow_subscribe}','${transport}')`
       await this.querySync(sql)
-      return {"error":false,"message:":''}
+      return {"error":false,"message":''}
    }
         
     //Criando tronco no asterisk
@@ -142,12 +142,12 @@ class Clients{
     let sql = `SELECT id FROM clients.servers WHERE ip='${ip_servidor}'`
       const r = await this.querySync(sql)
       if(r.length==1){
-        return {"error":true,"message:":`O Servidor ${ip_servidor} já existe!`}
+        return {"error":true,"message":`O Servidor ${ip_servidor} já existe!`}
       }
       sql = `INSERT INTO clients.servers 
                          (nome,ip,tipo,status) 
                   VALUES ('${nome_dominio}','${ip_servidor}','${tipo}','${status}')`
-      return {"error":false,"message:":''}
+      return {"error":false,"message":''}
   }
 
   async listServers(){

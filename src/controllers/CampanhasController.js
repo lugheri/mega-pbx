@@ -612,13 +612,40 @@ class CampanhasController{
         const apelido = req.body.name
         const description = req.body.description
         const musiconhold = req.body.musiconhold
-        const strategy = req.body.strategy
-        const timeout = req.body.timeout
-        const retry = req.body.retry
-        const autopause = req.body.autopause
-        const maxlen = req.body.maxlen
+        //const strategy = req.body.strategy
+        //const timeout = req.body.timeout
+        //const retry = req.body.retry
+        //const autopause = req.body.autopause
+        //const maxlen = req.body.maxlen
         const monitorType = 'mixmonitor'
         const monitorFormat = 'wav'
+        const announce_frequency=0
+        const announce_holdtime='no'
+        const announce_position='no'
+        const autofill='no'
+        const autopause='no'
+        const autopausebusy='no'
+        const autopausedelay=0
+        const autopauseunavail='no'
+        const joinempty='yes'
+        const leavewhenempty='no'
+        const maxlen=0
+        const memberdelay=0
+        const penaltymemberslimit=0
+        const periodic_announce_frequency=0
+        const queue_callswaiting='silence/1'
+        const queue_thereare='silence/1'
+        const queue_youarenext='silence/1'
+        const reportholdtime='no'
+        const retry=5
+        const ringinuse='yes'
+        const servicelevel=60
+        const strategy='rrmemory'
+        const timeout=30
+        const timeoutpriority='app'
+        const timeoutrestart='no'
+        const weight=0
+        const wrapuptime=2
 
         const nomeFila = `${empresa}-${apelido.replace(" ","_").replace("/", "_")}`
         const r = await Campanhas.novaFila(empresa,nomeFila,apelido,description)
@@ -629,7 +656,7 @@ class CampanhasController{
             res.send(rt)
             return false            
         }
-        const asterisk = await Filas.criarFila(empresa,nomeFila,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat)
+        const asterisk = await Filas.criarFila(empresa,nomeFila,musiconhold,monitorType,monitorFormat,announce_frequency,announce_holdtime,announce_position,autofill,autopause,autopausebusy,autopausedelay,autopauseunavail,joinempty,leavewhenempty,maxlen,memberdelay,penaltymemberslimit,periodic_announce_frequency,queue_callswaiting,queue_thereare,queue_youarenext,reportholdtime,retry,ringinuse,servicelevel,strategy,timeout,timeoutpriority,timeoutrestart,weight,wrapuptime)
         res.send(asterisk)
     }
 

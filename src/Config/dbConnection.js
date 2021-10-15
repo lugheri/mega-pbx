@@ -10,9 +10,9 @@ const user = []
 const db = []
 switch(environment){
     case 'dev':
-        host = 'localhost'
-        user['name'] = 'root'
-        user['pass'] = '1234abc@'
+        host = '34.121.31.128'
+        user['name'] = 'megaconecta'
+        user['pass'] = 'M3g4_devDB@2021'
         db['asterisk'] = 'asterisk'
         db['clients'] = 'clients'
     break;
@@ -33,7 +33,7 @@ connect.poolEmpresa=mysql.createPool({
     password : user['pass'],
     database : db['clients'],
     waitForConnections: true,
-    connectionLimit: 1000,
+    connectionLimit: 5000,
     queueLimit:0
 })
 

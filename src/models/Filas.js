@@ -15,10 +15,71 @@ class Filas{
 
     //CRUD FILAS
     //Criar nova filas
-    async criarFila(empresa,name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat){
+    async criarFila(empresa,nomeFila,musiconhold,monitorType,monitorFormat,announce_frequency,announce_holdtime,announce_position,autofill,autopause,autopausebusy,autopausedelay,autopauseunavail,joinempty,leavewhenempty,maxlen,memberdelay,penaltymemberslimit,periodic_announce_frequency,queue_callswaiting,queue_thereare,queue_youarenext,reportholdtime,retry,ringinuse,servicelevel,strategy,timeout,timeoutpriority,timeoutrestart,weight,wrapuptime){
+        
         const sql = `INSERT INTO ${connect.db.asterisk}.queues 
-                                (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) 
-                         VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
+                                (name,
+                                 musiconhold,
+                                 strategy,
+                                 timeout,
+                                 retry,
+                                 autopause,
+                                 maxlen,
+                                 monitor_type,
+                                 monitor_format,
+                                 announce_frequency,
+                                 announce_holdtime,
+                                 announce_position,
+                                 autofill,
+                                 autopausebusy,
+                                 autopausedelay,
+                                 autopauseunavail,
+                                 joinempty,
+                                 leavewhenempty,
+                                 memberdelay,
+                                 penaltymemberslimit,
+                                 periodic_announce_frequency,
+                                 queue_callswaiting,
+                                 queue_thereare,
+                                 queue_youarenext,
+                                 reportholdtime,
+                                 ringinuse,
+                                 servicelevel,
+                                 timeoutpriority,
+                                 timeoutrestart,
+                                 weight,
+                                 wrapuptime) 
+                         VALUES ('${nomeFila}',
+                                 '${musiconhold}',
+                                 '${strategy}',
+                                 '${timeout}',
+                                 '${retry}',
+                                 '${autopause}',
+                                 '${maxlen}',
+                                 '${monitorType}',
+                                 '${monitorFormat}',
+                                 '${announce_frequency}',
+                                 '${announce_holdtime}',
+                                 '${announce_position}',
+                                 '${autofill}',
+                                 '${autopausebusy}',
+                                 '${autopausedelay}',
+                                 '${autopauseunavail}',
+                                 '${joinempty}',
+                                 '${leavewhenempty}',
+                                 '${memberdelay}',
+                                 '${penaltymemberslimit}',
+                                 '${periodic_announce_frequency}',
+                                 '${queue_callswaiting}',
+                                 '${queue_thereare}',
+                                 '${queue_youarenext}',
+                                 '${reportholdtime}',
+                                 '${ringinuse}',
+                                 '${servicelevel}',
+                                 '${timeoutpriority}',
+                                 '${timeoutrestart}',
+                                 '${weight}',
+                                 '${wrapuptime}')`
         await this.querySync(sql)
         return true
     }

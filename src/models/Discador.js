@@ -379,7 +379,7 @@ class Discador{
         }
 
         await this.debug(' . PASSO 1.2','Removendo chamadas presas',empresa)
-        const limitTime = 30 //tempo limite para aguardar atendimento (em segundos)
+        const limitTime = 50 //tempo limite para aguardar atendimento (em segundos)
         let sql = `SELECT id,id_campanha,id_mailing,id_registro,id_numero,numero 
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE tipo_discador='power'                      
@@ -554,11 +554,22 @@ class Discador{
         }
 
         await this.debug(' . PASSO 1.3','Verificando Campanhas Ativas',empresa)     
-        const sql = `SELECT id 
-                       FROM ${empresa}_dados.campanhas 
-                      WHERE tipo='a' AND status=1 AND estado=1 
-                      ORDER BY RAND()`
-        return await this.querySync(sql)
+        const sql = `SELECT c.id,f.idFila,f.nomeFila,mc.idMailing,ml.tabela_dados,ml.tabela_numeros,d.tipo_discador,d.agressividade,d.tipo_discagem,d.ordem_discagem,d.modo_atendimento,d.saudacao
+                       FROM ${empresa}_dados.campanhas AS c
+                       JOIN ${empresa}_dados.campanhas_filas AS f ON c.id=f.idCampanha
+                       JOIN ${empresa}_dados.campanhas_mailing AS mc ON mc.idCampanha=c.id
+                       JOIN ${empresa}_dados.mailings AS ml ON ml.id=mc.idMailing
+                       JOIN ${empresa}_dados.campanhas_discador AS d ON c.id=d.idCampanha
+                      WHERE c.tipo='a' AND c.status=1 AND c.estado=1`
+                     
+        try{
+            const q = await this.querySync(sql)
+            return await this.querySync(sql)
+        } catch(error){
+           
+            console.log(error)
+            return 0
+        }        
     }
 
     //Checando se a campanha possui fila de agentes configurada
@@ -650,11 +661,17 @@ class Discador{
             return false
         }
         await this.debug(' . . . . . . . PASSO 2.1 - Verificando se existem agentes na fila','',empresa) 
-        const sql =  `SELECT * 
+        const sql =  `SELECT COUNT(id) AS total 
                         FROM ${empresa}_dados.agentes_filas 
-                       WHERE fila=${idFila}`     
-        return await this.querySync(sql)    
+                       WHERE fila=${idFila}` 
+        try{
+            const a = await this.querySync(sql) 
+            return a[0].total
+        } catch (error) {
+            console.log(error)
+        }
     }
+
     //Verificando se existem agentes disponiveis na fila
     async agentesDisponiveis(empresa,idFila){  
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
@@ -669,11 +686,16 @@ class Discador{
                         AND estado!=0 
                         AND estado!=5
                         AND estado!=2`*/
-        const sql = `SELECT ramal 
+        const sql = `SELECT COUNT(ramal) AS total 
                        FROM ${empresa}_dados.agentes_filas 
                       WHERE fila='${idFila}'
                         AND estado=1`
-        return await this.querySync(sql)       
+        try{
+            const a = await this.querySync(sql)
+            return a[0].total
+        } catch (error) {
+            console.log(error)
+        }    
     }
     //Recuperando os parametros do discador
     async parametrosDiscador(empresa,idCampanha){
@@ -694,16 +716,34 @@ class Discador{
         }
         const sql = `SELECT COUNT(id) AS total 
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                      WHERE id_campanha=${idCampanha} AND (atendido=0 OR falando=0)`
-        return await this.querySync(sql)               
+                      WHERE id_campanha=${idCampanha} AND  (atendido=0 OR falando=0)`
+        try{
+            const q = await this.querySync(sql)  
+            return q[0].total
+        } catch (error) {
+            console.log(error)
+            return false
+        }         
     }
 
     //Modo novo de filtragem que adiciona os ids dos registros na tabela de tabulacao a medida que forem sendo trabalhados
-    async filtrarRegistro(empresa,idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscagem,ordemDiscagem){
+    async filtrarRegistro(empresa,idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscador,tipoDiscagem,ordemDiscagem,limitRegistros){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - filtrarRegistro','Empresa nao recebida')
             return false
         }
+        
+        let limit=limitRegistros;
+        if(limitRegistros<0){
+            limit=0
+        }else if(limitRegistros>10){
+            limit=10
+        }
+
+        if(tipoDiscador!="power"){
+            limit=1
+        }
+       
         await this.debug(' . . . . . . . . . . . PASSO 2.5 - Verificando se existem registros disponíveis','',empresa)
         //Estados do registro
         //0 - Disponivel
@@ -719,7 +759,8 @@ class Discador{
          sql = `SELECT id as idNumero,id_registro,numero 
                   FROM ${empresa}_mailings.${tabela_numeros}
                  WHERE valido=1 AND discando=0 AND campanha_${idCampanha}>0
-              ORDER BY selecionado ASC, campanha_${idCampanha} ASC, id ${ordemDiscagem},RAND() LIMIT 1`
+              ORDER BY selecionado ASC, campanha_${idCampanha} ASC, id ${ordemDiscagem},RAND() LIMIT ${limit}`
+             
         const n = await this.querySync(sql)
         //console.log('--->Registros filtrados',n.length)
         if(n.length>0){
@@ -727,9 +768,6 @@ class Discador{
             const idRegistro = n[0].id_registro
             const numero     = n[0].numero       
             //atualiza o numero como discando
-
-
-
             sql = `UPDATE ${empresa}_mailings.${tabela_numeros} SET selecionado=selecionado+1 WHERE id=${idNumero}`
             await this.querySync(sql)
 
@@ -759,7 +797,7 @@ class Discador{
                 AND t.tentativas <= t.max_tent_status 
                 AND TIMESTAMPDIFF (MINUTE, data, NOW()) >= max_time_retry
             ORDER BY t.tentativas ASC, n.id ${ordemDiscagem}
-                LIMIT 1`
+                LIMIT ${limit}`
 
         return await this.querySync(sql)        
                 

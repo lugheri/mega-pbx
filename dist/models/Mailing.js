@@ -179,7 +179,7 @@ class Mailing{
 
         for(let i=0; i<campos.length; i++){
             let nomeCampo=campos[i].name
-
+            
             
             nomeCampo.replace(" ", "_")
                      .replace("/", "_")

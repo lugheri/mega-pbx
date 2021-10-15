@@ -59,7 +59,7 @@ type: kubernetes.io/basic-auth
 stringData:
   username: megaconecta
   password: M3g4_devDB@2021
-  host: "34.132.255.110"
+  host: "34.121.31.128"
 ---
 #Deploy do Backend
 apiVersion: apps/v1

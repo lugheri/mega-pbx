@@ -28,8 +28,13 @@ class Discador{
         const sql = `SELECT debug 
                        FROM ${empresa}_dados.asterisk_ari
                       WHERE active=1`
-        const mode = await this.querySync(sql);
-        return mode[0].debug
+        try{
+            const mode = await this.querySync(sql);
+            return mode[0].debug
+        } catch (error) {
+            console.error(error);
+        }
+        
     }
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     * INFORMAÇÕES DO DISCADOR / AGENTES
@@ -41,8 +46,13 @@ class Discador{
         const sql = `SELECT COUNT(id) AS logados
                        FROM ${empresa}_dados.user_ramal
                       WHERE estado>=1`
-        const ul=await this.querySync(sql);
-        return ul[0].logados
+        try{
+            const ul = await this.querySync(sql);
+            return ul[0].logados
+        } catch (error) {
+            console.error(error);
+        }
+        
     }    
     
     async listarAgentesLogados(empresa){
@@ -50,15 +60,24 @@ class Discador{
                       FROM ${empresa}_dados.users AS u
                       JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
                      WHERE r.estado>=1 ORDER BY r.datetime_estado DESC;`
-        return await this.querySync(sql);
+         try{
+            const q = await this.querySync(sql);
+            return q
+        } catch (error) {
+            console.error(error);
+        }
     }    
 
     async agentesPorEstado(empresa,estado){
         const sql = `SELECT COUNT(id) AS agentes
                        FROM ${empresa}_dados.user_ramal
                       WHERE estado=${estado}`
-        const ul=await this.querySync(sql);
-        return ul[0].agentes
+        try{
+            const ul = await this.querySync(sql);
+            return ul[0].agentes
+        } catch (error) {
+            console.error(error);
+        }
     }  
     
     async campanhasAtivasAgente(empresa,agente){
@@ -68,8 +87,12 @@ class Discador{
                        JOIN ${empresa}_dados.filas AS f ON cf.idFila=f.id
                        JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=f.id
                       WHERE c.estado=1 AND c.status=1 AND af.ramal=${agente}`
-        const c=await this.querySync(sql);
-        return c[0].campanhasAtivas
+        try{
+            const c = await this.querySync(sql);
+            return c[0].campanhasAtivas
+        } catch (error) {
+            console.error(error);
+        }        
     }
 
     async listarCampanhasAtivasAgente(empresa,agente){
@@ -79,19 +102,22 @@ class Discador{
                        JOIN ${empresa}_dados.filas AS f ON cf.idFila=f.id
                        JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=f.id
                       WHERE c.estado=1 AND c.status=1 AND af.ramal=${agente}`
-        const ca = await this.querySync(sql);
-        if(ca.length==0){
-            return ""
-        }
-        let campanhas=""
-        for(let i = 0; i<ca.length; i++){
-            if(i>=1){
-                campanhas+=" / "
+        try{
+            const ca = await this.querySync(sql);
+            if(ca.length==0){
+                return ""
             }
-            campanhas+=ca[i].campanhasAtivas
+            let campanhas=""
+            for(let i = 0; i<ca.length; i++){
+                if(i>=1){
+                    campanhas+=" / "
+                }
+                campanhas+=ca[i].campanhasAtivas
+            }
+            return campanhas
+        } catch (error) {
+            console.error(error);
         }
-
-        return campanhas
     }
 
     async chamadasProdutividadeDia_porAgente(empresa,statusProdutividade,idAgente,data){
@@ -104,18 +130,15 @@ class Discador{
         const sql = `SELECT COUNT(id) AS produtivas
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE data='${data}' AND agente=${idAgente};`
-        const p=await this.querySync(sql);
-        return p[0].produtivas
+        try{
+            const p = await this.querySync(sql);
+            return p[0].produtivas
+        } catch (error) {
+            console.error(error);
+        }    
     }
 
-    async chamadasAtendidas(empresa,ramal,campanha,dataI,dataF){
-
-        const sql = `SELECT COUNT(id) AS total
-                       FROM ${empresa}_dados.historico_atendimento 
-                      WHERE data='${data}' AND agente=${ramal}`
-        const ca = await this.querySync(sql)
-        return ca[0].total
-    }
+   
 
     //INFORMAÇÕES DE CAMPANHAS
 
@@ -269,7 +292,7 @@ class Discador{
             return 0
         }
         return t[0].tempoFalado
-    }
+    }   
      
    /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     * FUNCOES DO DISCADOOR
@@ -290,21 +313,29 @@ class Discador{
         const chamadas_simultaneas = await this.chamadasSimultaneas(empresa,'todas')
         const chamadas_conectadas = await this.chamadasSimultaneas(empresa,'conectadas')
         const chamadas_manuais = await this.chamadasSimultaneas(empresa,'manuais')
-
         
         //removendo do log chamadas do dia anterior
         let sql = `DELETE FROM ${empresa}_dados.log_chamadas_simultaneas  
                          WHERE DATA < DATE_SUB(NOW(), INTERVAL 15 SECOND);`
                          //console.log(sql)
-        await this.querySync(sql)
-        //Inserindo informacoes de chamadas para o grafico de chamadas simultaneas
-        sql = `INSERT INTO ${empresa}_dados.log_chamadas_simultaneas 
-                           (data,total,conectadas,manuais) 
-                     VALUE (now(),${chamadas_simultaneas},${chamadas_conectadas},${chamadas_manuais})`
-                     //console.log(sql)
-        await this.querySync(sql)
-        return true
+        try{
+            await this.querySync(sql);
+            //Inserindo informacoes de chamadas para o grafico de chamadas simultaneas
+            sql = `INSERT INTO ${empresa}_dados.log_chamadas_simultaneas 
+                               (data,total,conectadas,manuais) 
+                         VALUE (now(),${chamadas_simultaneas},${chamadas_conectadas},${chamadas_manuais})`
+                        //console.log(sql)
+            try{
+                await this.querySync(sql);
+                return true
+            } catch (error) {
+                console.error(error);
+            }       
+        } catch (error) {
+            console.error(error);
+        }   
     }
+
     //Conta as chamadas simultaneas
     async chamadasSimultaneas(empresa,parametro){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
@@ -330,8 +361,13 @@ class Discador{
                       WHERE 1=1
                       ${filter} ORDER BY id DESC LIMIT 1`
         const r = await this.querySync(sql)
+        try{
+            const r = await this.querySync(sql);
+            return r[0].total
+        } catch (error) {
+            console.error(error);
+        }      
         
-        return r[0].total
     }
 
      //Remove Chamadas presas nas chamadas simultaneas
@@ -343,7 +379,7 @@ class Discador{
         }
 
         await this.debug(' . PASSO 1.2','Removendo chamadas presas',empresa)
-        const limitTime = 60 //tempo limite para aguardar atendimento (em segundos)
+        const limitTime = 50 //tempo limite para aguardar atendimento (em segundos)
         let sql = `SELECT id,id_campanha,id_mailing,id_registro,id_numero,numero 
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE tipo_discador='power'                      
@@ -518,11 +554,22 @@ class Discador{
         }
 
         await this.debug(' . PASSO 1.3','Verificando Campanhas Ativas',empresa)     
-        const sql = `SELECT id 
-                       FROM ${empresa}_dados.campanhas 
-                      WHERE tipo='a' AND status=1 AND estado=1 
-                      ORDER BY RAND()`
-        return await this.querySync(sql)
+        const sql = `SELECT c.id,f.idFila,f.nomeFila,mc.idMailing,ml.tabela_dados,ml.tabela_numeros,d.tipo_discador,d.agressividade,d.tipo_discagem,d.ordem_discagem,d.modo_atendimento,d.saudacao
+                       FROM ${empresa}_dados.campanhas AS c
+                       JOIN ${empresa}_dados.campanhas_filas AS f ON c.id=f.idCampanha
+                       JOIN ${empresa}_dados.campanhas_mailing AS mc ON mc.idCampanha=c.id
+                       JOIN ${empresa}_dados.mailings AS ml ON ml.id=mc.idMailing
+                       JOIN ${empresa}_dados.campanhas_discador AS d ON c.id=d.idCampanha
+                      WHERE c.tipo='a' AND c.status=1 AND c.estado=1`
+                     
+        try{
+            const q = await this.querySync(sql)
+            return await this.querySync(sql)
+        } catch(error){
+           
+            console.log(error)
+            return 0
+        }        
     }
 
     //Checando se a campanha possui fila de agentes configurada
@@ -614,11 +661,17 @@ class Discador{
             return false
         }
         await this.debug(' . . . . . . . PASSO 2.1 - Verificando se existem agentes na fila','',empresa) 
-        const sql =  `SELECT * 
+        const sql =  `SELECT COUNT(id) AS total 
                         FROM ${empresa}_dados.agentes_filas 
-                       WHERE fila=${idFila}`     
-        return await this.querySync(sql)    
+                       WHERE fila=${idFila}` 
+        try{
+            const a = await this.querySync(sql) 
+            return a[0].total
+        } catch (error) {
+            console.log(error)
+        }
     }
+
     //Verificando se existem agentes disponiveis na fila
     async agentesDisponiveis(empresa,idFila){  
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
@@ -633,11 +686,16 @@ class Discador{
                         AND estado!=0 
                         AND estado!=5
                         AND estado!=2`*/
-        const sql = `SELECT ramal 
+        const sql = `SELECT COUNT(ramal) AS total 
                        FROM ${empresa}_dados.agentes_filas 
                       WHERE fila='${idFila}'
                         AND estado=1`
-        return await this.querySync(sql)       
+        try{
+            const a = await this.querySync(sql)
+            return a[0].total
+        } catch (error) {
+            console.log(error)
+        }    
     }
     //Recuperando os parametros do discador
     async parametrosDiscador(empresa,idCampanha){
@@ -658,16 +716,34 @@ class Discador{
         }
         const sql = `SELECT COUNT(id) AS total 
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                      WHERE id_campanha=${idCampanha} AND (atendido=1 OR falando=1)`
-        return await this.querySync(sql)               
+                      WHERE id_campanha=${idCampanha} AND  (atendido=0 OR falando=0)`
+        try{
+            const q = await this.querySync(sql)  
+            return q[0].total
+        } catch (error) {
+            console.log(error)
+            return false
+        }         
     }
 
     //Modo novo de filtragem que adiciona os ids dos registros na tabela de tabulacao a medida que forem sendo trabalhados
-    async filtrarRegistro(empresa,idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscagem,ordemDiscagem){
+    async filtrarRegistro(empresa,idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscador,tipoDiscagem,ordemDiscagem,limitRegistros){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - filtrarRegistro','Empresa nao recebida')
             return false
         }
+        
+        let limit=limitRegistros;
+        if(limitRegistros<0){
+            limit=0
+        }else if(limitRegistros>10){
+            limit=10
+        }
+
+        if(tipoDiscador!="power"){
+            limit=1
+        }
+       
         await this.debug(' . . . . . . . . . . . PASSO 2.5 - Verificando se existem registros disponíveis','',empresa)
         //Estados do registro
         //0 - Disponivel
@@ -680,18 +756,18 @@ class Discador{
         
         let sql 
          //VERIFICANDO NUMEROS NOVOS
-         sql = `SELECT *
+         sql = `SELECT id as idNumero,id_registro,numero 
                   FROM ${empresa}_mailings.${tabela_numeros}
                  WHERE valido=1 AND discando=0 AND campanha_${idCampanha}>0
-              ORDER BY selecionado ASC, campanha_${idCampanha} ASC, id ${ordemDiscagem}`
+              ORDER BY selecionado ASC, campanha_${idCampanha} ASC, id ${ordemDiscagem},RAND() LIMIT ${limit}`
+             
         const n = await this.querySync(sql)
         //console.log('--->Registros filtrados',n.length)
         if(n.length>0){
-            const idNumero   = n[0].id
+            const idNumero   = n[0].idNumero
             const idRegistro = n[0].id_registro
             const numero     = n[0].numero       
             //atualiza o numero como discando
-
             sql = `UPDATE ${empresa}_mailings.${tabela_numeros} SET selecionado=selecionado+1 WHERE id=${idNumero}`
             await this.querySync(sql)
 
@@ -701,30 +777,14 @@ class Discador{
                     WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} AND idNumero=${idNumero} LIMIT 1`
             const r = await this.querySync(sql)
             //CASO NAO, INSERE O MESMO NO REGISTRO DE TABULACAO DA CAMPANHA
+            
             if(r.length==0){
                 sql = `INSERT INTO ${empresa}_mailings.campanhas_tabulacao_mailing
                                     (data,idCampanha,idMailing,idRegistro,selecoes_registro,idNumero,selecoes_numero,numeroDiscado,estado,desc_estado,max_tent_status,tentativas) 
                             VALUES (now(),${idCampanha},${idMailing},${idRegistro},0,${idNumero},0,'${numero}',0,'pre selecao',1,0)`
                 await this.querySync(sql)
-
-                //FILTRA REGISTRO PARA DISCAGEM
-                sql = `SELECT n.id as idNumero,n.id_registro,n.numero 
-                        FROM ${empresa}_mailings.${tabela_numeros} AS n 
-                    LEFT JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS t ON n.id=t.idNumero
-                        WHERE idMailing=${idMailing} 
-                        AND idCampanha=${idCampanha}
-                        AND idRegistro=${idRegistro}
-                        AND idNumero=${idNumero}
-                        AND numeroDiscado=${numero}
-                        AND estado=0 
-                        AND t.tentativas <= t.max_tent_status 
-                        AND TIMESTAMPDIFF (MINUTE, data, NOW()) >= max_time_retry
-                    ORDER BY t.tentativas ASC, n.id ${ordemDiscagem}
-                        LIMIT 1`
-
-                return await this.querySync(sql)  
-
             }
+            return n
         }      
 
         //FILTRA REGISTRO PARA DISCAGEM
@@ -737,7 +797,7 @@ class Discador{
                 AND t.tentativas <= t.max_tent_status 
                 AND TIMESTAMPDIFF (MINUTE, data, NOW()) >= max_time_retry
             ORDER BY t.tentativas ASC, n.id ${ordemDiscagem}
-                LIMIT 1`
+                LIMIT ${limit}`
 
         return await this.querySync(sql)        
                 
@@ -761,6 +821,23 @@ class Discador{
         }
         await this.debug(` . . . . . . . . . . . . . PASSO 2.6 - Numero ${numero} ocupado`,'',empresa)
         return true;
+    }
+
+    async checandoRegistro(empresa,idRegistro){
+        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
+            //console.log('{[(!)]} - checaNumeroOcupado','Empresa nao recebida')
+            return false
+        }
+        const sql = `SELECT id 
+                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                        WHERE id_registro='${idRegistro}'
+                        LIMIT 1`
+        try{
+            const q = await this.querySync(sql)
+            return q
+        } catch(error){
+            console.log(error)
+        }       
     }
 
 

@@ -27,6 +27,7 @@ class Asterisk{
         if(check){
             return false;
         }
+
         const sql = `INSERT INTO ${connect.db.asterisk}.queue_members 
                                 (queue_name,interface,membername,state_interface,penalty) 
                          VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
