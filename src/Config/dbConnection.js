@@ -32,8 +32,9 @@ connect.poolEmpresa=mysql.createPool({
     user : user['name'],
     password : user['pass'],
     database : db['clients'],
-    waitForConnections: false,
-    connectionLimit: 500
+    waitForConnections: true,
+    connectionLimit: 1000,
+    queueLimit:0
 })
 
 /*
