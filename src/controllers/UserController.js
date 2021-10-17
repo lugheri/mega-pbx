@@ -1,4 +1,5 @@
 import User from '../models/User';
+import Clients from '../models/Clients';
 
 class UserController{
    
@@ -9,6 +10,17 @@ class UserController{
     async newUser(req,res){
         const empresa = await User.getEmpresa(req)
         const dados = req.body
+        const licencas = await Clients.maxLicences(empresa)
+        const totalAgentes = await User.totalAgentesAtivos(empresa)
+
+        console.log('licencas',licencas)
+        console.log('totalAgentes',totalAgentes)
+
+
+        if(licencas<=totalAgentes){
+            res.json({"error":true,"message":"Número máximo de licencas atingido!"})
+            return false
+        }
         const r = await User.newUser(empresa,dados)
         res.json(r)
     }
@@ -31,6 +43,23 @@ class UserController{
         const empresa = await User.getEmpresa(req)
         const userId = parseInt(req.params.userId)
         const userData = req.body
+
+        
+
+        if(userData.status==1){
+            //verifica status anterior do agente 
+            const status = await  User.statusAgente(empresa,userId)
+            if(status==0){
+                //Confere limites de usuarios 
+                const licencas = await Clients.maxLicences(empresa)
+                const totalAgentes = await User.totalAgentesAtivos(empresa)
+                if(licencas<=totalAgentes){
+                    res.json({"error":true,"message":"Número máximo de licencas atingido!"})
+                    return false
+                }
+            }  
+        }
+
         const r = await User.editUser(empresa,userId,userData)
         res.json(r)
     }

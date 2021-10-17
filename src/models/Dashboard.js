@@ -36,8 +36,8 @@ class Dashboard{
         const ag_emTela = await Discador.agentesPorEstado(empresa,5)
         const ag_chamadaManual = await Discador.agentesPorEstado(empresa,6)
         const chamadasAbandonadas = await Discador.chamadasAbandonadas_CampanhasAtivas(empresa)
-        const naoContatados = await Discador.chamadasPorContato_CampanhasAtivas(empresa,'N')       
-        const contatados = await Discador.chamadasPorContato_CampanhasAtivas(empresa,'S')
+        const naoContatados = await Discador.chamadasPorContato_dia(empresa,'N')       
+        const contatados = await Discador.chamadasPorContato_dia(empresa,'S')
         const emAtendimento = await Discador.chamadasEmAtendimento(empresa)   
         
         /*

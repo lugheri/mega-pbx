@@ -257,9 +257,9 @@ class Discador{
 
     async chamadasPorContato_dia(empresa,statusContatado){
         const hoje = moment().format("Y-MM-DD")
-        const sql = `SELECT COUNT(t.id) AS contatados
+        const sql = `SELECT COUNT(id) AS contatados
                       FROM ${empresa}_dados.historico_atendimento
-                     WHERE data='${hoje}' AND t.contatado='${statusContatado}';`
+                     WHERE data='${hoje}' AND contatado='${statusContatado}';`
         const c=await this.querySync(sql);
         return c[0].contatados
     }

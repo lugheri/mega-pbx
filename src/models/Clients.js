@@ -205,7 +205,7 @@ class Clients{
 
     }
 
-    async newAccount(nomeEmpresa,prefixo,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
+    async newAccount(nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
         if(await this.checkPrefix(prefixo)>0){
             return {"error":true,"message":`O prefixo '${prefixo}' já existe!`}
         }
@@ -231,6 +231,7 @@ class Clients{
                                           date,
                                           name,
                                         prefix,
+                                     fidelidade,
                                       licenses,
                               channels_by_user,
                                 total_channels,
@@ -246,6 +247,7 @@ class Clients{
                               '${nomeEmpresa}',
                                   '${prefixo}',
                                    ${licenses},
+                                 ${fidelidade},
                                ${channelsUser},
                               ${totalChannels},
                                     '${trunk}',
@@ -983,23 +985,36 @@ class Clients{
         return trunks
     }
 
-    async maxChannels(empresa){
-        const sql = `SELECT total_channels
-                       FROM clients.accounts 
-                      WHERE prefix='${empresa}'`
-        try{
-            const tc = await this.querySync(sql)
-            if(tc.length==0){
-              return 0
-          }
-          return tc[0].total_channels
-        }catch(error){
-          console.log(error)
-          return 0
+    async maxLicences(empresa){
+      const sql = `SELECT licenses
+                     FROM clients.accounts 
+                    WHERE prefix='${empresa}'`
+      try{
+          const tc = await this.querySync(sql)
+          if(tc.length==0){
+            return 0
         }
-        
+        return tc[0].licenses
+      }catch(error){
+        console.log(error)
+        return 0
+      }      
+    }
 
-       
+    async maxChannels(empresa){
+      const sql = `SELECT total_channels
+                     FROM clients.accounts 
+                    WHERE prefix='${empresa}'`
+      try{
+          const tc = await this.querySync(sql)
+          if(tc.length==0){
+            return 0
+        }
+        return tc[0].total_channels
+      }catch(error){
+        console.log(error)
+        return 0
+      }      
     }
 
     async servers(empresa){
@@ -1024,9 +1039,10 @@ class Clients{
       return await this.querySync(sql)
     }
 
-    async editarCliente(idCliente,nome,licenses,channels_by_user,total_channels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain){
+    async editarCliente(idCliente,nome,fidelidade,licenses,channels_by_user,total_channels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain){
         let sql = `UPDATE clients.accounts
                       SET name='${nome}',
+                          fidelidade=${fidelidade},
                           licenses=${licenses},
                           channels_by_user=${channels_by_user},
                           total_channels=${total_channels},
