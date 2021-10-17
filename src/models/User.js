@@ -278,8 +278,8 @@ class User{
         if(userData.nome){ fields+=`nome='${userData.nome}', `}
         if(userData.nivelAcesso){ fields+=`nivelAcesso=${userData.nivelAcesso}, `}
         if(userData.cargo){ fields+=`cargo=${userData.cargo}, `}
-        if(userData.reset){ fields+=`reset=${userData.reset}, `}
-        if(userData.status){ fields+=`status=${userData.status}, `}
+        if((userData.reset===1)||(userData.reset===0)){fields+=`reset=${userData.reset}, `}
+        if((userData.status===1)||(userData.status===0)){fields+=`status=${userData.status}, `}  
         if(userData.senha){ fields+=`senha=md5('${userData.senha}'), `}
         
         const sql = `UPDATE ${empresa}_dados.users
