@@ -51,9 +51,10 @@ class Discador{
             return ul[0].logados
         } catch (error) {
             console.error(error);
-        }
-        
+        }        
     }    
+
+
     
     async listarAgentesLogados(empresa){
         const sql = `SELECT u.id,u.nome,u.usuario,r.estado
@@ -159,6 +160,38 @@ class Discador{
         return p[0].produtivas
     }
 
+    async chamadasProdutividade_CampanhasAtivas_dia(empresa,statusProdutividade){
+        let queryFilter="";
+        if(statusProdutividade==1){
+            queryFilter=`AND produtivo=1`
+        }else{
+            queryFilter=`AND (produtivo=0 OR produtivo is null)`
+        }
+        const hoje = moment().format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS produtivas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}' ${queryFilter} `;
+             
+        const p=await this.querySync(sql);
+        return p[0].produtivas
+    }
+
+    async chamadas_CampanhasAtivas_dia(empresa,statusProdutividade){
+        let queryFilter="";
+        if(statusProdutividade==1){
+            queryFilter=`AND produtivo=1`
+        }else{
+            queryFilter=`AND (produtivo=0 OR produtivo is null)`
+        }
+        const hoje = moment().format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS produtivas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}' ${queryFilter} `;
+                 
+        const p=await this.querySync(sql);
+        return p[0].produtivas
+    }
+
     async chamadasProdutividade_porCampanha(empresa,idCampanha,statusProdutividade,idMailing){
         let queryFilter="";
         if(statusProdutividade==1){
@@ -222,6 +255,34 @@ class Discador{
         return p[0].chamadas
     }
 
+    async chamadasPorContato_dia(empresa,statusContatado){
+        const hoje = moment().format("Y-MM-DD")
+        const sql = `SELECT COUNT(t.id) AS contatados
+                      FROM ${empresa}_dados.historico_atendimento
+                     WHERE data='${hoje}' AND t.contatado='${statusContatado}';`
+        const c=await this.querySync(sql);
+        return c[0].contatados
+    }
+
+    async chamadasAbandonadas_dia(empresa){
+        const hoje = moment().format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS abandonadas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}' AND h.obs_tabulacao='ABANDONADA';`
+        const a=await this.querySync(sql);
+        return a[0].abandonadas
+    }
+
+
+    async totalChamadas_CampanhasAtivas_dia(empresa){
+        const hoje = moment().format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS chamadas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}';`
+        const p=await this.querySync(sql);
+        return p[0].chamadas
+    }
+
     async chamadasEmAtendimento(empresa){
         const sql = `SELECT COUNT(id) AS chamadas
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
@@ -273,9 +334,19 @@ class Discador{
         const hoje = moment().format("Y-MM-DD")
         const sql = `SELECT COUNT(id) AS atendimentos
                        FROM ${empresa}_dados.historico_atendimento 
-                       WHERE data='${hoje}' AND agente='${idAgente}' ${queryFilter}`
+                       WHERE tipo!='manual' AND data='${hoje}' AND agente='${idAgente}' ${queryFilter}`
         const a= await this.querySync(sql)
         return a[0].atendimentos
+
+    }
+
+    async chamadasManuais_Agente(empresa,idAgente){
+        const hoje = moment().format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS manuais
+                       FROM ${empresa}_dados.historico_atendimento 
+                       WHERE tipo='manual' AND data='${hoje}' AND agente='${idAgente}'`
+        const a= await this.querySync(sql)
+        return a[0].manuais
 
     }
     
@@ -763,10 +834,10 @@ class Discador{
              
         const n = await this.querySync(sql)
         //console.log('--->Registros filtrados',n.length)
-        if(n.length>0){
-            const idNumero   = n[0].idNumero
-            const idRegistro = n[0].id_registro
-            const numero     = n[0].numero       
+        for(i=0;i<n.length;i++){
+            const idNumero   = n[n].idNumero
+            const idRegistro = n[n].id_registro
+            const numero     = n[n].numero       
             //atualiza o numero como discando
             sql = `UPDATE ${empresa}_mailings.${tabela_numeros} SET selecionado=selecionado+1 WHERE id=${idNumero}`
             await this.querySync(sql)

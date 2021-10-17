@@ -2,6 +2,7 @@ import connect from '../Config/dbConnection'
 import Discador from '../models/Discador'
 import Campanhas from '../models/Campanhas'
 import Report from '../models/Report'
+import moment from 'moment'
 
 
 class Dashboard{
@@ -16,25 +17,26 @@ class Dashboard{
     }
 
     async painel(empresa){
+        const hoje = moment().format("Y-MM-DD")
+       
         const agentesLogados = await Discador.agentesLogados(empresa)
-        const produtivas = await Discador.chamadasProdutividade_CampanhasAtivas(empresa,1)
-        const improdutivas = await Discador.chamadasProdutividade_CampanhasAtivas(empresa,0)
-        const totalChamadas = await Discador.totalChamadas_CampanhasAtivas(empresa)   
-
+        const produtivas = await Discador.chamadasProdutividade_CampanhasAtivas_dia(empresa,1)
+        const improdutivas = await Discador.chamadasProdutividade_CampanhasAtivas_dia(empresa,0) 
+        const totalChamadas = await Discador.totalChamadas_CampanhasAtivas_dia(empresa)
         let percentual_improdutivas=0
         let percentual_produtivas=0
         if(totalChamadas!=0){
             percentual_improdutivas = Math.round((improdutivas / totalChamadas)*100)
             percentual_produtivas = Math.round((produtivas / totalChamadas)*100)
-        }       
+        }   
 
         const ag_Disponiveis = await Discador.agentesPorEstado(empresa,1)
         const ag_emPausa = await Discador.agentesPorEstado(empresa,2)
         const ag_emLigacao = await Discador.agentesPorEstado(empresa,3)        
         const ag_emTela = await Discador.agentesPorEstado(empresa,5)
         const ag_chamadaManual = await Discador.agentesPorEstado(empresa,6)
-        const naoContatados = await Discador.chamadasPorContato_CampanhasAtivas(empresa,'N')
         const chamadasAbandonadas = await Discador.chamadasAbandonadas_CampanhasAtivas(empresa)
+        const naoContatados = await Discador.chamadasPorContato_CampanhasAtivas(empresa,'N')       
         const contatados = await Discador.chamadasPorContato_CampanhasAtivas(empresa,'S')
         const emAtendimento = await Discador.chamadasEmAtendimento(empresa)   
         
@@ -74,8 +76,8 @@ class Dashboard{
                 const Trabalhados_mailingAtual=Improdutivas_mailingAtual+Produtivas_mailingAtual
                 const NaoTrabalhados_mailingAtual=totalRegistros[0].total-Trabalhados_mailingAtual  
 
-                console.log('totalRegistros',totalRegistros)
-                console.log('Trabalhados_mailingAtual',Trabalhados_mailingAtual)
+               // console.log('totalRegistros',totalRegistros)
+                //console.log('Trabalhados_mailingAtual',Trabalhados_mailingAtual)
                 
                 
                 let PercentualTrabalhado=0
@@ -105,7 +107,7 @@ class Dashboard{
 
                 const idMailing = mailings[i].id
                 const nomeMailing = mailings[i].nome
-                const totalRegistros=mailings[i].totalReg
+                const totalRegistros=mailings[i].totalNumeros-mailings[i].numerosInvalidos                
                 const Improdutivas=await Discador.chamadasProdutividade_porMailing(empresa,0,idMailing)
                 const Produtivas=await Discador.chamadasProdutividade_porMailing(empresa,1,idMailing)
                 const trabalhado=Produtivas+Improdutivas
@@ -135,12 +137,15 @@ class Dashboard{
                 const totalAtendimento=await Discador.totalAtendimentosAgente(empresa,idAgente)
                 const Improdutivas=await Discador.chamadasProdutividade_Agente(empresa,0,idAgente)
                 const Produtivas=await Discador.chamadasProdutividade_Agente(empresa,1,idAgente)
+                const chManuais=await Discador.chamadasManuais_Agente(empresa,idAgente)
                 const tempoFalado=await Discador.tempoFaladoAgente(empresa,idAgente)
                 let perc_improdutivas=0
                 let perc_produtivas=0
+                let perc_manuais=0
                 if(totalAtendimento!=0){
                     perc_improdutivas=Math.round((Improdutivas / totalAtendimento)*100)
                     perc_produtivas=Math.round((Produtivas / totalAtendimento)*100)
+                    perc_manuais=Math.round((chManuais / totalAtendimento)*100)
                 }
 
 
@@ -170,6 +175,12 @@ class Dashboard{
                       agente["improdutivos"]={}
                       agente["improdutivos"]["porcentagem"]=perc_improdutivas
                       agente["improdutivos"]["total"]=Improdutivas
+
+                      agente["chManuais"]={}
+                      agente["chManuais"]["porcentagem"]=perc_manuais
+                      agente["chManuais"]["total"]=chManuais
+
+                      
 
                       agente["tempoFalado"]=await this.converteSeg_tempo(tempoFalado)
                 dash["Agentes"].push(agente)

@@ -13,8 +13,7 @@ class DiscadorController{
         if(debug==1){
            //console.log(`${title}`,msg)
         }
-    }
-     
+    }     
 
     async campanhasAtivasAgente(req,res){
         const empresa = await User.getEmpresa(req)
@@ -163,7 +162,9 @@ class DiscadorController{
             await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
             return false;
         }
+        const maxCanais = await Clients. maxChannels(empresa)
         
+
         let agressividade = parametrosDiscador['agressividade']
         let tipoDiscagem = parametrosDiscador['tipo_discagem']
         let tipoDiscador= parametrosDiscador['tipo_discador']
@@ -193,7 +194,22 @@ class DiscadorController{
             
             return false;
         }else{
-            limitRegistros=limiteDiscagem-qtdChamadasSimultaneas-1
+            const canaisDisponiveis = maxCanais-qtdChamadasSimultaneas
+            
+            limitRegistros=limiteDiscagem-qtdChamadasSimultaneas
+
+            if(canaisDisponiveis<limitRegistros){
+                limitRegistros=canaisDisponiveis
+
+                if(limitRegistros==0){
+                    let msg='Todos os canais de atendimento estão em uso!'
+                    console.log('Todos os canais de atendimento estão em uso!')
+                    let estado = 2
+                    await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
+                    return false;
+                }
+            }
+
             const tipoDiscagem=parametrosDiscador['tipo_discagem']
             const ordemDiscagem=parametrosDiscador['ordem_discagem']
             //#5 Verifica se existem registros nao trabalhados ou com o nº de tentativas abaixo do limite
@@ -209,8 +225,7 @@ class DiscadorController{
             //percorre os numeros selecionados
             for(let i=0; i<registros.length; i++){
                 const registro = registros[i]
-              
-              
+                            
                 const numero = registros[i].numero
                 const ocupado = await Discador.checaNumeroOcupado(empresa,numero)  
                 //#6 Verifica se o numero selecionado ja nao esta em atendimento

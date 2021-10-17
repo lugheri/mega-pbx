@@ -370,7 +370,7 @@ class Campanhas{
 
     //Lista Mailings das campanhas ativas
     async listarMailingCampanhasAtivas(empresa){
-        const sql = `SELECT m.id, m.nome, m.totalReg
+        const sql = `SELECT m.id, m.nome, m.totalNumeros, m.numerosInvalidos
                        FROM ${empresa}_dados.mailings AS m 
                        JOIN ${empresa}_dados.campanhas_mailing AS cm ON m.id=cm.idMailing
                        JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS c ON c.id=cm.idCampanha
@@ -1054,7 +1054,7 @@ class Campanhas{
     }
 
     async totalRegistrosCampanha(empresa,idCampanha){
-        const sql = `SELECT SUM(totalReg) AS total 
+        const sql = `SELECT SUM(totalNumeros-numerosInvalidos) AS total 
                        FROM ${empresa}_dados.mailings as m 
                        JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
                        JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 

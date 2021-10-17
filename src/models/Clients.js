@@ -987,11 +987,19 @@ class Clients{
         const sql = `SELECT total_channels
                        FROM clients.accounts 
                       WHERE prefix='${empresa}'`
-        const tc = await this.querySync(sql)
-        if(tc.length==0){
-            return 0
+        try{
+            const tc = await this.querySync(sql)
+            if(tc.length==0){
+              return 0
+          }
+          return tc[0].total_channels
+        }catch(error){
+          console.log(error)
+          return 0
         }
-        return tc[0].total_channels
+        
+
+       
     }
 
     async servers(empresa){
