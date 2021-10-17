@@ -35,7 +35,9 @@ class Report{
                       WHERE 1=1 ${filter}
                       LIMIT ${pag},${reg}`
                       //console.log('filtrarAgentes',sql)
+       
         const users = await this.querySync(sql)
+
       
         return users
     }
@@ -251,7 +253,15 @@ class Report{
     async totalChamadasRealizadas(empresa,idAgente,de,ate){
         let sql = `SELECT SUM(tempo_total) AS tempo
                      FROM ${empresa}_dados.tempo_ligacao
-                    WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
+                    WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND tipoDiscador<>'manual' AND entrada>='${de}' AND saida <= '${ate}'`
+        const t = await this.querySync(sql)
+        return t[0].tempo
+    }   
+
+    async totalChamadasManuais(empresa,idAgente,de,ate){
+        let sql = `SELECT SUM(tempo_total) AS tempo
+                     FROM ${empresa}_dados.tempo_ligacao
+                    WHERE idAgente=${idAgente} AND tipoDiscador='manual' AND entrada>='${de}' AND saida <= '${ate}'`
         const t = await this.querySync(sql)
         return t[0].tempo
     }   

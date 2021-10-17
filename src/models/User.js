@@ -278,7 +278,7 @@ class User{
         if(userData.nome){ fields+=`nome='${userData.nome}', `}
         if(userData.nivelAcesso){ fields+=`nivelAcesso=${userData.nivelAcesso}, `}
         if(userData.cargo){ fields+=`cargo=${userData.cargo}, `}
-        if(userData.reset){ fields+=`nome='reset=${userData.reset}, `}
+        if(userData.reset){ fields+=`reset=${userData.reset}, `}
         if(userData.status){ fields+=`status=${userData.status}, `}
         if(userData.senha){ fields+=`senha=md5('${userData.senha}'), `}
         

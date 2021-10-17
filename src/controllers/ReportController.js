@@ -12,8 +12,8 @@ import Tabulacoes from '../models/Tabulacoes'
 class ReportController{  
     async relatorioPausas(req,res){
         const empresa = await User.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
+        let dataInicio  = req.body.dataInicio
+        let dataFinal  = req.body.dataFinal
         const ramal = req.body.ramal
         const equipe = req.body.equipe
         const logados = req.body.logados
@@ -23,11 +23,28 @@ class ReportController{
            registros = req.body.totalRegistro
         }
         const status = req.body.status
-        
-
-        const relatorioPausas = []       
-        const agentesAtivos = await Report.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina,registros)
        
+        if((dataInicio==false)||(dataInicio=="")){ dataInicio=moment().format("Y-MM-DD")}
+        if((dataFinal==false)||(dataFinal=="")){ dataFinal=moment().format("Y-MM-DD");}
+
+        const relatorioPausas = []  
+        
+        //Resumo Linha
+        const linhaResumo = {}
+
+        const totalPausas = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,false,false)
+              linhaResumo['Total em pausa']= await Report.converteSeg_tempo(totalPausas)
+
+        const pausas = await Pausas.listarPausas(empresa)
+        for(let p=0; p<pausas.length;p++){
+            const idPausa = pausas[p].id                     
+            const tempoPausa = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,false)
+              linhaResumo[`${pausas[p].nome}`] = await Report.converteSeg_tempo(tempoPausa)
+        }
+   
+        relatorioPausas.push(linhaResumo)
+
+        const agentesAtivos = await Report.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina,registros)
         for(let i=0; i<agentesAtivos.length; i++){
             const agente = {}
             const idAgente = agentesAtivos[i].id
@@ -36,32 +53,166 @@ class ReportController{
                   //Listar pausas 
                   const pausas = await Pausas.listarPausas(empresa)
                   for(let p=0; p<pausas.length;p++){
-                      const idPausa = pausas[p].id                     
+                      const idPausa = pausas[p].id            
                       const tempoPausa = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,idAgente)
                       agente[`${pausas[p].nome}`] = await Report.converteSeg_tempo(tempoPausa)
                   }
             const totalPausasAgente = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,false,idAgente)
                   agente['Total']=await Report.converteSeg_tempo(totalPausasAgente)
-            
-            relatorioPausas.push(agente)
+            if(agente['Total']!='00:00:00'){
+              relatorioPausas.push(agente)
+            }
         }
-        //Ultima Linha
-        const linhaFinal = {}
-              linhaFinal['Ramal']="Total"
-              linhaFinal["Agente"]=""
-              const pausas = await Pausas.listarPausas(empresa)
-              for(let p=0; p<pausas.length;p++){
-                const idPausa = pausas[p].id                     
-                const tempoPausa = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,false)
-                linhaFinal[`${pausas[p].nome}`] = await Report.converteSeg_tempo(tempoPausa)
-              }
-        const totalPausas = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,false,false)
-              linhaFinal["Total"]= await Report.converteSeg_tempo(totalPausas)
-        
-        relatorioPausas.push(linhaFinal)
-
+       
         return res.json(relatorioPausas)
     }
+
+    async loginXLogout(req,res){
+        const empresa = await User.getEmpresa(req)
+        const dataInicio  = req.body.dataInicio
+        const dataFinal  = req.body.dataFinal
+        const ramal = req.body.ramal
+        const estado = req.body.estado
+        const equipe = req.body.equipe
+        const logados = req.body.logados
+        const pagina = req.body.pagina
+        let registros = 20
+        if(req.body.totalRegistro==false){
+           registros = req.body.totalRegistro
+        }
+        
+        const status = req.body.status
+        const hoje = moment().format("Y-MM-DD")
+        const loginLogout = []
+        const agentes = await Report.filtrarAgentes(empresa,0,0,status,estado,ramal,equipe,logados,pagina,registros)
+        let de = hoje
+        let ate = hoje
+        if((dataInicio!=false)||(dataInicio!="")){de=dataInicio;}
+        if((dataFinal!=false)||(dataFinal!="")){ate=dataFinal;}
+        for(let i = 0; i <agentes.length; i++){
+            const idAgente=agentes[i].id
+            const login = await Report.dadosLogin(empresa,idAgente,de,ate,'login',0)
+            for(let l=0; l<login.length;l++) {
+                const llAgente = {}
+                      llAgente["ramal"]=idAgente
+                      llAgente["agente"]=agentes[i].nome
+                let dataLogin = `${login[l].data} ${login[l].hora}`
+                      llAgente["Login"]=moment(dataLogin, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
+
+                const logout = await Report.dadosLogin(empresa,idAgente,de,ate,'logout',login[l].id)
+                let dataLogout = moment().format("YYYY-MM-DD HH:mm:ss")
+                if(logout.length>0){
+                    dataLogout = `${logout[0].data} ${logout[0].hora}`
+                      llAgente["Logout"]=moment(dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
+                }else{
+                      llAgente["Logout"]="Logado"
+                }
+                
+                const tl = moment(dataLogout,"YYYY-MM-DD HH:mm:ss").diff(moment(dataLogin,"YYYY-MM-DD HH:mm:ss"))
+                const tempoLogado = moment.duration(tl).asSeconds()
+                      llAgente["Tempo Logado"]=await Report.converteSeg_tempo(tempoLogado)
+
+                const tempoChamadasRecebidas = await Report.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
+                      llAgente["Chamadas Recebidas"]=await Report.converteSeg_tempo(tempoChamadasRecebidas)
+
+                const tempoChamadasRealizadas = await Report.totalChamadasRealizadas(empresa,idAgente,dataLogin,dataLogout)                      
+                      llAgente["Chamadas Realizadas"]=await Report.converteSeg_tempo(tempoChamadasRealizadas)
+                
+                const tempoChamadasManuais = await Report.totalChamadasManuais(empresa,idAgente,dataLogin,dataLogout)                      
+                      llAgente["Chamadas Manuais"]=await Report.converteSeg_tempo(tempoChamadasManuais)      
+                      
+                const tempoEmChamadas=tempoChamadasRecebidas+tempoChamadasRealizadas+tempoChamadasManuais
+                      llAgente["Tempo em Chamada"]=await Report.converteSeg_tempo(tempoEmChamadas)
+
+                const perc_servico = Math.floor((tempoEmChamadas/tempoLogado)*100)
+                      llAgente["% de Serviço"]=`${perc_servico}%`
+                
+                      llAgente["Status"]=await Report.infoEstadoAgente(empresa,idAgente)
+                loginLogout.push(llAgente)
+            }
+        }
+        res.json(loginLogout)
+    }
+
+    async monitoramentoAgente(req,res){
+        const empresa = await User.getEmpresa(req)
+        const dataInicio  = req.body.dataInicio
+        const dataFinal  = req.body.dataFinal
+        const ramal = req.body.ramal
+        const idCampanha = req.body.campanha
+        const equipe = req.body.equipe
+        const logados = req.body.logados
+        const pagina = req.body.pagina
+        let registros = 20
+        if(req.body.totalRegistro==false){
+           registros = req.body.totalRegistro
+        }
+        const status = req.body.status
+
+        const monitoramentoAgentes = []
+        const agentesAtivos = await Report.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina,registros)
+        for(let i=0; i<agentesAtivos.length; i++){
+            const idAgente = agentesAtivos[i].id
+            const infoUser = await Report.infoAgente(empresa,idAgente);
+            const nome = infoUser[0].nome
+            const equipe = infoUser[0].equipe
+            const codEstado = infoUser[0].cod_estado
+            const estado = infoUser[0].estado
+            
+            const agente={}
+                  agente["ramal"]=idAgente
+                let estadoAgente = codEstado
+                if(codEstado==3){
+                    const tabulando = await Report.statusTabulacaoChamada(empresa,idAgente)
+                    if(tabulando==1){
+                        estadoAgente=3.5
+                    }
+
+                }else if(codEstado==6){
+                    const falando = await Report.statusAtendimentoChamada(empresa,idAgente)
+                    if(falando==1){
+                        estadoAgente=7
+                    }
+                }
+                  agente["estado"]=estadoAgente
+                  agente["cod_estado"]=codEstado
+                  agente["equipe"]=equipe
+                  agente["nome"]=nome
+            let userCampanhas
+            if((idCampanha==false)||(idCampanha=="")){
+                userCampanhas=true
+            }else{      
+                userCampanhas = await Report.usuarioCampanha(empresa,idAgente,idCampanha)
+            }
+            if(userCampanhas==true){
+                const tempoStatus=await Report.tempoEstadoAgente(empresa,idAgente)
+                const hoje = moment().format("Y-MM-DD")
+                const chamadasAtendidas=await Report.chamadasAtendidas(empresa,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+                const campanha = await Discador.listarCampanhasAtivasAgente(empresa,idAgente)
+                const TMT = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMT',idCampanha,dataInicio,dataFinal,hoje))
+                const TMA = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMA',idCampanha,dataInicio,dataFinal,hoje))
+                const TMO = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMO',idCampanha,dataInicio,dataFinal,hoje))
+                const produtivos = await Report.chamadasProdutividade(empresa,1,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+                const improdutivos = await Report.chamadasProdutividade(empresa,0,idAgente,idCampanha,dataInicio,dataFinal,hoje)
+
+                    agente["tempoStatus"]=tempoStatus
+                    agente["chamadasAtendidas"]=chamadasAtendidas
+                    agente["campanha"]=campanha
+                    agente["TMT"]=TMT
+                    agente["TMA"]=TMA
+                    agente["TMO"]=TMO
+                    agente["produtivos"]=produtivos
+                    agente["improdutivos"]=improdutivos
+
+                monitoramentoAgentes.push(agente)
+            }
+        }
+        res.json(monitoramentoAgentes)
+    }
+
+
+
+
     async detalhamentoChamadas(req,res){
         const empresa = await User.getEmpresa(req)
         const dataInicio  = req.body.dataInicio
@@ -161,83 +312,7 @@ class ReportController{
         res.json(detChamadas)
     }
 
-    async monitoramentoAgente(req,res){
-        const empresa = await User.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
-        const ramal = req.body.ramal
-        const idCampanha = req.body.campanha
-        const equipe = req.body.equipe
-        const logados = req.body.logados
-        const pagina = req.body.pagina
-        let registros = 20
-        if(req.body.totalRegistro==false){
-           registros = req.body.totalRegistro
-        }
-        const status = req.body.status
-
-        const monitoramentoAgentes = []
-        const agentesAtivos = await Report.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina,registros)
-        for(let i=0; i<agentesAtivos.length; i++){
-            const idAgente = agentesAtivos[i].id
-            const infoUser = await Report.infoAgente(empresa,idAgente);
-            const nome = infoUser[0].nome
-            const equipe = infoUser[0].equipe
-            const codEstado = infoUser[0].cod_estado
-            const estado = infoUser[0].estado
-            
-            const agente={}
-                  agente["ramal"]=idAgente
-                let estadoAgente = codEstado
-                if(codEstado==3){
-                    const tabulando = await Report.statusTabulacaoChamada(empresa,idAgente)
-                    if(tabulando==1){
-                        estadoAgente=3.5
-                    }
-
-                }else if(codEstado==6){
-                    const falando = await Report.statusAtendimentoChamada(empresa,idAgente)
-                    if(falando==1){
-                        estadoAgente=7
-                    }
-                }
-
-
-                  agente["estado"]=estadoAgente
-                  agente["cod_estado"]=codEstado
-                  agente["equipe"]=equipe
-                  agente["nome"]=nome
-            let userCampanhas
-            if((estado!=false)||(estado!="")){
-                userCampanhas=true
-            }else{      
-                userCampanhas = await Report.usuarioCampanha(empresa,idAgente,idCampanha)
-            }
-            if(userCampanhas==true){
-                const tempoStatus=await Report.tempoEstadoAgente(empresa,idAgente)
-                const hoje = moment().format("Y-MM-DD")
-                const chamadasAtendidas=await Report.chamadasAtendidas(empresa,idAgente,idCampanha,dataInicio,dataFinal,hoje)
-                const campanha = await Discador.listarCampanhasAtivasAgente(empresa,idAgente)
-                const TMT = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMT',idCampanha,dataInicio,dataFinal,hoje))
-                const TMA = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMA',idCampanha,dataInicio,dataFinal,hoje))
-                const TMO = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMO',idCampanha,dataInicio,dataFinal,hoje))
-                const produtivos = await Report.chamadasProdutividade(empresa,1,idAgente,idCampanha,dataInicio,dataFinal,hoje)
-                const improdutivos = await Report.chamadasProdutividade(empresa,0,idAgente,idCampanha,dataInicio,dataFinal,hoje)
-
-                    agente["tempoStatus"]=tempoStatus
-                    agente["chamadasAtendidas"]=chamadasAtendidas
-                    agente["campanha"]=campanha
-                    agente["TMT"]=TMT
-                    agente["TMA"]=TMA
-                    agente["TMO"]=TMO
-                    agente["produtivos"]=produtivos
-                    agente["improdutivos"]=improdutivos
-
-                monitoramentoAgentes.push(agente)
-            }
-        }
-        res.json(monitoramentoAgentes)
-    }
+    
 
     async monitoramentoCampanhas(req,res){
         const empresa = await User.getEmpresa(req)
@@ -366,75 +441,7 @@ class ReportController{
         res.json(true)
     }
 
-    async loginXLogout(req,res){
-        const empresa = await User.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
-        const ramal = req.body.ramal
-        const estado = req.body.estado
-        const equipe = req.body.equipe
-        const logados = req.body.logados
-        const pagina = req.body.pagina
-        let registros = 20
-        if(req.body.totalRegistro==false){
-           registros = req.body.totalRegistro
-        }
-        
-        const status = req.body.status
-
-        const hoje = moment().format("Y-MM-DD")
-
-        const loginLogout = []
-        const agentes = await Report.filtrarAgentes(empresa,0,0,status,estado,ramal,equipe,logados,pagina,registros)
-        let de = hoje
-        let ate = hoje
-
-        if((dataInicio!=false)||(dataInicio!="")){de=dataInicio;}
-        if((dataFinal!=false)||(dataFinal!="")){ate=dataFinal;}
-
-        for(let i = 0; i <agentes.length; i++){
-            const idAgente=agentes[i].id
-           
-            const login = await Report.dadosLogin(empresa,idAgente,de,ate,'login',0)
-            for(let l=0; l<login.length;l++) {
-                const llAgente = {}
-                      llAgente["ramal"]=idAgente
-                      llAgente["agente"]=agentes[i].nome
-                let dataLogin = `${login[l].data} ${login[l].hora}`
-                      llAgente["Login"]=moment(dataLogin, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
-
-                const logout = await Report.dadosLogin(empresa,idAgente,de,ate,'logout',login[l].id)
-                let dataLogout = moment().format("YYYY-MM-DD HH:mm:ss")
-                if(logout.length>0){
-                    dataLogout = `${logout[0].data} ${logout[0].hora}`
-                      llAgente["Logout"]=moment(dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
-                }else{
-                      llAgente["Logout"]="Logado"
-                }
-                
-                const tl = moment(dataLogout,"YYYY-MM-DD HH:mm:ss").diff(moment(dataLogin,"YYYY-MM-DD HH:mm:ss"))
-                const tempoLogado = moment.duration(tl).asSeconds()
-                      llAgente["Tempo Logado"]=await Report.converteSeg_tempo(tempoLogado)
-
-                const tempoChamadasRecebidas = await Report.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
-                      llAgente["Chamadas Recebidas"]=await Report.converteSeg_tempo(tempoChamadasRecebidas)
-
-                const tempoChamadasRealizadas = await Report.totalChamadasRealizadas(empresa,idAgente,dataLogin,dataLogout)                      
-                      llAgente["Chamadas Realizadas"]=await Report.converteSeg_tempo(tempoChamadasRealizadas)
-                      
-                const tempoEmChamadas=tempoChamadasRecebidas+tempoChamadasRealizadas
-                      llAgente["Tempo em Chamada"]=await Report.converteSeg_tempo(tempoEmChamadas)
-
-                const perc_servico = Math.floor((tempoEmChamadas/tempoLogado)*100)
-                      llAgente["% de Serviço"]=`${perc_servico}%`
-                
-                      llAgente["Status"]=await Report.infoEstadoAgente(empresa,idAgente)
-                loginLogout.push(llAgente)
-            }
-        }
-
-        res.json(loginLogout)
-    }
+    
 
 
 
