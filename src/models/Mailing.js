@@ -1055,7 +1055,7 @@ class Mailing{
     async registrosNaoContatados(empresa,tabela){
         const sql = `SELECT COUNT(id) AS total 
                        FROM ${empresa}_mailings.${tabela}
-                      WHERE contatado='N'`
+                      WHERE selecionado>0 AND contatado<>'S'`
         const reg = await this.querySync(sql)
         return reg[0].total
     }

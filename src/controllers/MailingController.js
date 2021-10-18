@@ -267,7 +267,7 @@ class MailingController{
             const totalRegistros = await Mailing.totalRegistros(empresa,tabela);
             const contatados = await Mailing.registrosContatados(empresa,tabela)
             const naoContatados = await Mailing.registrosNaoContatados(empresa,tabela)
-            
+
             const trabalhados = contatados + naoContatados
             const naoTrabalhados = totalRegistros-trabalhados
             let perc_naotrabalhados = 0
