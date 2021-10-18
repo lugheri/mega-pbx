@@ -920,7 +920,7 @@ class Mailing{
 
     //Status mailing
     async statusMailing(empresa,idMailing){
-        const sql = `SELECT configurado,totalReg,totalNumeros,pronto,status 
+        const sql = `SELECT configurado,totalReg,totalNumeros,numerosInvalidos,pronto,status 
                        FROM ${empresa}_dados.mailings 
                        WHERE id=${idMailing}`
         return await this.querySync(sql) 
@@ -1038,7 +1038,8 @@ class Mailing{
     //Saude do mailing
     async totalRegistros(empresa,tabela){
         const sql = `SELECT COUNT(id) AS total 
-                       FROM ${empresa}_mailings.${tabela}`
+                       FROM ${empresa}_mailings.${tabela}
+                       WHERE valido=1`
         const reg = await this.querySync(sql)
         return reg[0].total
     }

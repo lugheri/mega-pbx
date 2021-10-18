@@ -155,7 +155,7 @@ class Report{
         const sql = `SELECT c.ramal,u.nome,c.uniqueid,
                             DATE_FORMAT(c.data,'%d/%m/%Y') AS dataCall,
                             DATE_FORMAT(c.data,'%H:%i') AS horaCall,
-                            c.tipo_ligacao,c.id_campanha,c.numero, c.falando,c.desligada,c.tabulando,c.tabulado
+                            c.tipo_ligacao,c.id_campanha,c.numero, c.na_fila,c.falando,c.desligada,c.tabulando,c.tabulado
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas AS c
                   LEFT JOIN ${empresa}_dados.users AS u ON c.ramal=u.id
                       WHERE tipo_ligacao='discador' `
@@ -178,14 +178,14 @@ class Report{
             if(contatados==1){
                 filter+=` AND h.contatado='S'`
             }else{
-                filter+=` AND (h.contatado='N' OR h.contatado='0'  OR h.contatado is null)`
+                filter+=` AND h.contatado<>'S'`
             }
         }
         if((produtivo!=false)||(produtivo!="")){
             if(produtivo==1){
                 filter+=` AND h.produtivo=1`
             }else{
-                filter+=` AND (h.contatado=0  OR h.contatado is null)`
+                filter+=` AND h.contatado<>1`
             }
         }
         if((tipo!=false)||(tipo!="")){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}

@@ -705,7 +705,7 @@ class Campanhas{
 
     //STATUS DE EVOLUCAO DE CAMPANHA
     async totalMailingsCampanha(empresa,idCampanha){
-        const sql = `SELECT totalNumeros AS total, m.id AS idMailing
+        const sql = `SELECT m.totalNumeros-m.numerosInvalidos AS total, m.id AS idMailing
                       FROM ${empresa}_dados.mailings as m 
                       JOIN ${empresa}_dados.campanhas_mailing AS cm 
                         ON cm.idMailing=m.id 

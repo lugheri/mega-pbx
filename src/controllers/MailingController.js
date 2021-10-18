@@ -196,7 +196,7 @@ class MailingController{
         result['pronto']=true
         result['status']="Pronto"
         result['Reg.']=statusMailing[0].totalReg
-        result['Numeros']=statusMailing[0].totalNumeros
+        result['Numeros']=statusMailing[0].totalNumeros-statusMailing[0].numerosInvalidos
         res.json(result)
         return false
     }    

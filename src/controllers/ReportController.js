@@ -250,7 +250,9 @@ class ReportController{
                   callSim['contatado']=""
                   callSim['produtivo']=""
                   callSim['tabulacao']=""
-                  if(chamadasSimultaneas[i].falando==1){
+                  if(chamadasSimultaneas[i].na_fila==1){
+                      status="Na Fila"
+                  }else if(chamadasSimultaneas[i].falando==1){
                       status="Em Atendimento"
                   }else{
                      if((chamadasSimultaneas[i].desligada==1)||(chamadasSimultaneas[i].tabulando==1)||(chamadasSimultaneas[i].tabulado==1)){
@@ -284,7 +286,7 @@ class ReportController{
                   call['campanha']=await Campanhas.nomeCampanhas(empresa,chamadas[i].campanha)
                   call['tipo']=chamadas[i].tipo
                   call['telefone']=chamadas[i].numero_discado
-                  if(chamadas[i].contatado==1){
+                  if(chamadas[i].contatado=='S'){
                     call['contatado']='Sim'
                   }else{
                     call['contatado']='Não'
