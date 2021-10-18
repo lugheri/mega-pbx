@@ -1,16 +1,25 @@
 import connect from '../Config/dbConnection';
 import moment from 'moment';
+import Clients from './Clients'
 
 class Gravacao{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            connect.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await Clients.serversDbs(empresa)
+            connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
         })
     }
-
+    querySync_crmdb(sql){
+        return new Promise((resolve,reject)=>{
+            connect.poolCRM.query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })
+        })
+      }
     async listarGravacoes(empresa,inicio,limit){
         const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,
                             r.date_record,
@@ -37,7 +46,7 @@ class Gravacao{
                   LEFT JOIN ${empresa}_dados.tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
                    ORDER BY id DESC 
                       LIMIT ${inicio},${limit}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
 
@@ -137,21 +146,21 @@ class Gravacao{
                       WHERE 1=1 ${filter}`
         //console.log(buscarPor)
         console.log(sql)
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async infoGravacao(empresa,idGravacao){
         const sql = `SELECT *
                        FROM ${empresa}_dados.records
                       WHERE id=${idGravacao}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async numeroDiscadoByUniqueid(empresa,uniqueid){
         const sql = `SELECT numero_discado AS numero
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE uniqueid=${uniqueid}`
-        const n =  await this.querySync(sql)
+        const n =  await this.querySync(sql,empresa)
         if(n.length==0){
             return 0
         }
@@ -162,7 +171,7 @@ class Gravacao{
         const sql = `SELECT callfilename,date_record
                        FROM ${empresa}_dados.records
                       WHERE uniqueid=${uniqueid}`
-        const g =  await this.querySync(sql)
+        const g =  await this.querySync(sql,empresa)
         if(g.length==0){
             return 0
         }
@@ -173,7 +182,7 @@ class Gravacao{
         const sql = `SELECT prefix
                        FROM clients.accounts
                       WHERE client_number=${idEmpresa}`
-        const e = await this.querySync(sql)
+        const e = await this.querySync_crmdb(sql)
 
         if(e.length == 0){
             return false
@@ -207,7 +216,7 @@ class Gravacao{
                   LEFT JOIN ${empresa}_dados.tempo_ligacao AS t ON r.uniqueid=t.uniqueid 
                   LEFT JOIN ${empresa}_dados.tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
                       WHERE r.id=${idRec}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 }
 

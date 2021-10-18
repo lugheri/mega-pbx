@@ -471,7 +471,7 @@ class ReportController{
 
     async filtroAgentes(req,res){
         const empresa = await User.getEmpresa(req)
-        const agentes = await Report.filtrarAgentes(empresa,0,0,1,false,0,0,false,1)
+        const agentes = await Report.filtrarAgentes(empresa,0,0,1,false,0,0,false,1,30)
         res.json(agentes)
     }
     

@@ -12,8 +12,8 @@ var _Tabulacoes = require('../models/Tabulacoes'); var _Tabulacoes2 = _interopRe
 class ReportController{  
     async relatorioPausas(req,res){
         const empresa = await _User2.default.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
+        let dataInicio  = req.body.dataInicio
+        let dataFinal  = req.body.dataFinal
         const ramal = req.body.ramal
         const equipe = req.body.equipe
         const logados = req.body.logados
@@ -23,11 +23,28 @@ class ReportController{
            registros = req.body.totalRegistro
         }
         const status = req.body.status
-        
-
-        const relatorioPausas = []       
-        const agentesAtivos = await _Report2.default.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina,registros)
        
+        if((dataInicio==false)||(dataInicio=="")){ dataInicio=_moment2.default.call(void 0, ).format("Y-MM-DD")}
+        if((dataFinal==false)||(dataFinal=="")){ dataFinal=_moment2.default.call(void 0, ).format("Y-MM-DD");}
+
+        const relatorioPausas = []  
+        
+        //Resumo Linha
+        const linhaResumo = {}
+
+        const totalPausas = await _Report2.default.calculaTempoPausa(empresa,dataInicio,dataFinal,false,false)
+              linhaResumo['Total em pausa']= await _Report2.default.converteSeg_tempo(totalPausas)
+
+        const pausas = await _Pausas2.default.listarPausas(empresa)
+        for(let p=0; p<pausas.length;p++){
+            const idPausa = pausas[p].id                     
+            const tempoPausa = await _Report2.default.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,false)
+              linhaResumo[`${pausas[p].nome}`] = await _Report2.default.converteSeg_tempo(tempoPausa)
+        }
+   
+        relatorioPausas.push(linhaResumo)
+
+        const agentesAtivos = await _Report2.default.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina,registros)
         for(let i=0; i<agentesAtivos.length; i++){
             const agente = {}
             const idAgente = agentesAtivos[i].id
@@ -36,129 +53,85 @@ class ReportController{
                   //Listar pausas 
                   const pausas = await _Pausas2.default.listarPausas(empresa)
                   for(let p=0; p<pausas.length;p++){
-                      const idPausa = pausas[p].id                     
+                      const idPausa = pausas[p].id            
                       const tempoPausa = await _Report2.default.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,idAgente)
                       agente[`${pausas[p].nome}`] = await _Report2.default.converteSeg_tempo(tempoPausa)
                   }
             const totalPausasAgente = await _Report2.default.calculaTempoPausa(empresa,dataInicio,dataFinal,false,idAgente)
                   agente['Total']=await _Report2.default.converteSeg_tempo(totalPausasAgente)
-            
-            relatorioPausas.push(agente)
+            if(agente['Total']!='00:00:00'){
+              relatorioPausas.push(agente)
+            }
         }
-        //Ultima Linha
-        const linhaFinal = {}
-              linhaFinal['Ramal']="Total"
-              linhaFinal["Agente"]=""
-              const pausas = await _Pausas2.default.listarPausas(empresa)
-              for(let p=0; p<pausas.length;p++){
-                const idPausa = pausas[p].id                     
-                const tempoPausa = await _Report2.default.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,false)
-                linhaFinal[`${pausas[p].nome}`] = await _Report2.default.converteSeg_tempo(tempoPausa)
-              }
-        const totalPausas = await _Report2.default.calculaTempoPausa(empresa,dataInicio,dataFinal,false,false)
-              linhaFinal["Total"]= await _Report2.default.converteSeg_tempo(totalPausas)
-        
-        relatorioPausas.push(linhaFinal)
-
+       
         return res.json(relatorioPausas)
     }
-    async detalhamentoChamadas(req,res){
+
+    async loginXLogout(req,res){
         const empresa = await _User2.default.getEmpresa(req)
         const dataInicio  = req.body.dataInicio
         const dataFinal  = req.body.dataFinal
         const ramal = req.body.ramal
-        const equipe = req.body.ramal
-        const campanha = req.body.campanha
-        const mailing = req.body.mailing
-        const numero = req.body.numero 
-        const tipo = req.body.tipo         
-        const contatados = req.body.contatados
-        const produtivo = req.body.produtivo
-        const tabulacao = req.body.tabulacao
+        const estado = req.body.estado
+        const equipe = req.body.equipe
+        const logados = req.body.logados
         const pagina = req.body.pagina
         let registros = 20
         if(req.body.totalRegistro==false){
            registros = req.body.totalRegistro
         }
+        
+        const status = req.body.status
         const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+        const loginLogout = []
+        const agentes = await _Report2.default.filtrarAgentes(empresa,0,0,status,estado,ramal,equipe,logados,pagina,registros)
+        let de = hoje
+        let ate = hoje
+        if((dataInicio!=false)||(dataInicio!="")){de=dataInicio;}
+        if((dataFinal!=false)||(dataFinal!="")){ate=dataFinal;}
+        for(let i = 0; i <agentes.length; i++){
+            const idAgente=agentes[i].id
+            const login = await _Report2.default.dadosLogin(empresa,idAgente,de,ate,'login',0)
+            for(let l=0; l<login.length;l++) {
+                const llAgente = {}
+                      llAgente["ramal"]=idAgente
+                      llAgente["agente"]=agentes[i].nome
+                let dataLogin = `${login[l].data} ${login[l].hora}`
+                      llAgente["Login"]=_moment2.default.call(void 0, dataLogin, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
 
-        const detChamadas = []
+                const logout = await _Report2.default.dadosLogin(empresa,idAgente,de,ate,'logout',login[l].id)
+                let dataLogout = _moment2.default.call(void 0, ).format("YYYY-MM-DD HH:mm:ss")
+                if(logout.length>0){
+                    dataLogout = `${logout[0].data} ${logout[0].hora}`
+                      llAgente["Logout"]=_moment2.default.call(void 0, dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
+                }else{
+                      llAgente["Logout"]="Logado"
+                }
+                
+                const tl = _moment2.default.call(void 0, dataLogout,"YYYY-MM-DD HH:mm:ss").diff(_moment2.default.call(void 0, dataLogin,"YYYY-MM-DD HH:mm:ss"))
+                const tempoLogado = _moment2.default.duration(tl).asSeconds()
+                      llAgente["Tempo Logado"]=await _Report2.default.converteSeg_tempo(tempoLogado)
 
-        const chamadasSimultaneas = await _Report2.default.chamadasSimultaneas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero)
-        let status = "Encerrada"
-        for(let i = 0;i<chamadasSimultaneas.length; i++) {            
-            const callSim={}
-                  callSim['ramal']=chamadasSimultaneas[i].ramal 
-                  callSim['agente']=chamadasSimultaneas[i].nome
-                  callSim['data']=chamadasSimultaneas[i].dataCall
-                  callSim['hora']=chamadasSimultaneas[i].horaCall
-                  callSim['duracao']=await _Report2.default.converteSeg_tempo(await _Report2.default.timeCall(empresa,chamadasSimultaneas[i].uniqueid))
-                  callSim['campanha']=await _Campanhas2.default.nomeCampanhas(empresa,chamadasSimultaneas[i].id_campanha)
-                  callSim['tipo']=chamadasSimultaneas[i].tipo_ligacao
-                  callSim['telefone']=chamadasSimultaneas[i].numero
-                  callSim['contatado']=""
-                  callSim['produtivo']=""
-                  callSim['tabulacao']=""
-                  if(chamadasSimultaneas[i].falando==1){
-                      status="Em Atendimento"
-                  }else{
-                     if((chamadasSimultaneas[i].desligada==1)||(chamadasSimultaneas[i].tabulando==1)||(chamadasSimultaneas[i].tabulado==1)){
-                        status="Finalizando..."
-                     }else{
-                        status="Chamando..."
-                     }
-                  }
-                  callSim['status']=status
-                  let gravacao = " - "
-                  const linkGrav = await _Gravacao2.default.linkByUniqueid(empresa,chamadasSimultaneas[i].uniqueid)
-                  if(linkGrav!=0){ 
-                    const server = await _Asterisk2.default.getDomain(empresa)
-                    const pasta = linkGrav[0].date_record
-                    
-                    const arquivo = `${linkGrav[0].callfilename}.wav`
-                    gravacao = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
-                  }
-                  callSim['gravacao']=gravacao
-            detChamadas.push(callSim)
+                const tempoChamadasRecebidas = await _Report2.default.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
+                      llAgente["Chamadas Recebidas"]=await _Report2.default.converteSeg_tempo(tempoChamadasRecebidas)
+
+                const tempoChamadasRealizadas = await _Report2.default.totalChamadasRealizadas(empresa,idAgente,dataLogin,dataLogout)                      
+                      llAgente["Chamadas Realizadas"]=await _Report2.default.converteSeg_tempo(tempoChamadasRealizadas)
+                
+                const tempoChamadasManuais = await _Report2.default.totalChamadasManuais(empresa,idAgente,dataLogin,dataLogout)                      
+                      llAgente["Chamadas Manuais"]=await _Report2.default.converteSeg_tempo(tempoChamadasManuais)      
+                      
+                const tempoEmChamadas=tempoChamadasRecebidas+tempoChamadasRealizadas+tempoChamadasManuais
+                      llAgente["Tempo em Chamada"]=await _Report2.default.converteSeg_tempo(tempoEmChamadas)
+
+                const perc_servico = Math.floor((tempoEmChamadas/tempoLogado)*100)
+                      llAgente["% de Serviço"]=`${perc_servico}%`
+                
+                      llAgente["Status"]=await _Report2.default.infoEstadoAgente(empresa,idAgente)
+                loginLogout.push(llAgente)
+            }
         }
-        const chamadas = await _Report2.default.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
-
-        for(let i = 0;i<chamadas.length; i++) {
-            const call={}
-                  call['ramal']=chamadas[i].agente
-                  call['agente']=chamadas[i].nome
-                  call['data']=chamadas[i].dataCall
-                  call['hora']=chamadas[i].hora
-                  call['duracao']=await _Report2.default.converteSeg_tempo(await _Report2.default.timeCall(empresa,chamadas[i].uniqueid))
-                  call['campanha']=await _Campanhas2.default.nomeCampanhas(empresa,chamadas[i].campanha)
-                  call['tipo']=chamadas[i].tipo
-                  call['telefone']=chamadas[i].numero_discado
-                  if(chamadas[i].contatado==1){
-                    call['contatado']='Sim'
-                  }else{
-                    call['contatado']='Não'
-                  }
-                  if(chamadas[i].produtivo==1){
-                    call['produtivo']='Sim'
-                  }else{
-                    call['produtivo']='Não'
-                  }                 
-                  call['tabulacao']=await _Tabulacoes2.default.nomeStatus(empresa,chamadas[i].status_tabulacao) 
-                  call['status']='Encerrada'
-                  let gravacao = " - "
-                  const linkGrav = await _Gravacao2.default.linkByUniqueid(empresa,chamadas[i].uniqueid)
-                  if(linkGrav!=0){ 
-                    const server = await _Asterisk2.default.getDomain(empresa)
-                    const pasta = linkGrav[0].date_record
-                    
-                    const arquivo = `${linkGrav[0].callfilename}.wav`
-                    gravacao = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
-                  }
-                  call['gravacao']=gravacao
-
-            detChamadas.push(call)
-        }
-        res.json(detChamadas)
+        res.json(loginLogout)
     }
 
     async monitoramentoAgente(req,res){
@@ -201,14 +174,12 @@ class ReportController{
                         estadoAgente=7
                     }
                 }
-
-
                   agente["estado"]=estadoAgente
                   agente["cod_estado"]=codEstado
                   agente["equipe"]=equipe
                   agente["nome"]=nome
             let userCampanhas
-            if((estado!=false)||(estado!="")){
+            if((idCampanha==false)||(idCampanha=="")){
                 userCampanhas=true
             }else{      
                 userCampanhas = await _Report2.default.usuarioCampanha(empresa,idAgente,idCampanha)
@@ -238,6 +209,112 @@ class ReportController{
         }
         res.json(monitoramentoAgentes)
     }
+
+
+
+
+    async detalhamentoChamadas(req,res){
+        const empresa = await _User2.default.getEmpresa(req)
+        const dataInicio  = req.body.dataInicio
+        const dataFinal  = req.body.dataFinal
+        const ramal = req.body.ramal
+        const equipe = req.body.ramal
+        const campanha = req.body.campanha
+        const mailing = req.body.mailing
+        const numero = req.body.numero 
+        const tipo = req.body.tipo         
+        const contatados = req.body.contatados
+        const produtivo = req.body.produtivo
+        const tabulacao = req.body.tabulacao
+        const pagina = req.body.pagina
+        let registros = 20
+        if(req.body.totalRegistro==false){
+           registros = req.body.totalRegistro
+        }
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+
+        const detChamadas = []
+
+        const chamadasSimultaneas = await _Report2.default.chamadasSimultaneas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero)
+        let status = "Encerrada"
+        for(let i = 0;i<chamadasSimultaneas.length; i++) {            
+            const callSim={}
+                  callSim['ramal']=chamadasSimultaneas[i].ramal 
+                  callSim['agente']=chamadasSimultaneas[i].nome
+                  callSim['data']=chamadasSimultaneas[i].dataCall
+                  callSim['hora']=chamadasSimultaneas[i].horaCall
+                  callSim['duracao']=await _Report2.default.converteSeg_tempo(await _Report2.default.timeCall(empresa,chamadasSimultaneas[i].uniqueid))
+                  callSim['campanha']=await _Campanhas2.default.nomeCampanhas(empresa,chamadasSimultaneas[i].id_campanha)
+                  callSim['tipo']=chamadasSimultaneas[i].tipo_ligacao
+                  callSim['telefone']=chamadasSimultaneas[i].numero
+                  callSim['contatado']=""
+                  callSim['produtivo']=""
+                  callSim['tabulacao']=""
+                  if(chamadasSimultaneas[i].na_fila==1){
+                      status="Na Fila"
+                  }else if(chamadasSimultaneas[i].falando==1){
+                      status="Em Atendimento"
+                  }else{
+                     if((chamadasSimultaneas[i].desligada==1)||(chamadasSimultaneas[i].tabulando==1)||(chamadasSimultaneas[i].tabulado==1)){
+                        status="Finalizando..."
+                     }else{
+                        status="Chamando..."
+                     }
+                  }
+                  callSim['status']=status
+                  let gravacao = " - "
+                  const linkGrav = await _Gravacao2.default.linkByUniqueid(empresa,chamadasSimultaneas[i].uniqueid)
+                  if(linkGrav!=0){ 
+                    const server = await _Asterisk2.default.getDomain(empresa)
+                    const pasta = linkGrav[0].date_record
+                    
+                    const arquivo = `${linkGrav[0].callfilename}.wav`
+                    gravacao = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
+                  }
+                  callSim['gravacao']=gravacao
+            detChamadas.push(callSim)
+        }
+        const chamadas = await _Report2.default.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
+
+        for(let i = 0;i<chamadas.length; i++) {
+            const call={}
+                  call['ramal']=chamadas[i].agente
+                  call['agente']=chamadas[i].nome
+                  call['data']=chamadas[i].dataCall
+                  call['hora']=chamadas[i].hora
+                  call['duracao']=await _Report2.default.converteSeg_tempo(await _Report2.default.timeCall(empresa,chamadas[i].uniqueid))
+                  call['campanha']=await _Campanhas2.default.nomeCampanhas(empresa,chamadas[i].campanha)
+                  call['tipo']=chamadas[i].tipo
+                  call['telefone']=chamadas[i].numero_discado
+                  if(chamadas[i].contatado=='S'){
+                    call['contatado']='Sim'
+                  }else{
+                    call['contatado']='Não'
+                  }
+                  if(chamadas[i].produtivo==1){
+                    call['produtivo']='Sim'
+                  }else{
+                    call['produtivo']='Não'
+                  }                 
+                  call['tabulacao']=await _Tabulacoes2.default.nomeStatus(empresa,chamadas[i].status_tabulacao) 
+                  call['status']='Encerrada'
+                  let gravacao = " - "
+                  const linkGrav = await _Gravacao2.default.linkByUniqueid(empresa,chamadas[i].uniqueid)
+                  if(linkGrav!=0){ 
+                    const server = await _Asterisk2.default.getDomain(empresa)
+                    const pasta = linkGrav[0].date_record
+                    
+                    const arquivo = `${linkGrav[0].callfilename}.wav`
+                    gravacao = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
+                  }
+                  call['gravacao']=gravacao
+
+            detChamadas.push(call)
+        }
+        res.json(detChamadas)
+    }
+
+    
 
     async monitoramentoCampanhas(req,res){
         const empresa = await _User2.default.getEmpresa(req)
@@ -366,75 +443,7 @@ class ReportController{
         res.json(true)
     }
 
-    async loginXLogout(req,res){
-        const empresa = await _User2.default.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
-        const ramal = req.body.ramal
-        const estado = req.body.estado
-        const equipe = req.body.equipe
-        const logados = req.body.logados
-        const pagina = req.body.pagina
-        let registros = 20
-        if(req.body.totalRegistro==false){
-           registros = req.body.totalRegistro
-        }
-        
-        const status = req.body.status
-
-        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
-
-        const loginLogout = []
-        const agentes = await _Report2.default.filtrarAgentes(empresa,0,0,status,estado,ramal,equipe,logados,pagina,registros)
-        let de = hoje
-        let ate = hoje
-
-        if((dataInicio!=false)||(dataInicio!="")){de=dataInicio;}
-        if((dataFinal!=false)||(dataFinal!="")){ate=dataFinal;}
-
-        for(let i = 0; i <agentes.length; i++){
-            const idAgente=agentes[i].id
-           
-            const login = await _Report2.default.dadosLogin(empresa,idAgente,de,ate,'login',0)
-            for(let l=0; l<login.length;l++) {
-                const llAgente = {}
-                      llAgente["ramal"]=idAgente
-                      llAgente["agente"]=agentes[i].nome
-                let dataLogin = `${login[l].data} ${login[l].hora}`
-                      llAgente["Login"]=_moment2.default.call(void 0, dataLogin, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
-
-                const logout = await _Report2.default.dadosLogin(empresa,idAgente,de,ate,'logout',login[l].id)
-                let dataLogout = _moment2.default.call(void 0, ).format("YYYY-MM-DD HH:mm:ss")
-                if(logout.length>0){
-                    dataLogout = `${logout[0].data} ${logout[0].hora}`
-                      llAgente["Logout"]=_moment2.default.call(void 0, dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
-                }else{
-                      llAgente["Logout"]="Logado"
-                }
-                
-                const tl = _moment2.default.call(void 0, dataLogout,"YYYY-MM-DD HH:mm:ss").diff(_moment2.default.call(void 0, dataLogin,"YYYY-MM-DD HH:mm:ss"))
-                const tempoLogado = _moment2.default.duration(tl).asSeconds()
-                      llAgente["Tempo Logado"]=await _Report2.default.converteSeg_tempo(tempoLogado)
-
-                const tempoChamadasRecebidas = await _Report2.default.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
-                      llAgente["Chamadas Recebidas"]=await _Report2.default.converteSeg_tempo(tempoChamadasRecebidas)
-
-                const tempoChamadasRealizadas = await _Report2.default.totalChamadasRealizadas(empresa,idAgente,dataLogin,dataLogout)                      
-                      llAgente["Chamadas Realizadas"]=await _Report2.default.converteSeg_tempo(tempoChamadasRealizadas)
-                      
-                const tempoEmChamadas=tempoChamadasRecebidas+tempoChamadasRealizadas
-                      llAgente["Tempo em Chamada"]=await _Report2.default.converteSeg_tempo(tempoEmChamadas)
-
-                const perc_servico = Math.floor((tempoEmChamadas/tempoLogado)*100)
-                      llAgente["% de Serviço"]=`${perc_servico}%`
-                
-                      llAgente["Status"]=await _Report2.default.infoEstadoAgente(empresa,idAgente)
-                loginLogout.push(llAgente)
-            }
-        }
-
-        res.json(loginLogout)
-    }
+    
 
 
 
@@ -462,7 +471,7 @@ class ReportController{
 
     async filtroAgentes(req,res){
         const empresa = await _User2.default.getEmpresa(req)
-        const agentes = await _Report2.default.filtrarAgentes(empresa,0,0,1,false,0,0,false,1)
+        const agentes = await _Report2.default.filtrarAgentes(empresa,0,0,1,false,0,0,false,1,30)
         res.json(agentes)
     }
     

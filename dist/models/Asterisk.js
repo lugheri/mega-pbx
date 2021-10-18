@@ -19,6 +19,16 @@ class Asterisk{
             })
         })
     }
+    querySync_astdb(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.poolAsterisk.query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })
+        })
+    }
+
+    
     //######################Configuração das filas######################
     
     //Adiciona membros na fila
@@ -27,10 +37,11 @@ class Asterisk{
         if(check){
             return false;
         }
+
         const sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.queue_members 
                                 (queue_name,interface,membername,state_interface,penalty) 
                          VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
-        await this.querySync(sql)
+        await this.querySync_astdb(sql)
         return true
     }
     //Lista os membros da fila
@@ -38,20 +49,20 @@ class Asterisk{
         const sql = `SELECT * 
                        FROM ${_dbConnection2.default.db.asterisk}.queue_members 
                       WHERE queue_name = ${nomeFila}`
-        return await this.querySync(sql)
+        return await this.querySync_astdb(sql)
     }
     //Remove os membros da fila
     async removeMembroFila(empresa,nomeFila,membro){
         const sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.queue_members 
                       WHERE queue_name='${nomeFila}' AND membername='${membro}'`
-        await this.querySync(sql)
+        await this.querySync_astdb(sql)
         return true
     }
     async checkAgenteFila(empresa,queue_name,membername){
         const sql = `SELECT uniqueid 
                        FROM ${_dbConnection2.default.db.asterisk}.queue_members 
                       WHERE queue_name='${queue_name}' AND membername='${membername}'`
-        const r = await this.querySync(sql)
+        const r = await this.querySync_astdb(sql)
         return r.length
     }
 
@@ -485,6 +496,10 @@ class Asterisk{
         })
     }
 
+    async listarRamais(){
+        const sql = `SELECT * FROM ps_auths`
+        return await this.querySync_astdb(sql)
+    }
 
     /*
 

@@ -2,6 +2,7 @@
 var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireDefault(_Discador);
 var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
 var _Report = require('../models/Report'); var _Report2 = _interopRequireDefault(_Report);
+var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 
 
 class Dashboard{
@@ -16,26 +17,27 @@ class Dashboard{
     }
 
     async painel(empresa){
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+       
         const agentesLogados = await _Discador2.default.agentesLogados(empresa)
-        const produtivas = await _Discador2.default.chamadasProdutividade_CampanhasAtivas(empresa,1)
-        const improdutivas = await _Discador2.default.chamadasProdutividade_CampanhasAtivas(empresa,0)
-        const totalChamadas = await _Discador2.default.totalChamadas_CampanhasAtivas(empresa)   
-
+        const produtivas = await _Discador2.default.chamadasProdutividade_CampanhasAtivas_dia(empresa,1)
+        const improdutivas = await _Discador2.default.chamadasProdutividade_CampanhasAtivas_dia(empresa,0) 
+        const totalChamadas = await _Discador2.default.totalChamadas_CampanhasAtivas_dia(empresa)
         let percentual_improdutivas=0
         let percentual_produtivas=0
         if(totalChamadas!=0){
             percentual_improdutivas = Math.round((improdutivas / totalChamadas)*100)
             percentual_produtivas = Math.round((produtivas / totalChamadas)*100)
-        }       
+        }   
 
         const ag_Disponiveis = await _Discador2.default.agentesPorEstado(empresa,1)
         const ag_emPausa = await _Discador2.default.agentesPorEstado(empresa,2)
         const ag_emLigacao = await _Discador2.default.agentesPorEstado(empresa,3)        
         const ag_emTela = await _Discador2.default.agentesPorEstado(empresa,5)
         const ag_chamadaManual = await _Discador2.default.agentesPorEstado(empresa,6)
-        const naoContatados = await _Discador2.default.chamadasPorContato_CampanhasAtivas(empresa,'N')
         const chamadasAbandonadas = await _Discador2.default.chamadasAbandonadas_CampanhasAtivas(empresa)
-        const contatados = await _Discador2.default.chamadasPorContato_CampanhasAtivas(empresa,'S')
+        const naoContatados = await _Discador2.default.chamadasPorContato_dia(empresa,'N')       
+        const contatados = await _Discador2.default.chamadasPorContato_dia(empresa,'S')
         const emAtendimento = await _Discador2.default.chamadasEmAtendimento(empresa)   
         
         /*
@@ -74,8 +76,8 @@ class Dashboard{
                 const Trabalhados_mailingAtual=Improdutivas_mailingAtual+Produtivas_mailingAtual
                 const NaoTrabalhados_mailingAtual=totalRegistros[0].total-Trabalhados_mailingAtual  
 
-                console.log('totalRegistros',totalRegistros)
-                console.log('Trabalhados_mailingAtual',Trabalhados_mailingAtual)
+               // console.log('totalRegistros',totalRegistros)
+                //console.log('Trabalhados_mailingAtual',Trabalhados_mailingAtual)
                 
                 
                 let PercentualTrabalhado=0
@@ -100,12 +102,13 @@ class Dashboard{
 
         const mailings = await _Campanhas2.default.listarMailingCampanhasAtivas(empresa)
             dash["Mailings"]=[]
+            const mailingsAdicionados=[]
             for(let i = 0; i<mailings.length; i++) {
                 const mailing={}
-
+               
                 const idMailing = mailings[i].id
                 const nomeMailing = mailings[i].nome
-                const totalRegistros=mailings[i].totalReg
+                const totalRegistros=mailings[i].totalNumeros-mailings[i].numerosInvalidos                
                 const Improdutivas=await _Discador2.default.chamadasProdutividade_porMailing(empresa,0,idMailing)
                 const Produtivas=await _Discador2.default.chamadasProdutividade_porMailing(empresa,1,idMailing)
                 const trabalhado=Produtivas+Improdutivas
@@ -124,7 +127,11 @@ class Dashboard{
                 mailing["data"]["Produtivo"]=perc_produtivas
                 mailing["data"]["Improdutivo"]=perc_improdutivas
                 mailing["data"]["Trabalhados"]=perc_trabalhado
-                dash["Mailings"].push(mailing)
+                //verifica se o mailing ja consta na lista de mailngs
+                if(mailingsAdicionados.includes(idMailing)==false){//Caso o cpf conste no array de cpfs
+                    dash["Mailings"].push(mailing)
+                }                
+                mailingsAdicionados.push(idMailing)
             }
            
             dash["dia"]=await _Discador2.default.diaAtual()
@@ -135,12 +142,15 @@ class Dashboard{
                 const totalAtendimento=await _Discador2.default.totalAtendimentosAgente(empresa,idAgente)
                 const Improdutivas=await _Discador2.default.chamadasProdutividade_Agente(empresa,0,idAgente)
                 const Produtivas=await _Discador2.default.chamadasProdutividade_Agente(empresa,1,idAgente)
+                const chManuais=await _Discador2.default.chamadasManuais_Agente(empresa,idAgente)
                 const tempoFalado=await _Discador2.default.tempoFaladoAgente(empresa,idAgente)
                 let perc_improdutivas=0
                 let perc_produtivas=0
+                let perc_manuais=0
                 if(totalAtendimento!=0){
                     perc_improdutivas=Math.round((Improdutivas / totalAtendimento)*100)
                     perc_produtivas=Math.round((Produtivas / totalAtendimento)*100)
+                    perc_manuais=Math.round((chManuais / totalAtendimento)*100)
                 }
 
 
@@ -170,6 +180,12 @@ class Dashboard{
                       agente["improdutivos"]={}
                       agente["improdutivos"]["porcentagem"]=perc_improdutivas
                       agente["improdutivos"]["total"]=Improdutivas
+
+                      agente["chManuais"]={}
+                      agente["chManuais"]["porcentagem"]=perc_manuais
+                      agente["chManuais"]["total"]=chManuais
+
+                      
 
                       agente["tempoFalado"]=await this.converteSeg_tempo(tempoFalado)
                 dash["Agentes"].push(agente)

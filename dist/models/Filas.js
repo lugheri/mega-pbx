@@ -12,14 +12,83 @@ class Filas{
             })
         })
     }
+    querySync_astdb(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.poolAsterisk.query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })
+        })
+    }
 
     //CRUD FILAS
     //Criar nova filas
-    async criarFila(empresa,name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat){
+    async criarFila(empresa,nomeFila,musiconhold,monitorType,monitorFormat,announce_frequency,announce_holdtime,announce_position,autofill,autopause,autopausebusy,autopausedelay,autopauseunavail,joinempty,leavewhenempty,maxlen,memberdelay,penaltymemberslimit,periodic_announce_frequency,queue_callswaiting,queue_thereare,queue_youarenext,reportholdtime,retry,ringinuse,servicelevel,strategy,timeout,timeoutpriority,timeoutrestart,weight,wrapuptime){
+        
         const sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.queues 
-                                (name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitor_type,monitor_format) 
-                         VALUES ('${name}','${musiconhold}','${strategy}','${timeout}','${retry}','${autopause}','${maxlen}','${monitorType}','${monitorFormat}')`
-        await this.querySync(sql)
+                                (name,
+                                 musiconhold,
+                                 strategy,
+                                 timeout,
+                                 retry,
+                                 autopause,
+                                 maxlen,
+                                 monitor_type,
+                                 monitor_format,
+                                 announce_frequency,
+                                 announce_holdtime,
+                                 announce_position,
+                                 autofill,
+                                 autopausebusy,
+                                 autopausedelay,
+                                 autopauseunavail,
+                                 joinempty,
+                                 leavewhenempty,
+                                 memberdelay,
+                                 penaltymemberslimit,
+                                 periodic_announce_frequency,
+                                 queue_callswaiting,
+                                 queue_thereare,
+                                 queue_youarenext,
+                                 reportholdtime,
+                                 ringinuse,
+                                 servicelevel,
+                                 timeoutpriority,
+                                 timeoutrestart,
+                                 weight,
+                                 wrapuptime) 
+                         VALUES ('${nomeFila}',
+                                 '${musiconhold}',
+                                 '${strategy}',
+                                 '${timeout}',
+                                 '${retry}',
+                                 '${autopause}',
+                                 '${maxlen}',
+                                 '${monitorType}',
+                                 '${monitorFormat}',
+                                 '${announce_frequency}',
+                                 '${announce_holdtime}',
+                                 '${announce_position}',
+                                 '${autofill}',
+                                 '${autopausebusy}',
+                                 '${autopausedelay}',
+                                 '${autopauseunavail}',
+                                 '${joinempty}',
+                                 '${leavewhenempty}',
+                                 '${memberdelay}',
+                                 '${penaltymemberslimit}',
+                                 '${periodic_announce_frequency}',
+                                 '${queue_callswaiting}',
+                                 '${queue_thereare}',
+                                 '${queue_youarenext}',
+                                 '${reportholdtime}',
+                                 '${ringinuse}',
+                                 '${servicelevel}',
+                                 '${timeoutpriority}',
+                                 '${timeoutrestart}',
+                                 '${weight}',
+                                 '${wrapuptime}')`
+        await this.querySync_astdb(sql)
         return true
     }
    
@@ -27,12 +96,12 @@ class Filas{
     async dadosFila(empresa,nomeFila){
         const sql = `SELECT * FROM ${_dbConnection2.default.db.asterisk}.queues 
                      WHERE name='${nomeFila}'`
-        return await this.querySync(sql)
+        return await this.querySync_astdb(sql)
     }
     //Listar Filas
     async listar(empresa){
         const sql = `SELECT * FROM ${_dbConnection2.default.db.asterisk}.queues`
-        return await this.querySync(sql)
+        return await this.querySync_astdb(sql)
     }   
     //Edita os dados da fila
     async editarFila(empresa,nomeFila,dados){
@@ -44,20 +113,20 @@ class Filas{
                             autopause='${dados.autopause}',
                             maxlen='${dados.maxlen}' 
                       WHERE name='${nomeFila}'`
-        return await this.querySync(sql)
+        return await this.querySync_astdb(sql)
     }
 
     async editarNomeFila(empresa,nomeFilaAtual,name){
         const sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queues SET name='${name}' WHERE name='${nomeFilaAtual}'`
-        return await this.querySync(sql)
+        return await this.querySync_astdb(sql)
     }
 
      //Remove a fila
      async removerFila(empresa,nomeFila){
         let sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.queues WHERE name='${nomeFila}'`
-        await this.querySync(sql)
+        await this.querySync_astdb(sql)
         sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.queue_members WHERE queue_name='${nomeFila}'`
-        await this.querySync(sql)
+        await this.querySync_astdb(sql)
     }
 
     async filaCampanha(empresa,idCampanha){

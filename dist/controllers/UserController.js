@@ -1,4 +1,5 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
+var _Clients = require('../models/Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 class UserController{
    
@@ -9,6 +10,17 @@ class UserController{
     async newUser(req,res){
         const empresa = await _User2.default.getEmpresa(req)
         const dados = req.body
+        const licencas = await _Clients2.default.maxLicences(empresa)
+        const totalAgentes = await _User2.default.totalAgentesAtivos(empresa)
+
+        console.log('licencas',licencas)
+        console.log('totalAgentes',totalAgentes)
+
+
+        if(licencas<=totalAgentes){
+            res.json({"error":true,"message":"Número máximo de licencas atingido!"})
+            return false
+        }
         const r = await _User2.default.newUser(empresa,dados)
         res.json(r)
     }
@@ -31,6 +43,23 @@ class UserController{
         const empresa = await _User2.default.getEmpresa(req)
         const userId = parseInt(req.params.userId)
         const userData = req.body
+
+        
+
+        if(userData.status==1){
+            //verifica status anterior do agente 
+            const status = await  _User2.default.statusAgente(empresa,userId)
+            if(status==0){
+                //Confere limites de usuarios 
+                const licencas = await _Clients2.default.maxLicences(empresa)
+                const totalAgentes = await _User2.default.totalAgentesAtivos(empresa)
+                if(licencas<=totalAgentes){
+                    res.json({"error":true,"message":"Número máximo de licencas atingido!"})
+                    return false
+                }
+            }  
+        }
+
         const r = await _User2.default.editUser(empresa,userId,userData)
         res.json(r)
     }

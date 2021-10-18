@@ -34,8 +34,9 @@ class Report{
                        JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
                       WHERE 1=1 ${filter}
                       LIMIT ${pag},${reg}`
-                      //console.log('filtrarAgentes',sql)
+                     //console.log('filtrarAgentes',sql)       
         const users = await this.querySync(sql)
+
       
         return users
     }
@@ -153,7 +154,7 @@ class Report{
         const sql = `SELECT c.ramal,u.nome,c.uniqueid,
                             DATE_FORMAT(c.data,'%d/%m/%Y') AS dataCall,
                             DATE_FORMAT(c.data,'%H:%i') AS horaCall,
-                            c.tipo_ligacao,c.id_campanha,c.numero, c.falando,c.desligada,c.tabulando,c.tabulado
+                            c.tipo_ligacao,c.id_campanha,c.numero, c.na_fila,c.falando,c.desligada,c.tabulando,c.tabulado
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas AS c
                   LEFT JOIN ${empresa}_dados.users AS u ON c.ramal=u.id
                       WHERE tipo_ligacao='discador' `
@@ -176,14 +177,14 @@ class Report{
             if(contatados==1){
                 filter+=` AND h.contatado='S'`
             }else{
-                filter+=` AND (h.contatado='N' OR h.contatado='0'  OR h.contatado is null)`
+                filter+=` AND h.contatado<>'S'`
             }
         }
         if((produtivo!=false)||(produtivo!="")){
             if(produtivo==1){
                 filter+=` AND h.produtivo=1`
             }else{
-                filter+=` AND (h.contatado=0  OR h.contatado is null)`
+                filter+=` AND h.contatado<>1`
             }
         }
         if((tipo!=false)||(tipo!="")){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
@@ -251,7 +252,15 @@ class Report{
     async totalChamadasRealizadas(empresa,idAgente,de,ate){
         let sql = `SELECT SUM(tempo_total) AS tempo
                      FROM ${empresa}_dados.tempo_ligacao
-                    WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
+                    WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND tipoDiscador<>'manual' AND entrada>='${de}' AND saida <= '${ate}'`
+        const t = await this.querySync(sql)
+        return t[0].tempo
+    }   
+
+    async totalChamadasManuais(empresa,idAgente,de,ate){
+        let sql = `SELECT SUM(tempo_total) AS tempo
+                     FROM ${empresa}_dados.tempo_ligacao
+                    WHERE idAgente=${idAgente} AND tipoDiscador='manual' AND entrada>='${de}' AND saida <= '${ate}'`
         const t = await this.querySync(sql)
         return t[0].tempo
     }   

@@ -117,6 +117,7 @@ class ClientsController{
     async newAccount(req,res){
         const nomeEmpresa = req.body.nomeEmpresa
         const prefixo = req.body.prefixo
+        const fidelidade = req.body.fidelidade
         const licenses  = req.body.licenses
         const channelsUser = req.body.channelsUser
         const trunk = req.body.conta_trunk
@@ -131,7 +132,7 @@ class ClientsController{
         const type_server = req.body.type_server
         const totalChannels = channelsUser*licenses
         
-        const r = await _Clients2.default.newAccount(nomeEmpresa,prefixo,licenses,channelsUser,totalChannels, trunk, tech_prefix, type_dial,type_server)
+        const r = await _Clients2.default.newAccount(nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels, trunk, tech_prefix, type_dial,type_server)
         res.json(r)
     }
 
@@ -168,6 +169,7 @@ class ClientsController{
     async editarCliente(req,res){
         const idCliente = req.params.idCliente
         const nomeEmpresa = req.body.nomeEmpresa
+        const fidelidade = req.body.fidelidade
         const licenses  = req.body.licenses
         const channelsUser = req.body.channelsUser
         const totalChannels = channelsUser*licenses
@@ -189,7 +191,7 @@ class ClientsController{
         }
      
 
-        const clientes = await _Clients2.default.editarCliente(idCliente,nomeEmpresa,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain)
+        const clientes = await _Clients2.default.editarCliente(idCliente,nomeEmpresa,fidelidade,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain)
         res.json(true)
     }
     async desativarCliente(req,res){

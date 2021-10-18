@@ -1,10 +1,12 @@
 import connect from '../Config/dbConnection';
+import Clients from '../models/Clients'
 
 class Cronometro{
     //Query Sync
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            connect.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await Clients.serversDbs(empresa)
+            connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
@@ -17,7 +19,7 @@ class Cronometro{
         const sql = `INSERT INTO ${empresa}_dados.tempo_ociosidade
                                  (idAgente,entrada) 
                           VALUES (${ramal},now())`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //Encerra a contagem de ociosidade do sistema ao sair do discador
     async pararOciosidade(empresa,ramal){
@@ -25,7 +27,7 @@ class Cronometro{
                         SET saida=NOW(), 
                             tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW())
                       WHERE idAgente=${ramal} AND saida is null`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }  
    
 
@@ -35,7 +37,7 @@ class Cronometro{
         const sql = `INSERT INTO ${empresa}_dados.tempo_pausa 
                                  (idAgente,idPausa,entrada)
                           VALUES (${idAgente},${idPausa},now())`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //Encerra a contagem do tempo de pausa
     async saiuDaPausa(empresa,idAgente){
@@ -43,7 +45,7 @@ class Cronometro{
                         SET saida=NOW(), 
                             tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW()) 
                      WHERE idAgente=${idAgente} AND saida is null`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     } 
 
     //TEMPO DE FILA
@@ -52,7 +54,7 @@ class Cronometro{
         const sql = `INSERT INTO ${empresa}_dados.tempo_fila 
                                 (idCampanha,idMailing,idRegistro,numero,entrada) 
                          VALUES (${idCampanha},${idMailing},${idRegistro},${numero},now())`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //Encerra a contagem do tempo de espera na fila
     async saiuDaFila(empresa,numero){
@@ -60,7 +62,7 @@ class Cronometro{
                         SET saida=NOW(), 
                             tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW())
                       WHERE numero=${numero} AND saida is null`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     } 
 
     //TEMPO DE ATENDIMENTO 
@@ -69,7 +71,7 @@ class Cronometro{
         const sql = `INSERT INTO ${empresa}_dados.tempo_ligacao 
                                  (idCampanha,idMailing,idRegistro,tipoDiscador,numero,idAgente,uniqueid,entrada) 
                           VALUES (${idCampanha},${idMailing},${idRegistro},'${tipoChamada}',${numero},${ramal},${uniqueid},now())`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     
     //Encerra contagem do tempo de atendimento
@@ -78,7 +80,7 @@ class Cronometro{
                         SET saida=NOW(), 
                             tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW())
                       WHERE idCampanha=${idCampanha} AND numero=${numero} AND idAgente=${ramal} AND saida is null`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     } 
    
 
@@ -87,22 +89,22 @@ class Cronometro{
         const sql = `INSERT INTO ${empresa}_dados.tempo_espera 
                                  (idAgente,entrada) 
                           VALUES (${ramal},now())`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }*/
 
     //TEMPO DE TABULACAO (Ociosidade)
     async iniciaTabulacao(empresa,idCampanha,idMailing,idRegistro,numero,ramal){
         let sql = `UPDATE ${empresa}_dados.user_ramal SET tabulando=1 WHERE userId=${ramal}`
-        await this.querySync(sql);
+        await this.querySync(sql,empresa);
         sql = `INSERT INTO ${empresa}_dados.tempo_tabulacao 
                                  (idCampanha,idMailing,idRegistro,numero,idAgente,entrada) 
                           VALUES (${idCampanha},${idMailing},${idRegistro},${numero},${ramal},now())`
-        await this.querySync(sql);
+        await this.querySync(sql,empresa);
     }
 
     async encerrouTabulacao(empresa,idCampanha,numero,ramal,idTabulacao){
         let sql = `UPDATE ${empresa}_dados.user_ramal SET tabulando=0 WHERE userId=${ramal}`
-        await this.querySync(sql);
+        await this.querySync(sql,empresa);
         sql = `UPDATE ${empresa}_dados.tempo_tabulacao 
                         SET idTabulacao=${idTabulacao}, 
                             saida=NOW(), 
@@ -111,7 +113,7 @@ class Cronometro{
                         AND numero=${numero} 
                         AND idAgente=${ramal} 
                         AND saida is null`
-        await this.querySync(sql);
+        await this.querySync(sql,empresa);
     } 
 
     /* //Encerra a contagem de ociosidade do sistema ao concluir a tabulacao
@@ -121,7 +123,7 @@ class Cronometro{
                            saida=NOW(),
                            tempo_total=TIMESTAMPDIFF(SECOND, entrada, NOW()) 
                       WHERE idAgente=${ramal} AND saida is null`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     } */
 
 

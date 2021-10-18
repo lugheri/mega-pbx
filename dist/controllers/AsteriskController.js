@@ -302,12 +302,10 @@ class AsteriskController{
         })
     }
 
-    listarRamais(req,res){
-      _Asterisk2.default.listarRamais((e,r)=>{
-        if(e) throw e;
-
-        res.json(r);
-      })
+    async listarRamais(req,res){
+      const ramais = await _Asterisk2.default.listarRamais()
+      res.json(ramais);
+      
     }
 
     async servidorWebRTC(req,res){

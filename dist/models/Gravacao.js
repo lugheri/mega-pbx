@@ -10,7 +10,14 @@ class Gravacao{
             })
         })
     }
-
+    querySync_crmdb(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.poolCRM.query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })
+        })
+      }
     async listarGravacoes(empresa,inicio,limit){
         const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,
                             r.date_record,
@@ -173,7 +180,7 @@ class Gravacao{
         const sql = `SELECT prefix
                        FROM clients.accounts
                       WHERE client_number=${idEmpresa}`
-        const e = await this.querySync(sql)
+        const e = await this.querySync_crmdb(sql)
 
         if(e.length == 0){
             return false

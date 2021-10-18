@@ -196,7 +196,7 @@ class MailingController{
         result['pronto']=true
         result['status']="Pronto"
         result['Reg.']=statusMailing[0].totalReg
-        result['Numeros']=statusMailing[0].totalNumeros
+        result['Numeros']=statusMailing[0].totalNumeros-statusMailing[0].numerosInvalidos
         res.json(result)
         return false
     }    
@@ -267,7 +267,7 @@ class MailingController{
             const totalRegistros = await _Mailing2.default.totalRegistros(empresa,tabela);
             const contatados = await _Mailing2.default.registrosContatados(empresa,tabela)
             const naoContatados = await _Mailing2.default.registrosNaoContatados(empresa,tabela)
-            
+
             const trabalhados = contatados + naoContatados
             const naoTrabalhados = totalRegistros-trabalhados
             let perc_naotrabalhados = 0

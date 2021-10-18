@@ -13,6 +13,22 @@ class User{
             })
         })
     }
+    querySync_crmdb(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.poolCRM.query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })
+        })
+      }
+    querySync_astdb(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.poolAsterisk.query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })
+        })
+    }
 
     async findEmpresa(usuario){
         const u = usuario.split('@');
@@ -139,9 +155,15 @@ class User{
         return estadoRamal[0].estado
     }
 
+    async statusAgente(empresa,idAgente){
+        const sql = `SELECT status FROM ${empresa}_dados.users  WHERE  id=${idAgente}`
+        const r = await this.querySync(sql)
+        return r[0].status
+    }
+
     async nomeEmpresa(empresa){
         const sql = `SELECT name FROM clients.accounts WHERE prefix='${empresa}'`
-        const e = await this.querySync(sql)
+        const e = await this.querySync_crmdb(sql)
         return e[0].name
     }
 
@@ -187,17 +209,17 @@ class User{
         sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.ps_aors 
                            (id,max_contacts,remove_existing) 
                     VALUES ('${userId}',1,'yes')`
-        const a = await this.querySync(sql)
+        const a = await this.querySync_astdb(sql)
         //AUTH
         sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.ps_auths
                            (id,auth_type,password,realm,username) 
                     VALUES ('${userId}','userpass','mega_${userId}@agent','asterisk','${userId}')`
-        const h = await this.querySync(sql)
+        const h = await this.querySync_astdb(sql)
         //ENDPOINT
         sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.ps_endpoints 
                            (id,transport,aors,auth,context,disallow,allow,webrtc,dtls_auto_generate_cert,direct_media,force_rport,ice_support,rewrite_contact,rtp_symmetric) 
                     VALUES ('${userId}','transport-wss','${userId}','${userId}','external','all','alaw,ulaw,opus','yes','yes','no','yes','yes','yes','yes')`
-        const e = await this.querySync(sql)
+        const e = await this.querySync_astdb(sql)
         return true;    
     }
 
@@ -215,6 +237,19 @@ class User{
                        FROM ${empresa}_dados.users 
                        WHERE id=${idAgente}`
         return await this.querySync(sql)
+    }
+
+    async totalAgentesAtivos(empresa){
+        const sql = `SELECT COUNT(id) AS total 
+                       FROM ${empresa}_dados.users
+                      WHERE status=1`
+        try{
+            const r = await this.querySync(sql)
+            return r[0].total
+        }catch (error) {
+            console.log(error)
+            return 0
+        }
     }
 
     async listUsers(empresa,status){
@@ -255,14 +290,16 @@ class User{
     }
 
     async editUser(empresa,userId,userData){
+        let fields=""
+        if(userData.nome){ fields+=`nome='${userData.nome}', `}
+        if(userData.nivelAcesso){ fields+=`nivelAcesso=${userData.nivelAcesso}, `}
+        if(userData.cargo){ fields+=`cargo=${userData.cargo}, `}
+        if((userData.reset===1)||(userData.reset===0)){fields+=`reset=${userData.reset}, `}
+        if((userData.status===1)||(userData.status===0)){fields+=`status=${userData.status}, `}  
+        if(userData.senha){ fields+=`senha=md5('${userData.senha}'), `}
+        
         const sql = `UPDATE ${empresa}_dados.users
-                        SET modificado=NOW(),
-                            nome='${userData.nome}',                            
-                            nivelAcesso=${userData.nivelAcesso},
-                            cargo=${userData.cargo},
-                            reset=${userData.reset},
-                            status=${userData.status},
-                            senha=md5('${userData.senha}') 
+                        SET ${fields} modificado=NOW()
                       WHERE id=${userId}`
         return await this.querySync(sql)
     }

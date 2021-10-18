@@ -1,10 +1,20 @@
 import connect from '../Config/dbConnection';
 import Mailing from './Mailing';
+import Clients from './Clients';
 
 class Campanhas{   
-    querySync(sql){
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await Clients.serversDbs(empresa)
+            connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })
+        })
+    }
+    querySync_astdb(sql){
         return new Promise((resolve,reject)=>{
-            connect.poolEmpresa.query(sql,(e,rows)=>{
+            connect.poolAsterisk.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
@@ -19,7 +29,7 @@ class Campanhas{
         const sql = `INSERT INTO ${empresa}_dados.campanhas 
                                 (dataCriacao,tipo,nome,descricao,estado,status) 
                          VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }      
 
     //Lista campanhas
@@ -28,7 +38,7 @@ class Campanhas{
                        FROM ${empresa}_dados.campanhas 
                       WHERE status=1 
                       ORDER BY status ASC, id ASC`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
 
     async infoCampanha(empresa,idCampanha){
@@ -41,14 +51,14 @@ class Campanhas{
                     JOIN ${empresa}_dados.campanhas_horarios AS h ON c.id=h.id_campanha
                     JOIN ${empresa}_dados.campanhas_status AS s ON s.idCampanha=c.id
                     WHERE c.id=${idCampanha}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
    }
 
     async nomeCampanhas(empresa,idCampanha){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas 
                       WHERE id=${idCampanha}`
-        const c = await this.querySync(sql)
+        const c = await this.querySync(sql,empresa)
         if(c.length==0){
             return ""
         }
@@ -62,14 +72,14 @@ class Campanhas{
                       WHERE estado=1 
                         AND status=1 
                    ORDER BY status ASC, id ASC`
-        return await this.querySync(sql)         
+        return await this.querySync(sql,empresa)         
     }
 
     //Retorna Campanha
     async dadosCampanha(empresa,idCampanha){
         const sql = `SELECT * FROM ${empresa}_dados.campanhas
                       WHERE id='${idCampanha}' AND status=1`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
 
     //Atualiza campanha
@@ -85,7 +95,7 @@ class Campanhas{
         await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)              
 
 
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
 
     //Atualiza os status dos agentes da campanha de acordo com o status da mesma
@@ -94,7 +104,7 @@ class Campanhas{
         let sql = `SELECT idFila, nomeFila 
                        FROM ${empresa}_dados.campanhas_filas 
                       WHERE idCampanha=${idCampanha}`
-        const fila = await this.querySync(sql)
+        const fila = await this.querySync(sql,empresa)
         if(fila.length==0){
             return false;
         }
@@ -107,20 +117,20 @@ class Campanhas{
                      FROM ${empresa}_dados.agentes_filas
                     WHERE fila=${idFila}
                       AND estado=1`
-            const agentes=await this.querySync(sql)
+            const agentes=await this.querySync(sql,empresa)
             for(let i=0; i<agentes.length; i++){
                 const agente = agentes[i].ramal
                 sql = `UPDATE ${connect.db.asterisk}.queue_members 
                           SET paused=0 
                         WHERE membername='${agente}'`
-                await this.querySync(sql)  
+                await this.querySync_astdb(sql)  
             }
         }else{
             //Pausa os agentes no asterisk
             sql = `UPDATE ${connect.db.asterisk}.queue_members 
                       SET paused=1 
                         WHERE queue_name='${nomeFila}'`
-            await this.querySync(sql) 
+            await this.querySync_astdb(sql) 
         }
     } 
 
@@ -135,12 +145,12 @@ class Campanhas{
         //Removendo listas anteriores
         let sql = `DELETE FROM ${empresa}_dados.campanhas_listastabulacao
                          WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         
         sql = `INSERT INTO ${empresa}_dados.campanhas_listastabulacao 
                            (idCampanha,idListaTabulacao,maxTime) 
                     VALUES (${idCampanha},${idListaTabulacao},15)`
-        await this.querySync(sql)         
+        await this.querySync(sql,empresa)         
     }
 
     //Exibe listas de tabulacao da campanhas
@@ -149,7 +159,7 @@ class Campanhas{
                        FROM ${empresa}_dados.campanhas_listastabulacao AS cl 
                   LEFT JOIN ${empresa}_dados.tabulacoes_listas AS t ON t.id=cl.idListaTabulacao
                       WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
 
     async checklistaTabulacaoCampanha(empresa,idCampanha){
@@ -164,21 +174,21 @@ class Campanhas{
     async removerListaTabulacaoCampanha(empresa,idListaNaCampanha){
         const sql = `DELETE FROM ${empresa}_dados.campanhas_listastabulacao 
                            WHERE id=${idListaNaCampanha}`
-        await this.querySync(sql)  
+        await this.querySync(sql,empresa)  
     }
 
     async setMaxTimeStatusTab(empresa,idCampanha,time){
         const sql = `UPDATE ${empresa}_dados.campanhas_listastabulacao 
                         SET maxTime=${time} 
                       WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql)  
+        await this.querySync(sql,empresa)  
     }
 
     async getMaxTimeStatusTab(empresa,idCampanha){
         const sql = `SELECT maxTime 
                        FROM ${empresa}_dados.campanhas_listastabulacao 
                        WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
 
     //INTEGRAÇÕES
@@ -188,14 +198,14 @@ class Campanhas{
         const sql = `INSERT INTO ${empresa}_dados.campanhas_integracoes_disponiveis 
                                  (url,descricao,modoAbertura)
                           VALUES ('${dados.url}','${dados.descricao}','${dados.modoAbertura}')`
-        return await this.querySync(sql) 
+        return await this.querySync(sql,empresa) 
     }
 
     //Listar integracao
     async listarIntegracoes(empresa){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas_integracoes_disponiveis`
-        return await this.querySync(sql) 
+        return await this.querySync(sql,empresa) 
     }
 
     //Atualiza Integracao
@@ -205,7 +215,7 @@ class Campanhas{
                            descricao='${dados.descricao}',
                            modoAbertura='${dados.modoAbertura}' 
                      WHERE id=${idIntegracao}`
-        return await this.querySync(sql) 
+        return await this.querySync(sql,empresa) 
     }
 
     //Dados integracao
@@ -213,16 +223,16 @@ class Campanhas{
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas_integracoes_disponiveis 
                       WHERE id=${idIntegracao}`
-        return await this.querySync(sql) 
+        return await this.querySync(sql,empresa) 
     }
 
     //Remove Integracao
     async removerIntegracao(empresa,idIntegracao){
         let sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes_disponiveis WHERE id=${idIntegracao}`
-        await this.querySync(sql) 
+        await this.querySync(sql,empresa) 
         
         sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes WHERE idIntegracao=${idIntegracao}`
-        return await this.querySync(sql) 
+        return await this.querySync(sql,empresa) 
         
     }
 
@@ -230,13 +240,13 @@ class Campanhas{
     async inserirIntegracaoCampanha(empresa,dados){
         let sql = `SELECT id FROM ${empresa}_dados.campanhas_integracoes
                     WHERE idCampanha=${dados.idCampanha}`
-        const rows = await this.querySync(sql) 
+        const rows = await this.querySync(sql,empresa) 
         if(rows.length>=1){
             return false;
         }
         sql = `INSERT INTO ${empresa}_dados.campanhas_integracoes (idCampanha,idIntegracao) 
                     VALUES (${dados.idCampanha},${dados.idIntegracao})`
-        return await this.querySync(sql) 
+        return await this.querySync(sql,empresa) 
     }
 
     //Listar Integracoes de uma campanhas
@@ -245,7 +255,7 @@ class Campanhas{
                        FROM ${empresa}_dados.campanhas_integracoes AS c 
                        JOIN ${empresa}_dados.campanhas_integracoes_disponiveis AS i ON i.id=c.idIntegracao 
                       WHERE c.idCampanha=${idCampanha}`
-                       return await this.querySync(sql) 
+                       return await this.querySync(sql,empresa) 
     }
 
     //remove integracao campannha
@@ -253,7 +263,7 @@ class Campanhas{
         const sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes 
                       WHERE idCampanha=${idCampanha}
                         AND idIntegracao=${idIntegracao}`
-        return await this.querySync(sql) 
+        return await this.querySync(sql,empresa) 
     }
 
     //DISCADOR
@@ -265,7 +275,7 @@ class Campanhas{
             const sql = `INSERT INTO  ${empresa}_dados.campanhas_discador 
                                      (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,modo_atendimento,saudacao) 
                               VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}','${modo_atendimento}','${saudacao}')`
-            return await this.querySync(sql) 
+            return await this.querySync(sql,empresa) 
         }else{
             const sql = `UPDATE ${empresa}_dados.campanhas_discador 
                             SET tipo_discador='${tipoDiscador}',
@@ -275,7 +285,7 @@ class Campanhas{
                                 modo_atendimento='${modo_atendimento}',
                                 saudacao='${saudacao}'
                           WHERE idCampanha = ${idCampanha}`
-            return await this.querySync(sql)      
+            return await this.querySync(sql,empresa)      
         }
     }
     //Ver configuracoes do discador
@@ -283,7 +293,7 @@ class Campanhas{
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas_discador 
                       WHERE idCampanha = ${idCampanha}`
-        return await this.querySync(sql)   
+        return await this.querySync(sql,empresa)   
     }
 
     //FILAS
@@ -292,24 +302,24 @@ class Campanhas{
         const sql = `SELECT idFila, nomeFila
                        FROM ${empresa}_dados.campanhas_filas 
                       WHERE idCampanha='${idCampanha}'`
-        return await this.querySync(sql)   
+        return await this.querySync(sql,empresa)   
     }    
     //Incluir fila a campanhas
     async addFila(empresa,idCampanha,idFila,apelido,nomeFila){
         let sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
                     WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql)  
+        await this.querySync(sql,empresa)  
         sql = `INSERT INTO ${empresa}_dados.campanhas_filas 
                           (idCampanha,idFila,nomeFila,apelido) 
                    VALUES (${idCampanha},${idFila},'${nomeFila}','${apelido}')`
-        return await this.querySync(sql)   
+        return await this.querySync(sql,empresa)   
     }
 
     //Remove uma determinada fila da campanha
     async removerFilaCampanha(empresa,idCampanha,idFila){
         const sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
                       WHERE idCampanha=${idCampanha} AND idFila='${idFila}'`
-        return await this.querySync(sql)   
+        return await this.querySync(sql,empresa)   
     }    
 
     //MAILING
@@ -323,7 +333,7 @@ class Campanhas{
                      FROM ${empresa}_dados.campanhas_mailing 
                      WHERE idCampanha=${idCampanha} 
                        AND idMailing=${idMailing}`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         if(r.length==1){
             return false
         }
@@ -332,21 +342,21 @@ class Campanhas{
         //Inserindo coluna da campanha na tabela de numeros
         sql = `ALTER TABLE ${empresa}_mailings.${tabelaNumeros} 
                ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT '1' AFTER produtivo`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         //Atualiza os registros como disponíveis (1)
         //sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`
-        //await this.querySync(sql)
+        //await this.querySync(sql,empresa)
         
         //Inserindo informacao do id do mailing na campanha 
         sql = `INSERT INTO ${empresa}_dados.campanhas_mailing 
                            (idCampanha,idMailing) 
                     VALUES ('${idCampanha}','${idMailing}')`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         //Inserindo campos do mailing
         sql = `SELECT * 
                  FROM ${empresa}_dados.mailing_tipo_campo 
                 WHERE idMailing=${idMailing}`
-        const campos =  await this.querySync(sql)
+        const campos =  await this.querySync(sql,empresa)
         sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
                            (idCampanha,idMailing,tabela,idCampo,ordem) 
                     VALUES ` 
@@ -355,7 +365,7 @@ class Campanhas{
                 if((i+1)<campos.length){ sql +=', '}            
             }
         //console.log(sql)
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
 
@@ -365,7 +375,7 @@ class Campanhas{
                        FROM ${empresa}_dados.campanhas_mailing 
                       WHERE idCampanha=${idCampanha}
                       LIMIT 1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     //Lista Mailings das campanhas ativas
@@ -376,7 +386,7 @@ class Campanhas{
                        JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS c ON c.id=cm.idCampanha
                    ORDER BY m.id DESC
                       LIMIT 10;`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     //Remove o mailing de uma campanha
@@ -387,27 +397,27 @@ class Campanhas{
         let sql = `SELECT idCampanha 
                      FROM ${empresa}_dados.campanhas_mailing 
                     WHERE idCampanha=${idCampanha}`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         if(r.length==0){
             return false
         }
         //Removendo coluna da campanha no mailing
         sql = `ALTER TABLE ${empresa}_mailings.${infoMailing[0].tabela_numeros} 
                 DROP COLUMN campanha_${idCampanha}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
       
         //Removendo informacao do mailing da campanha
         sql = `DELETE FROM ${empresa}_dados.campanhas_mailing 
                 WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         //Removendo filtros do mailing na campanha
         sql = `DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
                      WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         //removendo campos do mailing na campanha
         sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
                 WHERE idCampanha=${idCampanha}` 
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
 
@@ -452,7 +462,7 @@ class Campanhas{
             }
             //console.log(`Removendo filtros sql`,sql)   
            
-            await this.querySync(sql)      
+            await this.querySync(sql,empresa)      
             
             
             this.delFilterDial(empresa,tabelaNumeros,idCampanha,tipo,valor,regiao)
@@ -460,7 +470,7 @@ class Campanhas{
             sql = `SELECT * 
                      FROM ${empresa}_dados.campanhas_mailing_filtros 
                     WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
-            const fr = await this.querySync(sql)//Filtros Restantes
+            const fr = await this.querySync(sql,empresa)//Filtros Restantes
             
             if(fr.length>=1){
                 for (let i = 0; i < fr.length; i++) {
@@ -474,7 +484,7 @@ class Campanhas{
                          (idCampanha,idMailing,tipo,valor,regiao)
                   VALUES (${idCampanha},${idMailing},'${tipo}','${valor}','${regiao}')`
                   //console.log(`last sql`,sql)          
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         this.addFilterDial(empresa,tabelaNumeros,idCampanha,tipo,valor,regiao)
         return true
     }
@@ -487,7 +497,7 @@ class Campanhas{
                       JOIN ${empresa}_dados.campanhas_mailing AS c
                         ON c.idMailing=m.id
                      WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     //Checa se já existe algum filtro aplicado com os parametros informados
     async checkFilter(empresa,idCampanha,idMailing,tipo,valor,regiao){
@@ -498,7 +508,7 @@ class Campanhas{
                        AND tipo='${tipo}'
                        AND valor='${valor}'
                        AND regiao='${regiao}'`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         if(r.length==0){
             return false;
         }
@@ -515,7 +525,7 @@ class Campanhas{
                       SET campanha_${idCampanha}=1 
                     WHERE ${filter}`       
         console.log(`delFilter sql`,sql)
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
     //Aplica um filtro a uma tabela
@@ -527,7 +537,7 @@ class Campanhas{
         let sql = `UPDATE ${empresa}_mailings.${tabela} 
                       SET campanha_${idCampanha}=0 
                     WHERE ${filter}`          
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
 
@@ -540,7 +550,7 @@ class Campanhas{
                        FROM ${empresa}_mailings.${tabela}
                        WHERE valido=1 ${filter}` 
          
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         return r[0].total
     }
     async totalNumeros_porTipo(empresa,tabela,uf,tipo){
@@ -550,7 +560,7 @@ class Campanhas{
         const sql = `SELECT COUNT(id) AS total 
                        FROM ${empresa}_mailings.${tabela} 
                       WHERE valido=1 ${filter}`       
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         return r[0].total
     }
     //Conta o total de registros filtrados de uma tabela pelo us
@@ -560,7 +570,7 @@ class Campanhas{
         const sql = `SELECT COUNT(id) AS total
                        FROM ${empresa}_mailings.${tabelaNumeros}
                       WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         return r[0].total
         
         //Verifica os filtros de uma campanha
@@ -569,7 +579,7 @@ class Campanhas{
             regiao=` AND regiao='${uf}'`
         }
         let sql = `SELECT * FROM campanhas_mailing_filtros WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${regiao}`
-        const filtros = await this.querySync(sql)      
+        const filtros = await this.querySync(sql,empresa)      
         let numerosFiltrados = 0
         let filters=""
         for(let i=0;i<filtros.length;i++){
@@ -594,7 +604,7 @@ class Campanhas{
         sql = `SELECT COUNT(id) AS numerosFiltrados
                  FROM ${connect.db.mailings}.${tabelaNumeros}
                 WHERE valido=1 ${filters}`
-        const numeros = await this.querySync(sql)
+        const numeros = await this.querySync(sql,empresa)
         return numeros[0].numerosFiltrados*/
     }
     //Retorna os DDDS de uma tabela de numeros
@@ -603,7 +613,7 @@ class Campanhas{
         if(uf!=0){ filter = `WHERE uf='${uf}'` }
         let sql = `SELECT DISTINCT ddd 
                      FROM ${empresa}_mailings.${tabela} ${filter}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     //Checa se existe algum filtro de DDD aplicado
     async checkTypeFilter(empresa,idCampanha,tipo,valor,uf){     
@@ -617,7 +627,7 @@ class Campanhas{
                        AND tipo='${tipo}' AND valor='${valor}'
                        ${filter}`
                      //  console.log('sql filtro',sql)
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         if(r.length==0){
             return false;
         }
@@ -630,7 +640,7 @@ class Campanhas{
         const sql = `SELECT id,campo,apelido,tipo
                        FROM ${empresa}_dados.mailing_tipo_campo 
                        WHERE idMailing='${idMailing}' AND conferido=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     //Verifica se o campo esta selecionado
     async campoSelecionadoTelaAgente(empresa,campo,tabela,idCampanha){
@@ -638,7 +648,7 @@ class Campanhas{
                        FROM ${empresa}_dados.campanhas_campos_tela_agente 
                       WHERE idCampo=${campo} AND idCampanha=${idCampanha} AND tabela='${tabela}'
                        ORDER BY ordem ASC`
-        const total = await this.querySync(sql)     
+        const total = await this.querySync(sql,empresa)     
         if(total[0].total===0){
             return false;
         }
@@ -649,27 +659,27 @@ class Campanhas{
         const sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
                                 (idCampanha,tabela,idCampo,ordem) 
                          VALUES (${idCampanha},'${tabela}',${idCampo},0)`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     async camposTelaAgente(empresa,idCampanha,tabela){
         const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo 
                       FROM ${empresa}_dados.campanhas_campos_tela_agente AS t 
                       JOIN ${empresa}_dados.mailing_tipo_campo AS m ON m.id=t.idCampo
                        WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     //Remove campo da campanha
     async delCampoTelaAgente(empresa,idCampanha,idCampo){
         const sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
                        WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
 
     //Campos adicionados na tela do agente
     /*async camposAdicionadosNaTelaAgente(idCampanha,tabela){
         const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}'`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }*/
 
 
@@ -710,7 +720,7 @@ class Campanhas{
                       JOIN ${empresa}_dados.campanhas_mailing AS cm 
                         ON cm.idMailing=m.id 
                       WHERE cm.idCampanha=${idCampanha}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
         
     }
 
@@ -718,7 +728,7 @@ class Campanhas{
         const sql = `SELECT count(id) AS total 
                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                       WHERE contatado='${status}' AND idCampanha=${idCampanha} AND idMailing=${idMailing}`
-        const total_mailing= await this.querySync(sql)
+        const total_mailing= await this.querySync(sql,empresa)
         return total_mailing[0].total
     }   
 
@@ -733,7 +743,7 @@ class Campanhas{
         const sql = `SELECT count(id) AS total 
                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                       WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${queryFilter}`
-        const total_mailing= await this.querySync(sql)
+        const total_mailing= await this.querySync(sql,empresa)
         return total_mailing[0].total
     }   
 
@@ -741,7 +751,7 @@ class Campanhas{
         const sql = `SELECT  DATE_FORMAT(data,'%d/%m/%Y') AS ultimaData
                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                       WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ORDER BY data DESC`
-        const d= await this.querySync(sql)
+        const d= await this.querySync(sql,empresa)
         if(d.length==0){
             return ""
         }
@@ -752,7 +762,7 @@ class Campanhas{
         const sql = `SELECT DISTINCT idMailing 
                        FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                       WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
         
     }
 
@@ -765,12 +775,12 @@ class Campanhas{
             const sql = `INSERT INTO ${empresa}_dados.campanhas_horarios 
                                     (id_campanha,inicio,termino,hora_inicio,hora_termino) 
                              VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
-            return await this.querySync(sql)
+            return await this.querySync(sql,empresa)
         }else{
             const sql = `UPDATE ${empresa}_dados.campanhas_horarios 
                             SET inicio='${dI}',termino='${dT}',hora_inicio='${hI}',hora_termino='${hT}' 
                           WHERE id_campanha='${idCampanha}'`
-            return await this.querySync(sql)
+            return await this.querySync(sql,empresa)
         }
     }
     //Ver Agendamento da campanha
@@ -781,7 +791,7 @@ class Campanhas{
                             hora_inicio,hora_termino
                        FROM ${empresa}_dados.campanhas_horarios 
                       WHERE id_campanha=${idCampanha}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
    
     //#########  F I L A S  ############
@@ -789,32 +799,32 @@ class Campanhas{
         let sql = `SELECT id 
                      FROM ${empresa}_dados.filas 
                     WHERE nome='${nomeFila}'`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         if(r.length>=1){
             return false
         }
         sql = `INSERT INTO ${empresa}_dados.filas (nome,apelido,descricao) VALUES('${nomeFila}','${apelido}','${descricao}')`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
 
     async listarFilas(empresa){
         const sql = `SELECT id,apelido as nome, descricao  FROM ${empresa}_dados.filas ORDER BY id DESC`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     } 
 
     async dadosFila(empresa,idFila){
         const sql = `SELECT id,apelido as nome, nome as nomeFila, descricao 
                        FROM ${empresa}_dados.filas 
                       WHERE id=${idFila}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     } 
 
     async nomeFila(empresa,idFila){
         const sql = `SELECT nome 
                        FROM ${empresa}_dados.filas 
                       WHERE id=${idFila}`
-        const n = await this.querySync(sql)
+        const n = await this.querySync(sql,empresa)
         return n[0].nome
     } 
 
@@ -823,13 +833,13 @@ class Campanhas{
                         SET apelido='${dados.name}',
                             descricao='${dados.description}' 
                         WHERE id='${idFila}'`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async removerFila(empresa,idFila){
         const sql = `DELETE FROM ${empresa}_dados.filas 
                       WHERE id='${idFila}'`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
 
@@ -851,7 +861,7 @@ class Campanhas{
                        GROUP BY data 
                        ORDER BY data DESC 
                        LIMIT ${limit}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     
     //Total de campanhas ativas
@@ -859,7 +869,7 @@ class Campanhas{
         const sql = `SELECT COUNT(id) as total 
                        FROM ${empresa}_dados.campanhas
                       WHERE status=1 AND estado=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     
     async campanhasAtivas(empresa){
@@ -868,7 +878,7 @@ class Campanhas{
                        FROM ${empresa}_dados.campanhas AS c 
                   LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha
                       WHERE c.status=1 AND c.estado=1 AND s.estado=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     //Total de campanhas em pausa
@@ -877,7 +887,7 @@ class Campanhas{
                        FROM ${empresa}_dados.campanhas AS c 
                   LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha 
                       WHERE c.status=1 AND c.estado=2 OR c.estado=1 AND s.estado=2`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     //Total de campanhas paradas
@@ -886,7 +896,7 @@ class Campanhas{
                        FROM ${empresa}_dados.campanhas AS c 
                   LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha 
                       WHERE c.status=1 AND c.estado=3 OR c.estado=1 AND s.estado=3`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
         
 
@@ -938,7 +948,7 @@ class Campanhas{
         const sql = `SELECT DISTINCT ramal AS agentes 
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                       WHERE falando=1`
-        return this.querySync(sql)
+        return this.querySync(sql,empresa)
     }
 
     atualizaEstadoAgente(ramal,estado,idPausa,callback){
@@ -968,7 +978,7 @@ class Campanhas{
                        JOIN ${empresa}_dados.campanhas_filas AS f ON a.fila = f.id 
                        JOIN ${empresa}_dados.campanhas AS c ON c.id=f.idCampanha 
                        WHERE c.estado=1 AND c.status=1 AND a.estado=2`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async agentesDisponiveis(empresa){
@@ -980,7 +990,7 @@ class Campanhas{
                        JOIN ${empresa}_dados.campanhas AS c ON c.id=f.idCampanha 
                        WHERE c.estado=1 AND c.status=1 AND a.estado=1`
                        
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
 
@@ -1027,7 +1037,7 @@ class Campanhas{
                        JOIN ${empresa}_dados.campanhas AS c ON m.idCampanha=c.id
                       WHERE idMailing=${idMailing} AND c.status=1
                       LIMIT 1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     mailingConfigurado(empresa,idMailing,callback){
@@ -1050,7 +1060,7 @@ class Campanhas{
                        JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
                        JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
                       WHERE c.estado=1 AND c.status=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async totalRegistrosCampanha(empresa,idCampanha){
@@ -1059,7 +1069,7 @@ class Campanhas{
                        JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
                        JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
                       WHERE c.id=${idCampanha}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }   
 
     async mailingsContatados(empresa){
@@ -1067,7 +1077,7 @@ class Campanhas{
                        FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
                        JOIN ${empresa}_dados.campanhas AS c ON c.id=t.idCampanha 
                        WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async mailingsNaoContatados(empresa){
@@ -1076,7 +1086,7 @@ class Campanhas{
                        JOIN ${empresa}_dados.campanhas AS c 
                          ON c.id=t.idCampanha 
                       WHERE t.contatado='N' AND c.estado=1 AND c.status=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     //Status dos Mailings por campanha

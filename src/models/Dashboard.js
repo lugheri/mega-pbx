@@ -3,13 +3,15 @@ import Discador from '../models/Discador'
 import Campanhas from '../models/Campanhas'
 import Report from '../models/Report'
 import moment from 'moment'
+import Clients from './Clients'
 
 
 class Dashboard{
 
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            connect.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await Clients.serversDbs(empresa)
+            connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
@@ -212,14 +214,14 @@ class Dashboard{
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE id_campanha=${idCampanha}
                  ORDER BY id DESC LIMIT 1`
-        const t = await this.querySync(sql)
+        const t = await this.querySync(sql,empresa)
         const totais = t[0].total
 
         sql = `SELECT COUNT(id) as conectadas 
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                       WHERE id_campanha=${idCampanha} AND falando=1 
                       ORDER BY id DESC LIMIT 1`
-        const c = await this.querySync(sql)
+        const c = await this.querySync(sql,empresa)
         const conectadas = c[0].conectadas
 
         const realTime={}

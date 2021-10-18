@@ -20,6 +20,14 @@ class Discador{
             })
         })
     }
+    querySync_astdb(sql){
+        return new Promise((resolve,reject)=>{
+            _dbConnection2.default.poolAsterisk.query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })
+        })
+    }
     async mode(empresa){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - mode','Empresa nao recebida')
@@ -51,9 +59,10 @@ class Discador{
             return ul[0].logados
         } catch (error) {
             console.error(error);
-        }
-        
+        }        
     }    
+
+
     
     async listarAgentesLogados(empresa){
         const sql = `SELECT u.id,u.nome,u.usuario,r.estado
@@ -159,6 +168,38 @@ class Discador{
         return p[0].produtivas
     }
 
+    async chamadasProdutividade_CampanhasAtivas_dia(empresa,statusProdutividade){
+        let queryFilter="";
+        if(statusProdutividade==1){
+            queryFilter=`AND produtivo=1`
+        }else{
+            queryFilter=`AND (produtivo=0 OR produtivo is null)`
+        }
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS produtivas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}' ${queryFilter} `;
+             
+        const p=await this.querySync(sql);
+        return p[0].produtivas
+    }
+
+    async chamadas_CampanhasAtivas_dia(empresa,statusProdutividade){
+        let queryFilter="";
+        if(statusProdutividade==1){
+            queryFilter=`AND produtivo=1`
+        }else{
+            queryFilter=`AND (produtivo=0 OR produtivo is null)`
+        }
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS produtivas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}' ${queryFilter} `;
+                 
+        const p=await this.querySync(sql);
+        return p[0].produtivas
+    }
+
     async chamadasProdutividade_porCampanha(empresa,idCampanha,statusProdutividade,idMailing){
         let queryFilter="";
         if(statusProdutividade==1){
@@ -222,6 +263,34 @@ class Discador{
         return p[0].chamadas
     }
 
+    async chamadasPorContato_dia(empresa,statusContatado){
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS contatados
+                      FROM ${empresa}_dados.historico_atendimento
+                     WHERE data='${hoje}' AND contatado='${statusContatado}';`
+        const c=await this.querySync(sql);
+        return c[0].contatados
+    }
+
+    async chamadasAbandonadas_dia(empresa){
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS abandonadas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}' AND h.obs_tabulacao='ABANDONADA';`
+        const a=await this.querySync(sql);
+        return a[0].abandonadas
+    }
+
+
+    async totalChamadas_CampanhasAtivas_dia(empresa){
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS chamadas
+                       FROM ${empresa}_dados.historico_atendimento
+                      WHERE data='${hoje}';`
+        const p=await this.querySync(sql);
+        return p[0].chamadas
+    }
+
     async chamadasEmAtendimento(empresa){
         const sql = `SELECT COUNT(id) AS chamadas
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
@@ -273,9 +342,19 @@ class Discador{
         const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
         const sql = `SELECT COUNT(id) AS atendimentos
                        FROM ${empresa}_dados.historico_atendimento 
-                       WHERE data='${hoje}' AND agente='${idAgente}' ${queryFilter}`
+                       WHERE tipo!='manual' AND data='${hoje}' AND agente='${idAgente}' ${queryFilter}`
         const a= await this.querySync(sql)
         return a[0].atendimentos
+
+    }
+
+    async chamadasManuais_Agente(empresa,idAgente){
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
+        const sql = `SELECT COUNT(id) AS manuais
+                       FROM ${empresa}_dados.historico_atendimento 
+                       WHERE tipo='manual' AND data='${hoje}' AND agente='${idAgente}'`
+        const a= await this.querySync(sql)
+        return a[0].manuais
 
     }
     
@@ -763,10 +842,10 @@ class Discador{
              
         const n = await this.querySync(sql)
         //console.log('--->Registros filtrados',n.length)
-        if(n.length>0){
-            const idNumero   = n[0].idNumero
-            const idRegistro = n[0].id_registro
-            const numero     = n[0].numero       
+        for(let i=0;i<n.length;i++){
+            const idNumero   = n[i].idNumero
+            const idRegistro = n[i].id_registro
+            const numero     = n[i].numero       
             //atualiza o numero como discando
             sql = `UPDATE ${empresa}_mailings.${tabela_numeros} SET selecionado=selecionado+1 WHERE id=${idNumero}`
             await this.querySync(sql)
@@ -1430,7 +1509,7 @@ class Discador{
                 sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
                           SET paused=1 
                         WHERE membername=${agente}`
-                await this.querySync(sql)  
+                await this.querySync_astdb(sql)  
                //Atualizando o novo estado do agente como        
                 sql = `UPDATE ${empresa}_dados.agentes_filas 
                           SET estado=4, idPausa=0 
@@ -1450,7 +1529,7 @@ class Discador{
                 sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
                           SET paused=0 
                         WHERE membername=${agente}`
-                await this.querySync(sql)  
+                await this.querySync_astdb(sql)  
                 _Cronometro2.default.iniciaOciosidade(empresa,agente)
             }else{
                 sql = `SELECT idPausa 
@@ -1469,7 +1548,7 @@ class Discador{
                     sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
                               SET paused=0 
                            WHERE membername=${agente}`
-                    await this.querySync(sql)  
+                    await this.querySync_astdb(sql)  
 
                     _Cronometro2.default.iniciaOciosidade(empresa,agente)
                 }else{//Caso contrário, pausa o mesmo                         
@@ -1485,7 +1564,7 @@ class Discador{
                     sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
                               SET paused=1 
                             WHERE membername='${agente}'`    
-                    await this.querySync(sql)
+                    await this.querySync_astdb(sql)
                     let agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
                     let resultado = _moment2.default.call(void 0, agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
                     //insere na lista dos agentes pausados
@@ -1551,7 +1630,7 @@ class Discador{
             sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
                       SET paused=1 
                     WHERE membername='${agente}'`    
-            await this.querySync(sql)
+            await this.querySync_astdb(sql)
 
             let agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
             let resultado = _moment2.default.call(void 0, agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
@@ -1576,7 +1655,7 @@ class Discador{
             sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members
                       SET paused=1 
                     WHERE membername=${agente}`
-            await this.querySync(sql)  
+            await this.querySync_astdb(sql)  
             _Cronometro2.default.pararOciosidade(empresa,agente)
         }
 
@@ -1585,7 +1664,7 @@ class Discador{
             sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members
                       SET paused=1 
                     WHERE membername=${agente}`
-            await this.querySync(sql)  
+            await this.querySync_astdb(sql)  
             if(estadoAnterior==3){
                 //Atualizando o novo estado do agente        
                 sql = `UPDATE ${empresa}_dados.user_ramal 
@@ -1603,7 +1682,7 @@ class Discador{
              sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members
                        SET paused=1 
                      WHERE membername=${agente}`
-            await this.querySync(sql)  
+            await this.querySync_astdb(sql)  
             
         }
           
@@ -1775,11 +1854,12 @@ class Discador{
             //console.log('{[(!)]} - modoAtendimento','Empresa nao recebida')
             return false
         }
+                
         const sql = `SELECT m.id, m.modo_atendimento, m.id_campanha 
-                       FROM ${_dbConnection2.default.db.asterisk}.queue_members AS q 
-                       JOIN ${empresa}_dados.campanhas_chamadas_simultaneas AS m 
-                         ON q.queue_name=m.fila 
-                      WHERE membername=${ramal} AND na_fila=1`
+                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas AS m  
+                      JOIN ${empresa}_dados.campanhas_filas AS cf ON m.id_campanha = cf.idCampanha
+                      JOIN ${empresa}_dados.agentes_filas AS a ON a.fila=cf.idFila
+                     WHERE a.ramal=${ramal} AND na_fila=1`                      
         return await this.querySync(sql)
     }
        

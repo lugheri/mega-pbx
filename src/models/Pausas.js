@@ -1,8 +1,11 @@
 import connect from '../Config/dbConnection';
+import Clients from './Clients'
+
 class Pausas{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            connect.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await Clients.serversDbs(empresa)
+            connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
@@ -15,7 +18,7 @@ class Pausas{
         const sql = `INSERT INTO ${empresa}_dados.pausas_listas 
                                  (nome,descricao,status) 
                           VALUES ('${dados.nome}','${dados.descricao}',1)`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
 
     //Editar Lista de Pausas
@@ -25,21 +28,21 @@ class Pausas{
                             descricao='${valores.descricao}',
                             status='${valores.status}'
                      WHERE id = ${idLista}`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //Dados da Lista de Pausas
     async dadosListaPausa(empresa,idLista) {
         const sql = `SELECT * 
                        FROM ${empresa}_dados.pausas_listas 
                        WHERE id=${idLista}` 
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //Listar listas de Pausas
     async listasPausa(empresa){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.pausas_listas 
                       WHERE status = 1`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
 
     //PAUSAS
@@ -49,7 +52,7 @@ class Pausas{
         const sql = `INSERT INTO ${empresa}_dados.pausas 
                                  (idLista,nome,descricao,tipo,tempo,status) 
                           VALUES ('1','${dados.nome}','${dados.descricao}','${tipo}','${dados.tempo}',1)`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     //Editar pausa
     async editarPausa(empresa,id,valores){
@@ -59,33 +62,33 @@ class Pausas{
                             tipo='${valores.tipo}',
                             tempo='${valores.tempo}'
                       WHERE id=${id}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async removerPausa(empresa,id){        
         const sql = `UPDATE ${empresa}_dados.pausas 
                         SET status=0
                       WHERE id=${id}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
     //Ver pausa
     async dadosPausa(empresa,id){
         const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE id=${id}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     //Listar pausa
     async listarPausas(empresa){
         const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE idLista=1 AND status=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }  
     
     async idPausaByTipo(empresa,tipo){
         const sql = `SELECT id 
                        FROM ${empresa}_dados.pausas 
                       WHERE tipo='${tipo}' AND status=1`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
        
         return r[0].id
     }

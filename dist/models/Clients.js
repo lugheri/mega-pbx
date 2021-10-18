@@ -9,18 +9,34 @@ class Clients{
             })
         })
     }
+    querySync_crmdb(sql){
+      return new Promise((resolve,reject)=>{
+          _dbConnection2.default.poolCRM.query(sql,(e,rows)=>{
+              if(e) reject(e);
+              resolve(rows)
+          })
+      })
+    }
+    querySync_astdb(sql){
+      return new Promise((resolve,reject)=>{
+          _dbConnection2.default.poolAsterisk.query(sql,(e,rows)=>{
+              if(e) reject(e);
+              resolve(rows)
+          })
+      })
+    }
 
     //TRONCOS 
    async registerTrunk(conta,ip_provider,tech_prefix,type_dial,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport){
       let sql = `SELECT id FROM clients.trunks WHERE conta='${conta}'`
-      const r = await this.querySync(sql)
+      const r = await this.querySync_crmdb(sql)
       if(r.length==1){
         return {"error":true,"message":`O Tronco ${conta} já existe!`}
       }
       sql = `INSERT INTO clients.trunks 
                          (conta,ip_provider,tech_prefix,type_dial,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport) 
                   VALUES ('${conta}','${ip_provider}','${tech_prefix}','${type_dial}','${contact}',${qualify_frequency},${max_contacts},'${context}','${server_ip}','${dtmf_mode}','${force_rport}','${disallow}','${allow}','${rtp_symmetric}','${rewrite_contact}','${direct_media}','${allow_subscribe}','${transport}')`
-      await this.querySync(sql)
+      await this.querySync_crmdb(sql)
       return {"error":false,"message":''}
    }
         
@@ -30,28 +46,28 @@ class Clients{
         let sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.ps_aors 
                               (id,contact,max_contacts,qualify_frequency) 
                        VALUES ('${conta}','${contact}',${max_contacts},${qualify_frequency})`
-        const a = await this.querySync(sql)
+        const a = await this.querySync_astdb(sql)
 
         //Criando Identify 
         sql = 'INSERT INTO '+_dbConnection2.default.db.asterisk+'.ps_endpoint_id_ips (id,endpoint,`match`) VALUES ("'+conta+'","'+conta+'","'+ip_provider+'")'
-        const i = await this.querySync(sql)
+        const i = await this.querySync_astdb(sql)
 
         //Criando Endpoint
         sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.ps_endpoints 
                           (id,transport,aors,context,disallow,allow,direct_media,dtmf_mode,force_rport,rewrite_contact,rtp_symmetric,allow_subscribe,from_domain) 
                    VALUES ('${conta}','${transport}','${conta}','${context}','${disallow}','${allow}','${direct_media}','${dtmf_mode}','${force_rport}','${rewrite_contact}','${rtp_symmetric}','${allow_subscribe}','${server_ip}')`
-        const e = await this.querySync(sql)
+        const e = await this.querySync_astdb(sql)
 
     }
 
     async listTrunks(){
         const sql = `SELECT * FROM clients.trunks`
-        return await this.querySync(sql)
+        return await this.querySync_crmdb(sql)
     }
 
     async infoTrunk(conta){
       const sql = `SELECT * FROM clients.trunks WHERE conta='${conta}'`
-      return await this.querySync(sql)
+      return await this.querySync_crmdb(sql)
   }
 
     async updateRegisterTrunk(conta,ip_provider,tech_prefix,type_dial,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport){
@@ -74,13 +90,13 @@ class Clients{
                         allow_subscribe='${allow_subscribe}',
                         transport='${transport}'
                   WHERE conta='${conta}'`
-      await this.querySync(sql)
+      await this.querySync_crmdb(sql)
 
       sql = `UPDATE clients.accounts
                 SET tech_prefix='${tech_prefix}',
                     type_dial='${type_dial}'
               WHERE trunk='${conta}'`
-      await this.querySync(sql)
+      await this.querySync_crmdb(sql)
       return true
     }
 
@@ -91,11 +107,11 @@ class Clients{
                         max_contacts=${max_contacts},
                         qualify_frequency=${qualify_frequency} 
                   WHERE id='${conta}'`
-      const a = await this.querySync(sql)
+      const a = await this.querySync_astdb(sql)
 
       //Criando Identify 
       sql = 'UPDATE '+_dbConnection2.default.db.asterisk+'.ps_endpoint_id_ips SET `match`="'+ip_provider+'" WHERE id="'+conta+'"'
-      const i = await this.querySync(sql)
+      const i = await this.querySync_astdb(sql)
 
       //Criando Endpoint
       sql = `UPDATE ${_dbConnection2.default.db.asterisk}.ps_endpoints 
@@ -111,53 +127,54 @@ class Clients{
                     allow_subscribe='${allow_subscribe}',
                     from_domain='${server_ip}'
               WHERE id='${conta}'`
-      const e = await this.querySync(sql)
+      const e = await this.querySync_astdb(sql)
   }
 
   async deleteRegisterTrunk(conta){
       let sql = `DELETE FROM clients.trunks 
                   WHERE conta='${conta}'`
-      await this.querySync(sql)
+      await this.querySync_crmdb(sql)
       return true
   }
   async deleteTrunk(conta){
      //Removendo AOR 
       let sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.ps_aors 
                        WHERE id='${conta}'`
-      const a = await this.querySync(sql)
+      const a = await this.querySync_astdb(sql)
 
       //Removendo Identify 
       sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.ps_endpoint_id_ips
                    WHERE id='${conta}'`
-      const i = await this.querySync(sql)
+      const i = await this.querySync_astdb(sql)
 
       //Removendo Endpoint
       sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.ps_endpoints 
                    WHERE id='${conta}'`
-      const e = await this.querySync(sql)
+      const e = await this.querySync_astdb(sql)
   }
 
   //SERVERS
   async createServer(nome_dominio,ip_servidor,tipo,status){
     let sql = `SELECT id FROM clients.servers WHERE ip='${ip_servidor}'`
-      const r = await this.querySync(sql)
+      const r = await this.querySync_crmdb(sql)
       if(r.length==1){
         return {"error":true,"message":`O Servidor ${ip_servidor} já existe!`}
       }
       sql = `INSERT INTO clients.servers 
                          (nome,ip,tipo,status) 
                   VALUES ('${nome_dominio}','${ip_servidor}','${tipo}','${status}')`
+      await this.querySync_crmdb(sql)
       return {"error":false,"message":''}
   }
 
   async listServers(){
         const sql = `SELECT * FROM clients.servers`
-        return await this.querySync(sql)
+        return await this.querySync_crmdb(sql)
   }
 
   async infoServer(idServer){
     const sql = `SELECT * FROM clients.servers WHERE id=${idServer}`
-    return await this.querySync(sql)
+    return await this.querySync_crmdb(sql)
   }
 
   async updateServer(idServer,nome_dominio,ip_servidor,tipo,status){
@@ -167,14 +184,14 @@ class Clients{
                         tipo='${tipo}',
                         status=${status}
                   WHERE id=${idServer}`
-    await this.querySync(sql)
+    await this.querySync_crmdb(sql)
   }
   
   async deleteServer(idServer){
     //Removendo AOR 
      let sql = `DELETE FROM clients.servers
                       WHERE id=${idServer}`
-     const a = await this.querySync(sql)
+     const a = await this.querySync_crmdb(sql)
  }
 
 
@@ -188,7 +205,7 @@ class Clients{
                  GROUP BY s.id 
                  ORDER BY clientes ASC
                  LIMIT 1;`
-      const s = await this.querySync(sql)
+      const s = await this.querySync_crmdb(sql)
       if(s.length==0){
         return false
       }
@@ -196,7 +213,7 @@ class Clients{
       sql = `SELECT *
                FROM clients.servers
               WHERE id=${idServer};`
-      const is = await this.querySync(sql)
+      const is = await this.querySync_crmdb(sql)
       const server={}
             server['id']=is[0]['id']
             server['domain']=is[0]['nome']
@@ -205,7 +222,7 @@ class Clients{
 
     }
 
-    async newAccount(nomeEmpresa,prefixo,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
+    async newAccount(nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
         if(await this.checkPrefix(prefixo)>0){
             return {"error":true,"message":`O prefixo '${prefixo}' já existe!`}
         }
@@ -222,7 +239,7 @@ class Clients{
         let sql = `INSERT INTO clients.clientes 
                                (desde,nome,status)
                         VALUES (now(),'${nomeEmpresa}',0)`
-        const e = await this.querySync(sql)
+        const e = await this.querySync_crmdb(sql)
         console.log(e)
         const accountId = e['insertId']
 
@@ -231,6 +248,7 @@ class Clients{
                                           date,
                                           name,
                                         prefix,
+                                     fidelidade,
                                       licenses,
                               channels_by_user,
                                 total_channels,
@@ -246,6 +264,7 @@ class Clients{
                               '${nomeEmpresa}',
                                   '${prefixo}',
                                    ${licenses},
+                                 ${fidelidade},
                                ${channelsUser},
                               ${totalChannels},
                                     '${trunk}',
@@ -255,15 +274,15 @@ class Clients{
                           '${asterisk_server_ip}',
                           '${asterisk_domain}',
                                              0)`
-        await this.querySync(sql)
+        await this.querySync_crmdb(sql)
         await this.createBD_dados(prefixo)
         await this.createBD_mailing(prefixo)
         await this.insertDados(prefixo,asterisk_server_ip,asterisk_domain,accountId)
         
         sql = `UPDATE clients.clientes SET status=1 WHERE id=${accountId}`
-        await this.querySync(sql)
+        await this.querySync_crmdb(sql)
         sql = `UPDATE clients.accounts SET status=1 WHERE client_number=${accountId}`
-        await this.querySync(sql)
+        await this.querySync_crmdb(sql)
 
         return {"error":false,"asterisk_domain":`${asterisk_domain}`,"server_ip":`${asterisk_server_ip}`}
     }
@@ -927,17 +946,17 @@ class Clients{
         sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.ps_aors 
                            (id,max_contacts,remove_existing) 
                     VALUES ('${userId}',1,'yes')`
-        const a = await this.querySync(sql)
+        const a = await this.querySync_astdb(sql)
         //AUTH
         sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.ps_auths
                            (id,auth_type,password,realm,username) 
                     VALUES ('${userId}','userpass','mega_${userId}@agent','asterisk','${userId}')`
-        const h = await this.querySync(sql)
+        const h = await this.querySync_astdb(sql)
         //ENDPOINT
         sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.ps_endpoints 
                            (id,transport,aors,auth,context,disallow,allow,webrtc,dtls_auto_generate_cert,direct_media,force_rport,ice_support,rewrite_contact,rtp_symmetric) 
                     VALUES ('${userId}','transport-wss','${userId}','${userId}','external','all','alaw,ulaw,opus','yes','yes','no','yes','yes','yes','yes')`
-        const e = await this.querySync(sql)
+        const e = await this.querySync_astdb(sql)
         
         sql = `INSERT INTO ${empresa}_dados.users_niveis (id, nivel, descricao, status) VALUES
             (1, 'Vendedor', 'Sem Descricao', 1),
@@ -952,7 +971,7 @@ class Clients{
         const sql = `SELECT id 
                        FROM clients.accounts 
                       WHERE asterisk_server='${asterisk_server}'`
-        const s=await this.querySync(sql)
+        const s=await this.querySync_crmdb(sql)
         return s.length
     }
 
@@ -960,7 +979,7 @@ class Clients{
         let sql = `SELECT id 
                      FROM clients.accounts
                     WHERE prefix = '${prefix}'`
-        const p = await this.querySync(sql) 
+        const p = await this.querySync_crmdb(sql) 
         return p.length           
     }
 
@@ -969,36 +988,57 @@ class Clients{
         const sql = `SELECT prefix 
                        FROM clients.accounts 
                       WHERE status=1`
-        return await this.querySync(sql)
+        return await this.querySync_crmdb(sql)
     }
 
     async getTrunk(empresa){
         const sql = `SELECT trunk, tech_prefix, type_dial 
                        FROM clients.accounts 
                       WHERE prefix='${empresa}'`
-        const trunks = await this.querySync(sql)
+        const trunks = await this.querySync_crmdb(sql)
         if(trunks.length==0){
             return false
         }
         return trunks
     }
 
+    async maxLicences(empresa){
+      const sql = `SELECT licenses
+                     FROM clients.accounts 
+                    WHERE prefix='${empresa}'`
+      try{
+          const tc = await this.querySync_crmdb(sql)
+          if(tc.length==0){
+            return 0
+        }
+        return tc[0].licenses
+      }catch(error){
+        console.log(error)
+        return 0
+      }      
+    }
+
     async maxChannels(empresa){
-        const sql = `SELECT total_channels
-                       FROM clients.accounts 
-                      WHERE prefix='${empresa}'`
-        const tc = await this.querySync(sql)
-        if(tc.length==0){
+      const sql = `SELECT total_channels
+                     FROM clients.accounts 
+                    WHERE prefix='${empresa}'`
+      try{
+          const tc = await this.querySync_crmdb(sql)
+          if(tc.length==0){
             return 0
         }
         return tc[0].total_channels
+      }catch(error){
+        console.log(error)
+        return 0
+      }      
     }
 
     async servers(empresa){
         const sql = `SELECT server_id, asterisk_server, asterisk_domain 
                        FROM clients.accounts 
                       WHERE prefix='${empresa}'`
-        const servers = await this.querySync(sql)
+        const servers = await this.querySync_crmdb(sql)
         if(servers.length==0){
             return false
         }
@@ -1008,17 +1048,18 @@ class Clients{
     async listarClientes(pag,reg){
       let pagina=(pag-1)*reg
       const sql = `SELECT * FROM clients.accounts LIMIT ${pagina},${reg}`
-      return await this.querySync(sql)
+      return await this.querySync_crmdb(sql)
     }
 
     async infoCliente(idCliente){
       const sql = `SELECT * FROM clients.accounts WHERE client_number=${idCliente}`
-      return await this.querySync(sql)
+      return await this.querySync_crmdb(sql)
     }
 
-    async editarCliente(idCliente,nome,licenses,channels_by_user,total_channels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain){
+    async editarCliente(idCliente,nome,fidelidade,licenses,channels_by_user,total_channels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain){
         let sql = `UPDATE clients.accounts
                       SET name='${nome}',
+                          fidelidade=${fidelidade},
                           licenses=${licenses},
                           channels_by_user=${channels_by_user},
                           total_channels=${total_channels},
@@ -1029,24 +1070,24 @@ class Clients{
                           asterisk_server='${asterisk_server}',
                           asterisk_domain='${asterisk_domain}'
                     WHERE client_number=${idCliente}`
-        await this.querySync(sql)
+        await this.querySync_crmdb(sql)
 
         sql = `UPDATE clients.clientes
                   SET nome='${nome}'
                 WHERE id=${idCliente}`
-        await this.querySync(sql)
+        await this.querySync_crmdb(sql)
     }
 
     async desativarCliente(idCliente){
       let sql = `UPDATE clients.accounts
                     SET status='0'
                   WHERE client_number=${idCliente}`
-      await this.querySync(sql)
+      await this.querySync_crmdb(sql)
 
       sql = `UPDATE clients.clientes
                 SET status='0'
               WHERE id=${idCliente}`
-      await this.querySync(sql)
+      await this.querySync_crmdb(sql)
     }
 }
 

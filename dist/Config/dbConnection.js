@@ -6,18 +6,24 @@ const environment = "DB_DEV"
 
 
 let host = 'localhost'
+let astdb_host = 'localhost'
+let crm_host = 'localhost'
 const user = []
 const db = []
 switch(environment){
     case 'dev':
-        host = 'localhost'
-        user['name'] = 'root'
-        user['pass'] = '1234abc@'
+        host = '34.121.31.128'
+        astdb_host = '34.121.31.128'
+        crm_host = '34.121.31.128'
+        user['name'] = 'megaconecta'
+        user['pass'] = 'M3g4_devDB@2021'
         db['asterisk'] = 'asterisk'
         db['clients'] = 'clients'
     break;
     default:
         host = process.env.DB_HOST
+        astdb_host = process.env.ASTDB_HOST
+        crm_host = process.env.CRMDB_HOST
         user['name'] = process.env.DB_USER
         user['pass'] = process.env.DB_PASS
 
@@ -27,13 +33,35 @@ switch(environment){
 const connect = ()=>{};
 connect.db=db
 
+connect.poolCRM=_mysql22.default.createPool({
+    host:crm_host,
+    user : user['name'],
+    password : user['pass'],
+    database : "clients",
+    waitForConnections: true,
+    connectionLimit: 5000,
+    queueLimit:0
+})
+
 connect.poolEmpresa=_mysql22.default.createPool({
     host:host,
     user : user['name'],
     password : user['pass'],
     database : db['clients'],
     waitForConnections: true,
-    connectionLimit: 1000,
+    connectionLimit: 5000,
+    queueLimit:0
+})
+
+
+
+connect.poolAsterisk=_mysql22.default.createPool({
+    host:astdb_host,
+    user : user['name'],
+    password : user['pass'],
+    database : "asterisk",
+    waitForConnections: true,
+    connectionLimit: 5000,
     queueLimit:0
 })
 
