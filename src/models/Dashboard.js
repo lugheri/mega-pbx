@@ -102,9 +102,10 @@ class Dashboard{
 
         const mailings = await Campanhas.listarMailingCampanhasAtivas(empresa)
             dash["Mailings"]=[]
+            const mailingsAdicionados=[]
             for(let i = 0; i<mailings.length; i++) {
                 const mailing={}
-
+               
                 const idMailing = mailings[i].id
                 const nomeMailing = mailings[i].nome
                 const totalRegistros=mailings[i].totalNumeros-mailings[i].numerosInvalidos                
@@ -126,7 +127,11 @@ class Dashboard{
                 mailing["data"]["Produtivo"]=perc_produtivas
                 mailing["data"]["Improdutivo"]=perc_improdutivas
                 mailing["data"]["Trabalhados"]=perc_trabalhado
-                dash["Mailings"].push(mailing)
+                //verifica se o mailing ja consta na lista de mailngs
+                if(mailingsAdicionados.includes(idMailing)==false){//Caso o cpf conste no array de cpfs
+                    dash["Mailings"].push(mailing)
+                }                
+                mailingsAdicionados.push(idMailing)
             }
            
             dash["dia"]=await Discador.diaAtual()
