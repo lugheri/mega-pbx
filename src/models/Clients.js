@@ -335,7 +335,9 @@ class Clients{
         await this.createBD_dados(prefixo)
         await this.createBD_mailing(prefixo)
         await this.insertDados(prefixo,asterisk_server_ip,asterisk_domain,accountId)
-        
+        server_db
+        sql = `UPDATE clients.servers_db SET clientes=clientes+1 WHERE id=${server_db}`
+        await this.querySync_crmdb(sql)
         sql = `UPDATE clients.clientes SET status=1 WHERE id=${accountId}`
         await this.querySync_crmdb(sql)
         sql = `UPDATE clients.accounts SET status=1 WHERE client_number=${accountId}`
@@ -345,7 +347,21 @@ class Clients{
     }
 
     async createBD_dados(empresa){       
-        let sql = `CREATE DATABASE IF NOT EXISTS ${empresa}_dados;`
+        let sql = `SET GLOBAL max_connections = 15000`
+        await this.querySync(sql,empresa)
+
+        sql = `CREATE DATABASE IF NOT EXISTS clientes_ativos;`
+        await this.querySync(sql,empresa)
+
+        sql = `CREATE TABLE IF NOT EXISTS clientes_ativos.empresas (
+                id int NOT NULL AUTO_INCREMENT,
+                prefixo char(50) DEFAULT NULL,
+                status int DEFAULT NULL,
+                PRIMARY KEY (id)
+        ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
+        await this.querySync(sql,empresa)
+      
+        sql = `CREATE DATABASE IF NOT EXISTS ${empresa}_dados;`
         await this.querySync(sql,empresa)
         
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.agentes_filas (
@@ -1020,7 +1036,10 @@ class Clients{
             (3, 'Gestor', NULL, 1),
             (4, 'Master', NULL, 1)`
         await this.querySync(sql,empresa)
-    
+
+        sql = `INSERT INTO clientes_ativos.empresas (prefixo, status) VALUES
+            ('${empresa}', 1)`
+        await this.querySync(sql,empresa)
     }
 
     async totalClientsServidor(asterisk_server){
@@ -1042,7 +1061,7 @@ class Clients{
 
     async clientesAtivos(){
         const sql = `SELECT prefix 
-                       FROM clients.accounts 
+                       FROM clientes_ativos.empresa
                       WHERE status=1`
         return await this.querySync_crmdb(sql)
     }

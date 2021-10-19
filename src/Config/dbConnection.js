@@ -44,7 +44,8 @@ connect.poolCRM=mysql.createPool({
     queueLimit:0
 })
 
-connect.poolConta = function(empresa,hostEmp){   
+connect.poolConta = function(empresa,hostEmp){
+    console.log('conta')   
     return mysql.createPool({
         host:hostEmp,
         port:3306,
@@ -52,21 +53,21 @@ connect.poolConta = function(empresa,hostEmp){
         password : user['pass'],
         database : `mysql`,
         waitForConnections: true,
-        connectionLimit: 5000,
+        connectionLimit: 10,
         queueLimit:0
     })
 }
 
-
+/*
 connect.poolEmpresa=mysql.createPool({
     host:host,
     user : user['name'],
     password : user['pass'],
     database : db['clients'],
     waitForConnections: true,
-    connectionLimit: 5000,
+    connectionLimit: 10,
     queueLimit:0
-})
+})*/
 
 
 
