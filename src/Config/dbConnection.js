@@ -45,14 +45,12 @@ connect.poolCRM=mysql.createPool({
 })
 
 connect.poolConta = function(empresa,hostEmp){   
-
-
     return mysql.createPool({
         host:hostEmp,
         port:3306,
         user : user['name'],
         password : user['pass'],
-        database : `${empresa}_dados`,
+        database : `mysql`,
         waitForConnections: true,
         connectionLimit: 5000,
         queueLimit:0

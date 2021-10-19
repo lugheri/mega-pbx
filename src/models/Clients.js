@@ -1,9 +1,11 @@
 import connect from '../Config/dbConnection'
 
+
 class Clients{
       querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
-            const hostEmp = await Clients.serversDbs(empresa)
+            const hostEmp = await this.serversDbs(empresa)
+            console.log('empresa',`${empresa} - ${hostEmp}`)
             connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
@@ -238,7 +240,7 @@ class Clients{
     async nextServerDataBase(tipo){
       let sql = `SELECT id 
                    FROM clients.servers_db
-                  WHERE tipo='${tipo}' AND status=1 AND clientes<limit
+                  WHERE tipo='${tipo}' AND status=1 AND clientes<limite
                   LIMIT 1;`
       const s = await this.querySync_crmdb(sql)
       if(s.length==0){
@@ -246,6 +248,29 @@ class Clients{
       }
       return s[0].id
 
+    }
+
+    async signatureContract(empresa){
+      const sql = `SELECT signed_contract, fidelidade FROM clients.accounts WHERE prefix='${empresa}'`
+      const r = await this.querySync_crmdb(sql)
+      if(r[0].signed_contract==1){
+        return {"approved":true}
+      }else{
+        return {"approved":false,"fidelidade":r[0].fidelidade}
+      }
+    }
+
+    async acceptContract(empresa){
+      
+      const sql = `UPDATE clients.accounts SET signed_contract=1 WHERE prefix='${empresa}'`
+      
+      try{
+        await this.querySync_crmdb(sql)
+        return true
+      }catch(error){
+        console.log(error)
+        return false
+      }
     }
 
     async newAccount(nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
@@ -294,8 +319,8 @@ class Clients{
                                          now(),
                               '${nomeEmpresa}',
                                   '${prefixo}',
-                                   ${licenses},
                                  ${fidelidade},
+                                   ${licenses},                                 
                                ${channelsUser},
                               ${totalChannels},
                                     '${trunk}',
@@ -319,11 +344,10 @@ class Clients{
         return {"error":false,"asterisk_domain":`${asterisk_domain}`,"server_ip":`${asterisk_server_ip}`}
     }
 
-    async createBD_dados(empresa){
-       
+    async createBD_dados(empresa){       
         let sql = `CREATE DATABASE IF NOT EXISTS ${empresa}_dados;`
         await this.querySync(sql,empresa)
-
+        
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.agentes_filas (
           id int NOT NULL AUTO_INCREMENT,
           ramal int DEFAULT NULL,

@@ -3,6 +3,7 @@ import 'dotenv/config';
 import md5 from 'md5';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import Clients from '../models/Clients'
 
 class SessionController{
     async store(req,res){
@@ -32,9 +33,22 @@ class SessionController{
                 await User.setToken(empresa,userData[0].id,token)
                 await User.registraLogin(empresa,userData[0].id,acao)
                 
-                res.json({                    
-                    token: token
-                })
+                //checa se contrato ja foi aceito 
+                const signature = await Clients.signatureContract(empresa)
+                if(signature['approved']==true){
+                    res.json({                    
+                        token: token
+                    })
+                }else{
+                    if(userData[0].nivelAcesso>=3){
+                        res.json({ "termo de uso":false,
+                                   "fidelidade":signature['fidelidade'],
+                                   "token": token})
+                    }else{
+                        res.json({ "error":true,"message":"Aguardando aceite dos termos de uso!"})
+                    }
+                }
+               
             }
         }
     }
