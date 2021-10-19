@@ -1061,7 +1061,7 @@ class Clients{
 
     async clientesAtivos(){
         const sql = `SELECT prefix 
-                       FROM clientes_ativos.empresa
+                       FROM clients.accounts
                       WHERE status=1`
         return await this.querySync_crmdb(sql)
     }

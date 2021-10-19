@@ -44,8 +44,7 @@ class DiscadorController{
             const horaAtual = moment().format("HH:mm")
             if(horaAtual=='23:59'){
                 await User.logoffUsersExpire(empresa)
-            }
-            console.log(empresa)
+            }            
            
             cache_timeout_ce=setTimeout(async ()=>{  
                 this.campanhasEmpresa(empresa)
