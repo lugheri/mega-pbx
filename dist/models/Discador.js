@@ -4,20 +4,26 @@ var _Campanhas = require('./Campanhas'); var _Campanhas2 = _interopRequireDefaul
 var _Mailing = require('./Mailing'); var _Mailing2 = _interopRequireDefault(_Mailing);
 var _Cronometro = require('./Cronometro'); var _Cronometro2 = _interopRequireDefault(_Cronometro);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
+var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 class Discador{
     async debug(title="",msg="",empresa){
-        const debug=await this.mode(empresa)       
-        if(debug==1){
+        //const debug=await this.mode(empresa)       
+        // if(debug==1){
             //console.log(`${title}`,msg)
-        }
+        // }
     }
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await _Clients2.default.serversDbs(empresa)
+            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
+            connection.query(sql,(e,rows)=>{
                 if(e) reject(e);
-                resolve(rows)
+               
+                resolve(rows)                
             })
+            connection.end()
+           
         })
     }
     querySync_astdb(sql){
@@ -37,7 +43,7 @@ class Discador{
                        FROM ${empresa}_dados.asterisk_ari
                       WHERE active=1`
         try{
-            const mode = await this.querySync(sql);
+            const mode = await this.querySync(sql,empresa);
             return mode[0].debug
         } catch (error) {
             console.error(error);
@@ -55,7 +61,7 @@ class Discador{
                        FROM ${empresa}_dados.user_ramal
                       WHERE estado>=1`
         try{
-            const ul = await this.querySync(sql);
+            const ul = await this.querySync(sql,empresa);
             return ul[0].logados
         } catch (error) {
             console.error(error);
@@ -70,7 +76,7 @@ class Discador{
                       JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
                      WHERE r.estado>=1 ORDER BY r.datetime_estado DESC;`
          try{
-            const q = await this.querySync(sql);
+            const q = await this.querySync(sql,empresa);
             return q
         } catch (error) {
             console.error(error);
@@ -82,7 +88,7 @@ class Discador{
                        FROM ${empresa}_dados.user_ramal
                       WHERE estado=${estado}`
         try{
-            const ul = await this.querySync(sql);
+            const ul = await this.querySync(sql,empresa);
             return ul[0].agentes
         } catch (error) {
             console.error(error);
@@ -97,7 +103,7 @@ class Discador{
                        JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=f.id
                       WHERE c.estado=1 AND c.status=1 AND af.ramal=${agente}`
         try{
-            const c = await this.querySync(sql);
+            const c = await this.querySync(sql,empresa);
             return c[0].campanhasAtivas
         } catch (error) {
             console.error(error);
@@ -112,7 +118,7 @@ class Discador{
                        JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=f.id
                       WHERE c.estado=1 AND c.status=1 AND af.ramal=${agente}`
         try{
-            const ca = await this.querySync(sql);
+            const ca = await this.querySync(sql,empresa);
             if(ca.length==0){
                 return ""
             }
@@ -140,7 +146,7 @@ class Discador{
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE data='${data}' AND agente=${idAgente};`
         try{
-            const p = await this.querySync(sql);
+            const p = await this.querySync(sql,empresa);
             return p[0].produtivas
         } catch (error) {
             console.error(error);
@@ -164,7 +170,7 @@ class Discador{
                        JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
                          ON c.id=t.idCampanha
                       WHERE c.estado=1 AND c.status=1 ${queryFilter};`
-        const p=await this.querySync(sql);
+        const p=await this.querySync(sql,empresa);
         return p[0].produtivas
     }
 
@@ -180,7 +186,7 @@ class Discador{
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE data='${hoje}' ${queryFilter} `;
              
-        const p=await this.querySync(sql);
+        const p=await this.querySync(sql,empresa);
         return p[0].produtivas
     }
 
@@ -196,7 +202,7 @@ class Discador{
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE data='${hoje}' ${queryFilter} `;
                  
-        const p=await this.querySync(sql);
+        const p=await this.querySync(sql,empresa);
         return p[0].produtivas
     }
 
@@ -212,7 +218,7 @@ class Discador{
                       WHERE idCampanha=${idCampanha}                        
                         AND idMailing=${idMailing}
                         ${queryFilter};`
-        const p=await this.querySync(sql);
+        const p=await this.querySync(sql,empresa);
         // //console.log(sql)
         return p[0].produtivas
     }
@@ -227,7 +233,7 @@ class Discador{
         const sql = `SELECT COUNT(id) AS produtivas
                        FROM ${empresa}_mailings.campanhas_tabulacao_mailing
                       WHERE idMailing=${idMailing} ${queryFilter};`
-        const p=await this.querySync(sql);
+        const p=await this.querySync(sql,empresa);
         return p[0].produtivas
     }
 
@@ -239,7 +245,7 @@ class Discador{
                        JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
                          ON c.id=t.idCampanha
                     WHERE c.estado=1 AND c.status=1 AND t.contatado='${statusContatado}';`
-        const c=await this.querySync(sql);
+        const c=await this.querySync(sql,empresa);
         return c[0].contatados
     }
 
@@ -249,7 +255,7 @@ class Discador{
                        JOIN ${empresa}_dados.historico_atendimento AS h
                          ON c.id=h.campanha
                       WHERE c.estado=1 AND c.status=1 AND h.obs_tabulacao='ABANDONADA';`
-        const a=await this.querySync(sql);
+        const a=await this.querySync(sql,empresa);
         return a[0].abandonadas
     }
 
@@ -259,7 +265,7 @@ class Discador{
                        JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
                          ON c.id=t.idCampanha
                       WHERE c.estado=1 AND c.status=1;`
-        const p=await this.querySync(sql);
+        const p=await this.querySync(sql,empresa);
         return p[0].chamadas
     }
 
@@ -268,7 +274,7 @@ class Discador{
         const sql = `SELECT COUNT(id) AS contatados
                       FROM ${empresa}_dados.historico_atendimento
                      WHERE data='${hoje}' AND contatado='${statusContatado}';`
-        const c=await this.querySync(sql);
+        const c=await this.querySync(sql,empresa);
         return c[0].contatados
     }
 
@@ -277,7 +283,7 @@ class Discador{
         const sql = `SELECT COUNT(id) AS abandonadas
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE data='${hoje}' AND h.obs_tabulacao='ABANDONADA';`
-        const a=await this.querySync(sql);
+        const a=await this.querySync(sql,empresa);
         return a[0].abandonadas
     }
 
@@ -287,7 +293,7 @@ class Discador{
         const sql = `SELECT COUNT(id) AS chamadas
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE data='${hoje}';`
-        const p=await this.querySync(sql);
+        const p=await this.querySync(sql,empresa);
         return p[0].chamadas
     }
 
@@ -295,7 +301,7 @@ class Discador{
         const sql = `SELECT COUNT(id) AS chamadas
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                       WHERE falando=1`
-        const c=await this.querySync(sql);
+        const c=await this.querySync(sql,empresa);
         return c[0].chamadas
     }
 
@@ -304,7 +310,7 @@ class Discador{
                     FROM ${empresa}_dados.log_chamadas_simultaneas
                    ORDER BY id DESC 
                    LIMIT ${limit}`
-        const c = await this.querySync(sql)
+        const c = await this.querySync(sql,empresa)
         if(c.length==0){
             return 0
         }
@@ -326,7 +332,7 @@ class Discador{
         const sql = `SELECT COUNT(id) AS atendimentos
                        FROM ${empresa}_dados.historico_atendimento 
                        WHERE data='${hoje}' AND agente='${idAgente}'`
-        const a= await this.querySync(sql)
+        const a= await this.querySync(sql,empresa)
         return a[0].atendimentos
 
     }
@@ -343,7 +349,7 @@ class Discador{
         const sql = `SELECT COUNT(id) AS atendimentos
                        FROM ${empresa}_dados.historico_atendimento 
                        WHERE tipo!='manual' AND data='${hoje}' AND agente='${idAgente}' ${queryFilter}`
-        const a= await this.querySync(sql)
+        const a= await this.querySync(sql,empresa)
         return a[0].atendimentos
 
     }
@@ -353,7 +359,7 @@ class Discador{
         const sql = `SELECT COUNT(id) AS manuais
                        FROM ${empresa}_dados.historico_atendimento 
                        WHERE tipo='manual' AND data='${hoje}' AND agente='${idAgente}'`
-        const a= await this.querySync(sql)
+        const a= await this.querySync(sql,empresa)
         return a[0].manuais
 
     }
@@ -365,7 +371,7 @@ class Discador{
                       WHERE idAgente = '${idAgente}'
                         AND entrada >= '${hoje} 00:00:00' 
                         AND saida <= '${hoje} 23:59:59'`; 
-        const t= await this.querySync(sql)
+        const t= await this.querySync(sql,empresa)
         
         if(t[0].tempoFalado==null){
             return 0
@@ -398,14 +404,14 @@ class Discador{
                          WHERE DATA < DATE_SUB(NOW(), INTERVAL 15 SECOND);`
                          //console.log(sql)
         try{
-            await this.querySync(sql);
+            await this.querySync(sql,empresa);
             //Inserindo informacoes de chamadas para o grafico de chamadas simultaneas
             sql = `INSERT INTO ${empresa}_dados.log_chamadas_simultaneas 
                                (data,total,conectadas,manuais) 
                          VALUE (now(),${chamadas_simultaneas},${chamadas_conectadas},${chamadas_manuais})`
                         //console.log(sql)
             try{
-                await this.querySync(sql);
+                await this.querySync(sql,empresa);
                 return true
             } catch (error) {
                 console.error(error);
@@ -439,9 +445,9 @@ class Discador{
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                       WHERE 1=1
                       ${filter} ORDER BY id DESC LIMIT 1`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         try{
-            const r = await this.querySync(sql);
+            const r = await this.querySync(sql,empresa);
             return r[0].total
         } catch (error) {
             console.error(error);
@@ -466,7 +472,7 @@ class Discador{
                       AND (tratado=0 OR ramal=0) 
                    LIMIT 1`
                    
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         if(r.length==0){
             return false;
         }
@@ -494,7 +500,7 @@ class Discador{
                   AND idMailing=${idMailing} 
                   AND idRegistro=${idRegistro}
                   AND (produtivo IS NULL OR produtivo=0)`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         //Grava no histórico de atendimento
         await this.registraHistoricoAtendimento(empresa,0,idCampanha,idMailing,idRegistro,id_numero,0,0,tipo_ligacao,numero,tabulacao,observacoes,contatado)
         
@@ -502,11 +508,11 @@ class Discador{
         sql = `UPDATE ${empresa}_mailings.${tabela_numeros} 
                   SET discando=0 
                 WHERE id_registro=${idRegistro}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         //removendo chamada simultanea
         sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                 WHERE id=${idChamada}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true; 
     }
 
@@ -519,7 +525,7 @@ class Discador{
         let sql = `SELECT id_campanha,tabela_numeros,id_numero,id_mailing
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE id_campanha=${idCampanha} AND tipo_discador='power'`
-        const infoChamada = await this.querySync(sql)
+        const infoChamada = await this.querySync(sql,empresa)
 
         for(let i=0; i<infoChamada.length; i++){
             const idCampanha = infoChamada[i].id_campanha
@@ -533,22 +539,22 @@ class Discador{
                       AND idNumero=${idNumero}
                       AND idMailing=${idMailing}
                       AND produtivo <> 1`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
 
             //Libera numero na base de numeros
             sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
                       SET discando=0   
                     WHERE id=${idNumero}`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
         }
 
         sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                 WHERE id_campanha=${idCampanha} AND falando=0 AND tipo_discador='power'`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         sql = `UPDATE ${empresa}_dados.campanhas_status
                   SET mensagem="..." 
                 WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
     }
 
     async clearCallsAgent(empresa,ramal){
@@ -560,7 +566,7 @@ class Discador{
         let sql = `SELECT id_campanha,tabela_numeros,id_numero,id_mailing
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE ramal=${ramal}`
-        const infoChamada = await this.querySync(sql)
+        const infoChamada = await this.querySync(sql,empresa)
         if(infoChamada.length==0){
             return false
         }        
@@ -573,18 +579,18 @@ class Discador{
         sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
                   SET estado=0, desc_estado='Disponivel'
                 WHERE idCampanha=${idCampanha} AND idNumero=${idNumero} AND idMailing=${idMailing} AND produtivo <> 1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
          //Atualiza o status do numero como nao discando
          sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
                    SET discando=0   
                  WHERE id=${idNumero}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         //Remove o numero da chamada simultanea
         sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                      WHERE ramal=${ramal}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
     }
 
     async clearCallbyId(empresa,idAtendimento){
@@ -596,7 +602,7 @@ class Discador{
         let sql = `SELECT id_campanha,tabela_numeros,id_numero,id_mailing
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                      WHERE id=${idAtendimento}`
-        const infoChamada = await this.querySync(sql)
+        const infoChamada = await this.querySync(sql,empresa)
         if(infoChamada.length==0){
            return false
         }
@@ -610,19 +616,19 @@ class Discador{
                   SET estado=0, desc_estado='Disponivel'
                 WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} 
                   AND idNumero=${idNumero} AND produtivo <> 1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         if(tabelaNumeros!=0){
             //Libera numero na base de numeros
             sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
                     SET discando=0   
                 WHERE id=${idNumero}`                
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
         }
 
         sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                 WHERE id=${idAtendimento}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
     }
 
     //Verifica se existem campanhas ativas
@@ -642,8 +648,8 @@ class Discador{
                       WHERE c.tipo='a' AND c.status=1 AND c.estado=1`
                      
         try{
-            const q = await this.querySync(sql)
-            return await this.querySync(sql)
+            const q = await this.querySync(sql,empresa)
+            return await this.querySync(sql,empresa)
         } catch(error){
            
             console.log(error)
@@ -660,7 +666,7 @@ class Discador{
         await this.debug(' . . . PASSO 1.4',`Verifica a fila da Campanha`,empresa)
         const sql = `SELECT idFila, nomeFila 
                        FROM ${empresa}_dados.campanhas_filas WHERE idCampanha='${idCampanha}'`
-        return await this.querySync(sql)        
+        return await this.querySync(sql,empresa)        
     }
     //Verifica mailings atribuidos na campanha
     async verificaMailing(empresa,idCampanha){
@@ -672,7 +678,7 @@ class Discador{
         const sql = `SELECT idMailing 
                        FROM ${empresa}_dados.campanhas_mailing 
                        WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
     //Verifica se o mailing da campanha esta pronto para discar
     async mailingConfigurado(empresa,idMailing){
@@ -684,7 +690,7 @@ class Discador{
         const sql = `SELECT id,tabela_dados,tabela_numeros 
                        FROM ${empresa}_dados.mailings
                       WHERE id=${idMailing} AND configurado=1`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
     //Verifica se a campanha possui Agendamento
     async agendamentoCampanha(empresa,idCampanha){
@@ -696,7 +702,7 @@ class Discador{
         const sql = `SELECT id 
                        FROM ${empresa}_dados.campanhas_horarios 
                        WHERE id_campanha=${idCampanha}`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     } 
 
     //Verifica se hoje esta dentro da data de agendamento de uma campanha
@@ -709,7 +715,7 @@ class Discador{
         const sql = `SELECT id 
                        FROM ${empresa}_dados.campanhas_horarios 
                       WHERE id_campanha=${idCampanha} AND inicio<='${hoje}' AND termino>='${hoje}'`;
-         return await this.querySync(sql)       
+         return await this.querySync(sql,empresa)       
     }
     //Verifica se agora esta dentro do horário de agendamento de uma campanha
     async agendamentoCampanha_horario(empresa,idCampanha,hora){
@@ -721,7 +727,7 @@ class Discador{
         const sql = `SELECT id 
                        FROM ${empresa}_dados.campanhas_horarios 
                       WHERE id_campanha=${idCampanha} AND hora_inicio<='${hora}' AND hora_termino>='${hora}'`;
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     } 
 
     
@@ -744,7 +750,7 @@ class Discador{
                         FROM ${empresa}_dados.agentes_filas 
                        WHERE fila=${idFila}` 
         try{
-            const a = await this.querySync(sql) 
+            const a = await this.querySync(sql,empresa) 
             return a[0].total
         } catch (error) {
             console.log(error)
@@ -770,7 +776,7 @@ class Discador{
                       WHERE fila='${idFila}'
                         AND estado=1`
         try{
-            const a = await this.querySync(sql)
+            const a = await this.querySync(sql,empresa)
             return a[0].total
         } catch (error) {
             console.log(error)
@@ -785,7 +791,7 @@ class Discador{
         await this.debug(' . . . . . . . . . PASSO 2.3 - Verificando configuração do discador','',empresa)
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas_discador WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql)          
+        return await this.querySync(sql,empresa)          
     }
     //Contanto total de chamadas simultaneas 
     async qtdChamadasSimultaneas(empresa,idCampanha){
@@ -797,7 +803,7 @@ class Discador{
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                       WHERE id_campanha=${idCampanha} AND  (atendido=0 OR falando=0)`
         try{
-            const q = await this.querySync(sql)  
+            const q = await this.querySync(sql,empresa)  
             return q[0].total
         } catch (error) {
             console.log(error)
@@ -840,7 +846,7 @@ class Discador{
                  WHERE valido=1 AND discando=0 AND campanha_${idCampanha}>0
               ORDER BY selecionado ASC, campanha_${idCampanha} ASC, id ${ordemDiscagem},RAND() LIMIT ${limit}`
              
-        const n = await this.querySync(sql)
+        const n = await this.querySync(sql,empresa)
         //console.log('--->Registros filtrados',n.length)
         for(let i=0;i<n.length;i++){
             const idNumero   = n[i].idNumero
@@ -848,20 +854,20 @@ class Discador{
             const numero     = n[i].numero       
             //atualiza o numero como discando
             sql = `UPDATE ${empresa}_mailings.${tabela_numeros} SET selecionado=selecionado+1 WHERE id=${idNumero}`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
 
             //CHECA SE O MESMO JA FOI TRABALHADO
             sql = `SELECT id,max_tent_status
                     FROM ${empresa}_mailings.campanhas_tabulacao_mailing
                     WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} AND idNumero=${idNumero} LIMIT 1`
-            const r = await this.querySync(sql)
+            const r = await this.querySync(sql,empresa)
             //CASO NAO, INSERE O MESMO NO REGISTRO DE TABULACAO DA CAMPANHA
             
             if(r.length==0){
                 sql = `INSERT INTO ${empresa}_mailings.campanhas_tabulacao_mailing
                                     (data,idCampanha,idMailing,idRegistro,selecoes_registro,idNumero,selecoes_numero,numeroDiscado,estado,desc_estado,max_tent_status,tentativas) 
                             VALUES (now(),${idCampanha},${idMailing},${idRegistro},0,${idNumero},0,'${numero}',0,'pre selecao',1,0)`
-                await this.querySync(sql)
+                await this.querySync(sql,empresa)
             }
             return n
         }      
@@ -878,7 +884,7 @@ class Discador{
             ORDER BY t.tentativas ASC, n.id ${ordemDiscagem}
                 LIMIT ${limit}`
 
-        return await this.querySync(sql)        
+        return await this.querySync(sql,empresa)        
                 
     }
 
@@ -892,7 +898,7 @@ class Discador{
         const sql = `SELECT id 
                         FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                         WHERE numero='${numero}'`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         if(r.length==0){
             await this.debug(` . . . . . . . . . . . . . PASSO 2.6 - Numero ${numero} livre`,'',empresa)
        
@@ -912,7 +918,7 @@ class Discador{
                         WHERE id_registro='${idRegistro}'
                         LIMIT 1`
         try{
-            const q = await this.querySync(sql)
+            const q = await this.querySync(sql,empresa)
             return q
         } catch(error){
             console.log(error)
@@ -937,18 +943,18 @@ class Discador{
                       selecoes_numero=selecoes_numero+1
                 WHERE idMailing=${idMailing} AND idCampanha=${idCampanha} 
                   AND idRegistro=${idRegistro} AND idNumero=${idNumero}`
-        await this.querySync(sql)  
+        await this.querySync(sql,empresa)  
         
         //atualiza como discando 
         sql = `UPDATE ${empresa}_mailings.${tabela_numeros} 
                   SET discando=1  
                   WHERE id_registro=${idRegistro}`
-        await this.querySync(sql)  
+        await this.querySync(sql,empresa)  
         //adiciona tentativa ao numeros
         sql = `UPDATE ${empresa}_mailings.${tabela_numeros} 
                 SET campanha_${idCampanha}=campanha_${idCampanha}+1 
                 WHERE id=${idNumero}`
-        await this.querySync(sql)  
+        await this.querySync(sql,empresa)  
         return true 
     }
 
@@ -965,7 +971,7 @@ class Discador{
                        AND a.estado=1 
                   ORDER BY t.tempo_total DESC 
                      LIMIT 1` 
-        const r =  await this.querySync(sql)    
+        const r =  await this.querySync(sql,empresa)    
         if(r.length==0){
             return 0
         }
@@ -1023,7 +1029,7 @@ class Discador{
                                  ${atendido},
                                  0,
                                  0)`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }   
 
     async filtrosDiscagem(empresa,idCampanha,idMailing){
@@ -1035,7 +1041,7 @@ class Discador{
                      FROM ${empresa}_dados.campanhas_mailing_filtros 
                     WHERE idCampanha=${idCampanha} 
                       AND idMailing=${idMailing}`;
-        return await this.querySync(sql)        
+        return await this.querySync(sql,empresa)        
     }   
 
     //Busca a fila da campanha atendida
@@ -1043,7 +1049,7 @@ class Discador{
         const sql = `SELECT id,fila AS Fila 
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                       WHERE numero='${numero}' ORDER BY id DESC LIMIT 1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }*/
     //Atualiza registros em uma fila de espera
     async setaRegistroNaFila(empresa,idAtendimento){   
@@ -1055,14 +1061,14 @@ class Discador{
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE id='${idAtendimento}' 
                     ORDER BY id DESC LIMIT 1`
-        const dadosAtendimento = await this.querySync(sql)
+        const dadosAtendimento = await this.querySync(sql,empresa)
         if(dadosAtendimento.length==0){
             return false
         }       
         sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                   SET na_fila=1, tratado=1 
                       WHERE id=${idAtendimento}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return dadosAtendimento
     }
 
@@ -1075,7 +1081,7 @@ class Discador{
         let sql = `SELECT id_campanha 
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE numero='${numero}' ORDER BY id DESC LIMIT 1`
-        const ch = await this.querySync(sql)
+        const ch = await this.querySync(sql,empresa)
         
         if(ch.length==0){
             return saudacao;
@@ -1085,7 +1091,7 @@ class Discador{
         sql = `SELECT saudacao 
                  FROM ${empresa}_dados.campanhas_discador
                 WHERE idCampanha='${idCampanha}'`        
-        const s = await this.querySync(sql)
+        const s = await this.querySync(sql,empresa)
         if((s[0].saudacao=="")||
            (s[0].saudacao==null)||
            (s[0].saudacao=="undefined")||
@@ -1120,13 +1126,13 @@ class Discador{
             const sql = `INSERT INTO ${empresa}_dados.campanhas_status
                                      (idCampanha,data,mensagem,estado) 
                               VALUES (${idCampanha},now(),'${msg}',${estado})`               
-            await this.querySync(sql)         
+            await this.querySync(sql,empresa)         
         }else{
             //Caso sim atualiza o mesmo
             const sql = `UPDATE ${empresa}_dados.campanhas_status
                             SET data=now(),mensagem='${msg}',estado=${estado}
                           WHERE idCampanha=${idCampanha}` 
-            await this.querySync(sql)               
+            await this.querySync(sql,empresa)               
         }
         return true
     }
@@ -1139,7 +1145,7 @@ class Discador{
         const sql =`SELECT * 
                       FROM ${empresa}_dados.campanhas_status 
                      WHERE idCampanha = ${idCampanha}`
-        return await this.querySync(sql)        
+        return await this.querySync(sql,empresa)        
     }
 
     
@@ -1154,7 +1160,7 @@ class Discador{
         const sql=`SELECT * 
                      FROM ${empresa}_dados.asterisk_ari 
                     WHERE active=1`; 
-        const asterisk_server = await this.querySync(sql)  
+        const asterisk_server = await this.querySync(sql,empresa)  
         const modo='discador'
         const server = asterisk_server[0].server
         const user =  asterisk_server[0].user
@@ -1188,7 +1194,7 @@ class Discador{
         const sql = `INSERT INTO ${empresa}_dados.historico_atendimento 
                                 (data,hora,protocolo,campanha,mailing,id_registro,id_numero,agente,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado) 
                          VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_registro},${id_numero},${ramal},'${uniqueid}','${tipo_ligacao}','${numero}',${tabulacao},'${observacoes}','${contatado}')`
-        return await this.querySync(sql)          
+        return await this.querySync(sql,empresa)          
     }  
 
     async agendandoRetorno(empresa,ramal,campanha,mailing,id_numero,id_registro,numero,data,hora){
@@ -1200,7 +1206,7 @@ class Discador{
         const sql = `INSERT INTO ${empresa}_dados.campanhas_agendamentos
                                  (data,ramal,campanha,mailing,id_numero,id_registro,numero,data_retorno,hora_retorno,tratado)
                           VALUES (NOW(),${ramal},${campanha},${mailing},${id_numero},${id_registro},${numero},'${data}','${hora}:00',0)`
-        return await this.querySync(sql)          
+        return await this.querySync(sql,empresa)          
     }
 
     async checaAgendamento(empresa,data,hora){
@@ -1210,14 +1216,14 @@ class Discador{
                       WHERE u.estado=1 AND a.data_retorno <= '${data}' AND a.hora_retorno<='${hora}' AND a.tratado=0
                       ORDER BY id ASC
                       LIMIT 1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async abreRegistroAgendado(empresa,idAgendamento){
         let sql = `SELECT *
                        FROM ${empresa}_dados.campanhas_agendamentos 
                       WHERE id=${idAgendamento}`
-        const a = await this.querySync(sql)
+        const a = await this.querySync(sql,empresa)
         const ramal=a[0].ramal
         const protocolo=0
         const tipo_ligacao='discador'
@@ -1274,14 +1280,14 @@ class Discador{
                                     ${na_fila},
                                     ${falando})`
             //console.log('sql insert',sql)                        
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
 
             await this.alterarEstadoAgente(empresa,ramal,3,0)
 
             sql = `UPDATE ${empresa}_dados.campanhas_agendamentos 
                       SET tratado=1 
                     WHERE id=${idAgendamento}`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
             return true;
 
     }   
@@ -1312,7 +1318,7 @@ class Discador{
                  FROM ${empresa}_mailings.${tabelaNumero} 
                 WHERE id=${idNumero}`
         
-        const nd = await this.querySync(sql)
+        const nd = await this.querySync(sql,empresa)
         const numero = nd[0].numero
 
         const nome_registro=await this.campoNomeRegistro(empresa,idMailing,idRegistro,tabelaDados);
@@ -1331,13 +1337,13 @@ class Discador{
             sql = `SELECT id,numero 
                      FROM ${empresa}_mailings.${tabelaNumero} 
                     WHERE id_registro=${idRegistro}`
-            const numbers = await this.querySync(sql)
+            const numbers = await this.querySync(sql,empresa)
           
             for(let i = 0; i < numbers.length; i++){
                 sql = `SELECT id
                          FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                         WHERE idRegistro=${idRegistro} AND idMailing=${idMailing} AND idCampanha=${idCampanha} AND idNumero=${numbers[i].id}`
-                const n = await this.querySync(sql)
+                const n = await this.querySync(sql,empresa)
 
 
                 
@@ -1346,7 +1352,7 @@ class Discador{
                                       (data,numeroDiscado,agente,estado,desc_estado,contatado,tabulacao,produtivo,observacao,tentativas,max_time_retry,idRegistro,idMailing,idCampanha,idNumero)
                                VALUES (now(),'${numero}','${ramal}','${estado}','${desc_estado}','${contatado}',${status_tabulacao},'${produtivo}','${observacao}',1,0,${idRegistro},${idMailing},${idCampanha},${numbers[i].id})` 
                     
-                    await this.querySync(sql)
+                    await this.querySync(sql,empresa)
                 }
             }
 
@@ -1359,7 +1365,7 @@ class Discador{
                               discando=0,
                               campanha_${idCampanha}=-1
                         WHERE id_registro = ${idRegistro}`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
         }else{
             estado=0
             desc_estado='Disponivel'
@@ -1367,7 +1373,7 @@ class Discador{
                 sql = `UPDATE ${empresa}_mailings.${tabelaNumero} 
                           SET valido=0, erro='Numero descartado na tabulacao'
                         WHERE id = ${idNumero}`
-                await this.querySync(sql)
+                await this.querySync(sql,empresa)
             }
 
            
@@ -1380,7 +1386,7 @@ class Discador{
                           produtivo='${produtivo}', 
                           discando=0
                     WHERE id = ${idNumero}`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
         }  
 
         
@@ -1392,7 +1398,7 @@ class Discador{
          sql=`SELECT tempoRetorno,maxTentativas
                 FROM ${empresa}_dados.tabulacoes_status 
                WHERE id=${status_tabulacao}` 
-         const st = await this.querySync(sql)    
+         const st = await this.querySync(sql,empresa)    
         let maxTentativas = 1
          if(st.length!=0){     
             maxTentativas   = st[0].maxTentativas         
@@ -1426,20 +1432,20 @@ class Discador{
                   AND idCampanha=${idCampanha} 
                   AND idNumero=${idNumero}`      
          
-        await this.querySync(sql)   
+        await this.querySync(sql,empresa)   
 
         //Deixa indisponiveis todos os produtivos
         sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
                   SET estado=4, desc_estado='Já trabalhado'
                 WHERE produtivo=1`
-        await this.querySync(sql)  
+        await this.querySync(sql,empresa)  
         
         
         //Grava informações no histórico de chamadas
         sql = `INSERT INTO ${empresa}_dados.historico_atendimento 
                             (data,hora,campanha,mailing,id_registro,id_numero,nome_registro,agente,protocolo,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado,produtivo) 
                      VALUES (now(),now(),${idCampanha},${idMailing},${idRegistro},${idNumero},'${nome_registro}',${ramal},'${protocolo}','${uniqueid}','${tipo_ligacao}','${numero}',${status_tabulacao},'${observacao}','${contatado}',${produtivo}) `
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
        
         
@@ -1454,7 +1460,7 @@ class Discador{
             sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                       SET tabulado=1
                     WHERE id=${idAtendimento}`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
         }
         
         return true;
@@ -1478,13 +1484,13 @@ class Discador{
             //Remove o agente da lista dos agentes pausados
             sql = `DELETE FROM ${empresa}_dados.agentes_pausados 
                          WHERE ramal='${agente}'`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
 
             //Atualiza Log
             sql = `UPDATE ${empresa}_dados.log_pausas 
                       SET termino=now(), ativa=0 
                     WHERE ramal='${agente}' AND ativa=1`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
             await _Cronometro2.default.saiuDaPausa(empresa,agente)    
         }
 
@@ -1497,7 +1503,7 @@ class Discador{
             sql = `SELECT deslogado 
                      FROM ${empresa}_dados.user_ramal 
                     WHERE ramal=${agente}`
-            const user = await this.querySync(sql)
+            const user = await this.querySync(sql,empresa)
             let deslogar=0
             if(user.length>=1){
                 deslogar = user[0].deslogado
@@ -1514,11 +1520,11 @@ class Discador{
                 sql = `UPDATE ${empresa}_dados.agentes_filas 
                           SET estado=4, idPausa=0 
                         WHERE ramal=${agente}` 
-                await this.querySync(sql)
+                await this.querySync(sql,empresa)
                 sql = `UPDATE ${empresa}_dados.user_ramal 
                           SET estado=4, deslogado=0, datetime_estado=NOW() 
                         WHERE userId=${agente}`
-                await this.querySync(sql)
+                await this.querySync(sql,empresa)
                 _Cronometro2.default.pararOciosidade(empresa,agente)
                 return false;
             }
@@ -1537,7 +1543,7 @@ class Discador{
                         WHERE ramal=${agente} 
                      ORDER BY idPausa DESC
                         LIMIT 1` 
-                const r = await this.querySync(sql)
+                const r = await this.querySync(sql,empresa)
                 let statusPausa=0
                 if(r.length==1){
                     statusPausa=r[0].idPausa
@@ -1555,7 +1561,7 @@ class Discador{
                     sql = `SELECT * 
                              FROM ${empresa}_dados.pausas 
                             WHERE id=${statusPausa}`
-                    const infoPausa = await this.querySync(sql)
+                    const infoPausa = await this.querySync(sql,empresa)
                     const idPausa = infoPausa[0].id
                     const nomePausa = infoPausa[0].nome
                     const descricaoPausa = infoPausa[0].descricao
@@ -1571,23 +1577,23 @@ class Discador{
                     sql = `INSERT INTO ${empresa}_dados.agentes_pausados
                                        (data,ramal,inicio,termino,idPausa,nome,descricao)
                                 VALUES (now(),'${agente}',now(),'${resultado}',${idPausa},'${nomePausa}','${descricaoPausa}')`
-                    await this.querySync(sql)
+                    await this.querySync(sql,empresa)
                     agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
                     resultado = _moment2.default.call(void 0, agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
                     sql = `INSERT INTO ${empresa}_dados.log_pausas 
                                       (ramal,idPausa,data,inicio,ativa) 
                                VALUES ('${agente}',${idPausa},now(),now(),1)`
-                    await this.querySync(sql)
+                    await this.querySync(sql,empresa)
                     //Atualizando o novo estado do agente        
                     sql = `UPDATE ${empresa}_dados.agentes_filas 
                               SET estado=2,
                                   idPausa=${pausa} 
                             WHERE ramal=${agente}` 
-                    await this.querySync(sql)
+                    await this.querySync(sql,empresa)
                     sql = `UPDATE ${empresa}_dados.user_ramal 
                               SET estado=2, datetime_estado=NOW() 
                             WHERE userId=${agente}`
-                    await this.querySync(sql)
+                    await this.querySync(sql,empresa)
                     _Cronometro2.default.pararOciosidade(empresa,agente)
                     _Cronometro2.default.entrouEmPausa(empresa,idPausa,agente)
                     return false
@@ -1604,12 +1610,12 @@ class Discador{
                           SET estado=${estadoAnterior}, 
                               idPausa=${pausa}
                         WHERE ramal=${agente}` 
-                await this.querySync(sql) 
+                await this.querySync(sql,empresa) 
 
                 sql = `UPDATE ${empresa}_dados.user_ramal
                           SET estado=${estadoAnterior}, datetime_estado=NOW()
                         WHERE userId=${agente}`
-                await this.querySync(sql)
+                await this.querySync(sql,empresa)
                 return false
             }   
             
@@ -1620,7 +1626,7 @@ class Discador{
             sql = `SELECT * 
                      FROM ${empresa}_dados.pausas
                     WHERE id=${pausa}`
-            const infoPausa = await this.querySync(sql)
+            const infoPausa = await this.querySync(sql,empresa)
             const idPausa = infoPausa[0].id
             const nomePausa = infoPausa[0].nome
             const descricaoPausa = infoPausa[0].descricao
@@ -1639,13 +1645,13 @@ class Discador{
             sql = `INSERT INTO ${empresa}_dados.agentes_pausados 
                                (data,ramal,inicio,termino,idPausa,nome,descricao)
                         VALUES (now(),'${agente}',now(),'${resultado}',${idPausa},'${nomePausa}','${descricaoPausa}')`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
             agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
             resultado = _moment2.default.call(void 0, agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
             sql = `INSERT INTO ${empresa}_dados.log_pausas
                                (ramal,idPausa,data,inicio,ativa)
                         VALUES ('${agente}',${idPausa},now(),now(),1)`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
             _Cronometro2.default.pararOciosidade(empresa,agente)
             _Cronometro2.default.entrouEmPausa(empresa,idPausa,agente)
         }
@@ -1670,7 +1676,7 @@ class Discador{
                 sql = `UPDATE ${empresa}_dados.user_ramal 
                           SET deslogado=1, datetime_estado=NOW() 
                         WHERE ramal=${agente}`
-                await this.querySync(sql)
+                await this.querySync(sql,empresa)
                 return false
             }
             _Cronometro2.default.pararOciosidade(empresa,agente)
@@ -1692,11 +1698,11 @@ class Discador{
                   SET estado=${estado}, 
                       idPausa=${pausa} 
                 WHERE ramal=${agente}` 
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         sql = `UPDATE ${empresa}_dados.user_ramal 
                   SET estado=${estado}, datetime_estado=NOW() 
                 WHERE userId=${agente}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         return true
     }
@@ -1710,7 +1716,7 @@ class Discador{
         const sql = `SELECT * 
                        FROM ${empresa}_dados.user_ramal 
                       WHERE ramal='${ramal}'`
-        const rows = await this.querySync(sql)
+        const rows = await this.querySync(sql,empresa)
         if(rows.length==0){
             return 0
         }
@@ -1726,7 +1732,7 @@ class Discador{
         let sql = `SELECT * 
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE ramal=${ramal}`
-        const infoChamada = await this.querySync(sql)
+        const infoChamada = await this.querySync(sql,empresa)
         if(infoChamada.length==0){
             return false
         }
@@ -1734,7 +1740,7 @@ class Discador{
         sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                   SET desligada=1 
                 WHERE id=${idAtendimento}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         //Para cronometro do atendimento
         await _Cronometro2.default.saiuLigacao(empresa,infoChamada[0].id_campanha,infoChamada[0].numero,ramal)
@@ -1751,7 +1757,7 @@ class Discador{
         const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                   SET desligada=1
                 WHERE numero=${numero}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         //Para cronometro do atendimento
         await _Cronometro2.default.saiuLigacao(empresa,idcampanha,numero,ramal)
@@ -1766,7 +1772,7 @@ class Discador{
         } 
         const sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                       WHERE id=${idAtendimento} AND ramal=0`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
 
@@ -1777,7 +1783,7 @@ class Discador{
         } 
         const sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                       WHERE id=${idAtendimento}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
 
@@ -1799,7 +1805,7 @@ class Discador{
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                       WHERE numero='${numero}'`
-        return await this.querySync(sql)   
+        return await this.querySync(sql,empresa)   
     }
 
     //Retorna as informações da chamada pelo id de atendimento
@@ -1812,7 +1818,7 @@ class Discador{
         const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                       WHERE id='${idAtendimento}'`
-        return await this.querySync(sql) 
+        return await this.querySync(sql,empresa) 
     }
     
     /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -1830,7 +1836,7 @@ class Discador{
         const sql = `SELECT estado, TIMESTAMPDIFF (SECOND, datetime_estado, NOW()) as tempo
                        FROM ${empresa}_dados.user_ramal 
                       WHERE ramal=${ramal}`        
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
        
 
     }
@@ -1844,7 +1850,7 @@ class Discador{
         const sql = `SELECT * 
                        FROM ${empresa}_dados.agentes_pausados
                       WHERE ramal='${ramal}'`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }  
 
 
@@ -1860,7 +1866,7 @@ class Discador{
                       JOIN ${empresa}_dados.campanhas_filas AS cf ON m.id_campanha = cf.idCampanha
                       JOIN ${empresa}_dados.agentes_filas AS a ON a.fila=cf.idFila
                      WHERE a.ramal=${ramal} AND na_fila=1`                      
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
        
     //Informações da chamada a ser atendida
@@ -1884,7 +1890,7 @@ class Discador{
                           tabela_numeros
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE id='${idAtendimento}'`
-        const calldata = await this.querySync(sql)
+        const calldata = await this.querySync(sql,empresa)
         if(calldata.length==0){
             return false
         }       
@@ -1917,7 +1923,7 @@ class Discador{
                    AND (cd.tipo='dados' OR cd.tipo='nome')
               ORDER BY cc.ordem ASC`;
        
-        const campos_dados = await this.querySync(sql)
+        const campos_dados = await this.querySync(sql,empresa)
         //montando a query de busca dos dados
       
               
@@ -1959,7 +1965,7 @@ class Discador{
                      FROM ${empresa}_mailings.${tabela_dados} 
                     WHERE id_key_base='${idReg}'` 
                  
-            let value = await this.querySync(sql)
+            let value = await this.querySync(sql,empresa)
             info['campos'][apelido]=value[0].valor
         }        
        
@@ -1969,7 +1975,7 @@ class Discador{
                        FROM ${empresa}_mailings.${tabela_numeros}
                       WHERE id_registro='${idReg}'
                    ORDER BY id ASC`;
-        const campos_numeros = await this.querySync(sql)
+        const campos_numeros = await this.querySync(sql,empresa)
         for(let i=0; i<campos_numeros.length; i++){    
             info['numeros'].push(await this.tabulacoesNumero(empresa,campos_numeros[i].id,`${campos_numeros[i].numero}`));
         }
@@ -1982,7 +1988,7 @@ class Discador{
         sql = `SELECT id,nome,descricao 
                  FROM ${empresa}_dados.campanhas 
                 WHERE id=${idCampanha}`
-        const dadosCampanha = await this.querySync(sql)
+        const dadosCampanha = await this.querySync(sql,empresa)
         if(dadosCampanha.length != 0 ){
             info['dadosCampanha']=dadosCampanha
         }
@@ -1999,7 +2005,7 @@ class Discador{
                             COUNT(produtivo)-SUM(produtivo) AS improdutivas 
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE numero_discado='${numero}'`
-        const tabs = await this.querySync(sql)
+        const tabs = await this.querySync(sql,empresa)
         tabs[0]['idNumero']=id
         tabs[0]['numero']=numero
         return tabs[0]
@@ -2015,7 +2021,7 @@ class Discador{
                      FROM ${empresa}_dados.mailing_tipo_campo 
                     WHERE idMailing=${idMailing}
                       AND tipo='nome'`
-        const campoNome = await this.querySync(sql)
+        const campoNome = await this.querySync(sql,empresa)
         if(campoNome.length==0){
             return false
         }
@@ -2023,7 +2029,7 @@ class Discador{
         sql = `SELECT ${campo} as nome
                  FROM ${empresa}_mailings.${tabelaDados}
                 WHERE id_key_base=${idRegistro}`
-        const nome = await this.querySync(sql)
+        const nome = await this.querySync(sql,empresa)
         return nome[0].nome
     }
 
@@ -2036,7 +2042,7 @@ class Discador{
                      FROM ${empresa}_dados.mailing_tipo_campo 
                     WHERE idMailing=${idMailing}
                       AND tipo='cpf'`
-        const campoNome = await this.querySync(sql)
+        const campoNome = await this.querySync(sql,empresa)
         if(campoNome.length==0){
             return false
         }
@@ -2044,7 +2050,7 @@ class Discador{
         sql = `SELECT ${campo} as cpf
                  FROM ${empresa}_mailings.${tabelaDados}
                 WHERE id_key_base=${idRegistro}`
-        const nome = await this.querySync(sql)
+        const nome = await this.querySync(sql,empresa)
         return nome[0].cpf
     }
 
@@ -2066,7 +2072,7 @@ class Discador{
                           tabela_numeros
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE ramal='${ramal}' AND falando=1`
-        const calldata = await this.querySync(sql)
+        const calldata = await this.querySync(sql,empresa)
         if(calldata.length==0){
             return false
         }
@@ -2087,7 +2093,7 @@ class Discador{
                    AND (tipo='dados' OR tipo='nome')
               ORDER BY ordem ASC`;
        
-        const campos_dados = await this.querySync(sql)
+        const campos_dados = await this.querySync(sql,empresa)
         //montando a query de busca dos dados
         const info = {};
               info['tipo_discador']=tipo_discador
@@ -2111,7 +2117,7 @@ class Discador{
             sql = `SELECT ${nomeCampo} AS 'valor' 
                      FROM ${empresa}_mailings.${tabela_dados} 
                    WHERE id_key_base='${idReg}'` 
-            let value = await this.querySync(sql)
+            let value = await this.querySync(sql,empresa)
             info['campos'][apelido]=value[0].valor
         }        
        
@@ -2121,7 +2127,7 @@ class Discador{
                        FROM ${empresa}_mailings.${tabela_numeros}
                       WHERE id_registro='${idReg}'
                    ORDER BY id ASC`;
-        const campos_numeros = await this.querySync(sql)
+        const campos_numeros = await this.querySync(sql,empresa)
         for(let i=0; i<campos_numeros.length; i++){
             info['numeros'].push(`${campos_numeros[i].numero}`);
         }
@@ -2129,7 +2135,7 @@ class Discador{
          sql = `SELECT id,nome,descricao 
                   FROM ${empresa}_dados.campanhas 
                  WHERE id=${idCampanha}`
-        const dadosCampanha = await this.querySync(sql)
+        const dadosCampanha = await this.querySync(sql,empresa)
         
         info['dadosCampanha']=dadosCampanha
         
@@ -2146,7 +2152,7 @@ class Discador{
         let sql = `SELECT id 
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                     WHERE ramal='${ramal}' AND tratado=1`
-        const calldata = await this.querySync(sql)
+        const calldata = await this.querySync(sql,empresa)
         if(calldata.length==0){
             return "Chamada interna"
         }
@@ -2156,7 +2162,7 @@ class Discador{
                   SET atendido=0, 
                       falando=1 
                 WHERE id='${idAtendimento}'`;
-        await this.querySync(sql)        
+        await this.querySync(sql,empresa)        
         return await this.infoChamada_byIdAtendimento(empresa,idAtendimento)
     }
 
@@ -2171,7 +2177,7 @@ class Discador{
                     WHERE ramal='${ramal}' 
                       AND (tipo_ligacao='discador' OR tipo_ligacao='retorno' OR tipo_ligacao='manual')`
             //discador='power' OR tipo_discador='preview' OR tipo_discador='clicktocall')`
-        const calldata = await this.querySync(sql)
+        const calldata = await this.querySync(sql,empresa)
         if(calldata.length==0){
             return "Chamada interna"
         }
@@ -2187,7 +2193,7 @@ class Discador{
         let sql = `SELECT *
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE ramal='${ramal}'`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     //Dados do Agente
@@ -2199,7 +2205,7 @@ class Discador{
         const sql = `SELECT id as ramal, nome 
                        FROM ${empresa}_dados.users 
                       WHERE id=${ramal}`
-        return await this.querySync(sql)        
+        return await this.querySync(sql,empresa)        
     }
 
      //Dados do Agente
@@ -2214,7 +2220,7 @@ class Discador{
         const sql = `SELECT * 
                        FROM ${empresa}_mailings.${tabela} 
                       WHERE id_key_base=${idRegistro}`
-        return await this.querySync(sql)        
+        return await this.querySync(sql,empresa)        
     }
 
     //Retorna o histórico de atendimento do registro
@@ -2244,7 +2250,7 @@ class Discador{
             sql = `SELECT numero 
                         FROM ${empresa}_mailings.${tabela} 
                         WHERE id_registro=${idReg}`
-            const n = await this.querySync(sql)            
+            const n = await this.querySync(sql,empresa)            
             
             for(let num=0; num<n.length; num++){
                 fNumeros+=` AND numero_discado='${n[num].numero}'`
@@ -2266,7 +2272,7 @@ class Discador{
                 WHERE 1=1 ${fNumeros} 
              ORDER BY h.id DESC 
                 LIMIT 50`
-        const dados = await this.querySync(sql)
+        const dados = await this.querySync(sql,empresa)
         for(let i=0; i<dados.length; i++){      
             const registro={}
                 registro['dadosAtendimento']={}
@@ -2305,7 +2311,7 @@ class Discador{
                 WHERE agente=${agente} AND numero_discado LIKE '%${numero}'
              ORDER BY h.id DESC 
                 LIMIT 20`
-        const dados = await this.querySync(sql)
+        const dados = await this.querySync(sql,empresa)
         if(dados.length==0){
             return []
         }
@@ -2337,7 +2343,7 @@ class Discador{
                    ORDER BY h.id DESC
                       LIMIT 50`
                      
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
 
     async nomeContatoHistoico_byNumber(empresa,numero){
@@ -2348,7 +2354,7 @@ class Discador{
                       ORDER BY id DESC
                       LIMIT 1`
                      //console.log(sql)
-        const n = await this.querySync(sql)
+        const n = await this.querySync(sql,empresa)
         if(n.length==0){
             return ""
         }
@@ -2361,7 +2367,7 @@ class Discador{
                 WHERE numero_discado LIKE '%${numero}'
                 ORDER BY id DESC
                 LIMIT 1`
-        const h =  await this.querySync(sql)
+        const h =  await this.querySync(sql,empresa)
         if(h.length==0){
             return false
         }
@@ -2369,13 +2375,13 @@ class Discador{
             sql = `UPDATE ${empresa}_dados.historico_atendimento  
                     SET nome_registro='${nome}'
                     WHERE id=${h[0].id}`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
         }
         if(observacoes!=""){
             sql = `UPDATE ${empresa}_dados.historico_atendimento  
                     SET obs_tabulacao='${observacoes}'
                     WHERE id=${h[0].id}`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
         }
         return true
     }    
@@ -2392,7 +2398,7 @@ class Discador{
                      FROM ${empresa}_dados.tempo_ligacao
                     WHERE tipoDiscador='manual' AND entrada>='${data} 00:00:00' AND saida<='${data} 23:59:59'`
         }
-        const t = await this.querySync(sql)
+        const t = await this.querySync(sql,empresa)
         return t[0].total
     }
 
@@ -2400,7 +2406,7 @@ class Discador{
         let sql = `SELECT *
                      FROM ${empresa}_dados.historico_atendimento
                     WHERE id='${idHistorico}'`
-        const h = await this.querySync(sql)
+        const h = await this.querySync(sql,empresa)
         
      
         if(h.length==0){
@@ -2423,7 +2429,7 @@ class Discador{
         sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                WHERE ramal='${ramal}'`
         //console.log('sql delete',sql)
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         //console.log(h[0].mailing)
         const infoMailing = await _Mailing2.default.infoMailing(empresa,h[0].mailing)
 
@@ -2471,7 +2477,7 @@ class Discador{
                                     0,
                                     0)`
                                   //  //console.log('sql insert',sql)                        
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
 
             await this.alterarEstadoAgente(empresa,ramal,5,0)
             //console.log(estado)
@@ -2490,7 +2496,7 @@ class Discador{
         let sql = `SELECT idListaTabulacao,maxTime 
                      FROM ${empresa}_dados.campanhas_listastabulacao 
                     WHERE idCampanha='${idCampanha}' AND idListaTabulacao!=0`
-        const idLista = await this.querySync(sql)
+        const idLista = await this.querySync(sql,empresa)
         if(idLista.length!=0){
            
             const tabulacoes={}
@@ -2501,7 +2507,7 @@ class Discador{
                      FROM ${empresa}_dados.tabulacoes_status 
                     WHERE idLista=${idLista[0].idListaTabulacao} AND tipo='produtivo' AND status=1
                     ORDER BY ordem ASC`
-            const pro = await this.querySync(sql) 
+            const pro = await this.querySync(sql,empresa) 
             tabulacoes['produtivas']=[]
             for(let i = 0; i<pro.length; i++) {                
                 tabulacoes['produtivas'].push(pro[i])
@@ -2512,7 +2518,7 @@ class Discador{
                      FROM ${empresa}_dados.tabulacoes_status 
                     WHERE idLista=${idLista[0].idListaTabulacao} AND tipo='improdutivo' AND status=1
                     ORDER BY ordem ASC`
-            const imp = await this.querySync(sql)
+            const imp = await this.querySync(sql,empresa)
             tabulacoes['improdutivas']=[]
             for(let i = 0; i<imp.length; i++) {
                 tabulacoes['improdutivas'].push(imp[i])
@@ -2532,7 +2538,7 @@ class Discador{
         const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas
                         SET falando=1, tabulando=1 
                       WHERE id='${idAtendimento}'`;
-        await this.querySync(sql) 
+        await this.querySync(sql,empresa) 
     }
 
 
@@ -2542,7 +2548,7 @@ class Discador{
         let sql = `SELECT idIntegracao 
                      FROM ${empresa}_dados.campanhas_integracoes 
                     WHERE idCampanha=${idCampanha}`
-        const i = await this.querySync(sql)
+        const i = await this.querySync(sql,empresa)
 
        
 
@@ -2553,7 +2559,7 @@ class Discador{
         sql = `SELECT *
                  FROM ${empresa}_dados.campanhas_integracoes_disponiveis 
                 WHERE id=${i[0].idIntegracao}` 
-        const info = await this.querySync(sql)
+        const info = await this.querySync(sql,empresa)
         let url = await this.trataUrlIntegracao(empresa,idAtendimento,info[0].url)
 
         const  infoInt={}
@@ -2568,7 +2574,7 @@ class Discador{
         let sql = `SELECT id_registro,id_numero,ramal,id_campanha,id_mailing,tabela_dados,tabela_numeros,numero
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE id=${idAtendimento}`
-        const dadosAtendimento = await this.querySync(sql)
+        const dadosAtendimento = await this.querySync(sql,empresa)
 
         //Dados do Mailing
 
@@ -2746,7 +2752,7 @@ class Discador{
         const sql = `SELECT ${tipo} AS chamadas 
                        FROM ${empresa}_dados.log_chamadas_simultaneas 
                       ORDER BY id DESC LIMIT ${limit}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     
 

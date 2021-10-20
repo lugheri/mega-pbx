@@ -1,15 +1,20 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
-
+var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
 var _Asterisk = require('../models/Asterisk'); var _Asterisk2 = _interopRequireDefault(_Asterisk);
 
 class Filas{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await _Clients2.default.serversDbs(empresa)
+            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
+            connection.query(sql,(e,rows)=>{
                 if(e) reject(e);
-                resolve(rows)
+               
+                resolve(rows)                
             })
+            connection.end()
+           
         })
     }
     querySync_astdb(sql){
@@ -133,7 +138,7 @@ class Filas{
         const sql = `SELECT idFila, nomeFila 
                        FROM ${empresa}_dados.campanhas_filas 
                       WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
         
     }
 
@@ -142,14 +147,14 @@ class Filas{
         const sql = `SELECT * 
                        FROM ${empresa}_dados.users 
                       WHERE status=1 ORDER BY ordem ASC`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async estadoRamal(empresa,idAgente){
         const sql = `SELECT estado 
                        FROM ${empresa}_dados.user_ramal 
                       WHERE userId=${idAgente}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async membrosNaFila(empresa,idFila){
@@ -158,7 +163,7 @@ class Filas{
                        JOIN ${empresa}_dados.users AS u ON f.ramal=u.id 
                       WHERE fila=${idFila}  
                       ORDER BY f.id ASC;`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async membrosForaFila(empresa,idFila){
@@ -166,7 +171,7 @@ class Filas{
                        FROM ${empresa}_dados.users AS u 
                       WHERE status=1  
                    ORDER BY u.nome ASC;`
-        return await this.querySync(sql)   
+        return await this.querySync(sql,empresa)   
     }
 
     
@@ -181,11 +186,11 @@ class Filas{
         let sql = `INSERT INTO ${empresa}_dados.agentes_filas 
                               (ramal,fila,estado,ordem) 
                        VALUES (${ramal},${idFila},${estado[0].estado},0)`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         sql = `SELECT nome 
                  FROM ${empresa}_dados.filas 
                 WHERE id=${idFila}`
-        const fila = await this.querySync(sql)
+        const fila = await this.querySync(sql,empresa)
         const queue_name = fila[0].nome
         const queue_interface = `PJSIP/${ramal}`
         const membername = ramal
@@ -198,12 +203,12 @@ class Filas{
     async removeMembroFila(empresa,ramal,idFila){
         let sql = `DELETE FROM ${empresa}_dados.agentes_filas
                      WHERE ramal=${ramal} AND fila=${idFila}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         
         sql = `SELECT nome 
                  FROM ${empresa}_dados.filas 
                 WHERE id=${idFila}`
-        const fila = await this.querySync(sql)
+        const fila = await this.querySync(sql,empresa)
         const nomeFila = fila[0].nome
         return await _Asterisk2.default.removeMembroFila(empresa,nomeFila,ramal)
     } 
@@ -213,7 +218,7 @@ class Filas{
         const sql = `SELECT * 
                        FROM ${empresa}_dados.agentes_filas 
                       WHERE ramal=${idAgente} AND fila=${idFila}`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         return r.length
     }
 

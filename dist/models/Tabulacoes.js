@@ -1,11 +1,17 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
+var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 class Tabulacoes{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await _Clients2.default.serversDbs(empresa)
+            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
+            connection.query(sql,(e,rows)=>{
                 if(e) reject(e);
-                resolve(rows)
+               
+                resolve(rows)                
             })
+            connection.end()
+           
         })
     }
    
@@ -15,21 +21,21 @@ class Tabulacoes{
         const sql = `INSERT INTO ${empresa}_dados.tabulacoes_listas 
                                  (data,nome,descricao,status) 
                           VALUES (now(),'${dados.nome}','${dados.descricao}',1)`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //Listar listas de tabulacoes
     async listasTabulacao(empresa){
         const sql = `SELECT id,DATE_FORMAT(data,'%d/%m/%Y') as data,nome,descricao,status 
                        FROM ${empresa}_dados.tabulacoes_listas
                       WHERE status = 1`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //Dados da Lista de Tabulacaoes
     async dadosListaTabulacao(empresa,idLista) {
         const sql = `SELECT id,DATE_FORMAT(data,'%d/%m/%Y') as data,nome,descricao,status 
                        FROM ${empresa}_dados.tabulacoes_listas 
                       WHERE id=${idLista}`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //Editar Lista de Tabulacaoes
     async editarListaTabulacao(empresa,idLista,valores) {
@@ -41,7 +47,7 @@ class Tabulacoes{
                             descricao='${descricao}',
                             status=${status}
                        WHERE id=${idLista}`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //STATUS DE TABULACOES
     //Criar Status
@@ -51,7 +57,7 @@ class Tabulacoes{
                   WHERE idLista=${dados.idLista} 
                   ORDER BY ordem DESC 
                   LIMIT 1`
-        const r =  await this.querySync(sql);
+        const r =  await this.querySync(sql,empresa);
         let contatado = 'S'
         let removeNumero = 0
         if(dados.tipo=='improdutivo'){
@@ -63,7 +69,7 @@ class Tabulacoes{
                          (idLista,tabulacao,descricao,tipo,contatado,removeNumero,venda,followUp,ordem,maxTentativas,tempoRetorno,status) 
                   VALUES (${dados.idLista},'${dados.tabulacao}','${dados.descricao}','${dados.tipo}','${contatado}',${removeNumero},${dados.venda},${dados.followUp},${ordem},${dados.maxTentativas},'${dados.tempoRetorno}',1)`
       
-        const result = await this.querySync(sql);
+        const result = await this.querySync(sql,empresa);
         await this.reordenaStatus(empresa,dados.idLista)
         if(result.affectedRows==1){
             return result;
@@ -76,7 +82,7 @@ class Tabulacoes{
                        FROM ${empresa}_dados.tabulacoes_status 
                        WHERE idLista=${idLista} AND status=1 
                        ORDER BY ordem ASC`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //Lista status por tipo
     async statusPorTipo(empresa,idLista,tipo){
@@ -84,21 +90,21 @@ class Tabulacoes{
                        FROM ${empresa}_dados.tabulacoes_status 
                        WHERE idLista=${idLista} AND tipo='${tipo}' AND status=1 
                        ORDER BY ordem ASC`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
     //Ver status
     async infoStatus(empresa,idStatus){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.tabulacoes_status 
                       WHERE id=${idStatus}`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
 
     async nomeStatus(empresa,idStatus){
         const sql = `SELECT tabulacao 
                        FROM ${empresa}_dados.tabulacoes_status 
                       WHERE id=${idStatus}`
-        const t = await this.querySync(sql);
+        const t = await this.querySync(sql,empresa);
        
         if(t.length==0){
             return ""
@@ -129,7 +135,7 @@ class Tabulacoes{
                             tempoRetorno='${tempoRetorno}',
                             maxTentativas=${maxTentativas}
                       WHERE id=${idStatus}`
-        const r = await this.querySync(sql);
+        const r = await this.querySync(sql,empresa);
         if(r.affectedRows==1){
             return true
         }
@@ -140,7 +146,7 @@ class Tabulacoes{
         const sql = `UPDATE ${empresa}_dados.tabulacoes_status 
                         SET status=0 
                       WHERE id=${idStatus}`
-        const r = await this.querySync(sql);
+        const r = await this.querySync(sql,empresa);
         if(r.affectedRows==1){
             return true
         }
@@ -153,7 +159,7 @@ class Tabulacoes{
         let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
                       SET ordem=-1 
                     WHERE status=0`
-        await this.querySync(sql);
+        await this.querySync(sql,empresa);
         //Produtivos
         const statusProd = await this.statusPorTipo(empresa,idLista,'produtivo')
         for(let i = 0; i < statusProd.length; i++){
@@ -161,7 +167,7 @@ class Tabulacoes{
                           SET ordem=${i} 
                         WHERE id=${statusProd[i].id}`
             
-            await this.querySync(sql);
+            await this.querySync(sql,empresa);
         }
         //Improdutivos
         const statusImprod = await this.statusPorTipo(empresa,idLista,'improdutivo')
@@ -170,7 +176,7 @@ class Tabulacoes{
                            SET ordem=${i} 
                          WHERE id=${statusImprod[i].id}`
              
-             await this.querySync(sql);
+             await this.querySync(sql,empresa);
          }
         return true
     }
@@ -181,17 +187,17 @@ class Tabulacoes{
             sql = `UPDATE ${empresa}_dados.tabulacoes_status 
                       SET ordem=ordem+1 
                     WHERE ordem>=${posDestino} AND ordem<${posOrigem} AND idLista=${idLista} AND tipo='${origem}' AND status=1`
-            await this.querySync(sql);
+            await this.querySync(sql,empresa);
         }else{
             sql = `UPDATE ${empresa}_dados.tabulacoes_status 
                       SET ordem=ordem-1 
                     WHERE ordem >${posOrigem} AND ordem<=${posDestino} AND idLista=${idLista} AND tipo='${origem}' AND status=1`
-            await this.querySync(sql);
+            await this.querySync(sql,empresa);
         }
         sql = `UPDATE ${empresa}_dados.tabulacoes_status 
                   SET ordem=${posDestino} 
                 WHERE id=${idStatus}`
-        await this.querySync(sql);
+        await this.querySync(sql,empresa);
         return true
     }
                            
@@ -201,12 +207,12 @@ class Tabulacoes{
         let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
                       SET ordem=ordem+1 
                     WHERE ordem>=${posDestino} AND idLista=${idLista} AND tipo='${destino}' AND status=1`
-        await this.querySync(sql);
+        await this.querySync(sql,empresa);
 
         sql = `UPDATE ${empresa}_dados.tabulacoes_status 
                   SET ordem=${posDestino}, tipo='${destino}'
                 WHERE id=${idStatus}`
-        await this.querySync(sql);
+        await this.querySync(sql,empresa);
        
         return true
     }

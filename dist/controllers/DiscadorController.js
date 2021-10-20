@@ -33,20 +33,28 @@ class DiscadorController{
     //Discador Otimizado:
     async checkAccounts(){
         const clientesAtivos = await _Clients2.default.clientesAtivos()
+        let cache_timeout_ce
+        let cache_timeout_ca
         for(let i=0;i<clientesAtivos.length;++i){
             const empresa = clientesAtivos[i].prefix 
-            //console.log('EMPRESA==>',empresa)            
+            //console.log(`${empresa} - loop`,i)
+            console.log('EMPRESA==>',empresa)            
             //Funcoes de controle
             //Desloga todos usuarios as 23h59
             const horaAtual = _moment2.default.call(void 0, ).format("HH:mm")
             if(horaAtual=='23:59'){
                 await _User2.default.logoffUsersExpire(empresa)
-            }
-            this.campanhasEmpresa(empresa)
+            }            
+           
+            cache_timeout_ce=setTimeout(async ()=>{  
+                this.campanhasEmpresa(empresa)
+            },1000)
+            clearTimeout(cache_timeout_ce)
         }
-        setTimeout(async ()=>{  
+        cache_timeout_ca=setTimeout(async ()=>{  
              await this.checkAccounts();
         },5000)
+        
     }
 
     async campanhasEmpresa(empresa){

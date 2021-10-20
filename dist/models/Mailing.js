@@ -5,16 +5,22 @@ var _utf8 = require('utf8'); var _utf82 = _interopRequireDefault(_utf8);
 var _fs = require('fs'); var _fs2 = _interopRequireDefault(_fs);
 var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
+var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 class Mailing{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await _Clients2.default.serversDbs(empresa)
+            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
+            connection.query(sql,(e,rows)=>{
                 if(e) reject(e);
-                resolve(rows)
+               
+                resolve(rows)                
             })
+            connection.end()
+           
         })
-    }    
+    }
     
 
     //Abre o csv do mailing a ser importado
@@ -44,7 +50,7 @@ class Mailing{
                         tratado INT(4) NULL DEFAULT NULL,
                         PRIMARY KEY (id_key_base) USING BTREE) 
                         COLLATE='utf8_general_ci' ENGINE=InnoDB;`
-        await this.querySync(sql)    
+        await this.querySync(sql,empresa)    
 
         //Numeros do Mailing        
         const tableNumbers=`numeros_${nomeTabela}`
@@ -84,28 +90,28 @@ class Mailing{
         const sql = `INSERT INTO ${empresa}_dados.mailings
                                (data,nome,arquivo,header,delimitador,tabela_dados,tabela_numeros,configurado,repetidos,numerosInvalidos,pronto,status) 
                         VALUES (NOW(),'${nome}','${arquivo}',${header},'${delimitador}','${tableData}','${tableNumber}',0,0,0,0,1)`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
 
     async infoMailing(empresa,idMailing){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.mailings 
                       WHERE id=${idMailing}`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
 
     async infoMailingAtivo(empresa,idMailing){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.mailings 
                       WHERE id=${idMailing} AND pronto=1`
-        return await this.querySync(sql)  
+        return await this.querySync(sql,empresa)  
     }
 
     async tabelaMailing(empresa,idMailing){
         const sql = `SELECT tabela_dados, tabela_numeros 
                        FROM ${empresa}_dados.mailings
                       WHERE id=${idMailing}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     
 
@@ -200,7 +206,7 @@ class Mailing{
             if((i+1)<campos.length){ sql +=', '}
         }
         
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
     }
 
     async importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,idKey,transferRate){
@@ -323,7 +329,7 @@ class Mailing{
                           totalReg='${totalReg}',
                           totalNumeros='0'
                     WHERE id='${idBase}'`
-        await this.querySync(sql)        
+        await this.querySync(sql,empresa)        
 
         //Verificando restantes para reexecução
         if(jsonFile.length>0){
@@ -512,7 +518,7 @@ class Mailing{
                       SET configurado=1, 
                           totalNumeros='${totalNumeros}'
                     WHERE id='${idBase}'`                   
-        await this.querySync(sql)        
+        await this.querySync(sql,empresa)        
 
         //Verificando restantes para reexecução
         if(jsonFile.length>0){
@@ -529,7 +535,7 @@ class Mailing{
                     WHERE id='${idBase}'`           
             _fs2.default.unlinkSync(file)//Removendo Arquivo
             //console.log("sql final",sql)
-            await this.querySync(sql)           
+            await this.querySync(sql,empresa)           
         }       
     }  
 
@@ -559,7 +565,7 @@ class Mailing{
                        FROM ${empresa}_mailings.${tabelaDados}
                       WHERE tratado=0
                      LIMIT ${rate}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async trataRegBase(empresa,dataTab,idReg){
@@ -567,7 +573,7 @@ class Mailing{
                         SET tratado=1
                       WHERE id_key_base=${idReg}`
                       console.log('atualiza base',sql)
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async calcRate(total,min,max,rate,multiplicador){
@@ -598,7 +604,7 @@ class Mailing{
                        FROM ${tabelaDados}
                       WHERE ${colunaCPF}='${cpf}'
                       LIMIT 1`
-        const check = await this.querySync(sql)
+        const check = await this.querySync(sql,empresa)
         if(check.length==0){
             return false
         }
@@ -611,7 +617,7 @@ class Mailing{
                       WHERE ${colunaCPF}='${cpf}'
                         AND valido=1
                       LIMIT 1`
-        const idCPF = await this.querySync(sql)
+        const idCPF = await this.querySync(sql,empresa)
         if(idCPF.length==0){
             return false
         }
@@ -678,7 +684,7 @@ class Mailing{
                        FROM  ${empresa}_mailings.${tabelaNumeros} 
                       WHERE valido=0`
                       console.log(sql)
-        const i = await this.querySync(sql)
+        const i = await this.querySync(sql,empresa)
         return i[0].invalidos
     }
 
@@ -798,22 +804,22 @@ class Mailing{
         const sql = `SELECT count(id_key_base) as total 
                        FROM ${tabela}
                        WHERE valido=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async totalNumeros(tabela){
         const sql = `SELECT count(id) as total 
                        FROM ${tabela}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async checaDuplicidade(numero,tabela,numeros){
         const sql = `SELECT id FROM ${tabela} WHERE numero='${numero}' LIMIT 1`       
-        const rpt = await this.querySync(sql) 
+        const rpt = await this.querySync(sql,empresa) 
         console.log('duplicado',rpt.length)
         if(rpt.length==1){
             const sql = `UPDATE ${tabela} SET duplicado=1 WHERE id=${rpt[0].id}`     
-            await this.querySync(sql) 
+            await this.querySync(sql,empresa) 
             return 1
         }            
         return 0
@@ -823,7 +829,7 @@ class Mailing{
         const sql = `SELECT COUNT(id) AS numeros
                        FROM ${empresa}_mailings.${tabela} 
                        WHERE campanha_${campanha}=0 AND uf='${uf}' AND valido=1 `
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         return r[0].numeros
     }
 
@@ -831,7 +837,7 @@ class Mailing{
         const sql = `SELECT totalReg
                        FROM ${empresa}_dados.mailings 
                        WHERE id='${idBase}'`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         return r[0].totalReg
     }
 
@@ -853,7 +859,7 @@ class Mailing{
                             status 
                        FROM ${empresa}_dados.mailings 
                        WHERE configurado=1 AND status=1 ORDER BY id DESC`
-        return  await this.querySync(sql);       
+        return  await this.querySync(sql,empresa);       
     }
 
     //Abre o mailing importado por paginas com a qtd de reg informada
@@ -861,7 +867,7 @@ class Mailing{
         let sql = `SELECT tabela_dados 
                      FROM ${empresa}_dados.mailings 
                     WHERE id=${id}`
-        const rows = await this.querySync(sql)
+        const rows = await this.querySync(sql,empresa)
         const qtd=r
         const pag=((p-1)*r)
         const tabela = rows[0].tabela_dados
@@ -869,7 +875,7 @@ class Mailing{
         sql = `SELECT * 
                  FROM ${empresa}_mailings.${tabela} 
                 LIMIT ${pag},${qtd}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     //ExportarMailing
@@ -877,10 +883,10 @@ class Mailing{
         let sql = `SELECT tabela_dados,nome 
                      FROM ${empresa}_dados.mailings 
                     WHERE id=${idMailing}` 
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         sql = `SELECT * 
                  FROM ${empresa}_mailings.${r[0].tabela_dados}`
-        const data = await this.querySync(sql)
+        const data = await this.querySync(sql,empresa)
         const json2csvParser = new (0, _json2csv.Parser)({ delimiter: ';' });
         const csv = json2csvParser.parse(data);
         res.attachment(`mailing_${r[0].nome}.csv`)
@@ -892,7 +898,7 @@ class Mailing{
         let sql = `SELECT tabela_dados,tabela_numeros 
                      FROM ${empresa}_dados.mailings 
                     WHERE id=${idMailing}`
-        const result = await this.querySync(sql)
+        const result = await this.querySync(sql,empresa)
         if(result.length==0){
             return false
         }
@@ -900,21 +906,21 @@ class Mailing{
         const tabelaDados = result[0].tabela_dados
         const tabelaNumeros = result[0].tabela_numeros
         sql = `DROP TABLE ${empresa}_mailings.${tabelaDados}`//Removendo tabela de dados
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         sql = `DROP TABLE ${empresa}_mailings.${tabelaNumeros}`//Removendo tabela de numeros
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         sql=`DELETE FROM ${empresa}_dados.mailings 
               WHERE id=${idMailing}` //Removendo informações do Mailing
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         sql=`DELETE FROM ${empresa}_dados.mailing_tipo_campo 
               WHERE idMailing=${idMailing}` //Removendo configuracoes dos tipos de campos
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         sql=`DELETE FROM ${empresa}_dados.campanhas_mailing 
               WHERE idMailing=${idMailing}`//Removendo mailing das campanhas
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         sql=`DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
               WHERE idMailing='${idMailing}'` //Removendo configurações da tela do agente
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
 
@@ -923,7 +929,7 @@ class Mailing{
         const sql = `SELECT configurado,totalReg,totalNumeros,numerosInvalidos,pronto,status 
                        FROM ${empresa}_dados.mailings 
                        WHERE id=${idMailing}`
-        return await this.querySync(sql) 
+        return await this.querySync(sql,empresa) 
     }
 
     //Conta os ufs do mailing
@@ -938,7 +944,7 @@ class Mailing{
         let sql = `SELECT COUNT(uf) AS total, uf 
                      FROM ${empresa}_mailings.${tabela} 
                     WHERE valido=1 GROUP BY uf`
-        const r = await  this.querySync(sql)     
+        const r = await  this.querySync(sql,empresa)     
         const estados=[
             //Centro-Oeste       
             {estado:'Distrito Federal',uf:'DF'},
@@ -1007,13 +1013,13 @@ class Mailing{
                           tentativas=0
                     WHERE idMailing=${idMailing} AND (produtivo = 0 OR produtivo is null)`
         //console.log(sql)
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         //Libera numero na base de numeros
         sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
                   SET discando=0 
                 WHERE produtivo != 1`
-        await this.querySync(sql)       
+        await this.querySync(sql,empresa)       
         
         return true       
     }
@@ -1023,7 +1029,7 @@ class Mailing{
         const sql = `SELECT ddd, COUNT(id) AS total 
                        FROM ${empresa}_mailings.${tabela} 
                       WHERE uf='${uf}' GROUP BY ddd ORDER BY ddd ASC`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     //Resumo por ddd
@@ -1032,7 +1038,7 @@ class Mailing{
                        FROM ${empresa}_mailings.${tabela} 
                        GROUP BY uf 
                        ORDER BY uf ASC`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     //Saude do mailing
@@ -1040,7 +1046,7 @@ class Mailing{
         const sql = `SELECT COUNT(id) AS total 
                        FROM ${empresa}_mailings.${tabela}
                        WHERE valido=1`
-        const reg = await this.querySync(sql)
+        const reg = await this.querySync(sql,empresa)
         return reg[0].total
     }
 
@@ -1048,7 +1054,7 @@ class Mailing{
         const sql = `SELECT COUNT(id) AS total 
                        FROM ${empresa}_mailings.${tabela} 
                        WHERE contatado='S'`
-        const reg = await this.querySync(sql)
+        const reg = await this.querySync(sql,empresa)
         return reg[0].total
     }
 
@@ -1056,7 +1062,7 @@ class Mailing{
         const sql = `SELECT COUNT(id) AS total 
                        FROM ${empresa}_mailings.${tabela}
                       WHERE selecionado>0 AND contatado<>'S'`
-        const reg = await this.querySync(sql)
+        const reg = await this.querySync(sql,empresa)
         return reg[0].total
     }
     

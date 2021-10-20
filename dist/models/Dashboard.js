@@ -3,22 +3,28 @@ var _Discador = require('../models/Discador'); var _Discador2 = _interopRequireD
 var _Campanhas = require('../models/Campanhas'); var _Campanhas2 = _interopRequireDefault(_Campanhas);
 var _Report = require('../models/Report'); var _Report2 = _interopRequireDefault(_Report);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
+var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 
 class Dashboard{
 
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await _Clients2.default.serversDbs(empresa)
+            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
+            connection.query(sql,(e,rows)=>{
                 if(e) reject(e);
-                resolve(rows)
+               
+                resolve(rows)                
             })
+            connection.end()
+           
         })
     }
 
     async painel(empresa){
-        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
        
+        const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")       
         const agentesLogados = await _Discador2.default.agentesLogados(empresa)
         const produtivas = await _Discador2.default.chamadasProdutividade_CampanhasAtivas_dia(empresa,1)
         const improdutivas = await _Discador2.default.chamadasProdutividade_CampanhasAtivas_dia(empresa,0) 
@@ -40,10 +46,10 @@ class Dashboard{
         const contatados = await _Discador2.default.chamadasPorContato_dia(empresa,'S')
         const emAtendimento = await _Discador2.default.chamadasEmAtendimento(empresa)   
         
-        /*
+       
         console.log('totalChamadas',totalChamadas)
         console.log('improdutivas',improdutivas)
-        console.log('produtivas',produtivas)*/
+        console.log('produtivas',produtivas)
         
         const dash={}
               dash['sinteticos']={}
@@ -191,19 +197,20 @@ class Dashboard{
                 dash["Agentes"].push(agente)
             }         
               
+          return dash
 
-        return dash
+
         
     }
 
     async realTimeCalls(empresa){       
-        const totais = await _Discador2.default.logChamadasSimultaneas(empresa,'total',1)
-        const conectadas = await _Discador2.default.logChamadasSimultaneas(empresa,'conectadas',1)
+        //const totais = await Discador.logChamadasSimultaneas(empresa,'total',1)
+        //const conectadas = await Discador.logChamadasSimultaneas(empresa,'conectadas',1)
         const realTime={}
               realTime['RealTimeChart']={}
-              const ligando = totais - conectadas
-              realTime['RealTimeChart']['Ligando']=ligando
-              realTime['RealTimeChart']['Falando']=conectadas
+             // const ligando = totais - conectadas
+              realTime['RealTimeChart']['Ligando']=0//ligando
+              realTime['RealTimeChart']['Falando']=0//conectadas
         return realTime
     }
 
@@ -212,14 +219,14 @@ class Dashboard{
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                     WHERE id_campanha=${idCampanha}
                  ORDER BY id DESC LIMIT 1`
-        const t = await this.querySync(sql)
+        const t = await this.querySync(sql,empresa)
         const totais = t[0].total
 
         sql = `SELECT COUNT(id) as conectadas 
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                       WHERE id_campanha=${idCampanha} AND falando=1 
                       ORDER BY id DESC LIMIT 1`
-        const c = await this.querySync(sql)
+        const c = await this.querySync(sql,empresa)
         const conectadas = c[0].conectadas
 
         const realTime={}

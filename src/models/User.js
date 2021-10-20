@@ -17,10 +17,14 @@ class User{
     querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await Clients.serversDbs(empresa)
-            connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
+            const connection = connect.poolConta(empresa,hostEmp)
+            connection.query(sql,(e,rows)=>{
                 if(e) reject(e);
-                resolve(rows)
+               
+                resolve(rows)                
             })
+            connection.end()
+           
         })
     }
 
@@ -61,8 +65,6 @@ class User{
     }
     
     async findUser(empresa,usuario){
-      
-
         const sql = `SELECT *
                        FROM ${empresa}_dados.users 
                       WHERE usuario='${usuario}' AND status=1`;

@@ -112,11 +112,11 @@ class ClientsController{
         res.json(true)
     }
     
-    async acceptContract(req,res){
+    /*async acceptContract(req,res){
         const empresa = await User.getEmpresa(req)
         const r = await Clients.acceptContract(empresa)
         res.json(r)
-    }
+    }*/
 
     //novo cliente
     async newAccount(req,res){

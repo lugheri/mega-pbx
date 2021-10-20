@@ -2,16 +2,19 @@ import connect from '../Config/dbConnection'
 
 
 class Clients{
-      querySync(sql,empresa){
-        return new Promise(async(resolve,reject)=>{
-            const hostEmp = await this.serversDbs(empresa)
-            console.log('empresa',`${empresa} - ${hostEmp}`)
-            connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
-                if(e) reject(e);
-                resolve(rows)
-            })
-        })
-    }
+    querySync(sql,empresa){
+      return new Promise(async(resolve,reject)=>{
+          const hostEmp = await Clients.serversDbs(empresa)
+          const connection = connect.poolConta(empresa,hostEmp)
+          connection.query(sql,(e,rows)=>{
+              if(e) reject(e);
+            
+              resolve(rows)                
+          })
+          connection.end()
+        
+      })
+  }
     querySync_crmdb(sql){
       return new Promise((resolve,reject)=>{
           connect.poolCRM.query(sql,(e,rows)=>{
@@ -158,14 +161,13 @@ class Clients{
 
   //DBS SERVERS
   async serversDbs(prefix){
-      const sql = `SELECT d.ip
-        FROM clients.accounts AS c 
-        JOIN clients.servers_db AS d ON c.server_id = d.id 
-      WHERE c.prefix = '${prefix}'`
-      const r = await this.querySync_crmdb(sql)
+    const sql = `SELECT d.ip
+                     FROM clients.accounts AS c 
+                     JOIN clients.servers_db AS d ON c.server_id = d.id 
+                    WHERE c.prefix = '${prefix}'`
+      const r = await this.querySync_crmdb(sql)    
+      
       return r[0].ip
-   
-
   }
   
 

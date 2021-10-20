@@ -1,14 +1,20 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
 
+
 class Clients{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
-                if(e) reject(e);
-                resolve(rows)
-            })
-        })
-    }
+    querySync(sql,empresa){
+      return new Promise(async(resolve,reject)=>{
+          const hostEmp = await Clients.serversDbs(empresa)
+          const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
+          connection.query(sql,(e,rows)=>{
+              if(e) reject(e);
+            
+              resolve(rows)                
+          })
+          connection.end()
+        
+      })
+  }
     querySync_crmdb(sql){
       return new Promise((resolve,reject)=>{
           _dbConnection2.default.poolCRM.query(sql,(e,rows)=>{
@@ -153,6 +159,18 @@ class Clients{
       const e = await this.querySync_astdb(sql)
   }
 
+  //DBS SERVERS
+  async serversDbs(prefix){
+    const sql = `SELECT d.ip
+                     FROM clients.accounts AS c 
+                     JOIN clients.servers_db AS d ON c.server_id = d.id 
+                    WHERE c.prefix = '${prefix}'`
+      const r = await this.querySync_crmdb(sql)    
+      
+      return r[0].ip
+  }
+  
+
   //SERVERS
   async createServer(nome_dominio,ip_servidor,tipo,status){
     let sql = `SELECT id FROM clients.servers WHERE ip='${ip_servidor}'`
@@ -169,7 +187,6 @@ class Clients{
 
   async listServers(){
         const sql = `SELECT * FROM clients.servers`
-        return await this.querySync_crmdb(sql)
   }
 
   async infoServer(idServer){
@@ -222,6 +239,42 @@ class Clients{
 
     }
 
+    async nextServerDataBase(tipo){
+      let sql = `SELECT id 
+                   FROM clients.servers_db
+                  WHERE tipo='${tipo}' AND status=1 AND clientes<limite
+                  LIMIT 1;`
+      const s = await this.querySync_crmdb(sql)
+      if(s.length==0){
+        return false
+      }
+      return s[0].id
+
+    }
+
+    async signatureContract(empresa){
+      const sql = `SELECT signed_contract, fidelidade FROM clients.accounts WHERE prefix='${empresa}'`
+      const r = await this.querySync_crmdb(sql)
+      if(r[0].signed_contract==1){
+        return {"approved":true}
+      }else{
+        return {"approved":false,"fidelidade":r[0].fidelidade}
+      }
+    }
+
+    async acceptContract(empresa){
+      
+      const sql = `UPDATE clients.accounts SET signed_contract=1 WHERE prefix='${empresa}'`
+      
+      try{
+        await this.querySync_crmdb(sql)
+        return true
+      }catch(error){
+        console.log(error)
+        return false
+      }
+    }
+
     async newAccount(nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
         if(await this.checkPrefix(prefixo)>0){
             return {"error":true,"message":`O prefixo '${prefixo}' já existe!`}
@@ -230,6 +283,10 @@ class Clients{
         const server = await this.nextServer(type_server);
         if(server==false){
           return {"error":true,"message":`Nenhum servidor disponível`}
+        }
+        const server_db = await this.nextServerDataBase(type_server);
+        if(server_db==false){
+          return {"error":true,"message":`Nenhum servidor de banco de dados disponível`}
         }
         const server_id = server['id']
         const asterisk_server_ip = server['ip']
@@ -248,7 +305,7 @@ class Clients{
                                           date,
                                           name,
                                         prefix,
-                                     fidelidade,
+                                    fidelidade,
                                       licenses,
                               channels_by_user,
                                 total_channels,
@@ -256,6 +313,7 @@ class Clients{
                                    tech_prefix,
                                      type_dial,
                                      server_id,
+                                     server_db,
                                asterisk_server,
                                asterisk_domain,
                                         status)
@@ -263,14 +321,15 @@ class Clients{
                                          now(),
                               '${nomeEmpresa}',
                                   '${prefixo}',
-                                   ${licenses},
                                  ${fidelidade},
+                                   ${licenses},                                 
                                ${channelsUser},
                               ${totalChannels},
                                     '${trunk}',
                                 ${tech_prefix},
                                  '${type_dial}',
                                   ${server_id},
+                                  ${server_db},
                           '${asterisk_server_ip}',
                           '${asterisk_domain}',
                                              0)`
@@ -278,7 +337,9 @@ class Clients{
         await this.createBD_dados(prefixo)
         await this.createBD_mailing(prefixo)
         await this.insertDados(prefixo,asterisk_server_ip,asterisk_domain,accountId)
-        
+        server_db
+        sql = `UPDATE clients.servers_db SET clientes=clientes+1 WHERE id=${server_db}`
+        await this.querySync_crmdb(sql)
         sql = `UPDATE clients.clientes SET status=1 WHERE id=${accountId}`
         await this.querySync_crmdb(sql)
         sql = `UPDATE clients.accounts SET status=1 WHERE client_number=${accountId}`
@@ -287,11 +348,24 @@ class Clients{
         return {"error":false,"asterisk_domain":`${asterisk_domain}`,"server_ip":`${asterisk_server_ip}`}
     }
 
-    async createBD_dados(empresa){
-       
-        let sql = `CREATE DATABASE IF NOT EXISTS ${empresa}_dados;`
-        await this.querySync(sql)
+    async createBD_dados(empresa){       
+        let sql = `SET GLOBAL max_connections = 15000`
+        await this.querySync(sql,empresa)
 
+        sql = `CREATE DATABASE IF NOT EXISTS clientes_ativos;`
+        await this.querySync(sql,empresa)
+
+        sql = `CREATE TABLE IF NOT EXISTS clientes_ativos.empresas (
+                id int NOT NULL AUTO_INCREMENT,
+                prefixo char(50) DEFAULT NULL,
+                status int DEFAULT NULL,
+                PRIMARY KEY (id)
+        ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
+        await this.querySync(sql,empresa)
+      
+        sql = `CREATE DATABASE IF NOT EXISTS ${empresa}_dados;`
+        await this.querySync(sql,empresa)
+        
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.agentes_filas (
           id int NOT NULL AUTO_INCREMENT,
           ramal int DEFAULT NULL,
@@ -301,7 +375,7 @@ class Clients{
           ordem int DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.agentes_pausados (
           id int NOT NULL AUTO_INCREMENT,
@@ -314,7 +388,7 @@ class Clients{
           descricao text,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.asterisk_ari (
           id int NOT NULL AUTO_INCREMENT,
@@ -325,7 +399,7 @@ class Clients{
           debug tinyint DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)       
+        await this.querySync(sql,empresa)       
     
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas (
           id int NOT NULL AUTO_INCREMENT,
@@ -338,7 +412,7 @@ class Clients{
           PRIMARY KEY (id),
           KEY nome (nome)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_agendamentos (
           id int NOT NULL AUTO_INCREMENT,
@@ -354,7 +428,7 @@ class Clients{
           tratado int DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_blacklists (
           id int NOT NULL AUTO_INCREMENT,
@@ -362,7 +436,7 @@ class Clients{
           idBlacklist int DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_campos_tela_agente (
           id int NOT NULL AUTO_INCREMENT,
@@ -373,7 +447,7 @@ class Clients{
           ordem int DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_chamadas_simultaneas (
           id int NOT NULL AUTO_INCREMENT,
@@ -405,7 +479,7 @@ class Clients{
           PRIMARY KEY (id) USING BTREE,
           KEY atendido (atendido) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_discador (
           id int NOT NULL AUTO_INCREMENT,
@@ -419,7 +493,7 @@ class Clients{
           saudacao varchar(50) NOT NULL DEFAULT 'laura',
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_filas (
           id int NOT NULL AUTO_INCREMENT,
@@ -430,7 +504,7 @@ class Clients{
           descricao text,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_horarios (
           id int NOT NULL AUTO_INCREMENT,
@@ -441,7 +515,7 @@ class Clients{
           hora_termino time DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_integracoes (
           id int NOT NULL AUTO_INCREMENT,
@@ -449,7 +523,7 @@ class Clients{
           idIntegracao int DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_integracoes_disponiveis (
           id int NOT NULL AUTO_INCREMENT,
@@ -458,7 +532,7 @@ class Clients{
           modoAbertura char(10) DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_listastabulacao (
           id int NOT NULL AUTO_INCREMENT,
@@ -467,7 +541,7 @@ class Clients{
           maxTime int DEFAULT '0',
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_mailing (
           id int NOT NULL AUTO_INCREMENT,
@@ -475,7 +549,7 @@ class Clients{
           idMailing int DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_mailing_filtros (
           id int NOT NULL AUTO_INCREMENT,
@@ -486,7 +560,7 @@ class Clients{
           regiao char(2) DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.campanhas_status (
           id int NOT NULL AUTO_INCREMENT,
@@ -496,7 +570,7 @@ class Clients{
           estado int DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.cargos (
           id int NOT NULL AUTO_INCREMENT,
@@ -505,7 +579,7 @@ class Clients{
           status int DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.estadosAgente (
           id int NOT NULL AUTO_INCREMENT,
@@ -513,7 +587,7 @@ class Clients{
           estado varchar(25) DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.filas (
           id int NOT NULL AUTO_INCREMENT,
@@ -522,7 +596,7 @@ class Clients{
           descricao text,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.historico_atendimento (
           id int NOT NULL AUTO_INCREMENT,
@@ -544,7 +618,7 @@ class Clients{
           obs_tabulacao text,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.log_chamadas_simultaneas (
           id int NOT NULL AUTO_INCREMENT,
@@ -555,7 +629,7 @@ class Clients{
           manuais int DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.log_pausas (
           id int NOT NULL AUTO_INCREMENT,
@@ -568,7 +642,7 @@ class Clients{
           ativa tinyint DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.mailings (
           id int NOT NULL AUTO_INCREMENT,
@@ -589,7 +663,7 @@ class Clients{
           status int DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.mailing_tipo_campo (
           id int NOT NULL AUTO_INCREMENT,
@@ -602,7 +676,7 @@ class Clients{
           ordem tinyint DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.pausas (
           id int NOT NULL AUTO_INCREMENT,
@@ -614,10 +688,10 @@ class Clients{
           status tinyint DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = 'CREATE TABLE IF NOT EXISTS '+empresa+'_dados.pausas_listas (id int NOT NULL AUTO_INCREMENT,nome varchar(50) DEFAULT NULL,descricao text,`default` int DEFAULT NULL,status int DEFAULT NULL,PRIMARY KEY (id)) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1'
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.records (
           id int NOT NULL AUTO_INCREMENT,
@@ -630,7 +704,7 @@ class Clients{
           callfilename varchar(255) DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.registro_logins (
           id int NOT NULL AUTO_INCREMENT,
@@ -640,7 +714,7 @@ class Clients{
           acao varchar(50) DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.report_campos (
           id int NOT NULL AUTO_INCREMENT,
@@ -650,7 +724,7 @@ class Clients{
           chart char(50) DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.report_campos_disponiveis (
           id int NOT NULL AUTO_INCREMENT,
@@ -661,7 +735,7 @@ class Clients{
           status tinyint DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.report_info (
           id int NOT NULL AUTO_INCREMENT,
@@ -671,7 +745,7 @@ class Clients{
           status tinyint DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.servidor_webrtc (
           id int NOT NULL AUTO_INCREMENT,
@@ -681,7 +755,7 @@ class Clients{
           status tinyint DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)      
+        await this.querySync(sql,empresa)      
     
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.tabulacoes_listas (
           id int NOT NULL AUTO_INCREMENT,
@@ -691,7 +765,7 @@ class Clients{
           status int DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.tabulacoes_status (
           id int NOT NULL AUTO_INCREMENT,
@@ -709,7 +783,7 @@ class Clients{
           status int DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.tempo_espera (
           id int NOT NULL AUTO_INCREMENT,
@@ -720,7 +794,7 @@ class Clients{
           tempo_total char(10) DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.tempo_fila (
           id int NOT NULL AUTO_INCREMENT,
@@ -733,7 +807,7 @@ class Clients{
           tempo_total char(10) DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.tempo_ligacao (
           id int NOT NULL AUTO_INCREMENT,
@@ -749,7 +823,7 @@ class Clients{
           tempo_total char(10) DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.tempo_login (
           id int NOT NULL AUTO_INCREMENT,
@@ -759,7 +833,7 @@ class Clients{
           tempo_total char(10) DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.tempo_ociosidade (
           id int NOT NULL AUTO_INCREMENT,
@@ -770,7 +844,7 @@ class Clients{
           tempo_total char(10) CHARACTER SET latin1 COLLATE latin1_swedish_ci DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.tempo_pausa (
           id int NOT NULL AUTO_INCREMENT,
@@ -781,7 +855,7 @@ class Clients{
           tempo_total char(10) DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.tempo_tabulacao (
           id int NOT NULL AUTO_INCREMENT,
@@ -796,7 +870,7 @@ class Clients{
           tempo_total char(10) DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.users (
           id int NOT NULL AUTO_INCREMENT,
@@ -817,7 +891,7 @@ class Clients{
           status int unsigned DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)        
+        await this.querySync(sql,empresa)        
     
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.users_cargos (
           id int NOT NULL AUTO_INCREMENT,
@@ -826,7 +900,7 @@ class Clients{
           status int DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.users_equipes (
           id int NOT NULL AUTO_INCREMENT,
@@ -836,7 +910,7 @@ class Clients{
           status int DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.users_niveis (
           id int NOT NULL AUTO_INCREMENT,
@@ -845,7 +919,7 @@ class Clients{
           status int DEFAULT NULL,
           PRIMARY KEY (id) USING BTREE
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)        
+        await this.querySync(sql,empresa)        
     
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_dados.user_ramal (
           id int NOT NULL AUTO_INCREMENT,
@@ -857,12 +931,12 @@ class Clients{
           datetime_estado datetime DEFAULT NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
     }
     
     async createBD_mailing(empresa){
         let sql = `CREATE DATABASE IF NOT EXISTS ${empresa}_mailings;`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_mailings.blacklists (
                       id int NOT NULL AUTO_INCREMENT,
@@ -871,7 +945,7 @@ class Clients{
                       padrao int DEFAULT NULL,
                       PRIMARY KEY (id) USING BTREE
                ) ENGINE=InnoDB DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_mailings.blacklist_numeros (
                     id int NOT NULL AUTO_INCREMENT,
@@ -882,7 +956,7 @@ class Clients{
                     tipo char(15) DEFAULT NULL,
                     PRIMARY KEY (id) USING BTREE
                 ) ENGINE=InnoDB DEFAULT CHARSET=latin1`
-                await this.querySync(sql)
+                await this.querySync(sql,empresa)
 
         sql = `CREATE TABLE IF NOT EXISTS ${empresa}_mailings.campanhas_tabulacao_mailing (
                     id int NOT NULL AUTO_INCREMENT,
@@ -906,7 +980,7 @@ class Clients{
                     tentativas int DEFAULT NULL,
                     PRIMARY KEY (id) USING BTREE
                 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
     }
 
     async insertDados(empresa,asterisk_server,asterisk_domain,accountId){
@@ -914,7 +988,7 @@ class Clients{
       let sql = `INSERT INTO ${empresa}_dados.asterisk_ari 
                          (id, server, user, pass, active, debug)
                   VALUES (1, 'http://${asterisk_server}:8088 ', 'mega-user-ari', '1234abc@', 1, 0)`
-      await this.querySync(sql)
+      await this.querySync(sql,empresa)
 
       sql = `INSERT INTO ${empresa}_dados.estadosAgente 
                          (id, cod, estado) 
@@ -926,21 +1000,21 @@ class Clients{
                          (6, 5, 'Tela Reg.'),
                          (7, 6, 'C. Manual'),
                          (8, 7, 'Em lig. Manual')`
-      await this.querySync(sql)
+      await this.querySync(sql,empresa)
 
       sql = `INSERT INTO ${empresa}_dados.servidor_webrtc (id, protocolo, ip, porta, status) VALUES
         (1, 'wss', '${asterisk_domain}', '8089', 1)`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
 
         sql = `INSERT INTO ${empresa}_dados.users (id, criacao, nome, usuario, empresa, senha, nivelAcesso, equipe, cargo, reset, logado, ordem, status) VALUES
             (${firstRamal}, NOW(), 'Gestor', 'gestor@${empresa}', '${empresa}', '64ad3fb166ddb41a2ca24f1803b8b722', 4, 4, 2, 0, 0, 0, 1)`
-        const u = await this.querySync(sql)
+        const u = await this.querySync(sql,empresa)
         const userId = u.insertId;
         //Cadastrando ramal
         sql = `INSERT INTO ${empresa}_dados.user_ramal 
                            (userId,ramal,estado)
                     VALUES ('${userId}','${userId}',0)`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
          //criando ramal no asterisk
         //AOR
         sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.ps_aors 
@@ -963,8 +1037,11 @@ class Clients{
             (2, 'Supervisor', NULL, 1),
             (3, 'Gestor', NULL, 1),
             (4, 'Master', NULL, 1)`
-        await this.querySync(sql)
-    
+        await this.querySync(sql,empresa)
+
+        sql = `INSERT INTO clientes_ativos.empresas (prefixo, status) VALUES
+            ('${empresa}', 1)`
+        await this.querySync(sql,empresa)
     }
 
     async totalClientsServidor(asterisk_server){
@@ -986,7 +1063,7 @@ class Clients{
 
     async clientesAtivos(){
         const sql = `SELECT prefix 
-                       FROM clients.accounts 
+                       FROM clients.accounts
                       WHERE status=1`
         return await this.querySync_crmdb(sql)
     }

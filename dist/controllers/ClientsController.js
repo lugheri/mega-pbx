@@ -1,4 +1,5 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _Clients = require('../models/Clients'); var _Clients2 = _interopRequireDefault(_Clients);
+var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
 
 class ClientsController{
     //TRUNKS
@@ -111,7 +112,11 @@ class ClientsController{
         res.json(true)
     }
     
-
+    /*async acceptContract(req,res){
+        const empresa = await User.getEmpresa(req)
+        const r = await Clients.acceptContract(empresa)
+        res.json(r)
+    }*/
 
     //novo cliente
     async newAccount(req,res){

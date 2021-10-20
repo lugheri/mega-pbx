@@ -6,26 +6,26 @@ import User from '../models/User';
 import Clients from '../models/Clients'
 
 class SessionController{
-    async store(req,res){
+    async store(req,res){          
         const {usuario,senha} = req.body;
-
         const e = await User.findEmpresa(usuario);
+        
         if(!e[0]){
             res.json({userNotFound:'Empresa não encontrada!'})
             return false
         }
+       
         const empresa=e[0].prefix
-
-        console.log('prefixo',empresa)
-
         const userData = await User.findUser(empresa,usuario)
         
         if(!userData[0]){
             return res.json({userNotFound:'Usuário não encontrado!'})
         }else{    
+           
             if(userData[0].senha!=md5(senha)){
                 return res.json({WrongPassword: 'Senha errada!'})
             }else{
+               
                 const acao='login'
                 const token = jwt.sign({userId:userData[0].id,empresa:empresa},process.env.APP_SECRET,{
                     expiresIn:'12h'
@@ -35,6 +35,7 @@ class SessionController{
                 
                 //checa se contrato ja foi aceito 
                 const signature = await Clients.signatureContract(empresa)
+               
                 if(signature['approved']==true){
                     res.json({                    
                         token: token
@@ -47,8 +48,8 @@ class SessionController{
                     }else{
                         res.json({ "error":true,"message":"Aguardando aceite dos termos de uso!"})
                     }
-                }
-               
+                } 
+                            
             }
         }
     }

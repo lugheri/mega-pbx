@@ -24,7 +24,7 @@ module.exports = (routes) => {
     //MIDDLEWARE DE AUTENTICACAO
     routes.use(authMiddleware);
 
-    routes.post('/acceptContract',ClientsController.acceptContract)
+    //routes.post('/acceptContract',ClientsController.acceptContract)
 
     //VERIFICA TOKEN AUTENTICADO
     routes.get('/authenticated', SessionController.validate);

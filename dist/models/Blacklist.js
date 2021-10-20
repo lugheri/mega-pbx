@@ -1,15 +1,21 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
+var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 var _csvtojson = require('csvtojson'); var _csvtojson2 = _interopRequireDefault(_csvtojson);
 const Json2csvParser = require("json2csv").Parser;
 var _fs = require('fs'); var _fs2 = _interopRequireDefault(_fs);
 
 class Blacklist{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await _Clients2.default.serversDbs(empresa)
+            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
+            connection.query(sql,(e,rows)=>{
                 if(e) reject(e);
-                resolve(rows)
+               
+                resolve(rows)                
             })
+            connection.end()
+           
         })
     }
 
@@ -17,20 +23,20 @@ class Blacklist{
         const sql = `INSERT INTO ${empresa}_mailings.blacklists 
                                  (nome,descricao,padrao) 
                           VALUES ('${dados.nome}','${dados.descricao}','${dados.default}')`;
-        const rows = await this.querySync(sql)
+        const rows = await this.querySync(sql,empresa)
     }
 
     async listarBlacklists(empresa){
         const sql = `SELECT id,nome,descricao,padrao as 'default'
                        FROM ${empresa}_mailings.blacklists`;
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async verDadosLista(empresa,idLista){
         const sql = `SELECT nome,descricao,padrao as 'default' 
                        FROM ${empresa}_mailings.blacklists 
                       WHERE id=${idLista}`;
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async editarDadosLista(empresa,idLista,dados){
@@ -39,16 +45,16 @@ class Blacklist{
                             descricao='${dados.descricao}',
                             padrao=${dados.default} 
                       WHERE id=${idLista}`;
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async removerBlacklist(empresa,idLista){
         const sql = `DELETE FROM ${empresa}_mailings.blacklists
                            WHERE id=${idLista}`;
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         const sql2 = `DELETE FROM ${empresa}_mailings.blacklist_numeros
                             WHERE idLista=${idLista}`;
-        await this.querySync(sql2)
+        await this.querySync(sql2,empresa)
         return true
     }
 
@@ -116,7 +122,7 @@ class Blacklist{
             const sql = `INSERT INTO ${empresa}_mailings.blacklist_numeros 
                                      (idLista,dataBloqueio,ddd,numero,tipo) 
                               VALUES (${idLista},now(),'${ddd}','${numero}','${tipo}')`
-            await this.querySync(sql)
+            await this.querySync(sql,empresa)
             return true
         }
         return false
@@ -126,19 +132,19 @@ class Blacklist{
         const sql = `SELECT id,idLista,DATE_FORMAT(dataBloqueio,'%d/%m/%Y') AS inclusao, ddd,numero,tipo 
                        FROM ${empresa}_mailings.blacklist_numeros 
                        WHERE numero LIKE '%${numero}%' AND idLista=${idLista}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async numerosBloqueados(empresa,inicio,limit){
         const sql = `SELECT DATE_FORMAT(dataBloqueio,'%d/%m/%Y') AS inclusao,ddd,numero,tipo 
                       FROM ${empresa}_mailings.blacklist_numeros LIMIT ${inicio},${limit}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
      }
 
     async removerNumero(empresa,idLista,numero){
         const sql = `DELETE FROM ${empresa}_mailings.blacklist_numeros 
                       WHERE numero='${numero}' AND idLista=${idLista}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
     }
 
     async addBlacklistCampanha(empresa,idBlacklist,idCampanha){
@@ -152,7 +158,7 @@ class Blacklist{
         const sql = `INSERT INTO ${empresa}_dados.campanhas_blacklists 
                                  (idCampanha,idBlacklist) 
                           VALUES (${idCampanha},${idBlacklist})`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return true
     }
 
@@ -161,13 +167,13 @@ class Blacklist{
                         FROM ${empresa}_dados.campanhas_blacklists as c
                         JOIN ${empresa}_mailings.blacklists as b ON b.id=c.idBlacklist
                        WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async removerBlacklistCampanha(empresa,idBlacklist,idCampanha){
         const sql = `DELETE FROM ${empresa}_dados.campanhas_blacklists 
         WHERE idCampanha=${idCampanha} AND idBlacklist=${idBlacklist}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
     }
 }
 

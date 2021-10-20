@@ -492,7 +492,7 @@ class CampanhasController{
             let total = improdutivos+produtivos
             let nome = "Informações Removidas"
             if(info.length>0){               
-                total=info[0].totalNumeros
+                total=info[0].totalNumeros-info[0].numerosInvalidos
                 nome=info[0].nome
             }
             const trabalhados = produtivos+improdutivos

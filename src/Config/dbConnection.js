@@ -4,8 +4,6 @@ import Clients from '../models/Clients';
 //const environment = "dev"
 const environment = "DB_DEV"
 
-
-
 let host = 'localhost'
 let astdb_host = 'localhost'
 let crm_host = 'localhost'
@@ -22,7 +20,6 @@ switch(environment){
         db['clients'] = 'clients'
     break;
     default:
-        host = process.env.DB_HOST
         astdb_host = process.env.ASTDB_HOST
         crm_host = process.env.CRMDB_HOST
         user['name'] = process.env.DB_USER
@@ -31,10 +28,38 @@ switch(environment){
         db['asterisk'] = 'asterisk'
         db['clients'] = 'clients'
 }
-const connect = ()=>{};
-connect.db=db
 
-connect.poolCRM=mysql.createPool({
+const connect = ()=>{};
+
+/*MYSQL*/
+/*
+connect.poolCRM=mysql.createConnection({    
+    host:crm_host,
+    user : user['name'],
+    password : user['pass'],
+    database : "clients"
+})
+connect.poolConta = (empresa,hostEmp)=>{   
+    return mysql.createConnection({
+        host:hostEmp,
+        port:3306,
+        user : user['name'],
+        password : user['pass'],
+        database : `clientes_ativos`
+    })
+}
+console.log('poolAsterisk',astdb_host)
+connect.poolAsterisk=mysql.createConnection({
+    host:astdb_host,
+    user : user['name'],
+    password : user['pass'],
+    database : "asterisk"
+})*/
+
+
+
+/*MYSQL2*/
+connect.poolCRM=mysql.createConnection({    
     host:crm_host,
     user : user['name'],
     password : user['pass'],
@@ -44,19 +69,32 @@ connect.poolCRM=mysql.createPool({
     queueLimit:0
 })
 
-connect.poolConta = function(empresa,hostEmp){
-    console.log('conta')   
-    return mysql.createPool({
+connect.poolConta = (empresa,hostEmp)=>{  
+    //console.log('host',hostEmp)
+    return mysql.createConnection({
         host:hostEmp,
         port:3306,
         user : user['name'],
         password : user['pass'],
-        database : `mysql`,
+        database : `clientes_ativos`,
         waitForConnections: true,
-        connectionLimit: 10,
+        connectionLimit: 20,
         queueLimit:0
     })
 }
+
+console.log('poolAsterisk',astdb_host)
+connect.poolAsterisk=mysql.createConnection({
+    host:astdb_host,
+    user : user['name'],
+    password : user['pass'],
+    database : "asterisk",
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit:0
+}) 
+
+
 
 /*
 connect.poolEmpresa=mysql.createPool({
@@ -68,18 +106,6 @@ connect.poolEmpresa=mysql.createPool({
     connectionLimit: 10,
     queueLimit:0
 })*/
-
-
-
-connect.poolAsterisk=mysql.createPool({
-    host:astdb_host,
-    user : user['name'],
-    password : user['pass'],
-    database : "asterisk",
-    waitForConnections: true,
-    connectionLimit: 100,
-    queueLimit:0
-})
 
 /*
 

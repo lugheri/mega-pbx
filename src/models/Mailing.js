@@ -11,12 +11,16 @@ class Mailing{
     querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await Clients.serversDbs(empresa)
-            connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
+            const connection = connect.poolConta(empresa,hostEmp)
+            connection.query(sql,(e,rows)=>{
                 if(e) reject(e);
-                resolve(rows)
+               
+                resolve(rows)                
             })
+            connection.end()
+           
         })
-    }    
+    }
     
 
     //Abre o csv do mailing a ser importado

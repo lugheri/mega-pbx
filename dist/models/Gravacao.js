@@ -1,13 +1,19 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
+var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 class Gravacao{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
+    querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await _Clients2.default.serversDbs(empresa)
+            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
+            connection.query(sql,(e,rows)=>{
                 if(e) reject(e);
-                resolve(rows)
+               
+                resolve(rows)                
             })
+            connection.end()
+           
         })
     }
     querySync_crmdb(sql){
@@ -44,7 +50,7 @@ class Gravacao{
                   LEFT JOIN ${empresa}_dados.tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
                    ORDER BY id DESC 
                       LIMIT ${inicio},${limit}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
 
@@ -144,21 +150,21 @@ class Gravacao{
                       WHERE 1=1 ${filter}`
         //console.log(buscarPor)
         console.log(sql)
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async infoGravacao(empresa,idGravacao){
         const sql = `SELECT *
                        FROM ${empresa}_dados.records
                       WHERE id=${idGravacao}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async numeroDiscadoByUniqueid(empresa,uniqueid){
         const sql = `SELECT numero_discado AS numero
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE uniqueid=${uniqueid}`
-        const n =  await this.querySync(sql)
+        const n =  await this.querySync(sql,empresa)
         if(n.length==0){
             return 0
         }
@@ -169,7 +175,7 @@ class Gravacao{
         const sql = `SELECT callfilename,date_record
                        FROM ${empresa}_dados.records
                       WHERE uniqueid=${uniqueid}`
-        const g =  await this.querySync(sql)
+        const g =  await this.querySync(sql,empresa)
         if(g.length==0){
             return 0
         }
@@ -214,7 +220,7 @@ class Gravacao{
                   LEFT JOIN ${empresa}_dados.tempo_ligacao AS t ON r.uniqueid=t.uniqueid 
                   LEFT JOIN ${empresa}_dados.tabulacoes_status AS tb ON tb.id=h.status_tabulacao 
                       WHERE r.id=${idRec}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 }
 

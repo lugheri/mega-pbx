@@ -11,16 +11,20 @@ class Dashboard{
     querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await Clients.serversDbs(empresa)
-            connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
+            const connection = connect.poolConta(empresa,hostEmp)
+            connection.query(sql,(e,rows)=>{
                 if(e) reject(e);
-                resolve(rows)
+               
+                resolve(rows)                
             })
+            connection.end()
+           
         })
     }
 
     async painel(empresa){
-        const hoje = moment().format("Y-MM-DD")
        
+        const hoje = moment().format("Y-MM-DD")       
         const agentesLogados = await Discador.agentesLogados(empresa)
         const produtivas = await Discador.chamadasProdutividade_CampanhasAtivas_dia(empresa,1)
         const improdutivas = await Discador.chamadasProdutividade_CampanhasAtivas_dia(empresa,0) 
@@ -42,10 +46,10 @@ class Dashboard{
         const contatados = await Discador.chamadasPorContato_dia(empresa,'S')
         const emAtendimento = await Discador.chamadasEmAtendimento(empresa)   
         
-        /*
+       
         console.log('totalChamadas',totalChamadas)
         console.log('improdutivas',improdutivas)
-        console.log('produtivas',produtivas)*/
+        console.log('produtivas',produtivas)
         
         const dash={}
               dash['sinteticos']={}
@@ -193,19 +197,20 @@ class Dashboard{
                 dash["Agentes"].push(agente)
             }         
               
+          return dash
 
-        return dash
+
         
     }
 
     async realTimeCalls(empresa){       
-        const totais = await Discador.logChamadasSimultaneas(empresa,'total',1)
-        const conectadas = await Discador.logChamadasSimultaneas(empresa,'conectadas',1)
+        //const totais = await Discador.logChamadasSimultaneas(empresa,'total',1)
+        //const conectadas = await Discador.logChamadasSimultaneas(empresa,'conectadas',1)
         const realTime={}
               realTime['RealTimeChart']={}
-              const ligando = totais - conectadas
-              realTime['RealTimeChart']['Ligando']=ligando
-              realTime['RealTimeChart']['Falando']=conectadas
+             // const ligando = totais - conectadas
+              realTime['RealTimeChart']['Ligando']=0//ligando
+              realTime['RealTimeChart']['Falando']=0//conectadas
         return realTime
     }
 
