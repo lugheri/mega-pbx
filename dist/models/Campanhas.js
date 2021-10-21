@@ -3,26 +3,35 @@ var _Mailing = require('./Mailing'); var _Mailing2 = _interopRequireDefault(_Mai
 var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 class Campanhas{   
-    querySync(sql,empresa){
+    /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }*/
+    
+    async querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await _Clients2.default.serversDbs(empresa)
-            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
-            connection.query(sql,(e,rows)=>{
-                if(e) reject(e);
-               
-                resolve(rows)                
-            })
-            connection.end()
-           
-        })
-    }
-    querySync_astdb(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolAsterisk.query(sql,(e,rows)=>{
+            const conn = _dbConnection2.default.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
+            conn.end()                        
         })
+    }
+   
+    
+    async querySync_astdb(sql){
+        const connection = _dbConnection2.default.poolAsterisk
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];
     }
     
     //######################CONFIGURAÇÃO DE CAMPANHA ATIVA################################
@@ -124,14 +133,14 @@ class Campanhas{
             const agentes=await this.querySync(sql,empresa)
             for(let i=0; i<agentes.length; i++){
                 const agente = agentes[i].ramal
-                sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
+                sql = `UPDATE asterisk.queue_members 
                           SET paused=0 
                         WHERE membername='${agente}'`
                 await this.querySync_astdb(sql)  
             }
         }else{
             //Pausa os agentes no asterisk
-            sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
+            sql = `UPDATE asterisk.queue_members 
                       SET paused=1 
                         WHERE queue_name='${nomeFila}'`
             await this.querySync_astdb(sql) 

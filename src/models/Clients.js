@@ -2,35 +2,64 @@ import connect from '../Config/dbConnection'
 
 
 class Clients{
-    querySync(sql,empresa){
+  /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }
+    async querySync_crmdb(sql){
+      const connection = connect.poolCRM
+      const promisePool =  connection.promise();
+      const result = await promisePool.query(sql)
+      //promisePool.end();
+      return result[0];
+    }
+
+    async querySync_astdb(sql){
+      const connection = connect.poolAsterisk
+      const promisePool =  connection.promise();
+      const result = await promisePool.query(sql)
+     // promisePool.end();
+      return result[0];
+  }*/
+    
+  async querySync(sql,empresa){
+    return new Promise(async(resolve,reject)=>{
+        const hostEmp = await this.serversDbs(empresa)
+        const conn = connect.poolConta(hostEmp)
+        conn.query(sql,(e,rows)=>{
+            if(e) reject(e);
+            resolve(rows)
+        })
+        conn.end()                        
+    })
+}
+
+    async querySync_crmdb(sql){
       return new Promise(async(resolve,reject)=>{
-          const hostEmp = await Clients.serversDbs(empresa)
-          const connection = connect.poolConta(empresa,hostEmp)
-          connection.query(sql,(e,rows)=>{
+          const conn = connect.poolCRM
+          conn.query(sql,(e,rows)=>{
               if(e) reject(e);
-            
-              resolve(rows)                
+              resolve(rows)
           })
-          connection.end()
-        
-      })
+          
+      })    
+    }
+
+    async querySync_astdb(sql){
+      const connection = connect.poolAsterisk
+      const promisePool =  connection.promise();
+      const result = await promisePool.query(sql)
+      //promisePool.end();
+      return result[0];
   }
-    querySync_crmdb(sql){
-      return new Promise((resolve,reject)=>{
-          connect.poolCRM.query(sql,(e,rows)=>{
-              if(e) reject(e);
-              resolve(rows)
-          })
-      })
-    }
-    querySync_astdb(sql){
-      return new Promise((resolve,reject)=>{
-          connect.poolAsterisk.query(sql,(e,rows)=>{
-              if(e) reject(e);
-              resolve(rows)
-          })
-      })
-    }
+
+
+   
 
     //TRONCOS 
    async registerTrunk(conta,ip_provider,tech_prefix,type_dial,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport){
@@ -49,17 +78,17 @@ class Clients{
     //Criando tronco no asterisk
     async createTrunk(conta,ip_provider,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport){
         //Criando AOR 
-        let sql = `INSERT INTO ${connect.db.asterisk}.ps_aors 
+        let sql = `INSERT INTO asterisk.ps_aors 
                               (id,contact,max_contacts,qualify_frequency) 
                        VALUES ('${conta}','${contact}',${max_contacts},${qualify_frequency})`
         const a = await this.querySync_astdb(sql)
 
         //Criando Identify 
-        sql = 'INSERT INTO '+connect.db.asterisk+'.ps_endpoint_id_ips (id,endpoint,`match`) VALUES ("'+conta+'","'+conta+'","'+ip_provider+'")'
+        sql = 'INSERT INTO asterisk.ps_endpoint_id_ips (id,endpoint,`match`) VALUES ("'+conta+'","'+conta+'","'+ip_provider+'")'
         const i = await this.querySync_astdb(sql)
 
         //Criando Endpoint
-        sql = `INSERT INTO ${connect.db.asterisk}.ps_endpoints 
+        sql = `INSERT INTO asterisk.ps_endpoints 
                           (id,transport,aors,context,disallow,allow,direct_media,dtmf_mode,force_rport,rewrite_contact,rtp_symmetric,allow_subscribe,from_domain) 
                    VALUES ('${conta}','${transport}','${conta}','${context}','${disallow}','${allow}','${direct_media}','${dtmf_mode}','${force_rport}','${rewrite_contact}','${rtp_symmetric}','${allow_subscribe}','${server_ip}')`
         const e = await this.querySync_astdb(sql)
@@ -72,6 +101,8 @@ class Clients{
     }
 
     async infoTrunk(conta){
+
+      console.log('info trunk')
       const sql = `SELECT * FROM clients.trunks WHERE conta='${conta}'`
       return await this.querySync_crmdb(sql)
   }
@@ -108,7 +139,7 @@ class Clients{
 
     async updateCreateTrunk(conta,ip_provider,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport){
       //Criando AOR 
-      let sql = `UPDATE ${connect.db.asterisk}.ps_aors 
+      let sql = `UPDATE asterisk.ps_aors 
                     SET contact='${contact}',
                         max_contacts=${max_contacts},
                         qualify_frequency=${qualify_frequency} 
@@ -120,7 +151,7 @@ class Clients{
       const i = await this.querySync_astdb(sql)
 
       //Criando Endpoint
-      sql = `UPDATE ${connect.db.asterisk}.ps_endpoints 
+      sql = `UPDATE asterisk.ps_endpoints 
                 SET transport='${transport}',
                     context='${context}',
                     disallow='${disallow}',
@@ -144,29 +175,29 @@ class Clients{
   }
   async deleteTrunk(conta){
      //Removendo AOR 
-      let sql = `DELETE FROM ${connect.db.asterisk}.ps_aors 
+      let sql = `DELETE FROM asterisk.ps_aors 
                        WHERE id='${conta}'`
       const a = await this.querySync_astdb(sql)
 
       //Removendo Identify 
-      sql = `DELETE FROM ${connect.db.asterisk}.ps_endpoint_id_ips
+      sql = `DELETE FROM asterisk.ps_endpoint_id_ips
                    WHERE id='${conta}'`
       const i = await this.querySync_astdb(sql)
 
       //Removendo Endpoint
-      sql = `DELETE FROM ${connect.db.asterisk}.ps_endpoints 
+      sql = `DELETE FROM asterisk.ps_endpoints 
                    WHERE id='${conta}'`
       const e = await this.querySync_astdb(sql)
   }
 
   //DBS SERVERS
   async serversDbs(prefix){
-    const sql = `SELECT d.ip
+    const sql = `SELECT c.server_db,  d.ip , d.ip
                      FROM clients.accounts AS c 
-                     JOIN clients.servers_db AS d ON c.server_id = d.id 
+                     JOIN clients.servers_db AS d ON c.server_db = d.id 
                     WHERE c.prefix = '${prefix}'`
-      const r = await this.querySync_crmdb(sql)    
-      
+      const r = await this.querySync_crmdb(sql)   
+     
       return r[0].ip
   }
   
@@ -187,6 +218,7 @@ class Clients{
 
   async listServers(){
         const sql = `SELECT * FROM clients.servers`
+        return await this.querySync_crmdb(sql)
   }
 
   async infoServer(idServer){
@@ -214,35 +246,26 @@ class Clients{
 
 
  //Verifica qual eh o proximo servidor mais disponivel
-    async nextServer(tipo){
-      let sql = `SELECT COUNT(s.id) AS clientes, s.id AS server
-                     FROM clients.servers AS s 
-                     JOIN clients.accounts AS a ON s.ip=a.asterisk_server
-                     WHERE tipo='${tipo}'
-                 GROUP BY s.id 
-                 ORDER BY clientes ASC
-                 LIMIT 1;`
-      const s = await this.querySync_crmdb(sql)
-      if(s.length==0){
-        return false
-      }
-      const idServer = s[0].server 
-      sql = `SELECT *
-               FROM clients.servers
-              WHERE id=${idServer};`
+    async nextServer(tipo,mega){
+      let sql = `SELECT id, nome, ip
+                   FROM clients.servers
+                  WHERE mega='${mega}' AND tipo='${tipo}' 
+                    AND status=1 AND clientes<limite
+               ORDER BY clientes ASC
+                  LIMIT 1`     
       const is = await this.querySync_crmdb(sql)
       const server={}
             server['id']=is[0]['id']
             server['domain']=is[0]['nome']
             server['ip']=is[0]['ip']
       return server
-
     }
 
-    async nextServerDataBase(tipo){
+    async nextServerDataBase(tipo,mega){
       let sql = `SELECT id 
                    FROM clients.servers_db
-                  WHERE tipo='${tipo}' AND status=1 AND clientes<limite
+                  WHERE mega='${mega}' AND tipo='${tipo}' AND status=1 AND clientes<limite
+                  ORDER BY clientes ASC
                   LIMIT 1;`
       const s = await this.querySync_crmdb(sql)
       if(s.length==0){
@@ -275,16 +298,20 @@ class Clients{
       }
     }
 
-    async newAccount(nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
+    async newAccount(mega,nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
+        console.log('criando prefixp')
         if(await this.checkPrefix(prefixo)>0){
             return {"error":true,"message":`O prefixo '${prefixo}' já existe!`}
         }
 
-        const server = await this.nextServer(type_server);
+        console.log('Verificando servidor')
+        const server = await this.nextServer(type_server,mega);
         if(server==false){
           return {"error":true,"message":`Nenhum servidor disponível`}
         }
-        const server_db = await this.nextServerDataBase(type_server);
+
+        console.log('Separando Banco de dados')
+        const server_db = await this.nextServerDataBase(type_server,mega);
         if(server_db==false){
           return {"error":true,"message":`Nenhum servidor de banco de dados disponível`}
         }
@@ -292,16 +319,18 @@ class Clients{
         const asterisk_server_ip = server['ip']
         const asterisk_domain = server['domain']
         
-
+        console.log('Inserindo clientes')
         let sql = `INSERT INTO clients.clientes 
                                (desde,nome,status)
                         VALUES (now(),'${nomeEmpresa}',0)`
         const e = await this.querySync_crmdb(sql)
-        console.log(e)
+        
         const accountId = e['insertId']
 
+        console.log('Criando account')
         sql = `INSERT INTO clients.accounts  
                                 (client_number,
+                                          mega,
                                           date,
                                           name,
                                         prefix,
@@ -318,6 +347,7 @@ class Clients{
                                asterisk_domain,
                                         status)
                           VALUES (${accountId},
+                                     '${mega}',
                                          now(),
                               '${nomeEmpresa}',
                                   '${prefixo}',
@@ -333,28 +363,34 @@ class Clients{
                           '${asterisk_server_ip}',
                           '${asterisk_domain}',
                                              0)`
-        await this.querySync_crmdb(sql)
+                                             console.log('SERVER DB',server_db)                                      
+                                             console.log('sql',sql)   
+                                              await this.querySync_crmdb(sql)
+        console.log('Criando banco de dados')
         await this.createBD_dados(prefixo)
+        console.log('Criando banco de mailings')
         await this.createBD_mailing(prefixo)
+        console.log('inserindo dados')
+        console.log(prefixo,asterisk_server_ip,asterisk_domain,accountId)
         await this.insertDados(prefixo,asterisk_server_ip,asterisk_domain,accountId)
-        server_db
         sql = `UPDATE clients.servers_db SET clientes=clientes+1 WHERE id=${server_db}`
         await this.querySync_crmdb(sql)
+        console.log('Ativando a conta')
         sql = `UPDATE clients.clientes SET status=1 WHERE id=${accountId}`
         await this.querySync_crmdb(sql)
         sql = `UPDATE clients.accounts SET status=1 WHERE client_number=${accountId}`
         await this.querySync_crmdb(sql)
 
+        console.log('Concluindo')
+
         return {"error":false,"asterisk_domain":`${asterisk_domain}`,"server_ip":`${asterisk_server_ip}`}
     }
 
     async createBD_dados(empresa){       
-        let sql = `SET GLOBAL max_connections = 15000`
+        let sql = `CREATE DATABASE IF NOT EXISTS clientes_ativos;`
         await this.querySync(sql,empresa)
-
-        sql = `CREATE DATABASE IF NOT EXISTS clientes_ativos;`
-        await this.querySync(sql,empresa)
-
+        
+        
         sql = `CREATE TABLE IF NOT EXISTS clientes_ativos.empresas (
                 id int NOT NULL AUTO_INCREMENT,
                 prefixo char(50) DEFAULT NULL,
@@ -1017,17 +1053,17 @@ class Clients{
         const r = await this.querySync(sql,empresa)
          //criando ramal no asterisk
         //AOR
-        sql = `INSERT INTO ${connect.db.asterisk}.ps_aors 
+        sql = `INSERT INTO asterisk.ps_aors 
                            (id,max_contacts,remove_existing) 
                     VALUES ('${userId}',1,'yes')`
         const a = await this.querySync_astdb(sql)
         //AUTH
-        sql = `INSERT INTO ${connect.db.asterisk}.ps_auths
+        sql = `INSERT INTO asterisk.ps_auths
                            (id,auth_type,password,realm,username) 
                     VALUES ('${userId}','userpass','mega_${userId}@agent','asterisk','${userId}')`
         const h = await this.querySync_astdb(sql)
         //ENDPOINT
-        sql = `INSERT INTO ${connect.db.asterisk}.ps_endpoints 
+        sql = `INSERT INTO asterisk.ps_endpoints 
                            (id,transport,aors,auth,context,disallow,allow,webrtc,dtls_auto_generate_cert,direct_media,force_rport,ice_support,rewrite_contact,rtp_symmetric) 
                     VALUES ('${userId}','transport-wss','${userId}','${userId}','external','all','alaw,ulaw,opus','yes','yes','no','yes','yes','yes','yes')`
         const e = await this.querySync_astdb(sql)

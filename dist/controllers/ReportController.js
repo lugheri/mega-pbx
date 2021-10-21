@@ -80,6 +80,8 @@ class ReportController{
         if(req.body.totalRegistro==false){
            registros = req.body.totalRegistro
         }
+
+        
         
         const status = req.body.status
         const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
@@ -92,6 +94,7 @@ class ReportController{
         for(let i = 0; i <agentes.length; i++){
             const idAgente=agentes[i].id
             const login = await _Report2.default.dadosLogin(empresa,idAgente,de,ate,'login',0)
+          
             for(let l=0; l<login.length;l++) {
                 const llAgente = {}
                       llAgente["ramal"]=idAgente

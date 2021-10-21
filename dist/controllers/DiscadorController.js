@@ -38,7 +38,7 @@ class DiscadorController{
         for(let i=0;i<clientesAtivos.length;++i){
             const empresa = clientesAtivos[i].prefix 
             //console.log(`${empresa} - loop`,i)
-            console.log('EMPRESA==>',empresa)            
+            //console.log('EMPRESA==>',empresa)            
             //Funcoes de controle
             //Desloga todos usuarios as 23h59
             const horaAtual = _moment2.default.call(void 0, ).format("HH:mm")

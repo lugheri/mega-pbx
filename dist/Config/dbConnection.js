@@ -7,6 +7,7 @@ const environment = "DB_DEV"
 let host = 'localhost'
 let astdb_host = 'localhost'
 let crm_host = 'localhost'
+let datadb_host= 'localhost'
 const user = []
 const db = []
 switch(environment){
@@ -14,6 +15,7 @@ switch(environment){
         host = '34.121.31.128'
         astdb_host = '34.121.31.128'
         crm_host = '34.121.31.128'
+        datadb_host= '34.121.31.128'
         user['name'] = 'megaconecta'
         user['pass'] = 'M3g4_devDB@2021'
         db['asterisk'] = 'asterisk'
@@ -22,6 +24,7 @@ switch(environment){
     default:
         astdb_host = process.env.ASTDB_HOST
         crm_host = process.env.CRMDB_HOST
+       
         user['name'] = process.env.DB_USER
         user['pass'] = process.env.DB_PASS
 
@@ -31,60 +34,24 @@ switch(environment){
 
 const connect = ()=>{};
 
-/*MYSQL*/
-/*
-connect.poolCRM=mysql.createConnection({    
-    host:crm_host,
-    user : user['name'],
-    password : user['pass'],
-    database : "clients"
-})
-connect.poolConta = (empresa,hostEmp)=>{   
-    return mysql.createConnection({
-        host:hostEmp,
-        port:3306,
-        user : user['name'],
-        password : user['pass'],
-        database : `clientes_ativos`
-    })
-}
-console.log('poolAsterisk',astdb_host)
-connect.poolAsterisk=mysql.createConnection({
-    host:astdb_host,
-    user : user['name'],
-    password : user['pass'],
-    database : "asterisk"
-})*/
-
-
-
 /*MYSQL2*/
 connect.poolCRM=_mysql22.default.createConnection({    
     host:crm_host,
     user : user['name'],
     password : user['pass'],
-    database : "clients",
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit:0
+    database : "clients"
 })
-
-connect.poolConta = (empresa,hostEmp)=>{  
-    //console.log('host',hostEmp)
-    return _mysql22.default.createConnection({
-        host:hostEmp,
-        port:3306,
-        user : user['name'],
-        password : user['pass'],
-        database : `clientes_ativos`,
-        waitForConnections: true,
-        connectionLimit: 20,
-        queueLimit:0
+connect.poolConta = (hostEmpresa) =>{
+    console.log('host',hostEmpresa)
+    return  _mysql22.default.createConnection({
+            host               : hostEmpresa,//'35.194.25.54',//'34.68.33.39',
+            port               : 3306,
+            user               : user['name'],
+            password           : user['pass'],
+            database           : `clientes_ativos`
     })
 }
-
-console.log('poolAsterisk',astdb_host)
-connect.poolAsterisk=_mysql22.default.createConnection({
+connect.poolAsterisk=_mysql22.default.createPool({
     host:astdb_host,
     user : user['name'],
     password : user['pass'],

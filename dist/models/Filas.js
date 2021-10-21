@@ -4,33 +4,41 @@ var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User
 var _Asterisk = require('../models/Asterisk'); var _Asterisk2 = _interopRequireDefault(_Asterisk);
 
 class Filas{
-    querySync(sql,empresa){
+    /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }*/
+    
+    async querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await _Clients2.default.serversDbs(empresa)
-            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
-            connection.query(sql,(e,rows)=>{
-                if(e) reject(e);
-               
-                resolve(rows)                
-            })
-            connection.end()
-           
-        })
-    }
-    querySync_astdb(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolAsterisk.query(sql,(e,rows)=>{
+            const conn = _dbConnection2.default.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
+            conn.end()                        
         })
+    }
+
+    async querySync_astdb(sql){
+        const connection = _dbConnection2.default.poolAsterisk
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];
     }
 
     //CRUD FILAS
     //Criar nova filas
     async criarFila(empresa,nomeFila,musiconhold,monitorType,monitorFormat,announce_frequency,announce_holdtime,announce_position,autofill,autopause,autopausebusy,autopausedelay,autopauseunavail,joinempty,leavewhenempty,maxlen,memberdelay,penaltymemberslimit,periodic_announce_frequency,queue_callswaiting,queue_thereare,queue_youarenext,reportholdtime,retry,ringinuse,servicelevel,strategy,timeout,timeoutpriority,timeoutrestart,weight,wrapuptime){
         
-        const sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.queues 
+        const sql = `INSERT INTO asterisk.queues 
                                 (name,
                                  musiconhold,
                                  strategy,
@@ -99,18 +107,18 @@ class Filas{
    
     //Exibe os dads da fila
     async dadosFila(empresa,nomeFila){
-        const sql = `SELECT * FROM ${_dbConnection2.default.db.asterisk}.queues 
+        const sql = `SELECT * FROM asterisk.queues 
                      WHERE name='${nomeFila}'`
         return await this.querySync_astdb(sql)
     }
     //Listar Filas
     async listar(empresa){
-        const sql = `SELECT * FROM ${_dbConnection2.default.db.asterisk}.queues`
+        const sql = `SELECT * FROM asterisk.queues`
         return await this.querySync_astdb(sql)
     }   
     //Edita os dados da fila
     async editarFila(empresa,nomeFila,dados){
-        const sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queues 
+        const sql = `UPDATE asterisk.queues 
                         SET musiconhold='${dados.musiconhold}',
                             strategy='${dados.strategy}',
                             timeout='${dados.timeout}',
@@ -122,15 +130,15 @@ class Filas{
     }
 
     async editarNomeFila(empresa,nomeFilaAtual,name){
-        const sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queues SET name='${name}' WHERE name='${nomeFilaAtual}'`
+        const sql = `UPDATE asterisk.queues SET name='${name}' WHERE name='${nomeFilaAtual}'`
         return await this.querySync_astdb(sql)
     }
 
      //Remove a fila
      async removerFila(empresa,nomeFila){
-        let sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.queues WHERE name='${nomeFila}'`
+        let sql = `DELETE FROM asterisk.queues WHERE name='${nomeFila}'`
         await this.querySync_astdb(sql)
-        sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.queue_members WHERE queue_name='${nomeFila}'`
+        sql = `DELETE FROM asterisk.queue_members WHERE queue_name='${nomeFila}'`
         await this.querySync_astdb(sql)
     }
 

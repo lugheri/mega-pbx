@@ -11,28 +11,47 @@ import Discador from './Discador';
 import Clients from './Clients';
 
 class Asterisk{
-    querySync(sql,empresa){
+    /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }
+    async querySync_astdb(sql){
+        const connection = connect.poolAsterisk
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        //promisePool.end();
+        return result[0];
+    }
+    */
+    
+    async querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await Clients.serversDbs(empresa)
-            const connection = connect.poolConta(empresa,hostEmp)
-            connection.query(sql,(e,rows)=>{
-                if(e) reject(e);
-               
-                resolve(rows)                
-            })
-            connection.end()
-           
-        })
-    }
-    
-    querySync_astdb(sql){
-        return new Promise((resolve,reject)=>{
-            connect.poolAsterisk.query(sql,(e,rows)=>{
+            const conn = connect.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
+                      
         })
     }
+    
+    async querySync_astdb(sql){
+        const connection = connect.poolAsterisk
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];
+    }
+    
+    
+
+   
 
     
     //######################Configuração das filas######################
@@ -44,7 +63,7 @@ class Asterisk{
             return false;
         }
 
-        const sql = `INSERT INTO ${connect.db.asterisk}.queue_members 
+        const sql = `INSERT INTO asterisk.queue_members 
                                 (queue_name,interface,membername,state_interface,penalty) 
                          VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
         await this.querySync_astdb(sql)
@@ -53,20 +72,20 @@ class Asterisk{
     //Lista os membros da fila
     async listarMembrosFila(nomeFila){
         const sql = `SELECT * 
-                       FROM ${connect.db.asterisk}.queue_members 
+                       FROM asterisk.queue_members 
                       WHERE queue_name = ${nomeFila}`
         return await this.querySync_astdb(sql)
     }
     //Remove os membros da fila
     async removeMembroFila(empresa,nomeFila,membro){
-        const sql = `DELETE FROM ${connect.db.asterisk}.queue_members 
+        const sql = `DELETE FROM asterisk.queue_members 
                       WHERE queue_name='${nomeFila}' AND membername='${membro}'`
         await this.querySync_astdb(sql)
         return true
     }
     async checkAgenteFila(empresa,queue_name,membername){
         const sql = `SELECT uniqueid 
-                       FROM ${connect.db.asterisk}.queue_members 
+                       FROM asterisk.queue_members 
                       WHERE queue_name='${queue_name}' AND membername='${membername}'`
         const r = await this.querySync_astdb(sql)
         return r.length

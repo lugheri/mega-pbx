@@ -8,17 +8,25 @@ import Clients from './Clients'
 
 class Dashboard{
 
-    querySync(sql,empresa){
+    /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }*/
+    
+    async querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await Clients.serversDbs(empresa)
-            const connection = connect.poolConta(empresa,hostEmp)
-            connection.query(sql,(e,rows)=>{
+            const conn = connect.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
-               
-                resolve(rows)                
+                resolve(rows)
             })
-            connection.end()
-           
+            conn.end()                        
         })
     }
 
@@ -144,6 +152,7 @@ class Dashboard{
             dash["Agentes"]=[]
             const agentes = await Discador.listarAgentesLogados(empresa)
             for(let i = 0; i<agentes.length; i++) {
+                
                 const idAgente=agentes[i].id
                 const totalAtendimento=await Discador.totalAtendimentosAgente(empresa,idAgente)
                 const Improdutivas=await Discador.chamadasProdutividade_Agente(empresa,0,idAgente)

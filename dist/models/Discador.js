@@ -13,27 +13,36 @@ class Discador{
             //console.log(`${title}`,msg)
         // }
     }
-    querySync(sql,empresa){
+    /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }*/
+    
+    async querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await _Clients2.default.serversDbs(empresa)
-            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
-            connection.query(sql,(e,rows)=>{
-                if(e) reject(e);
-               
-                resolve(rows)                
-            })
-            connection.end()
-           
-        })
-    }
-    querySync_astdb(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolAsterisk.query(sql,(e,rows)=>{
+            const conn = _dbConnection2.default.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
+            conn.end()                        
         })
     }
+
+    async querySync_astdb(sql){
+        const connection = _dbConnection2.default.poolAsterisk
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];
+    }
+    
     async mode(empresa){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - mode','Empresa nao recebida')
@@ -74,7 +83,8 @@ class Discador{
         const sql = `SELECT u.id,u.nome,u.usuario,r.estado
                       FROM ${empresa}_dados.users AS u
                       JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
-                     WHERE r.estado>=1 ORDER BY r.datetime_estado DESC;`
+                     WHERE r.estado>=1 ORDER BY r.datetime_estado DESC
+                     LIMIT 5;`
          try{
             const q = await this.querySync(sql,empresa);
             return q
@@ -1512,7 +1522,7 @@ class Discador{
             //Caso o agente tenha solicitado o logout
             if(deslogar==1){
                 //Atualiza o status do agente como indisponivel no asterisk
-                sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
+                sql = `UPDATE asterisk.queue_members 
                           SET paused=1 
                         WHERE membername=${agente}`
                 await this.querySync_astdb(sql)  
@@ -1532,7 +1542,7 @@ class Discador{
         
             //Caso o agente venha de uma pausa dentro da valicadao do novo status 1
             if(estadoAnterior==2){ //Remove a pausa do agente no asterisk   
-                sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
+                sql = `UPDATE asterisk.queue_members 
                           SET paused=0 
                         WHERE membername=${agente}`
                 await this.querySync_astdb(sql)  
@@ -1551,7 +1561,7 @@ class Discador{
 
                 //Caso nenhuma pausa tenha sido pré setada
                 if((statusPausa==0)||(statusPausa==null)){//Disponibiliza o agente no ASTERISK
-                    sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
+                    sql = `UPDATE asterisk.queue_members 
                               SET paused=0 
                            WHERE membername=${agente}`
                     await this.querySync_astdb(sql)  
@@ -1567,7 +1577,7 @@ class Discador{
                     const descricaoPausa = infoPausa[0].descricao
                     const tempo = infoPausa[0].tempo
                     //pausa agente no asterisk
-                    sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
+                    sql = `UPDATE asterisk.queue_members 
                               SET paused=1 
                             WHERE membername='${agente}'`    
                     await this.querySync_astdb(sql)
@@ -1633,7 +1643,7 @@ class Discador{
             const tempo = infoPausa[0].tempo
 
             //pausa agente no asterisk
-            sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members 
+            sql = `UPDATE asterisk.queue_members 
                       SET paused=1 
                     WHERE membername='${agente}'`    
             await this.querySync_astdb(sql)
@@ -1658,7 +1668,7 @@ class Discador{
 
         if(estado==3){
             //Retira o agente do asterisk quando o mesmo esta em ligacao
-            sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members
+            sql = `UPDATE asterisk.queue_members
                       SET paused=1 
                     WHERE membername=${agente}`
             await this.querySync_astdb(sql)  
@@ -1667,7 +1677,7 @@ class Discador{
 
         if(estado==4){
             //teste de remover agente do asterisk quando deslogado
-            sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members
+            sql = `UPDATE asterisk.queue_members
                       SET paused=1 
                     WHERE membername=${agente}`
             await this.querySync_astdb(sql)  
@@ -1685,7 +1695,7 @@ class Discador{
 
         if(estado==6){
              //teste de remover agente do asterisk quando deslogado
-             sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queue_members
+             sql = `UPDATE asterisk.queue_members
                        SET paused=1 
                      WHERE membername=${agente}`
             await this.querySync_astdb(sql)  

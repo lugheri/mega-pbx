@@ -3,27 +3,37 @@ import moment from 'moment';
 import Clients from './Clients'
 
 class Gravacao{
-    querySync(sql,empresa){
+   /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }*/
+    
+    async querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await Clients.serversDbs(empresa)
-            const connection = connect.poolConta(empresa,hostEmp)
-            connection.query(sql,(e,rows)=>{
-                if(e) reject(e);
-               
-                resolve(rows)                
-            })
-            connection.end()
-           
-        })
-    }
-    querySync_crmdb(sql){
-        return new Promise((resolve,reject)=>{
-            connect.poolCRM.query(sql,(e,rows)=>{
+            const conn = connect.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
+            conn.end()                        
         })
-      }
+    }
+    async querySync_crmdb(sql){
+        return new Promise(async(resolve,reject)=>{
+            const conn = connect.poolCRM
+            conn.query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })            
+        })    
+    }
+    
     async listarGravacoes(empresa,inicio,limit){
         const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,
                             r.date_record,

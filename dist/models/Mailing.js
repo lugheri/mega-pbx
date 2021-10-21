@@ -8,21 +8,27 @@ var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
 var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 class Mailing{
-    querySync(sql,empresa){
+    /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }*/
+    
+    async querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await _Clients2.default.serversDbs(empresa)
-            const connection = _dbConnection2.default.poolConta(empresa,hostEmp)
-            connection.query(sql,(e,rows)=>{
+            const conn = _dbConnection2.default.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
-               
-                resolve(rows)                
+                resolve(rows)
             })
-            connection.end()
-           
+            conn.end()                        
         })
     }
-    
-
     //Abre o csv do mailing a ser importado
     async abreCsv(path,delimitador,callback){
         await _csvtojson2.default.call(void 0, {delimiter:delimitador}).fromFile(path,'binary').then(callback)

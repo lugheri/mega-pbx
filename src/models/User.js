@@ -5,46 +5,71 @@ import md5 from 'md5';
 import Discador from './Discador';
 
 class User{
-    /*querySync(sql,empresa){
-        return new Promise((resolve,reject)=>{
-            connect.poolEmpresa.query(sql,(e,rows)=>{
+    async querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await Clients.serversDbs(empresa)
+            const conn = connect.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
+                resolve(rows)
+            })
+            conn.end()                        
+        })
+    }
+    async querySync_crmdb(sql){
+        return new Promise(async(resolve,reject)=>{
+            const conn = connect.poolCRM
+            conn.query(sql,(e,rows)=>{
+                if(e) reject(e);
+                resolve(rows)
+            })            
+        })    
+    }
+    async querySync_astdb(sql){
+        const connection = connect.poolAsterisk
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];
+    }
+
+
+
+
+/*
+    
+    async querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            connect.executeSQLQuery()
+             //const hostEmp = await Clients.serversDbs(empresa)
+            connect.executeSQLQuery = (sql, 'dados', '34.68.33.39', (e,rows)=>{
+                if(e) reject(e);
+
+                resolve(rows)
+            })
+        })
+    }
+    async querySync_crmdb(sql){
+        return new Promise(async(resolve,reject)=>{
+            //const hostEmp = await Clients.serversDbs(empresa)
+            connect.executeSQLQuery = (sql, 'crm', 0, (e,rows)=>{
+                if(e) reject(e);
+
+                resolve(rows)
+            })
+        })
+    }
+    
+    async querySync_astdb(sql){
+        return new Promise(async(resolve,reject)=>{
+            //const hostEmp = await Clients.serversDbs(empresa)
+            connect.executeSQLQuery = (sql, 'asterisk', 0, (e,rows)=>{
+                if(e) reject(e);
+
                 resolve(rows)
             })
         })
     }*/
-
-    querySync(sql,empresa){
-        return new Promise(async(resolve,reject)=>{
-            const hostEmp = await Clients.serversDbs(empresa)
-            const connection = connect.poolConta(empresa,hostEmp)
-            connection.query(sql,(e,rows)=>{
-                if(e) reject(e);
-               
-                resolve(rows)                
-            })
-            connection.end()
-           
-        })
-    }
-
-
-    querySync_crmdb(sql){
-        return new Promise((resolve,reject)=>{
-            connect.poolCRM.query(sql,(e,rows)=>{
-                if(e) reject(e);
-                resolve(rows)
-            })
-        })
-      }
-    querySync_astdb(sql){
-        return new Promise((resolve,reject)=>{
-            connect.poolAsterisk.query(sql,(e,rows)=>{
-                if(e) reject(e);
-                resolve(rows)
-            })
-        })
-    }
 
     async findEmpresa(usuario){
         const u = usuario.split('@');
@@ -220,17 +245,17 @@ class User{
         const r = await this.querySync(sql,empresa)
         //criando ramal no asterisk
         //AOR
-        sql = `INSERT INTO ${connect.db.asterisk}.ps_aors 
+        sql = `INSERT INTO asterisk.ps_aors 
                            (id,max_contacts,remove_existing) 
                     VALUES ('${userId}',1,'yes')`
         const a = await this.querySync_astdb(sql)
         //AUTH
-        sql = `INSERT INTO ${connect.db.asterisk}.ps_auths
+        sql = `INSERT INTO asterisk.ps_auths
                            (id,auth_type,password,realm,username) 
                     VALUES ('${userId}','userpass','mega_${userId}@agent','asterisk','${userId}')`
         const h = await this.querySync_astdb(sql)
         //ENDPOINT
-        sql = `INSERT INTO ${connect.db.asterisk}.ps_endpoints 
+        sql = `INSERT INTO asterisk.ps_endpoints 
                            (id,transport,aors,auth,context,disallow,allow,webrtc,dtls_auto_generate_cert,direct_media,force_rport,ice_support,rewrite_contact,rtp_symmetric) 
                     VALUES ('${userId}','transport-wss','${userId}','${userId}','external','all','alaw,ulaw,opus','yes','yes','no','yes','yes','yes','yes')`
         const e = await this.querySync_astdb(sql)

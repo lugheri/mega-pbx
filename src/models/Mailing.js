@@ -8,21 +8,27 @@ import moment from 'moment';
 import Clients from './Clients'
 
 class Mailing{
-    querySync(sql,empresa){
+    /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }*/
+    
+    async querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await Clients.serversDbs(empresa)
-            const connection = connect.poolConta(empresa,hostEmp)
-            connection.query(sql,(e,rows)=>{
+            const conn = connect.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
-               
-                resolve(rows)                
+                resolve(rows)
             })
-            connection.end()
-           
+            conn.end()                        
         })
     }
-    
-
     //Abre o csv do mailing a ser importado
     async abreCsv(path,delimitador,callback){
         await csv({delimiter:delimitador}).fromFile(path,'binary').then(callback)

@@ -4,6 +4,7 @@ import AsteriskController from '../controllers/AsteriskController';
 import GravacaoController from '../controllers/GravacaoController';
 import ClientsController from '../controllers/ClientsController';
 
+
 module.exports = (routes) => {
     
     routes.get('/listaCampos', (req, res) =>{
@@ -20,6 +21,9 @@ module.exports = (routes) => {
 
     //OPERACOES DO AGI-ASTERISK
     routes.post('/agi/:action',AsteriskController.agi);
+
+    
+   
 
     //MIDDLEWARE DE AUTENTICACAO
     routes.use(authMiddleware);

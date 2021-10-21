@@ -4,6 +4,7 @@ var _AsteriskController = require('../controllers/AsteriskController'); var _Ast
 var _GravacaoController = require('../controllers/GravacaoController'); var _GravacaoController2 = _interopRequireDefault(_GravacaoController);
 var _ClientsController = require('../controllers/ClientsController'); var _ClientsController2 = _interopRequireDefault(_ClientsController);
 
+
 module.exports = (routes) => {
     
     routes.get('/listaCampos', (req, res) =>{
@@ -20,6 +21,9 @@ module.exports = (routes) => {
 
     //OPERACOES DO AGI-ASTERISK
     routes.post('/agi/:action',_AsteriskController2.default.agi);
+
+    
+   
 
     //MIDDLEWARE DE AUTENTICACAO
     routes.use(_auth2.default);
