@@ -1542,6 +1542,7 @@ class Discador{
                 pool.end((err)=>{
                     if(err) console.log(err)
                     }) 
+                    
                 resolve(rows) 
             })
         })              
