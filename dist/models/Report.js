@@ -1,15 +1,29 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
+var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 //import util from 'util'
 
 
 class Report{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
+   /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }*/
+    
+    async querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await _Clients2.default.serversDbs(empresa)
+            const conn = _dbConnection2.default.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
+            conn.end()                        
         })
     }
 
@@ -34,8 +48,8 @@ class Report{
                        JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
                       WHERE 1=1 ${filter}
                       LIMIT ${pag},${reg}`
-                     //console.log('filtrarAgentes',sql)       
-        const users = await this.querySync(sql)
+                         
+        const users = await this.querySync(sql,empresa)
 
       
         return users
@@ -45,21 +59,21 @@ class Report{
         const sql = `SELECT id,equipe 
                        FROM ${empresa}_dados.users_equipes 
                       WHERE status=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async filtroCampanhas(empresa){
         const sql = `SELECT id,nome 
                        FROM ${empresa}_dados.campanhas 
                       WHERE status=1 AND estado=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async filtroMailings(empresa){
         const sql = `SELECT id,nome 
                        FROM ${empresa}_dados.mailings 
                       WHERE pronto=1 AND status=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     } 
     
     async usuarioCampanha(empresa,idAgente,idCampanha){
@@ -68,7 +82,7 @@ class Report{
                        JOIN ${empresa}_dados.campanhas_filas as f ON c.id=f.idCampanha
                        JOIN ${empresa}_dados.agentes_filas AS a ON a.fila=f.idFila
                       WHERE a.ramal='${idAgente}' AND c.id=${idCampanha} LIMIT 1`
-        const u = await this.querySync(sql)
+        const u = await this.querySync(sql,empresa)
         return u.length
     }
 
@@ -80,7 +94,7 @@ class Report{
                   LEFT JOIN ${empresa}_dados.users_equipes AS eq ON eq.id=us.equipe
                       WHERE us.id=${agente}`
                       
-        const user = await this.querySync(sql)
+        const user = await this.querySync(sql,empresa)
         return user
     }
 
@@ -98,7 +112,7 @@ class Report{
                 ORDER BY id ASC 
                          LIMIT 1`
         }
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async infoEstadoAgente(empresa,ramal){        
@@ -106,7 +120,7 @@ class Report{
                        FROM ${empresa}_dados.user_ramal AS r
                        JOIN ${empresa}_dados.estadosAgente AS e ON r.estado=e.cod
                       WHERE r.ramal='${ramal}'`
-        const e = await this.querySync(sql)
+        const e = await this.querySync(sql,empresa)
         return e[0].estado
     }
 
@@ -123,7 +137,7 @@ class Report{
         const sql = `SELECT SUM(tempo_total) AS tempo
                        FROM ${empresa}_dados.tempo_pausa 
                       WHERE 1=1 ${filter}`
-        const t = await this.querySync(sql)
+        const t = await this.querySync(sql,empresa)
         return t[0].tempo
     }  
 
@@ -132,7 +146,7 @@ class Report{
         let sql = `SELECT TIMESTAMPDIFF (SECOND, datetime_estado, NOW()) as tempo
                      FROM ${empresa}_dados.user_ramal 
                     WHERE userId=${ramal}`
-        const t = await this.querySync(sql)
+        const t = await this.querySync(sql,empresa)
         if(t.length>0){
             tempo=t[0].tempo
         }
@@ -159,7 +173,7 @@ class Report{
                   LEFT JOIN ${empresa}_dados.users AS u ON c.ramal=u.id
                       WHERE tipo_ligacao='discador' `
         //console.log('chamadasSimultaneas',sql)
-        const c = await this.querySync(sql)     
+        const c = await this.querySync(sql,empresa)     
         return c   
     }
 
@@ -198,7 +212,7 @@ class Report{
                   LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
                       WHERE 1=1 ${filter} LIMIT ${pag},${reg}`
         //console.log('chamadasRealizadas',sql)
-        return await this.querySync(sql)        
+        return await this.querySync(sql,empresa)        
     }
 
     async statusTabulacaoChamada(empresa,idAgente){
@@ -206,7 +220,7 @@ class Report{
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                       WHERE ramal='${idAgente}' AND tabulando=1 AND desligada=1
                       LIMIT 1`
-        const t = await this.querySync(sql)    
+        const t = await this.querySync(sql,empresa)    
         return t.length
     }
 
@@ -215,7 +229,7 @@ class Report{
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                       WHERE ramal='${idAgente}' AND falando=1
                       LIMIT 1`
-        const f = await this.querySync(sql) 
+        const f = await this.querySync(sql,empresa) 
         return f.length
     }
 
@@ -224,7 +238,7 @@ class Report{
                        FROM ${empresa}_dados.tempo_ligacao
                       WHERE uniqueid=${uniqueid}
                       LIMIT 1`
-        const t = await this.querySync(sql)
+        const t = await this.querySync(sql,empresa)
         if(t.length==0){
             return 0
         }
@@ -237,7 +251,7 @@ class Report{
                  FROM ${empresa}_dados.tempo_ligacao 
                 WHERE id=${t[0].id}`
         //console.log('timeCall',sql)
-        const d = await this.querySync(sql)
+        const d = await this.querySync(sql,empresa)
         return d[0].tempo
     }
 
@@ -245,7 +259,7 @@ class Report{
         let sql = `SELECT SUM(tempo_total) AS tempo
                      FROM ${empresa}_dados.tempo_ligacao
                     WHERE idAgente=${idAgente} AND tipoDiscador='receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
-        const t = await this.querySync(sql)
+        const t = await this.querySync(sql,empresa)
         return t[0].tempo
     }
 
@@ -253,7 +267,7 @@ class Report{
         let sql = `SELECT SUM(tempo_total) AS tempo
                      FROM ${empresa}_dados.tempo_ligacao
                     WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND tipoDiscador<>'manual' AND entrada>='${de}' AND saida <= '${ate}'`
-        const t = await this.querySync(sql)
+        const t = await this.querySync(sql,empresa)
         return t[0].tempo
     }   
 
@@ -261,7 +275,7 @@ class Report{
         let sql = `SELECT SUM(tempo_total) AS tempo
                      FROM ${empresa}_dados.tempo_ligacao
                     WHERE idAgente=${idAgente} AND tipoDiscador='manual' AND entrada>='${de}' AND saida <= '${ate}'`
-        const t = await this.querySync(sql)
+        const t = await this.querySync(sql,empresa)
         return t[0].tempo
     }   
 
@@ -276,7 +290,7 @@ class Report{
                        FROM ${empresa}_dados.historico_atendimento 
                       WHERE 1=1 ${filter}`
                       //console.log('chamadasAtendidas',sql)
-        const ca = await this.querySync(sql)
+        const ca = await this.querySync(sql,empresa)
         
         return ca[0].total
     }
@@ -299,7 +313,7 @@ class Report{
                        FROM ${empresa}_dados.${tabela} 
                       WHERE 1=1 ${filter}`
                       //console.log('tempoMedioAgente',sql)
-        const tm = await this.querySync(sql)
+        const tm = await this.querySync(sql,empresa)
         return Math.floor(tm[0].tempoMedio);
     }
 
@@ -320,7 +334,7 @@ class Report{
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE 1=1 ${filter};`
                       //console.log('chamadasProdutividade',sql)
-        const p=await this.querySync(sql);
+        const p=await this.querySync(sql,empresa);
         return p[0].produtivas
     }
 
@@ -328,7 +342,7 @@ class Report{
         const sql = `SELECT COUNT(id) AS atendidas
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE agente>0 AND campanha=${campanha}`
-        const a=await this.querySync(sql);
+        const a=await this.querySync(sql,empresa);
         return a[0].atendidas
     }
 
@@ -336,7 +350,7 @@ class Report{
         const sql = `SELECT COUNT(id) AS produtivas
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE produtivo=1 AND campanha=${campanha}`
-        const a=await this.querySync(sql);
+        const a=await this.querySync(sql,empresa);
         return a[0].produtivas
     }
 
@@ -344,7 +358,7 @@ class Report{
         const sql = `SELECT COUNT(id) AS atendidas
                        FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                       WHERE falando=1 AND id_campanha=${campanha}`
-            const a=await this.querySync(sql);
+            const a=await this.querySync(sql,empresa);
             return a[0].atendidas
     }
 
@@ -352,7 +366,7 @@ class Report{
         const sql = `SELECT COUNT(id) AS nao_atendidas
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE agente=0 AND campanha=${campanha}`
-        const na=await this.querySync(sql);
+        const na=await this.querySync(sql,empresa);
         return na[0].nao_atendidas
     }
 
@@ -360,7 +374,7 @@ class Report{
         const sql = `SELECT COUNT(id) AS contatados
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE contatado='S' AND campanha=${idCampanha}`
-        const c=await this.querySync(sql);
+        const c=await this.querySync(sql,empresa);
         return c[0].contatados
     }
 
@@ -368,7 +382,7 @@ class Report{
         const sql = `SELECT agressividade 
                        FROM ${empresa}_dados.campanhas_discador
                       WHERE idCampanha=${idCampanha}`
-        const c=await this.querySync(sql);
+        const c=await this.querySync(sql,empresa);
         if(c.length==0){
             return 0
         }
@@ -379,7 +393,7 @@ class Report{
         const sql = `UPDATE ${empresa}_dados.campanhas_discador 
                         SET agressividade=${agressividade}
                       WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
 
     }
 
@@ -388,7 +402,7 @@ class Report{
         const sql = `SELECT AVG(tempo_total) as tempoMedio 
                        FROM ${empresa}_dados.tempo_ligacao
                       WHERE idCampanha=${idCampanha}`
-        const tm=await this.querySync(sql);
+        const tm=await this.querySync(sql,empresa);
         return tm[0].tempoMedio
     }
 
@@ -402,7 +416,7 @@ class Report{
         const sql = `SELECT count(id) AS total 
                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                       WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${filter}`
-        const total_mailing= await this.querySync(sql)
+        const total_mailing= await this.querySync(sql,empresa)
         return total_mailing[0].total
     }   
 
@@ -410,7 +424,7 @@ class Report{
         const sql = `SELECT COUNT(id) AS chamadas
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE data='${hoje}' AND campanha=${idCampanha}`
-        const c=await this.querySync(sql);
+        const c=await this.querySync(sql,empresa);
         return c[0].chamadas
     }
 
@@ -419,7 +433,7 @@ class Report{
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE campanha=${idCampanha} AND data<'${hoje}' GROUP BY dataCall
                       ORDER BY dataCall ASC LIMIT 7`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
 
 
@@ -427,7 +441,7 @@ class Report{
         const sql = `SELECT COUNT(id) AS chamadas
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE data='${hoje}' AND agente>0 AND campanha=${idCampanha}`
-        const c = await this.querySync(sql);
+        const c = await this.querySync(sql,empresa);
         return c[0].chamadas
     }
     async ChamadasCompletadas_UltimosDias(empresa,idCampanha,hoje){
@@ -435,7 +449,7 @@ class Report{
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE campanha=${idCampanha} AND agente>0 AND data<'${hoje}' GROUP BY dataCall
                       ORDER BY dataCall ASC LIMIT 7`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
 
     
@@ -444,7 +458,7 @@ class Report{
                        FROM ${empresa}_dados.historico_atendimento AS h
                        JOIN ${empresa}_dados.tabulacoes_status AS t ON h.status_tabulacao=t.id
                       WHERE h.data='${hoje}' AND h.campanha=${idCampanha} AND t.venda=1`
-        const c=await this.querySync(sql);
+        const c=await this.querySync(sql,empresa);
         return c[0].chamadas
     }
     async totalChamadasVendas_UltimosDias(empresa,idCampanha,hoje){
@@ -453,14 +467,14 @@ class Report{
                        JOIN ${empresa}_dados.tabulacoes_status AS t ON h.status_tabulacao=t.id
                       WHERE campanha=${idCampanha} AND data<'${hoje}' GROUP BY dataCall
                       ORDER BY dataCall ASC LIMIT 7`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
 
     async totalChamadasAbandonadasDia(empresa,idCampanha,hoje){
         const sql = `SELECT COUNT(id) AS abandonadas
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE data='${hoje}' AND obs_tabulacao='ABANDONADA' AND campanha=${idCampanha}`
-        const a=await this.querySync(sql);
+        const a=await this.querySync(sql,empresa);
         return a[0].abandonadas
     }
     async totalChamadasAbandonadas_UltimosDias(empresa,idCampanha,hoje){
@@ -468,7 +482,7 @@ class Report{
                        FROM ${empresa}_dados.historico_atendimento
                       WHERE campanha=${idCampanha} AND data<'${hoje}' AND obs_tabulacao='ABANDONADA' GROUP BY dataCall
                       ORDER BY dataCall ASC LIMIT 7`
-        return await this.querySync(sql);
+        return await this.querySync(sql,empresa);
     }
 
    
@@ -496,7 +510,7 @@ class Report{
                    FROM ${empresa}_dados.campanhas as c 
               LEFT JOIN ${empresa}_dados.campanhas_horarios AS h ON h.id_campanha=c.id 
                   WHERE c.estado=1 AND c.status=1 AND c.id=${idCampanha}`
-        const rowsCampanhasAtivas = await this.querySync(sql) 
+        const rowsCampanhasAtivas = await this.querySync(sql,empresa) 
         if(rowsCampanhasAtivas.length==0){
             const monitoramentoCampanhaIndividual=false
             callback(null,monitoramentoCampanhaIndividual)
@@ -511,7 +525,7 @@ class Report{
         sql=`SELECT estado 
                FROM ${empresa}_dados.campanhas_status 
               WHERE idCampanha=${idCampanha}`
-        const rowEstado = await this.querySync(sql)
+        const rowEstado = await this.querySync(sql,empresa)
         let estado = false
         if(rowEstado.length!=0){
             if(rowEstado[0].estado==1){
@@ -524,7 +538,7 @@ class Report{
         sql=`SELECT COUNT(id) AS atendidas 
                FROM ${empresa}_dados.historico_atendimento
               WHERE campanha=${idCampanha} AND contatado='S'`
-        const rowAtendidas = await this.querySync(sql)
+        const rowAtendidas = await this.querySync(sql,empresa)
         const atendidas=rowAtendidas[0].atendidas
         monitoramentoCampanhaIndividual['ChamadasAtendidasNoTotal']=atendidas
 
@@ -532,7 +546,7 @@ class Report{
                FROM ${empresa}_dados.tabulacoes_status AS s 
                JOIN ${empresa}_dados.campanhas_listastabulacao AS l ON l.idListaTabulacao=s.idLista 
               WHERE l.idCampanha=${idCampanha} AND s.venda=1 `
-        const rowStatusVenda = await this.querySync(sql)
+        const rowStatusVenda = await this.querySync(sql,empresa)
         let statusVenda=0
         let totalVendas=0
         if(rowStatusVenda.length!=0){
@@ -540,7 +554,7 @@ class Report{
             sql=`SELECT COUNT(id) as totalVendas 
                    FROM ${empresa}_dados.historico_atendimento
                   WHERE status_tabulacao=${statusVenda} AND campanha=${idCampanha}`
-            const rowVendas = await this.querySync(sql)
+            const rowVendas = await this.querySync(sql,empresa)
             totalVendas = rowVendas[0].totalVendas            
         }
         monitoramentoCampanhaIndividual['TabulacaoDeVendasNoTotal']=totalVendas
@@ -549,13 +563,13 @@ class Report{
         sql=`SELECT COUNT(id) as emAtendimento 
                FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
               WHERE falando=1 AND id_campanha=${idCampanha}`
-        const rowEmAtendimento = await this.querySync(sql)
+        const rowEmAtendimento = await this.querySync(sql,empresa)
         monitoramentoCampanhaIndividual['ChamadasEmAtendimento']=rowEmAtendimento[0].emAtendimento
 
         sql=`SELECT COUNT(id) AS naoAtendidas 
                FROM ${empresa}_dados.historico_atendimento 
               WHERE campanha=${idCampanha} AND contatado='N'`
-        const rowNaoAtendidas = await this.querySync(sql)
+        const rowNaoAtendidas = await this.querySync(sql,empresa)
         monitoramentoCampanhaIndividual['ChamadasNãoAtendidas']=rowNaoAtendidas[0].naoAtendidas
         
         let conversao=0
@@ -569,7 +583,7 @@ class Report{
         sql=`SELECT AVG(tempo_total) as TMA 
                FROM ${empresa}_dados.tempo_ligacao 
               WHERE idCampanha=${idCampanha}`
-        const rowsTMA = await this.querySync(sql)  
+        const rowsTMA = await this.querySync(sql,empresa)  
         monitoramentoCampanhaIndividual['TempoMedioDeAtendimento']=await this.converteSeg_tempo(rowsTMA[0].TMA)
         
         monitoramentoCampanhaIndividual['GraficoDeChamadasSimultaneas']={}
@@ -577,7 +591,7 @@ class Report{
         sql=`SELECT total,conectadas 
                FROM ${empresa}_dados.log_chamadas_simultaneas 
               ORDER BY id DESC LIMIT 12`        
-        const rowsChamadasSimultaneas = await this.querySync(sql)          
+        const rowsChamadasSimultaneas = await this.querySync(sql,empresa)          
         monitoramentoCampanhaIndividual['GraficoDeChamadasSimultaneas']['Conectados']=[]
         monitoramentoCampanhaIndividual['GraficoDeChamadasSimultaneas']['ChamadasSimultaneas']=[]
         for(let i=0;i<rowsChamadasSimultaneas.length;i++){
@@ -592,13 +606,13 @@ class Report{
                FROM ${empresa}_dados.mailings as m 
                JOIN ${empresa}_dados.campanhas_mailing AS c ON m.id=c.idMailing 
               WHERE idCampanha=${idCampanha}`        
-        const rowsTotalMailing = await this.querySync(sql)     
+        const rowsTotalMailing = await this.querySync(sql,empresa)     
         const totalRegistros = rowsTotalMailing[0].totalRegistros
 
         sql=`SELECT count(id) as trabalhados 
                FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
               WHERE contatado='S' AND idCampanha=${idCampanha}`        
-        const rowsTrabalhadas = await this.querySync(sql)  
+        const rowsTrabalhadas = await this.querySync(sql,empresa)  
         let trabalhados=0
         let produtivas=0
         let improdutivas=0
@@ -610,7 +624,7 @@ class Report{
         sql=`SELECT count(id) as produtivo 
                FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
               WHERE contatado='S' AND produtivo=1 AND idCampanha=${idCampanha}`        
-        const rowsProdutivas = await this.querySync(sql)  
+        const rowsProdutivas = await this.querySync(sql,empresa)  
         if(produtivas>0){   
         const produtivas = (rowsProdutivas[0].produtivo/rowsTrabalhadas[0].trabalhados)*100
         }
@@ -619,7 +633,7 @@ class Report{
         sql=`SELECT count(id) as improdutivas
                FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
               WHERE contatado='S' AND produtivo=0 AND idCampanha=${idCampanha}`        
-        const rowsImprodutivas = await this.querySync(sql)   
+        const rowsImprodutivas = await this.querySync(sql,empresa)   
         if(improdutivas>0){   
             improdutivas = (rowsImprodutivas[0].improdutivas/rowsTrabalhadas[0].trabalhados)*100
         }
@@ -632,7 +646,7 @@ class Report{
         sql=`SELECT COUNT(id) AS chamadas 
                FROM ${empresa}_dados.historico_atendimento 
               WHERE data=date(now()) AND campanha=${idCampanha}`
-        const rowsCallsHoje = await this.querySync(sql)   
+        const rowsCallsHoje = await this.querySync(sql,empresa)   
         monitoramentoCampanhaIndividual['ConsolidadoDodia']['TotalDeChamadas']['total']=rowsCallsHoje[0].chamadas
         
         sql=`SELECT COUNT(id) AS chamadas,DATE_FORMAT(data,'%d/%m/%Y') AS label 
@@ -641,7 +655,7 @@ class Report{
            GROUP BY data 
            ORDER BY data 
                DESC LIMIT 7`
-        const rowsCallsLastWeeK = await this.querySync(sql) 
+        const rowsCallsLastWeeK = await this.querySync(sql,empresa) 
         monitoramentoCampanhaIndividual['ConsolidadoDodia']['TotalDeChamadas']['labelChart']=[]
         monitoramentoCampanhaIndividual['ConsolidadoDodia']['TotalDeChamadas']['dataChart']=[]
         for(let i=0;i<rowsCallsLastWeeK.length;i++){
@@ -654,7 +668,7 @@ class Report{
         sql=`SELECT COUNT(id) AS total 
                FROM ${empresa}_dados.historico_atendimento 
                WHERE data=date(now()) AND contatado='S' AND campanha=${idCampanha}`
-        const rowsCompletedHoje = await this.querySync(sql)   
+        const rowsCompletedHoje = await this.querySync(sql,empresa)   
         monitoramentoCampanhaIndividual['ConsolidadoDodia']['ChamadasCompletadasHoje']['total']=rowsCompletedHoje[0].total
         
         sql=`SELECT COUNT(id) AS chamadas,DATE_FORMAT(data,'%d/%m/%Y') AS label 
@@ -662,7 +676,7 @@ class Report{
               WHERE data<>DATE(NOW()) AND contatado='S' AND campanha=${idCampanha} 
            GROUP BY data 
            ORDER BY data DESC LIMIT 7`
-        const rowsCompletedLastWeeK = await this.querySync(sql) 
+        const rowsCompletedLastWeeK = await this.querySync(sql,empresa) 
         monitoramentoCampanhaIndividual['ConsolidadoDodia']['ChamadasCompletadasHoje']['labelChart']=[]
         monitoramentoCampanhaIndividual['ConsolidadoDodia']['ChamadasCompletadasHoje']['dataChart']=[]
         for(let i=0;i<rowsCompletedLastWeeK.length;i++){
@@ -679,7 +693,7 @@ class Report{
             sql=`SELECT COUNT(id) AS total 
                    FROM ${empresa}_dados.historico_atendimento 
                   WHERE data=date(now()) AND status_tabulacao=${statusVenda} AND campanha=${idCampanha}`
-            const rowsSalesHoje = await this.querySync(sql)   
+            const rowsSalesHoje = await this.querySync(sql,empresa)   
             monitoramentoCampanhaIndividual['ConsolidadoDodia']['TabulacaoDeVendasHoje']['total']=rowsSalesHoje[0].total
             
             sql=`SELECT COUNT(id) AS chamadas,DATE_FORMAT(data,'%d/%m/%Y') AS label 
@@ -688,7 +702,7 @@ class Report{
                    GROUP BY data 
                    ORDER BY data DESC 
                    LIMIT 7`
-            const rowsSalesLastWeeK = await this.querySync(sql) 
+            const rowsSalesLastWeeK = await this.querySync(sql,empresa) 
             monitoramentoCampanhaIndividual['ConsolidadoDodia']['TabulacaoDeVendasHoje']['labelChart']=[]
             monitoramentoCampanhaIndividual['ConsolidadoDodia']['TabulacaoDeVendasHoje']['dataChart']=[]
             for(let i=0;i<rowsSalesLastWeeK.length;i++){
@@ -702,7 +716,7 @@ class Report{
         sql=`SELECT COUNT(id) AS total 
                FROM ${empresa}_dados.historico_atendimento 
                WHERE data=date(now()) AND obs_tabulacao='ABANDONOU FILA' AND campanha=${idCampanha}`
-        const rowsAbandonedHoje = await this.querySync(sql)   
+        const rowsAbandonedHoje = await this.querySync(sql,empresa)   
         monitoramentoCampanhaIndividual['ConsolidadoDodia']['ChamadasAbandonadas']['total']=rowsAbandonedHoje[0].total
         
         sql=`SELECT COUNT(id) AS chamadas,DATE_FORMAT(data,'%d/%m/%Y') AS label 
@@ -711,7 +725,7 @@ class Report{
               GROUP BY data 
               ORDER BY data DESC 
               LIMIT 7`
-        const rowsAbandonedLastWeeK = await this.querySync(sql) 
+        const rowsAbandonedLastWeeK = await this.querySync(sql,empresa) 
         monitoramentoCampanhaIndividual['ConsolidadoDodia']['ChamadasAbandonadas']['labelChart']=[]
         monitoramentoCampanhaIndividual['ConsolidadoDodia']['ChamadasAbandonadas']['dataChart']=[]
         for(let i=0;i<rowsAbandonedLastWeeK.length;i++){
@@ -724,28 +738,28 @@ class Report{
                  FROM ${empresa}_dados.campanhas_filas AS cf 
                  JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=cf.id 
                 WHERE cf.idCampanha=${idCampanha} AND af.estado=4`
-        const rowAgentesIndisponiveis = await this.querySync(sql)
+        const rowAgentesIndisponiveis = await this.querySync(sql,empresa)
         monitoramentoCampanhaIndividual['DadosAgente']['indisponiveis']=rowAgentesIndisponiveis[0].total
 
         sql = `SELECT COUNT(af.id) as total 
                  FROM ${empresa}_dados.campanhas_filas AS cf 
                  JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=cf.id 
                 WHERE cf.idCampanha=${idCampanha} AND af.estado=1`
-        const rowAgentesDisponiveis = await this.querySync(sql)
+        const rowAgentesDisponiveis = await this.querySync(sql,empresa)
         monitoramentoCampanhaIndividual['DadosAgente']['Disponiveis']=rowAgentesDisponiveis[0].total
 
         sql = `SELECT COUNT(af.id) as total 
                  FROM ${empresa}_dados.campanhas_filas AS cf 
                  JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=cf.id 
                 WHERE cf.idCampanha=${idCampanha} AND af.estado=3`
-        const rowAgentesFalando = await this.querySync(sql)
+        const rowAgentesFalando = await this.querySync(sql,empresa)
         monitoramentoCampanhaIndividual['DadosAgente']['Falando']=rowAgentesFalando[0].total
 
         sql = `SELECT COUNT(af.id) as total 
                  FROM ${empresa}_dados.campanhas_filas AS cf 
                  JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=cf.id 
                 WHERE cf.idCampanha=${idCampanha} AND af.estado=2`
-        const rowAgentesPausados = await this.querySync(sql)
+        const rowAgentesPausados = await this.querySync(sql,empresa)
         monitoramentoCampanhaIndividual['DadosAgente']['Pausados']=rowAgentesPausados[0].total      
        
        
@@ -758,7 +772,7 @@ class Report{
                    FROM ${empresa}_dados.campanhas as c 
               LEFT JOIN ${empresa}_dados.campanhas_horarios AS h ON h.id_campanha=c.id
                   WHERE c.estado=1 AND c.status=1`
-        const rowsCampanhasAtivas = await this.querySync(sql) 
+        const rowsCampanhasAtivas = await this.querySync(sql,empresa) 
         if(rowsCampanhasAtivas.length==0){
             const monitoramentoCampanhas=false
             callback(null,monitoramentoCampanhas)
@@ -776,7 +790,7 @@ class Report{
         sql=`SELECT COUNT(id) AS atendidas 
                FROM ${empresa}_dados.historico_atendimento 
               WHERE contatado='S'`
-        const rowAtendidas = await this.querySync(sql)
+        const rowAtendidas = await this.querySync(sql,empresa)
         const atendidas=rowAtendidas[0].atendidas
         monitoramentoCampanhas['ChamadasAtendidasNoTotal']=atendidas
 
@@ -784,7 +798,7 @@ class Report{
                FROM ${empresa}_dados.tabulacoes_status AS s 
                JOIN ${empresa}_dados.campanhas_listastabulacao AS l ON l.idListaTabulacao=s.idLista 
                WHERE s.venda=1 `
-        const rowStatusVenda = await this.querySync(sql)
+        const rowStatusVenda = await this.querySync(sql,empresa)
         let statusVenda=0
         let totalVendas=0
         if(rowStatusVenda.length!=0){
@@ -792,7 +806,7 @@ class Report{
             sql=`SELECT COUNT(id) as totalVendas 
                    FROM ${empresa}_dados.historico_atendimento 
                    WHERE status_tabulacao=${statusVenda}`
-            const rowVendas = await this.querySync(sql)
+            const rowVendas = await this.querySync(sql,empresa)
             totalVendas = rowVendas[0].totalVendas            
         }
         monitoramentoCampanhas['TabulacaoDeVendasNoTotal']=totalVendas
@@ -801,13 +815,13 @@ class Report{
         sql=`SELECT COUNT(id) as emAtendimento 
                FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                WHERE falando=1`
-        const rowEmAtendimento = await this.querySync(sql)
+        const rowEmAtendimento = await this.querySync(sql,empresa)
         monitoramentoCampanhas['ChamadasEmAtendimento']=rowEmAtendimento[0].emAtendimento
 
         sql=`SELECT COUNT(id) AS naoAtendidas 
               FROM ${empresa}_dados.historico_atendimento 
               WHERE contatado='N'`
-        const rowNaoAtendidas = await this.querySync(sql)
+        const rowNaoAtendidas = await this.querySync(sql,empresa)
         monitoramentoCampanhas['ChamadasNãoAtendidas']=rowNaoAtendidas[0].naoAtendidas
         let conversao=0
         if(totalVendas>0){
@@ -818,7 +832,7 @@ class Report{
         
         sql=`SELECT AVG(tempo_total) as TMA 
                FROM ${empresa}_dados.tempo_ligacao`
-        const rowsTMA = await this.querySync(sql)  
+        const rowsTMA = await this.querySync(sql,empresa)  
         monitoramentoCampanhas['TempoMedioDeAtendimento']=await this.converteSeg_tempo(rowsTMA[0].TMA)
         
         monitoramentoCampanhas['GraficoDeChamadasSimultaneas']={}
@@ -827,7 +841,7 @@ class Report{
                FROM ${empresa}_dados.log_chamadas_simultaneas 
                ORDER BY id DESC 
                LIMIT 12`        
-        const rowsChamadasSimultaneas = await this.querySync(sql)          
+        const rowsChamadasSimultaneas = await this.querySync(sql,empresa)          
         monitoramentoCampanhas['GraficoDeChamadasSimultaneas']['Conectados']=[]
         monitoramentoCampanhas['GraficoDeChamadasSimultaneas']['ChamadasSimultaneas']=[]
         for(let i=0;i<rowsChamadasSimultaneas.length;i++){
@@ -840,13 +854,13 @@ class Report{
         sql=`SELECT SUM(m.totalReg) as totalRegistros 
                FROM ${empresa}_dados.mailings as m 
                JOIN ${empresa}_dados.campanhas_mailing AS c ON m.id=c.idMailing`        
-        const rowsTotalMailing = await this.querySync(sql)     
+        const rowsTotalMailing = await this.querySync(sql,empresa)     
         const totalRegistros = rowsTotalMailing[0].totalRegistros
 
         sql=`SELECT count(id) as trabalhados 
                FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                WHERE contatado='S'`        
-        const rowsTrabalhadas = await this.querySync(sql)  
+        const rowsTrabalhadas = await this.querySync(sql,empresa)  
         let trabalhados=0
         let produtivas=0
         let improdutivas=0
@@ -860,7 +874,7 @@ class Report{
         sql=`SELECT count(id) as produtivo 
                FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                WHERE contatado='S' AND produtivo=1`        
-        const rowsProdutivas = await this.querySync(sql)     
+        const rowsProdutivas = await this.querySync(sql,empresa)     
         if(produtivas>0){
             produtivas = (rowsProdutivas[0].produtivo/rowsTrabalhadas[0].trabalhados)*100
         }
@@ -869,7 +883,7 @@ class Report{
         sql=`SELECT count(id) as improdutivas 
                FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                WHERE contatado='S' AND produtivo=0`        
-        const rowsImprodutivas = await this.querySync(sql)   
+        const rowsImprodutivas = await this.querySync(sql,empresa)   
         if(improdutivas>0){
              improdutivas = (rowsImprodutivas[0].improdutivas/rowsTrabalhadas[0].trabalhados)*100
         }
@@ -881,7 +895,7 @@ class Report{
         sql=`SELECT COUNT(id) AS chamadas
                FROM ${empresa}_dados.historico_atendimento 
                WHERE data=date(now())`
-        const rowsCallsHoje = await this.querySync(sql)   
+        const rowsCallsHoje = await this.querySync(sql,empresa)   
         monitoramentoCampanhas['ConsolidadoDodia']['TotalDeChamadas']['total']=rowsCallsHoje[0].chamadas
         
         sql=`SELECT COUNT(id) AS chamadas,DATE_FORMAT(data,'%d/%m/%Y') AS label 
@@ -890,7 +904,7 @@ class Report{
                GROUP BY data 
                ORDER BY data DESC 
                LIMIT 7`
-        const rowsCallsLastWeeK = await this.querySync(sql) 
+        const rowsCallsLastWeeK = await this.querySync(sql,empresa) 
         monitoramentoCampanhas['ConsolidadoDodia']['TotalDeChamadas']['labelChart']=[]
         monitoramentoCampanhas['ConsolidadoDodia']['TotalDeChamadas']['dataChart']=[]
         for(let i=0;i<rowsCallsLastWeeK.length;i++){
@@ -903,7 +917,7 @@ class Report{
         sql=`SELECT COUNT(id) AS total 
                FROM ${empresa}_dados.historico_atendimento 
                WHERE data=date(now()) AND contatado='S'`
-        const rowsCompletedHoje = await this.querySync(sql)   
+        const rowsCompletedHoje = await this.querySync(sql,empresa)   
         monitoramentoCampanhas['ConsolidadoDodia']['ChamadasCompletadasHoje']['total']=rowsCompletedHoje[0].total
         
         sql=`SELECT COUNT(id) AS chamadas,DATE_FORMAT(data,'%d/%m/%Y') AS label 
@@ -912,7 +926,7 @@ class Report{
                GROUP BY data 
                ORDER BY data DESC 
                LIMIT 7`
-        const rowsCompletedLastWeeK = await this.querySync(sql) 
+        const rowsCompletedLastWeeK = await this.querySync(sql,empresa) 
         monitoramentoCampanhas['ConsolidadoDodia']['ChamadasCompletadasHoje']['labelChart']=[]
         monitoramentoCampanhas['ConsolidadoDodia']['ChamadasCompletadasHoje']['dataChart']=[]
         for(let i=0;i<rowsCompletedLastWeeK.length;i++){
@@ -929,7 +943,7 @@ class Report{
             sql=`SELECT COUNT(id) AS total 
                    FROM ${empresa}_dados.historico_atendimento 
                    WHERE data=date(now()) AND status_tabulacao=${statusVenda}`
-            const rowsSalesHoje = await this.querySync(sql)   
+            const rowsSalesHoje = await this.querySync(sql,empresa)   
             monitoramentoCampanhas['ConsolidadoDodia']['TabulacaoDeVendasHoje']['total']=rowsSalesHoje[0].total
             
             sql=`SELECT COUNT(id) AS chamadas,DATE_FORMAT(data,'%d/%m/%Y') AS label 
@@ -937,7 +951,7 @@ class Report{
                    WHERE data<>DATE(NOW()) AND status_tabulacao=${statusVenda} 
                    GROUP BY data 
                    ORDER BY data DESC LIMIT 7`
-            const rowsSalesLastWeeK = await this.querySync(sql) 
+            const rowsSalesLastWeeK = await this.querySync(sql,empresa) 
             monitoramentoCampanhas['ConsolidadoDodia']['TabulacaoDeVendasHoje']['labelChart']=[]
             monitoramentoCampanhas['ConsolidadoDodia']['TabulacaoDeVendasHoje']['dataChart']=[]
             for(let i=0;i<rowsSalesLastWeeK.length;i++){
@@ -951,7 +965,7 @@ class Report{
         sql=`SELECT COUNT(id) AS total 
                FROM ${empresa}_dados.historico_atendimento 
                WHERE data=date(now()) AND obs_tabulacao='ABANDONOU FILA'`
-        const rowsAbandonedHoje = await this.querySync(sql)   
+        const rowsAbandonedHoje = await this.querySync(sql,empresa)   
         monitoramentoCampanhas['ConsolidadoDodia']['ChamadasAbandonadas']['total']=rowsAbandonedHoje[0].total
         
         sql=`SELECT COUNT(id) AS chamadas,DATE_FORMAT(data,'%d/%m/%Y') AS label 
@@ -960,7 +974,7 @@ class Report{
                GROUP BY data 
                ORDER BY data DESC 
                LIMIT 7`
-        const rowsAbandonedLastWeeK = await this.querySync(sql) 
+        const rowsAbandonedLastWeeK = await this.querySync(sql,empresa) 
         monitoramentoCampanhas['ConsolidadoDodia']['ChamadasAbandonadas']['labelChart']=[]
         monitoramentoCampanhas['ConsolidadoDodia']['ChamadasAbandonadas']['dataChart']=[]
         for(let i=0;i<rowsAbandonedLastWeeK.length;i++){
@@ -972,25 +986,25 @@ class Report{
         sql = `SELECT COUNT(id) as total 
                  FROM ${empresa}_dados.user_ramal 
                  WHERE estado=4`
-        const rowAgentesIndisponiveis = await this.querySync(sql)
+        const rowAgentesIndisponiveis = await this.querySync(sql,empresa)
         monitoramentoCampanhas['DadosAgente']['indisponiveis']=rowAgentesIndisponiveis[0].total
 
         sql = `SELECT COUNT(id) as total 
                  FROM ${empresa}_dados.user_ramal 
                  WHERE estado=1`
-        const rowAgentesDisponiveis = await this.querySync(sql)
+        const rowAgentesDisponiveis = await this.querySync(sql,empresa)
         monitoramentoCampanhas['DadosAgente']['Disponiveis']=rowAgentesDisponiveis[0].total
 
         sql = `SELECT COUNT(id) as total 
                  FROM ${empresa}_dados.user_ramal 
                  WHERE estado=3`
-        const rowAgentesFalando = await this.querySync(sql)
+        const rowAgentesFalando = await this.querySync(sql,empresa)
         monitoramentoCampanhas['DadosAgente']['Falando']=rowAgentesFalando[0].total
 
         sql = `SELECT COUNT(id) as total 
                  FROM ${empresa}_dados.user_ramal 
                  WHERE estado=2`
-        const rowAgentesPausados = await this.querySync(sql)
+        const rowAgentesPausados = await this.querySync(sql,empresa)
         monitoramentoCampanhas['DadosAgente']['Pausados']=rowAgentesPausados[0].total      
        
        
@@ -1058,21 +1072,21 @@ class Report{
         const sql = `INSERT INTO ${empresa}_dados.report_info 
                                 (data,nome,descricao,status) 
                          VALUES (NOW(),'${data.nome}','${data.descricao}',1) ` 
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async listarRelatorios(empresa){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.report_info 
                       WHERE status=1`;
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async infoRelatorio(empresa,idRelatorio){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.report_info 
                       WHERE id='${idRelatorio}'`;
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async editarRelatorio(empresa,idRelatorio,dados){
@@ -1081,20 +1095,20 @@ class Report{
                             descricao='${dados.descricao}', 
                             status='${dados.status}' 
                       WHERE id='${idRelatorio}'`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async addCampoDisponiveis(empresa,dados){
         const sql = `INSERT INTO ${empresa}_dados.report_campos_disponiveis 
                                 (campo,descricao,sintetico,charts,status) 
                          VALUES ('${dados.campo}','${dados.descricao}','${dados.sintetico}','${dados.charts}','${dados.status}')`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async listCamposDisponiveis(empresa){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.report_campos_disponiveis`;
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async editarCampoDisponiveis(empresa,idCampoDisponivel,dados){
@@ -1105,13 +1119,13 @@ class Report{
                             charts='${dados.charts}',
                             status='${dados.status}' 
                       WHERE id='${idCampoDisponivel}'`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async delCampoDisponiveis(empresa,idCampoDisponivel){
         const sql = `DELETE FROM ${empresa}_dados.report_campos_disponiveis 
                       WHERE id='${idCampoDisponivel}'`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     
@@ -1121,21 +1135,21 @@ class Report{
         const sql = `INSERT INTO ${empresa}_dados.report_campos 
                                 (idreport,idcampo,sintetico,chart) 
                          VALUES ('${dados.idreport}','${dados.idcampo}','${dados.sintetico}','${dados.chart}')`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async listarCamposRelatorio(empresa,idRelatorio){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.report_campos 
                       WHERE idreport=${idRelatorio}`;
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async infoCamposRelatorio(empresa,idCampoRelatorio){
         const sql = `SELECT * 
                        FROM ${empresa}_dados.report_campos 
                       WHERE id=${idCampoRelatorio}`;
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     
     async editCampoRelatorio(empresa,idCampoRelatorio,dados){
@@ -1143,13 +1157,13 @@ class Report{
                         SET sintetico='${dados.sintetico}', 
                             chart='${dados.chart}'
                       WHERE id='${idCampoRelatorio}'`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
     
     async delCampoRelatorio(empresa,idCampoRelatorio){
         const sql = `DELETE FROM ${empresa}_dados.report_campos 
                       WHERE id='${idCampoRelatorio}'`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
 

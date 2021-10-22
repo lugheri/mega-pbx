@@ -1,31 +1,45 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
-
+var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
 var _Asterisk = require('../models/Asterisk'); var _Asterisk2 = _interopRequireDefault(_Asterisk);
 
 class Filas{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
+    /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }*/
+    
+    async querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await _Clients2.default.serversDbs(empresa)
+            const conn = _dbConnection2.default.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
+                
                 resolve(rows)
             })
+            conn.end()                        
         })
     }
-    querySync_astdb(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolAsterisk.query(sql,(e,rows)=>{
-                if(e) reject(e);
-                resolve(rows)
-            })
-        })
+
+    async querySync_astdb(sql){
+        const connection = _dbConnection2.default.poolAsterisk
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        //promisePool.end();
+        return result[0];
     }
 
     //CRUD FILAS
     //Criar nova filas
     async criarFila(empresa,nomeFila,musiconhold,monitorType,monitorFormat,announce_frequency,announce_holdtime,announce_position,autofill,autopause,autopausebusy,autopausedelay,autopauseunavail,joinempty,leavewhenempty,maxlen,memberdelay,penaltymemberslimit,periodic_announce_frequency,queue_callswaiting,queue_thereare,queue_youarenext,reportholdtime,retry,ringinuse,servicelevel,strategy,timeout,timeoutpriority,timeoutrestart,weight,wrapuptime){
         
-        const sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.queues 
+        const sql = `INSERT INTO asterisk.queues 
                                 (name,
                                  musiconhold,
                                  strategy,
@@ -94,18 +108,18 @@ class Filas{
    
     //Exibe os dads da fila
     async dadosFila(empresa,nomeFila){
-        const sql = `SELECT * FROM ${_dbConnection2.default.db.asterisk}.queues 
+        const sql = `SELECT * FROM asterisk.queues 
                      WHERE name='${nomeFila}'`
         return await this.querySync_astdb(sql)
     }
     //Listar Filas
     async listar(empresa){
-        const sql = `SELECT * FROM ${_dbConnection2.default.db.asterisk}.queues`
+        const sql = `SELECT * FROM asterisk.queues`
         return await this.querySync_astdb(sql)
     }   
     //Edita os dados da fila
     async editarFila(empresa,nomeFila,dados){
-        const sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queues 
+        const sql = `UPDATE asterisk.queues 
                         SET musiconhold='${dados.musiconhold}',
                             strategy='${dados.strategy}',
                             timeout='${dados.timeout}',
@@ -117,15 +131,15 @@ class Filas{
     }
 
     async editarNomeFila(empresa,nomeFilaAtual,name){
-        const sql = `UPDATE ${_dbConnection2.default.db.asterisk}.queues SET name='${name}' WHERE name='${nomeFilaAtual}'`
+        const sql = `UPDATE asterisk.queues SET name='${name}' WHERE name='${nomeFilaAtual}'`
         return await this.querySync_astdb(sql)
     }
 
      //Remove a fila
      async removerFila(empresa,nomeFila){
-        let sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.queues WHERE name='${nomeFila}'`
+        let sql = `DELETE FROM asterisk.queues WHERE name='${nomeFila}'`
         await this.querySync_astdb(sql)
-        sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.queue_members WHERE queue_name='${nomeFila}'`
+        sql = `DELETE FROM asterisk.queue_members WHERE queue_name='${nomeFila}'`
         await this.querySync_astdb(sql)
     }
 
@@ -133,7 +147,7 @@ class Filas{
         const sql = `SELECT idFila, nomeFila 
                        FROM ${empresa}_dados.campanhas_filas 
                       WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
         
     }
 
@@ -142,14 +156,14 @@ class Filas{
         const sql = `SELECT * 
                        FROM ${empresa}_dados.users 
                       WHERE status=1 ORDER BY ordem ASC`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async estadoRamal(empresa,idAgente){
         const sql = `SELECT estado 
                        FROM ${empresa}_dados.user_ramal 
                       WHERE userId=${idAgente}`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async membrosNaFila(empresa,idFila){
@@ -158,7 +172,7 @@ class Filas{
                        JOIN ${empresa}_dados.users AS u ON f.ramal=u.id 
                       WHERE fila=${idFila}  
                       ORDER BY f.id ASC;`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async membrosForaFila(empresa,idFila){
@@ -166,7 +180,7 @@ class Filas{
                        FROM ${empresa}_dados.users AS u 
                       WHERE status=1  
                    ORDER BY u.nome ASC;`
-        return await this.querySync(sql)   
+        return await this.querySync(sql,empresa)   
     }
 
     
@@ -181,11 +195,11 @@ class Filas{
         let sql = `INSERT INTO ${empresa}_dados.agentes_filas 
                               (ramal,fila,estado,ordem) 
                        VALUES (${ramal},${idFila},${estado[0].estado},0)`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         sql = `SELECT nome 
                  FROM ${empresa}_dados.filas 
                 WHERE id=${idFila}`
-        const fila = await this.querySync(sql)
+        const fila = await this.querySync(sql,empresa)
         const queue_name = fila[0].nome
         const queue_interface = `PJSIP/${ramal}`
         const membername = ramal
@@ -198,12 +212,12 @@ class Filas{
     async removeMembroFila(empresa,ramal,idFila){
         let sql = `DELETE FROM ${empresa}_dados.agentes_filas
                      WHERE ramal=${ramal} AND fila=${idFila}`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         
         sql = `SELECT nome 
                  FROM ${empresa}_dados.filas 
                 WHERE id=${idFila}`
-        const fila = await this.querySync(sql)
+        const fila = await this.querySync(sql,empresa)
         const nomeFila = fila[0].nome
         return await _Asterisk2.default.removeMembroFila(empresa,nomeFila,ramal)
     } 
@@ -213,7 +227,7 @@ class Filas{
         const sql = `SELECT * 
                        FROM ${empresa}_dados.agentes_filas 
                       WHERE ramal=${idAgente} AND fila=${idFila}`
-        const r = await this.querySync(sql)
+        const r = await this.querySync(sql,empresa)
         return r.length
     }
 

@@ -11,22 +11,47 @@ var _Discador = require('./Discador'); var _Discador2 = _interopRequireDefault(_
 var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 class Asterisk{
-    querySync(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolEmpresa.query(sql,(e,rows)=>{
+    /*
+    async querySync(sql,empresa){
+        const hostEmp = await Clients.serversDbs(empresa)
+        const connection = connect.poolConta(hostEmp)
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        promisePool.end();
+        return result[0];       
+    }
+    async querySync_astdb(sql){
+        const connection = connect.poolAsterisk
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        //promisePool.end();
+        return result[0];
+    }
+    */
+    
+    async querySync(sql,empresa){
+        return new Promise(async(resolve,reject)=>{
+            const hostEmp = await _Clients2.default.serversDbs(empresa)
+            const conn = _dbConnection2.default.poolConta(hostEmp)
+            conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
             })
+                      
         })
     }
-    querySync_astdb(sql){
-        return new Promise((resolve,reject)=>{
-            _dbConnection2.default.poolAsterisk.query(sql,(e,rows)=>{
-                if(e) reject(e);
-                resolve(rows)
-            })
-        })
+    
+    async querySync_astdb(sql){
+        const connection = _dbConnection2.default.poolAsterisk
+        const promisePool =  connection.promise();
+        const result = await promisePool.query(sql)
+        //promisePool.end();
+        return result[0];
     }
+    
+    
+
+   
 
     
     //######################Configuração das filas######################
@@ -38,7 +63,7 @@ class Asterisk{
             return false;
         }
 
-        const sql = `INSERT INTO ${_dbConnection2.default.db.asterisk}.queue_members 
+        const sql = `INSERT INTO asterisk.queue_members 
                                 (queue_name,interface,membername,state_interface,penalty) 
                          VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
         await this.querySync_astdb(sql)
@@ -47,20 +72,20 @@ class Asterisk{
     //Lista os membros da fila
     async listarMembrosFila(nomeFila){
         const sql = `SELECT * 
-                       FROM ${_dbConnection2.default.db.asterisk}.queue_members 
+                       FROM asterisk.queue_members 
                       WHERE queue_name = ${nomeFila}`
         return await this.querySync_astdb(sql)
     }
     //Remove os membros da fila
     async removeMembroFila(empresa,nomeFila,membro){
-        const sql = `DELETE FROM ${_dbConnection2.default.db.asterisk}.queue_members 
+        const sql = `DELETE FROM asterisk.queue_members 
                       WHERE queue_name='${nomeFila}' AND membername='${membro}'`
         await this.querySync_astdb(sql)
         return true
     }
     async checkAgenteFila(empresa,queue_name,membername){
         const sql = `SELECT uniqueid 
-                       FROM ${_dbConnection2.default.db.asterisk}.queue_members 
+                       FROM asterisk.queue_members 
                       WHERE queue_name='${queue_name}' AND membername='${membername}'`
         const r = await this.querySync_astdb(sql)
         return r.length
@@ -78,7 +103,7 @@ class Asterisk{
         const sql = `INSERT INTO ${empresa}_dados.records
                                 (date,date_record,time_record,ramal,uniqueid,numero,callfilename)
                          VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}','${numero}','${callfilename}')`
-        await this.querySync(sql)
+        await this.querySync(sql,empresa)
         return await this.servidorWebRTC(empresa)        
     }
 
@@ -86,13 +111,13 @@ class Asterisk{
         let sql = `SELECT uniqueid 
                      FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                     WHERE ramal='${ramal}' LIMIT 1`
-        const check = await this.querySync(sql)
+        const check = await this.querySync(sql,empresa)
         if(check.length==1){
             if(check[0].uniqueid == null){
                 let sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                               SET uniqueid='${uniqueid}' 
                             WHERE ramal='${ramal}'`
-                await this.querySync(sql)
+                await this.querySync(sql,empresa)
                 return true
             }
         }
@@ -103,14 +128,14 @@ class Asterisk{
         const sql = `SELECT ip 
                        FROM ${empresa}_dados.servidor_webrtc 
                       WHERE status=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     async servidorWebRTC(empresa){//Ip da maquina onde o asterisk esta instalado
         const sql = `SELECT * 
                        FROM ${empresa}_dados.servidor_webrtc 
                        WHERE status=1`
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }
 
     ariConnect(server,user,pass,callback){
@@ -163,7 +188,7 @@ class Asterisk{
         const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                         SET uniqueid='${uniqueid}',ramal='${ramal}', na_fila=0, atendido=1, falando=1 
                       WHERE id='${idAtendimento}'`// AND na_fila=1`  
-        return await this.querySync(sql)
+        return await this.querySync(sql,empresa)
     }   
 
            

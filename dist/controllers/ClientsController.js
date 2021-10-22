@@ -1,4 +1,5 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _Clients = require('../models/Clients'); var _Clients2 = _interopRequireDefault(_Clients);
+var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
 
 class ClientsController{
     //TRUNKS
@@ -111,11 +112,17 @@ class ClientsController{
         res.json(true)
     }
     
-
+    /*async acceptContract(req,res){
+        const empresa = await User.getEmpresa(req)
+        const r = await Clients.acceptContract(empresa)
+        res.json(r)
+    }*/
 
     //novo cliente
     async newAccount(req,res){
+        console.log('newAccount')
         const nomeEmpresa = req.body.nomeEmpresa
+        const mega = req.body.mega
         const prefixo = req.body.prefixo
         const fidelidade = req.body.fidelidade
         const licenses  = req.body.licenses
@@ -131,8 +138,8 @@ class ClientsController{
         }
         const type_server = req.body.type_server
         const totalChannels = channelsUser*licenses
-        
-        const r = await _Clients2.default.newAccount(nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels, trunk, tech_prefix, type_dial,type_server)
+        console.log('newAccount')
+        const r = await _Clients2.default.newAccount(mega,nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels, trunk, tech_prefix, type_dial,type_server)
         res.json(r)
     }
 
@@ -148,7 +155,7 @@ class ClientsController{
         const maxChannels = await _Clients2.default.maxChannels(empresa)
         res.json(maxChannels)
     }
-
+    
     async servers(req,res){
         const empresa = req.params.prefix
         const servers = await _Clients2.default.servers(empresa)

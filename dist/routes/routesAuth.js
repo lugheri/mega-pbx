@@ -2,6 +2,8 @@
 var _SessionController = require('../controllers/SessionController'); var _SessionController2 = _interopRequireDefault(_SessionController);
 var _AsteriskController = require('../controllers/AsteriskController'); var _AsteriskController2 = _interopRequireDefault(_AsteriskController);
 var _GravacaoController = require('../controllers/GravacaoController'); var _GravacaoController2 = _interopRequireDefault(_GravacaoController);
+var _ClientsController = require('../controllers/ClientsController'); var _ClientsController2 = _interopRequireDefault(_ClientsController);
+
 
 module.exports = (routes) => {
     
@@ -20,8 +22,13 @@ module.exports = (routes) => {
     //OPERACOES DO AGI-ASTERISK
     routes.post('/agi/:action',_AsteriskController2.default.agi);
 
+    
+   
+
     //MIDDLEWARE DE AUTENTICACAO
     routes.use(_auth2.default);
+
+    //routes.post('/acceptContract',ClientsController.acceptContract)
 
     //VERIFICA TOKEN AUTENTICADO
     routes.get('/authenticated', _SessionController2.default.validate);

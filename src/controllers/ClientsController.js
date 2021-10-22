@@ -112,15 +112,17 @@ class ClientsController{
         res.json(true)
     }
     
-    async acceptContract(req,res){
+    /*async acceptContract(req,res){
         const empresa = await User.getEmpresa(req)
         const r = await Clients.acceptContract(empresa)
         res.json(r)
-    }
+    }*/
 
     //novo cliente
     async newAccount(req,res){
+        console.log('newAccount')
         const nomeEmpresa = req.body.nomeEmpresa
+        const mega = req.body.mega
         const prefixo = req.body.prefixo
         const fidelidade = req.body.fidelidade
         const licenses  = req.body.licenses
@@ -136,8 +138,8 @@ class ClientsController{
         }
         const type_server = req.body.type_server
         const totalChannels = channelsUser*licenses
-        
-        const r = await Clients.newAccount(nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels, trunk, tech_prefix, type_dial,type_server)
+        console.log('newAccount')
+        const r = await Clients.newAccount(mega,nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels, trunk, tech_prefix, type_dial,type_server)
         res.json(r)
     }
 
@@ -153,7 +155,7 @@ class ClientsController{
         const maxChannels = await Clients.maxChannels(empresa)
         res.json(maxChannels)
     }
-
+    
     async servers(req,res){
         const empresa = req.params.prefix
         const servers = await Clients.servers(empresa)

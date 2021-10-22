@@ -1,216 +1,355 @@
 import connect from '../Config/dbConnection';
 import Clients from './Clients'
 class Tabulacoes{
-    querySync(sql,empresa){
-        return new Promise(async(resolve,reject)=>{
-            const hostEmp = await Clients.serversDbs(empresa)
-            connect.poolConta(empresa,hostEmp).query(sql,(e,rows)=>{
-                if(e) reject(e);
-                resolve(rows)
-            })
+   //Query Sync
+   async querySync(conn,sql){         
+    return new Promise((resolve,reject)=>{            
+        conn.query(sql, (err,rows)=>{
+            if(err) return reject(err)
+            resolve(rows)
         })
-    }
-   
+    })
+  }   
+
     //LISTA DE TABULACOES 
     //Criar Lista de Tabulacaoes
     async novaLista(empresa,dados){
-        const sql = `INSERT INTO ${empresa}_dados.tabulacoes_listas 
-                                 (data,nome,descricao,status) 
-                          VALUES (now(),'${dados.nome}','${dados.descricao}',1)`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+
+                const sql = `INSERT INTO ${empresa}_dados.tabulacoes_listas 
+                                        (data,nome,descricao,status) 
+                                VALUES (now(),'${dados.nome}','${dados.descricao}',1)`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(rows)
+            })
+        })      
     }
     //Listar listas de tabulacoes
     async listasTabulacao(empresa){
-        const sql = `SELECT id,DATE_FORMAT(data,'%d/%m/%Y') as data,nome,descricao,status 
-                       FROM ${empresa}_dados.tabulacoes_listas
-                      WHERE status = 1`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT id,DATE_FORMAT(data,'%d/%m/%Y') as data,nome,descricao,status 
+                            FROM ${empresa}_dados.tabulacoes_listas
+                            WHERE status = 1`
+                const rows= await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(rows)
+            })
+        })      
     }
     //Dados da Lista de Tabulacaoes
     async dadosListaTabulacao(empresa,idLista) {
-        const sql = `SELECT id,DATE_FORMAT(data,'%d/%m/%Y') as data,nome,descricao,status 
-                       FROM ${empresa}_dados.tabulacoes_listas 
-                      WHERE id=${idLista}`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT id,DATE_FORMAT(data,'%d/%m/%Y') as data,nome,descricao,status 
+                            FROM ${empresa}_dados.tabulacoes_listas 
+                            WHERE id=${idLista}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(rows)
+            })
+        })      
     }
     //Editar Lista de Tabulacaoes
     async editarListaTabulacao(empresa,idLista,valores) {
-        const nome = valores.nome
-        const descricao = valores.descricao
-        const status = valores.status
-        const sql = `UPDATE ${empresa}_dados.tabulacoes_listas 
-                        SET nome='${nome}',
-                            descricao='${descricao}',
-                            status=${status}
-                       WHERE id=${idLista}`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const nome = valores.nome
+                const descricao = valores.descricao
+                const status = valores.status
+                const sql = `UPDATE ${empresa}_dados.tabulacoes_listas 
+                                SET nome='${nome}',
+                                    descricao='${descricao}',
+                                    status=${status}
+                            WHERE id=${idLista}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(rows)
+            })
+        })      
     }
     //STATUS DE TABULACOES
     //Criar Status
     async criarStatusTabulacao(empresa,dados){
-        let sql=`SELECT id 
-                   FROM ${empresa}_dados.tabulacoes_status 
-                  WHERE idLista=${dados.idLista} 
-                  ORDER BY ordem DESC 
-                  LIMIT 1`
-        const r =  await this.querySync(sql,empresa);
-        let contatado = 'S'
-        let removeNumero = 0
-        if(dados.tipo=='improdutivo'){
-            contatado = dados.contatado
-            removeNumero = dados.removeNumero
-        }
-        const ordem=r.length+1
-        sql=`INSERT INTO ${empresa}_dados.tabulacoes_status 
-                         (idLista,tabulacao,descricao,tipo,contatado,removeNumero,venda,followUp,ordem,maxTentativas,tempoRetorno,status) 
-                  VALUES (${dados.idLista},'${dados.tabulacao}','${dados.descricao}','${dados.tipo}','${contatado}',${removeNumero},${dados.venda},${dados.followUp},${ordem},${dados.maxTentativas},'${dados.tempoRetorno}',1)`
-      
-        const result = await this.querySync(sql,empresa);
-        await this.reordenaStatus(empresa,dados.idLista)
-        if(result.affectedRows==1){
-            return result;
-        }
-        return false
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                let sql=`SELECT id 
+                        FROM ${empresa}_dados.tabulacoes_status 
+                        WHERE idLista=${dados.idLista} 
+                        ORDER BY ordem DESC 
+                        LIMIT 1`
+                const r =  await this.querySync(conn,sql)
+                let contatado = 'S'
+                let removeNumero = 0
+                if(dados.tipo=='improdutivo'){
+                    contatado = dados.contatado
+                    removeNumero = dados.removeNumero
+                }
+                const ordem=r.length+1
+                sql=`INSERT INTO ${empresa}_dados.tabulacoes_status 
+                                (idLista,tabulacao,descricao,tipo,contatado,removeNumero,venda,followUp,ordem,maxTentativas,tempoRetorno,status) 
+                        VALUES (${dados.idLista},'${dados.tabulacao}','${dados.descricao}','${dados.tipo}','${contatado}',${removeNumero},${dados.venda},${dados.followUp},${ordem},${dados.maxTentativas},'${dados.tempoRetorno}',1)`
+            
+                const result = await this.querySync(conn,sql)
+                await this.reordenaStatus(empresa,dados.idLista)
+                if(result.affectedRows==1){
+                    pool.end((err)=>{
+                        if(err) console.log(err)
+                    })
+                    resolve(result)
+                    return ;
+
+                }
+               
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(false)
+            })
+        })      
     }   
     //Listar Status
     async listarStatusTabulacao(empresa,idLista){
-        const sql = `SELECT * 
-                       FROM ${empresa}_dados.tabulacoes_status 
-                       WHERE idLista=${idLista} AND status=1 
-                       ORDER BY ordem ASC`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT * 
+                            FROM ${empresa}_dados.tabulacoes_status 
+                            WHERE idLista=${idLista} AND status=1 
+                            ORDER BY ordem ASC`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(rows)
+            })
+        })      
     }
     //Lista status por tipo
     async statusPorTipo(empresa,idLista,tipo){
-        const sql = `SELECT id
-                       FROM ${empresa}_dados.tabulacoes_status 
-                       WHERE idLista=${idLista} AND tipo='${tipo}' AND status=1 
-                       ORDER BY ordem ASC`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT id
+                            FROM ${empresa}_dados.tabulacoes_status 
+                            WHERE idLista=${idLista} AND tipo='${tipo}' AND status=1 
+                            ORDER BY ordem ASC`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(rows)
+            })
+        })      
     }
     //Ver status
     async infoStatus(empresa,idStatus){
-        const sql = `SELECT * 
-                       FROM ${empresa}_dados.tabulacoes_status 
-                      WHERE id=${idStatus}`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT * 
+                            FROM ${empresa}_dados.tabulacoes_status 
+                            WHERE id=${idStatus}`
+                const rows= await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(rows)
+            })
+        })      
     }
 
     async nomeStatus(empresa,idStatus){
-        const sql = `SELECT tabulacao 
-                       FROM ${empresa}_dados.tabulacoes_status 
-                      WHERE id=${idStatus}`
-        const t = await this.querySync(sql,empresa);
-       
-        if(t.length==0){
-            return ""
-        }
-        return t[0].tabulacao;
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT tabulacao 
+                            FROM ${empresa}_dados.tabulacoes_status 
+                            WHERE id=${idStatus}`
+                const t = await this.querySync(conn,sql)
+            
+                if(t.length==0){
+                    pool.end((err)=>{
+                        if(err) console.log(err)
+                    })
+                    resolve("")
+                    return
+                }
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(t[0].tabulacao)
+            })
+        })      
     }
     //Editar status
     async editarStatusTabulacao(empresa,idStatus,valores){
-        const idLista = valores.idLista
-        const tabulacao = valores.tabulacao
-        const descricao = valores.descricao
-        const tipo = valores.tipo
-        const contatado = valores.contatado
-        const removeNumero = valores.removeNumero
-        const venda = valores.venda
-        const followUp = valores.followUp
-        const tempoRetorno = valores.tempoRetorno
-        const maxTentativas = valores.maxTentativas
-        const sql = `UPDATE ${empresa}_dados.tabulacoes_status 
-                        SET idLista=${idLista},
-                            tabulacao='${tabulacao}',
-                            descricao='${descricao}',
-                            tipo='${tipo}',
-                            contatado='${contatado}',
-                            removeNumero=${removeNumero},
-                            venda=${venda},
-                            followUp=${followUp},
-                            tempoRetorno='${tempoRetorno}',
-                            maxTentativas=${maxTentativas}
-                      WHERE id=${idStatus}`
-        const r = await this.querySync(sql,empresa);
-        if(r.affectedRows==1){
-            return true
-        }
-        return false
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const idLista = valores.idLista
+                const tabulacao = valores.tabulacao
+                const descricao = valores.descricao
+                const tipo = valores.tipo
+                const contatado = valores.contatado
+                const removeNumero = valores.removeNumero
+                const venda = valores.venda
+                const followUp = valores.followUp
+                const tempoRetorno = valores.tempoRetorno
+                const maxTentativas = valores.maxTentativas
+                const sql = `UPDATE ${empresa}_dados.tabulacoes_status 
+                                SET idLista=${idLista},
+                                    tabulacao='${tabulacao}',
+                                    descricao='${descricao}',
+                                    tipo='${tipo}',
+                                    contatado='${contatado}',
+                                    removeNumero=${removeNumero},
+                                    venda=${venda},
+                                    followUp=${followUp},
+                                    tempoRetorno='${tempoRetorno}',
+                                    maxTentativas=${maxTentativas}
+                            WHERE id=${idStatus}`
+                const r = await this.querySync(conn,sql)
+                if(r.affectedRows==1){
+                    pool.end((err)=>{
+                        if(err) console.log(err)
+                    })
+                    resolve(true)
+                    return true
+                }
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(false)
+            })
+        })      
     }
     //Remove status de tabulacao
     async removeStatusTabulacao(empresa,idStatus){
-        const sql = `UPDATE ${empresa}_dados.tabulacoes_status 
-                        SET status=0 
-                      WHERE id=${idStatus}`
-        const r = await this.querySync(sql,empresa);
-        if(r.affectedRows==1){
-            return true
-        }
-        return false
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `UPDATE ${empresa}_dados.tabulacoes_status 
+                                SET status=0 
+                            WHERE id=${idStatus}`
+                const r = await this.querySync(conn,sql)
+                if(r.affectedRows==1){
+                    pool.end((err)=>{
+                        if(err) console.log(err)
+                    })
+                    resolve(true)
+                    return true
+                }
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(false)
+            })
+        })      
     }
 
     //Normaliza ordem
     async reordenaStatus(empresa,idLista){
-        //Desativados
-        let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
-                      SET ordem=-1 
-                    WHERE status=0`
-        await this.querySync(sql,empresa);
-        //Produtivos
-        const statusProd = await this.statusPorTipo(empresa,idLista,'produtivo')
-        for(let i = 0; i < statusProd.length; i++){
-            let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
-                          SET ordem=${i} 
-                        WHERE id=${statusProd[i].id}`
-            
-            await this.querySync(sql,empresa);
-        }
-        //Improdutivos
-        const statusImprod = await this.statusPorTipo(empresa,idLista,'improdutivo')
-         for(let i = 0; i < statusImprod.length; i++){
-             let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
-                           SET ordem=${i} 
-                         WHERE id=${statusImprod[i].id}`
-             
-             await this.querySync(sql,empresa);
-         }
-        return true
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                //Desativados
+                let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
+                            SET ordem=-1 
+                            WHERE status=0`
+                await this.querySync(conn,sql)
+                //Produtivos
+                const statusProd = await this.statusPorTipo(empresa,idLista,'produtivo')
+                for(let i = 0; i < statusProd.length; i++){
+                    let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
+                                SET ordem=${i} 
+                                WHERE id=${statusProd[i].id}`
+                    
+                    await this.querySync(conn,sql)
+                }
+                //Improdutivos
+                const statusImprod = await this.statusPorTipo(empresa,idLista,'improdutivo')
+                for(let i = 0; i < statusImprod.length; i++){
+                    let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
+                                SET ordem=${i} 
+                                WHERE id=${statusImprod[i].id}`
+                    
+                    await this.querySync(conn,sql)
+                }
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(true)
+            })
+        })      
     }
 
     async reordenarTipoStatus(empresa,idLista,idStatus,origem,posOrigem,posDestino){
-        let sql
-        if(posOrigem>posDestino){
-            sql = `UPDATE ${empresa}_dados.tabulacoes_status 
-                      SET ordem=ordem+1 
-                    WHERE ordem>=${posDestino} AND ordem<${posOrigem} AND idLista=${idLista} AND tipo='${origem}' AND status=1`
-            await this.querySync(sql,empresa);
-        }else{
-            sql = `UPDATE ${empresa}_dados.tabulacoes_status 
-                      SET ordem=ordem-1 
-                    WHERE ordem >${posOrigem} AND ordem<=${posDestino} AND idLista=${idLista} AND tipo='${origem}' AND status=1`
-            await this.querySync(sql,empresa);
-        }
-        sql = `UPDATE ${empresa}_dados.tabulacoes_status 
-                  SET ordem=${posDestino} 
-                WHERE id=${idStatus}`
-        await this.querySync(sql,empresa);
-        return true
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                let sql
+
+                if(posOrigem>posDestino){
+                    sql = `UPDATE ${empresa}_dados.tabulacoes_status 
+                            SET ordem=ordem+1 
+                            WHERE ordem>=${posDestino} AND ordem<${posOrigem} AND idLista=${idLista} AND tipo='${origem}' AND status=1`
+                    await this.querySync(conn,sql)
+                }else{
+                    sql = `UPDATE ${empresa}_dados.tabulacoes_status 
+                            SET ordem=ordem-1 
+                            WHERE ordem >${posOrigem} AND ordem<=${posDestino} AND idLista=${idLista} AND tipo='${origem}' AND status=1`
+                    await this.querySync(conn,sql)
+                }
+                sql = `UPDATE ${empresa}_dados.tabulacoes_status 
+                        SET ordem=${posDestino} 
+                        WHERE id=${idStatus}`
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(true)
+            })
+        })      
     }
                            
     async alterarTipoStatus(empresa,idLista,idStatus,origem,destino,posDestino){
         console.log('posDestino',posDestino)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
         
-        let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
-                      SET ordem=ordem+1 
-                    WHERE ordem>=${posDestino} AND idLista=${idLista} AND tipo='${destino}' AND status=1`
-        await this.querySync(sql,empresa);
+                let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
+                            SET ordem=ordem+1 
+                            WHERE ordem>=${posDestino} AND idLista=${idLista} AND tipo='${destino}' AND status=1`
+                await this.querySync(conn,sql)
 
-        sql = `UPDATE ${empresa}_dados.tabulacoes_status 
-                  SET ordem=${posDestino}, tipo='${destino}'
-                WHERE id=${idStatus}`
-        await this.querySync(sql,empresa);
-       
-        return true
+                sql = `UPDATE ${empresa}_dados.tabulacoes_status 
+                        SET ordem=${posDestino}, tipo='${destino}'
+                        WHERE id=${idStatus}`
+                await this.querySync(conn,sql)
+            
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(true)
+            })
+        })      
     }
 
 
