@@ -45,7 +45,7 @@ class Asterisk{
         const connection = connect.poolAsterisk
         const promisePool =  connection.promise();
         const result = await promisePool.query(sql)
-        promisePool.end();
+        //promisePool.end();
         return result[0];
     }
     

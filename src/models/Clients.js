@@ -192,12 +192,14 @@ class Clients{
 
   //DBS SERVERS
   async serversDbs(prefix){
-    const sql = `SELECT c.server_db,  d.ip , d.ip
-                     FROM clients.accounts AS c 
-                     JOIN clients.servers_db AS d ON c.server_db = d.id 
-                    WHERE c.prefix = '${prefix}'`
+    const sql = `SELECT d.ip
+                   FROM clients.accounts AS c 
+                   JOIN clients.servers_db AS d ON c.server_db = d.id 
+                  WHERE c.prefix = '${prefix}'`
       const r = await this.querySync_crmdb(sql)   
-     
+     if(r.length==0){
+       return 0
+     }
       return r[0].ip
   }
   

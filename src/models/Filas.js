@@ -20,6 +20,7 @@ class Filas{
             const conn = connect.poolConta(hostEmp)
             conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
+                
                 resolve(rows)
             })
             conn.end()                        
@@ -30,7 +31,7 @@ class Filas{
         const connection = connect.poolAsterisk
         const promisePool =  connection.promise();
         const result = await promisePool.query(sql)
-        promisePool.end();
+        //promisePool.end();
         return result[0];
     }
 

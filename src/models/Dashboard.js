@@ -213,13 +213,13 @@ class Dashboard{
     }
 
     async realTimeCalls(empresa){       
-        //const totais = await Discador.logChamadasSimultaneas(empresa,'total',1)
-        //const conectadas = await Discador.logChamadasSimultaneas(empresa,'conectadas',1)
+        const totais = await Discador.logChamadasSimultaneas(empresa,'total',1)
+        const conectadas = await Discador.logChamadasSimultaneas(empresa,'conectadas',1)
         const realTime={}
               realTime['RealTimeChart']={}
-             // const ligando = totais - conectadas
-              realTime['RealTimeChart']['Ligando']=0//ligando
-              realTime['RealTimeChart']['Falando']=0//conectadas
+              const ligando = totais - conectadas
+              realTime['RealTimeChart']['Ligando']=ligando
+              realTime['RealTimeChart']['Falando']=conectadas
         return realTime
     }
 

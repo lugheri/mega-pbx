@@ -7,7 +7,7 @@ const environment = "DB_DEV"
 let host = 'localhost'
 let astdb_host = 'localhost'
 let crm_host = 'localhost'
-let datadb_host= 'localhost'
+let database= 'localhost'
 const user = []
 const db = []
 switch(environment){
@@ -35,6 +35,35 @@ switch(environment){
 const connect = ()=>{};
 
 /*MYSQL2*/
+connect.pool = async (empresa,type = 'dados') =>{
+    switch(type){
+        case 'crm':
+            host = process.env.CRMDB_HOST
+            database = 'clients'
+        break;
+        case 'asterisk':
+            host = process.env.ASTDB_HOST
+            database = 'asterisk'
+        break;
+        default:
+            host = await _Clients2.default.serversDbs(empresa) 
+            database = 'clientes_ativos'
+    }
+        console.log(type,host)
+        return  _mysql22.default.createPool({
+            host               : host,
+            port               : 3306,
+            user               : user['name'],
+            password           : user['pass'],
+            database           : database,
+            waitForConnections: true,
+            connectionLimit: 10,
+            queueLimit:0
+    })
+}
+
+
+
 connect.poolCRM=_mysql22.default.createConnection({    
     host:crm_host,
     user : user['name'],
@@ -43,12 +72,15 @@ connect.poolCRM=_mysql22.default.createConnection({
 })
 connect.poolConta = (hostEmpresa) =>{
     console.log('host',hostEmpresa)
-    return  _mysql22.default.createConnection({
-            host               : hostEmpresa,//'35.194.25.54',//'34.68.33.39',
+    return  _mysql22.default.createPool({
+            host               : '35.194.25.54',//'34.68.33.39',
             port               : 3306,
             user               : user['name'],
             password           : user['pass'],
-            database           : `clientes_ativos`
+            database           : `clientes_ativos`,
+            waitForConnections: true,
+            connectionLimit: 10,
+            queueLimit:0
     })
 }
 connect.poolAsterisk=_mysql22.default.createPool({
@@ -60,6 +92,18 @@ connect.poolAsterisk=_mysql22.default.createPool({
     connectionLimit: 10,
     queueLimit:0
 }) 
+connect.poolMailing=(hostEmpresa,empresa)=>{
+    return _mysql22.default.createPool({
+        host               : '35.194.25.54',//'34.68.33.39',
+        port               : 3306,
+        user               : user['name'],
+        password           : user['pass'],
+        database           : `${empresa}_mailings`,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit:0
+    })
+}
 
 
 

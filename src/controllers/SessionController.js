@@ -27,7 +27,8 @@ class SessionController{
             }else{
                
                 const acao='login'
-                const token = jwt.sign({userId:userData[0].id,empresa:empresa},process.env.APP_SECRET,{
+                const host = await Clients.serversDbs(empresa)
+                const token = jwt.sign({userId:userData[0].id,empresa:empresa,hostDB:host},process.env.APP_SECRET,{
                     expiresIn:'12h'
                 })
                 await User.setToken(empresa,userData[0].id,token)

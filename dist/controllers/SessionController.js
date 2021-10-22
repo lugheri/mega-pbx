@@ -27,7 +27,8 @@ class SessionController{
             }else{
                
                 const acao='login'
-                const token = _jsonwebtoken2.default.sign({userId:userData[0].id,empresa:empresa},process.env.APP_SECRET,{
+                const host = await _Clients2.default.serversDbs(empresa)
+                const token = _jsonwebtoken2.default.sign({userId:userData[0].id,empresa:empresa,hostDB:host},process.env.APP_SECRET,{
                     expiresIn:'12h'
                 })
                 await _User2.default.setToken(empresa,userData[0].id,token)
