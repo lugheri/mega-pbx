@@ -529,10 +529,6 @@ class Discador{
                             WHERE tipo='manual' AND data='${hoje}' AND agente='${idAgente}'`
                 const a= await this.querySync(conn,sql)
                 return a[0].manuais
-                pool.end((err)=>{
-                    if(err) console.log('Discador.js ...', err )
-                })
-                resolve(a[0].manuais) 
             })
         })       
 
@@ -1108,10 +1104,6 @@ class Discador{
                             WHERE id_campanha=${idCampanha} AND  (atendido=0 OR falando=0)`
                 const q = await this.querySync(conn,sql)  
                 return q[0].total
-                pool.end((err)=>{
-                    if(err) console.log('Discador.js ...', err )
-                })
-                resolve(q[0].total) 
             })
         })                
     }

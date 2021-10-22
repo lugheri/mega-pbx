@@ -46,8 +46,8 @@ connect.pool = async (empresa,type = 'dados') =>{
             database = 'asterisk'
         break;
         default:
-            host = await Clients.serversDbs(empresa),//'35.194.25.54',
-            database = 'clientes_ativos'
+            host = '35.194.25.54',//await Clients.serversDbs(empresa),
+            database = `clientes_ativos`
     }
         //console.log(type,host)
         return  mysql.createPool({
