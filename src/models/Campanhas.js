@@ -1094,61 +1094,104 @@ class Campanhas{
 
     //BLACKLIST
 
-    /*
+   
 
     //STATUS DE EVOLUCAO DE CAMPANHA
     async totalMailingsCampanha(empresa,idCampanha){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
         
-        const sql = `SELECT m.totalNumeros-m.numerosInvalidos AS total, m.id AS idMailing
-                      FROM ${empresa}_dados.mailings as m 
-                      JOIN ${empresa}_dados.campanhas_mailing AS cm 
-                        ON cm.idMailing=m.id 
-                      WHERE cm.idCampanha=${idCampanha}`
-        return await this.querySync(conn,sql)
+                const sql = `SELECT m.totalNumeros-m.numerosInvalidos AS total, m.id AS idMailing
+                            FROM ${empresa}_dados.mailings as m 
+                            JOIN ${empresa}_dados.campanhas_mailing AS cm 
+                                ON cm.idMailing=m.id 
+                            WHERE cm.idCampanha=${idCampanha}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(rows)
+            })
+        })
         
     }
 
     async mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,status){
-        const sql = `SELECT count(id) AS total 
-                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE contatado='${status}' AND idCampanha=${idCampanha} AND idMailing=${idMailing}`
-        const total_mailing= await this.querySync(conn,sql)
-        return total_mailing[0].total
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT count(id) AS total 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE contatado='${status}' AND idCampanha=${idCampanha} AND idMailing=${idMailing}`
+                const total_mailing= await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(total_mailing[0].total)
+            })
+        })
     }   
 
    
     async mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,status){
-        let queryFilter="";
-        if(status==1){
-            queryFilter=`AND produtivo=1`
-        }else{
-            queryFilter=`AND (produtivo=0 OR produtivo is null)`
-        }
-        const sql = `SELECT count(id) AS total 
-                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${queryFilter}`
-        const total_mailing= await this.querySync(conn,sql)
-        return total_mailing[0].total
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let queryFilter="";
+                if(status==1){
+                    queryFilter=`AND produtivo=1`
+                }else{
+                    queryFilter=`AND (produtivo=0 OR produtivo is null)`
+                }
+                const sql = `SELECT count(id) AS total 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${queryFilter}`
+                const total_mailing= await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(total_mailing[0].total)
+            })
+        })
     }   
 
     async dataUltimoRegMailingNaCampanha(empresa,idCampanha,idMailing){
-        const sql = `SELECT  DATE_FORMAT(data,'%d/%m/%Y') AS ultimaData
-                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ORDER BY data DESC`
-        const d= await this.querySync(conn,sql)
-        if(d.length==0){
-            return ""
-        }
-        return d[0].ultimaData
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT  DATE_FORMAT(data,'%d/%m/%Y') AS ultimaData
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ORDER BY data DESC`
+                const d= await this.querySync(conn,sql)
+                if(d.length==0){
+                    return ""
+                }
+                
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(d[0].ultimaData)
+            })
+        })
     }   
 
     async mailingsAnteriores(empresa,idCampanha){
-        const sql = `SELECT DISTINCT idMailing 
-                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE idCampanha=${idCampanha}`
-        return await this.querySync(conn,sql);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT DISTINCT idMailing 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE idCampanha=${idCampanha}`
+                const rows = await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(rows)
+            })
+        })
         
-    }*/
+    }
 
     //AGENDAMENTO DE CAMPANHAS
     //Agenda campanha

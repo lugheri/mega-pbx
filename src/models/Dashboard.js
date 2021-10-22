@@ -64,6 +64,8 @@ class Dashboard{
               dash['sinteticos']['AnotherKpis']['ChamadasEmAtendimento']=emAtendimento       
 
         const campanhasAtivas = await Campanhas.listarCampanhasAtivas(empresa)
+
+        console.log('campanhasAtivas',campanhasAtivas)
               
             dash["Campanhas"]=[]
             for(let i = 0; i<campanhasAtivas.length; i++) {
@@ -102,6 +104,7 @@ class Dashboard{
             }
 
         const mailings = await Campanhas.listarMailingCampanhasAtivas(empresa)
+         console.log('mailings',mailings)
             dash["Mailings"]=[]
             const mailingsAdicionados=[]
             for(let i = 0; i<mailings.length; i++) {
@@ -138,6 +141,7 @@ class Dashboard{
             dash["dia"]=await Discador.diaAtual()
             dash["Agentes"]=[]
             const agentes = await Discador.listarAgentesLogados(empresa)
+            console.log('agentes',agentes)
             for(let i = 0; i<agentes.length; i++) {
                 
                 const idAgente=agentes[i].id
@@ -192,7 +196,7 @@ class Dashboard{
                       agente["tempoFalado"]=await this.converteSeg_tempo(tempoFalado)
                 dash["Agentes"].push(agente)
             }         
-              
+            console.log('dash',dash)
           return dash
 
 
