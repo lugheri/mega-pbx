@@ -8,7 +8,8 @@ import Clients from './Clients'
 
 class Dashboard{
 //Query Sync
-    async querySync(conn,sql){         
+    async querySync(conn,sql){    
+       
         return new Promise((resolve,reject)=>{            
             conn.query(sql, (err,rows)=>{
                 if(err) return reject(err)
@@ -42,9 +43,9 @@ class Dashboard{
         const emAtendimento = await Discador.chamadasEmAtendimento(empresa)   
         
        
-        console.log('totalChamadas',totalChamadas)
+        /*console.log('totalChamadas',totalChamadas)
         console.log('improdutivas',improdutivas)
-        console.log('produtivas',produtivas)
+        console.log('produtivas',produtivas)*/
         
         const dash={}
               dash['sinteticos']={}
@@ -65,7 +66,7 @@ class Dashboard{
 
         const campanhasAtivas = await Campanhas.listarCampanhasAtivas(empresa)
 
-        console.log('campanhasAtivas',campanhasAtivas)
+        //console.log('campanhasAtivas',campanhasAtivas)
               
             dash["Campanhas"]=[]
             for(let i = 0; i<campanhasAtivas.length; i++) {
@@ -102,9 +103,10 @@ class Dashboard{
                 dash["Campanhas"].push(campanha)
 
             }
-
-        const mailings = await Campanhas.listarMailingCampanhasAtivas(empresa)
-         console.log('mailings',mailings)
+           // console.log('dash Campanhas',dash)
+         
+         const mailings = await Campanhas.listarMailingCampanhasAtivas(empresa)
+         //console.log('mailings',mailings)
             dash["Mailings"]=[]
             const mailingsAdicionados=[]
             for(let i = 0; i<mailings.length; i++) {
@@ -138,18 +140,22 @@ class Dashboard{
                 mailingsAdicionados.push(idMailing)
             }
            
+          
             dash["dia"]=await Discador.diaAtual()
             dash["Agentes"]=[]
+           
             const agentes = await Discador.listarAgentesLogados(empresa)
-            console.log('agentes',agentes)
             for(let i = 0; i<agentes.length; i++) {
                 
+               
                 const idAgente=agentes[i].id
+                
                 const totalAtendimento=await Discador.totalAtendimentosAgente(empresa,idAgente)
                 const Improdutivas=await Discador.chamadasProdutividade_Agente(empresa,0,idAgente)
                 const Produtivas=await Discador.chamadasProdutividade_Agente(empresa,1,idAgente)
                 const chManuais=await Discador.chamadasManuais_Agente(empresa,idAgente)
                 const tempoFalado=await Discador.tempoFaladoAgente(empresa,idAgente)
+               
                 let perc_improdutivas=0
                 let perc_produtivas=0
                 let perc_manuais=0
@@ -159,7 +165,7 @@ class Dashboard{
                     perc_manuais=Math.round((chManuais / totalAtendimento)*100)
                 }
 
-
+                
                 const agente={}
                       agente["nomeAgente"]=agentes[i].nome
                     let estadoAgente=agentes[i].estado
@@ -195,8 +201,9 @@ class Dashboard{
 
                       agente["tempoFalado"]=await this.converteSeg_tempo(tempoFalado)
                 dash["Agentes"].push(agente)
-            }         
-            console.log('dash',dash)
+                
+            }    
+           
           return dash
 
 
@@ -218,6 +225,7 @@ class Dashboard{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async(err,conn)=>{
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             
                 let sql = `SELECT COUNT(id) as total 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
@@ -230,7 +238,7 @@ class Dashboard{
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                             WHERE id_campanha=${idCampanha} AND falando=1 
                             ORDER BY id DESC LIMIT 1`
-                const c = await this.querySync(conn,sql)
+                const c = await this.querySync(conn,sql,)
                 const conectadas = c[0].conectadas
 
                 const realTime={}
@@ -239,8 +247,8 @@ class Dashboard{
                     realTime['RealTimeChart']['Falando']=conectadas
                 
                 pool.end((err)=>{
-                    if(err) console.log('Dashboard.js 238', err)
-                })
+                    if(err) console.log(err)
+                    }) 
                 resolve(realTime)
             })
         })

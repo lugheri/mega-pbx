@@ -18,6 +18,7 @@ class Cronometro{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `INSERT INTO ${empresa}_dados.tempo_ociosidade
                                         (idAgente,entrada) 
                                 VALUES (${ramal},now())`
@@ -34,6 +35,7 @@ class Cronometro{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.tempo_ociosidade 
                                 SET saida=NOW(), 
                                     tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW())
@@ -54,6 +56,7 @@ class Cronometro{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `INSERT INTO ${empresa}_dados.tempo_pausa 
                                         (idAgente,idPausa,entrada)
                                 VALUES (${idAgente},${idPausa},now())`
@@ -70,6 +73,7 @@ class Cronometro{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
         const sql = `UPDATE ${empresa}_dados.tempo_pausa 
                         SET saida=NOW(), 
                             tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW()) 
@@ -89,6 +93,7 @@ class Cronometro{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `INSERT INTO ${empresa}_dados.tempo_fila 
                                         (idCampanha,idMailing,idRegistro,numero,entrada) 
                                 VALUES (${idCampanha},${idMailing},${idRegistro},${numero},now())`
@@ -105,6 +110,7 @@ class Cronometro{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.tempo_fila 
                                 SET saida=NOW(), 
                                     tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW())
@@ -124,6 +130,7 @@ class Cronometro{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `INSERT INTO ${empresa}_dados.tempo_ligacao 
                                         (idCampanha,idMailing,idRegistro,tipoDiscador,numero,idAgente,uniqueid,entrada) 
                                 VALUES (${idCampanha},${idMailing},${idRegistro},'${tipoChamada}',${numero},${ramal},${uniqueid},now())`
@@ -141,6 +148,7 @@ class Cronometro{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.tempo_ligacao 
                                 SET saida=NOW(), 
                                     tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW())
@@ -168,6 +176,7 @@ class Cronometro{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `UPDATE ${empresa}_dados.user_ramal SET tabulando=1 WHERE userId=${ramal}`
                 await this.querySync(conn,sql);
                 sql = `INSERT INTO ${empresa}_dados.tempo_tabulacao 
@@ -185,6 +194,7 @@ class Cronometro{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `UPDATE ${empresa}_dados.user_ramal SET tabulando=0 WHERE userId=${ramal}`
                 await this.querySync(conn,sql);
                 sql = `UPDATE ${empresa}_dados.tempo_tabulacao 

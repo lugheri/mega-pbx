@@ -19,6 +19,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'asterisk')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `INSERT INTO asterisk.queues 
                                         (name,
                                         musiconhold,
@@ -97,6 +98,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'asterisk')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * FROM asterisk.queues 
                             WHERE name='${nomeFila}'`
                 const rows = await this.querySync(conn,sql)
@@ -111,7 +113,8 @@ class Filas{
     async listar(empresa){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'asterisk')
-                    pool.getConnection(async (err,conn)=>{   
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * FROM asterisk.queues`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
@@ -126,6 +129,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'asterisk')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE asterisk.queues 
                                 SET musiconhold='${dados.musiconhold}',
                                     strategy='${dados.strategy}',
@@ -147,6 +151,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'asterisk')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE asterisk.queues SET name='${name}' WHERE name='${nomeFilaAtual}'`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
@@ -162,6 +167,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'asterisk')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `DELETE FROM asterisk.queues WHERE name='${nomeFila}'`
                 await this.querySync(conn,sql)
                 sql = `DELETE FROM asterisk.queue_members WHERE queue_name='${nomeFila}'`
@@ -177,6 +183,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT idFila, nomeFila 
                             FROM ${empresa}_dados.campanhas_filas 
                             WHERE idCampanha=${idCampanha}`
@@ -195,6 +202,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.users 
                             WHERE status=1 ORDER BY ordem ASC`
@@ -211,6 +219,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT estado 
                             FROM ${empresa}_dados.user_ramal 
                             WHERE userId=${idAgente}`
@@ -227,6 +236,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT u.nome, f.ramal 
                             FROM ${empresa}_dados.agentes_filas AS f 
                             JOIN ${empresa}_dados.users AS u ON f.ramal=u.id 
@@ -245,6 +255,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT u.id as ramal, u.nome 
                             FROM ${empresa}_dados.users AS u 
                             WHERE status=1  
@@ -265,6 +276,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const check = await this.verificaMembroFila(empresa,ramal,idFila)
                 if(check){
                     pool.end((err)=>{
@@ -301,6 +313,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `DELETE FROM ${empresa}_dados.agentes_filas
                             WHERE ramal=${ramal} AND fila=${idFila}`
                 await this.querySync(conn,sql)
@@ -324,6 +337,7 @@ class Filas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.agentes_filas 
                             WHERE ramal=${idAgente} AND fila=${idFila}`

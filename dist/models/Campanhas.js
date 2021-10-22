@@ -2,149 +2,204 @@
 var _Mailing = require('./Mailing'); var _Mailing2 = _interopRequireDefault(_Mailing);
 var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
-class Campanhas{   
-    /*
-    async querySync(sql,empresa){
-        const hostEmp = await Clients.serversDbs(empresa)
-        const connection = connect.poolConta(hostEmp)
-        const promisePool =  connection.promise();
-        const result = await promisePool.query(sql)
-        promisePool.end();
-        return result[0];       
-    }*/
-    
-    async querySync(sql,empresa){
-        return new Promise(async(resolve,reject)=>{
-            const hostEmp = await _Clients2.default.serversDbs(empresa)
-            const conn = _dbConnection2.default.poolConta(hostEmp)
-            conn.query(sql,(e,rows)=>{
-                if(e) reject(e);
+class Campanhas{ 
+    async querySync(conn,sql){         
+        return new Promise((resolve,reject)=>{            
+            conn.query(sql, (err,rows)=>{
+                if(err) return reject(err)
                 resolve(rows)
             })
-            conn.end()                        
         })
-    }
-   
-    
-    async querySync_astdb(sql){
-        const connection = _dbConnection2.default.poolAsterisk
-        const promisePool =  connection.promise();
-        const result = await promisePool.query(sql)
-        //promisePool.end();
-        return result[0];
-    }
+    } 
     
     //######################CONFIGURAÇÃO DE CAMPANHA ATIVA################################
     
     //######################Operacoes básicas das campanhas (CRUD)######################
     //Criar Campanha
     async criarCampanha(empresa,tipo,nome,descricao){
-        const sql = `INSERT INTO ${empresa}_dados.campanhas 
-                                (dataCriacao,tipo,nome,descricao,estado,status) 
-                         VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
-        return await this.querySync(sql,empresa)  
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `INSERT INTO ${empresa}_dados.campanhas 
+                                        (dataCriacao,tipo,nome,descricao,estado,status) 
+                                VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
+                const rows =  await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 59', err)
+                })
+                resolve(rows) 
+            })
+        })
     }      
 
     //Lista campanhas
     async listarCampanhas(empresa){
-        const sql = `SELECT * 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas 
                       WHERE status=1 
                       ORDER BY status ASC, id ASC`
-        return await this.querySync(sql,empresa)  
+                const rows =  await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 77', err)
+                })
+                resolve(rows) 
+            })
+        })
     }
 
     async infoCampanha(empresa,idCampanha){
-        const sql = `SELECT c.nome, s.estado,
-                            DATE_FORMAT(h.inicio,'%d/%m/%Y') AS dataInicio,
-                            DATE_FORMAT(h.hora_inicio,'%H:%i') AS horaInicio,
-                            DATE_FORMAT(h.termino,'%d/%m/%Y') AS dataTermino,
-                            DATE_FORMAT(h.hora_termino,'%H:%i') AS horaTermino
-                    FROM ${empresa}_dados.campanhas AS c 
-                    JOIN ${empresa}_dados.campanhas_horarios AS h ON c.id=h.id_campanha
-                    JOIN ${empresa}_dados.campanhas_status AS s ON s.idCampanha=c.id
-                    WHERE c.id=${idCampanha}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT c.nome, s.estado,
+                                    DATE_FORMAT(h.inicio,'%d/%m/%Y') AS dataInicio,
+                                    DATE_FORMAT(h.hora_inicio,'%H:%i') AS horaInicio,
+                                    DATE_FORMAT(h.termino,'%d/%m/%Y') AS dataTermino,
+                                    DATE_FORMAT(h.hora_termino,'%H:%i') AS horaTermino
+                            FROM ${empresa}_dados.campanhas AS c 
+                            JOIN ${empresa}_dados.campanhas_horarios AS h ON c.id=h.id_campanha
+                            JOIN ${empresa}_dados.campanhas_status AS s ON s.idCampanha=c.id
+                            WHERE c.id=${idCampanha}`
+                const rows =  await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 99', err)
+                })
+                resolve(rows) 
+            })
+        })
    }
 
     async nomeCampanhas(empresa,idCampanha){
-        const sql = `SELECT * 
-                       FROM ${empresa}_dados.campanhas 
-                      WHERE id=${idCampanha}`
-        const c = await this.querySync(sql,empresa)
-        if(c.length==0){
-            return ""
-        }
-        return c[0].nome
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT * 
+                            FROM ${empresa}_dados.campanhas 
+                            WHERE id=${idCampanha}`
+                const c = await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 115', err)
+                })
+                if(c.length==0){
+                    resolve("")
+                }
+                resolve(c[0].nome)          
+                
+            })
+        })
     }
 
 
     async listarCampanhasAtivas(empresa){
-        const sql = `SELECT * 
-                       FROM ${empresa}_dados.campanhas 
-                      WHERE estado=1 
-                        AND status=1 
-                   ORDER BY status ASC, id ASC`
-        return await this.querySync(sql,empresa)         
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT * 
+                            FROM ${empresa}_dados.campanhas 
+                            WHERE estado=1 
+                                AND status=1 
+                        ORDER BY status ASC, id ASC`
+                const rows =  await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 138', err)
+                })
+                resolve(rows) 
+            })
+        })         
     }
 
     //Retorna Campanha
     async dadosCampanha(empresa,idCampanha){
-        const sql = `SELECT * FROM ${empresa}_dados.campanhas
-                      WHERE id='${idCampanha}' AND status=1`
-        return await this.querySync(sql,empresa)  
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT * FROM ${empresa}_dados.campanhas
+                            WHERE id='${idCampanha}' AND status=1`
+                            const rows =  await this.querySync(conn,sql) 
+                            pool.end((err)=>{
+                                if(err) console.log('Campanhas.js 154', err)
+                            })
+                            resolve(rows) 
+                        })
+                    })          
     }
 
     //Atualiza campanha
     async atualizaCampanha(empresa,idCampanha,valores){
-        const sql = `UPDATE ${empresa}_dados.campanhas 
-                        SET tipo='${valores.tipo}',
-                            nome='${valores.nome}',
-                            descricao='${valores.descricao}',
-                            estado=${valores.estado},
-                            status=${valores.status} 
-                      WHERE id=${idCampanha}`
-
-        await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)              
-
-
-        return await this.querySync(sql,empresa)  
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `UPDATE ${empresa}_dados.campanhas 
+                                SET tipo='${valores.tipo}',
+                                    nome='${valores.nome}',
+                                    descricao='${valores.descricao}',
+                                    estado=${valores.estado},
+                                    status=${valores.status} 
+                            WHERE id=${idCampanha}`
+                await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)              
+                const rows =  await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 176', err)
+                })
+                resolve(rows) 
+            })
+        })       
     }
 
     //Atualiza os status dos agentes da campanha de acordo com o status da mesma
     async atualizaMembrosFilaCampanha(empresa,estado,idCampanha){
-        //Fila da campanha 
-        let sql = `SELECT idFila, nomeFila 
-                       FROM ${empresa}_dados.campanhas_filas 
-                      WHERE idCampanha=${idCampanha}`
-        const fila = await this.querySync(sql,empresa)
-        if(fila.length==0){
-            return false;
-        }
-        const idFila=fila[0].idFila
-        const nomeFila=fila[0].nomeFila
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                //Fila da campanha 
+                let sql = `SELECT idFila, nomeFila 
+                            FROM ${empresa}_dados.campanhas_filas 
+                            WHERE idCampanha=${idCampanha}`
+                const fila = await this.querySync(conn,sql) 
+                if(fila.length==0){
+                    pool.end((err)=>{
+                        if(err) console.log('Campanhas.js 165', err)
+                    })
+                    resolve(false);
+                    return
+                }
+                const idFila=fila[0].idFila
+                const nomeFila=fila[0].nomeFila
 
-        if(estado==1){
-            //Retira pausa do asterisk dos agentes disponiveis no sistema
-            sql = `SELECT ramal 
-                     FROM ${empresa}_dados.agentes_filas
-                    WHERE fila=${idFila}
-                      AND estado=1`
-            const agentes=await this.querySync(sql,empresa)
-            for(let i=0; i<agentes.length; i++){
-                const agente = agentes[i].ramal
-                sql = `UPDATE asterisk.queue_members 
-                          SET paused=0 
-                        WHERE membername='${agente}'`
-                await this.querySync_astdb(sql)  
-            }
-        }else{
-            //Pausa os agentes no asterisk
-            sql = `UPDATE asterisk.queue_members 
-                      SET paused=1 
-                        WHERE queue_name='${nomeFila}'`
-            await this.querySync_astdb(sql) 
-        }
+                const poolAsterisk = await _dbConnection2.default.pool(empresa,'asterisk')
+                poolAsterisk.getConnection(async (err,connAst)=>{
+                    if(estado==1){
+                        //Retira pausa do asterisk dos agentes disponiveis no sistema
+                        sql = `SELECT ramal 
+                                FROM ${empresa}_dados.agentes_filas
+                                WHERE fila=${idFila}
+                                AND estado=1`
+                        const agentes=await this.querySync(conn,sql)
+                   
+                        for(let i=0; i<agentes.length; i++){
+                            const agente = agentes[i].ramal
+                            sql = `UPDATE asterisk.queue_members 
+                                    SET paused=0 
+                                    WHERE membername='${agente}'`
+                            await this.querySync(connAst,sql)  
+                        }
+                    }else{
+                        //Pausa os agentes no asterisk
+                        sql = `UPDATE asterisk.queue_members 
+                                SET paused=1 
+                                    WHERE queue_name='${nomeFila}'`
+                        await this.querySync(connAst,sql)
+                    }
+                    poolAsterisk.end((err)=>{
+                        if(err) console.log('Campanhas.js 225', err)
+                    })
+                    resolve(true)
+                })
+            })
+        })
     } 
 
     //Remove Campanha
@@ -155,24 +210,42 @@ class Campanhas{
     //######################Gestão das listas de tabulacao das campanhas######################
     //Adiciona lista de tabulacao na campanha
     async addListaTabulacaoCampanha(empresa,idCampanha,idListaTabulacao){
-        //Removendo listas anteriores
-        let sql = `DELETE FROM ${empresa}_dados.campanhas_listastabulacao
-                         WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                //Removendo listas anteriores
+                let sql = `DELETE FROM ${empresa}_dados.campanhas_listastabulacao
+                                WHERE idCampanha=${idCampanha}`
+                await this.querySync(conn,sql)
         
-        sql = `INSERT INTO ${empresa}_dados.campanhas_listastabulacao 
-                           (idCampanha,idListaTabulacao,maxTime) 
-                    VALUES (${idCampanha},${idListaTabulacao},15)`
-        await this.querySync(sql,empresa)         
+                sql = `INSERT INTO ${empresa}_dados.campanhas_listastabulacao 
+                                (idCampanha,idListaTabulacao,maxTime) 
+                            VALUES (${idCampanha},${idListaTabulacao},15)`
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 254', err)
+                })
+                resolve(true)
+            })
+        })         
     }
 
     //Exibe listas de tabulacao da campanhas
     async listasTabulacaoCampanha(empresa,idCampanha){
-        const sql = `SELECT cl.id as idListaNaCampanha, t.nome AS nomeListaTabulacao, idCampanha, idListaTabulacao, maxTime 
-                       FROM ${empresa}_dados.campanhas_listastabulacao AS cl 
-                  LEFT JOIN ${empresa}_dados.tabulacoes_listas AS t ON t.id=cl.idListaTabulacao
-                      WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql,empresa)  
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT cl.id as idListaNaCampanha, t.nome AS nomeListaTabulacao, idCampanha, idListaTabulacao, maxTime 
+                            FROM ${empresa}_dados.campanhas_listastabulacao AS cl 
+                        LEFT JOIN ${empresa}_dados.tabulacoes_listas AS t ON t.id=cl.idListaTabulacao
+                            WHERE idCampanha=${idCampanha}`
+                const rows = await this.querySync(conn,sql)  
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 271', err)
+                })
+                resolve(rows)
+            })
+        }) 
     }
 
     async checklistaTabulacaoCampanha(empresa,idCampanha){
@@ -185,406 +258,667 @@ class Campanhas{
 
     //Remove listas de tabulacao da campanha
     async removerListaTabulacaoCampanha(empresa,idListaNaCampanha){
-        const sql = `DELETE FROM ${empresa}_dados.campanhas_listastabulacao 
-                           WHERE id=${idListaNaCampanha}`
-        await this.querySync(sql,empresa)  
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `DELETE FROM ${empresa}_dados.campanhas_listastabulacao 
+                                WHERE id=${idListaNaCampanha}`
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 294', err)
+                })
+            })
+        })   
     }
 
     async setMaxTimeStatusTab(empresa,idCampanha,time){
-        const sql = `UPDATE ${empresa}_dados.campanhas_listastabulacao 
-                        SET maxTime=${time} 
-                      WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql,empresa)  
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `UPDATE ${empresa}_dados.campanhas_listastabulacao 
+                                SET maxTime=${time} 
+                            WHERE idCampanha=${idCampanha}`
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 309', err)
+                })
+            })
+        })   
     }
 
     async getMaxTimeStatusTab(empresa,idCampanha){
-        const sql = `SELECT maxTime 
-                       FROM ${empresa}_dados.campanhas_listastabulacao 
-                       WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql,empresa)  
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT maxTime 
+                            FROM ${empresa}_dados.campanhas_listastabulacao 
+                            WHERE idCampanha=${idCampanha}`
+                const rows =  await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 324', err)
+                })
+                resolve(rows)
+            })
+        })  
     }
 
     //INTEGRAÇÕES
     //######################Gestão das integrações######################
     //Cria Integração
     async criarIntegracao(empresa,dados){
-        const sql = `INSERT INTO ${empresa}_dados.campanhas_integracoes_disponiveis 
-                                 (url,descricao,modoAbertura)
-                          VALUES ('${dados.url}','${dados.descricao}','${dados.modoAbertura}')`
-        return await this.querySync(sql,empresa) 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `INSERT INTO ${empresa}_dados.campanhas_integracoes_disponiveis 
+                                        (url,descricao,modoAbertura)
+                                VALUES ('${dados.url}','${dados.descricao}','${dados.modoAbertura}')`
+                const rows =  await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 343', err)
+                })
+                resolve(rows)
+            })
+        })  
     }
 
     //Listar integracao
     async listarIntegracoes(empresa){
-        const sql = `SELECT * 
-                       FROM ${empresa}_dados.campanhas_integracoes_disponiveis`
-        return await this.querySync(sql,empresa) 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT * 
+                            FROM ${empresa}_dados.campanhas_integracoes_disponiveis`
+                const rows = await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 359', err)
+                })
+                resolve(rows)
+            })
+        })  
     }
 
     //Atualiza Integracao
     async atualizarIntegracao(empresa,idIntegracao,dados){
-        const sql = `UPDATE ${empresa}_dados.campanhas_integracoes_disponiveis 
-                       SET url='${dados.url}',
-                           descricao='${dados.descricao}',
-                           modoAbertura='${dados.modoAbertura}' 
-                     WHERE id=${idIntegracao}`
-        return await this.querySync(sql,empresa) 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `UPDATE ${empresa}_dados.campanhas_integracoes_disponiveis 
+                            SET url='${dados.url}',
+                                descricao='${dados.descricao}',
+                                modoAbertura='${dados.modoAbertura}' 
+                            WHERE id=${idIntegracao}`
+                const rows = await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 378', err)
+                })
+                resolve(rows)
+            })
+        })  
     }
 
     //Dados integracao
     async dadosIntegracao(empresa,idIntegracao){
-        const sql = `SELECT * 
-                       FROM ${empresa}_dados.campanhas_integracoes_disponiveis 
-                      WHERE id=${idIntegracao}`
-        return await this.querySync(sql,empresa) 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT * 
+                            FROM ${empresa}_dados.campanhas_integracoes_disponiveis 
+                            WHERE id=${idIntegracao}`
+                const rows = await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 395', err)
+                })
+                resolve(rows)
+            })
+        })  
     }
 
     //Remove Integracao
     async removerIntegracao(empresa,idIntegracao){
-        let sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes_disponiveis WHERE id=${idIntegracao}`
-        await this.querySync(sql,empresa) 
-        
-        sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes WHERE idIntegracao=${idIntegracao}`
-        return await this.querySync(sql,empresa) 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes_disponiveis WHERE id=${idIntegracao}`
+                await this.querySync(conn,sql) 
+                
+                sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes WHERE idIntegracao=${idIntegracao}`
+                const rows = await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 413', err)
+                })
+                resolve(rows)
+            })
+        })  
         
     }
 
     //Selecionar integracao
     async inserirIntegracaoCampanha(empresa,dados){
-        let sql = `SELECT id FROM ${empresa}_dados.campanhas_integracoes
-                    WHERE idCampanha=${dados.idCampanha}`
-        const rows = await this.querySync(sql,empresa) 
-        if(rows.length>=1){
-            return false;
-        }
-        sql = `INSERT INTO ${empresa}_dados.campanhas_integracoes (idCampanha,idIntegracao) 
-                    VALUES (${dados.idCampanha},${dados.idIntegracao})`
-        return await this.querySync(sql,empresa) 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let sql = `SELECT id FROM ${empresa}_dados.campanhas_integracoes
+                            WHERE idCampanha=${dados.idCampanha}`
+                const r = await this.querySync(conn,sql) 
+                if(r.length>=1){
+                    pool.end((err)=>{ console.log(err)})
+                    resolve(false)
+                    return
+                }
+                sql = `INSERT INTO ${empresa}_dados.campanhas_integracoes (idCampanha,idIntegracao) 
+                            VALUES (${dados.idCampanha},${dados.idIntegracao})`
+                const rows = await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 438', err)
+                })
+                resolve(rows)
+            })
+        })  
     }
 
     //Listar Integracoes de uma campanhas
     async listaIntegracaoCampanha(empresa,idCampanha){
-        const sql = `SELECT i.* 
-                       FROM ${empresa}_dados.campanhas_integracoes AS c 
-                       JOIN ${empresa}_dados.campanhas_integracoes_disponiveis AS i ON i.id=c.idIntegracao 
-                      WHERE c.idCampanha=${idCampanha}`
-                       return await this.querySync(sql,empresa) 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT i.* 
+                            FROM ${empresa}_dados.campanhas_integracoes AS c 
+                            JOIN ${empresa}_dados.campanhas_integracoes_disponiveis AS i ON i.id=c.idIntegracao 
+                            WHERE c.idCampanha=${idCampanha}`
+                const rows =  await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 456', err)
+                })
+                resolve(rows)
+            })
+        })  
     }
 
     //remove integracao campannha
     async removerIntegracaoCampanha(empresa,idCampanha,idIntegracao){
-        const sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes 
-                      WHERE idCampanha=${idCampanha}
-                        AND idIntegracao=${idIntegracao}`
-        return await this.querySync(sql,empresa) 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes 
+                            WHERE idCampanha=${idCampanha}
+                                AND idIntegracao=${idIntegracao}`
+                const rows = await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 473', err)
+                })
+                resolve(rows)
+            })
+        })  
     }
 
     //DISCADOR
     //######################Configuração do discador da campanha######################
     //Configurar discador da campanha
     async configDiscadorCampanha(empresa,idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,modo_atendimento,saudacao){
-        const conf = await this.verConfigDiscadorCampanha(empresa,idCampanha)
-        if(conf.length ===0){
-            const sql = `INSERT INTO  ${empresa}_dados.campanhas_discador 
-                                     (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,modo_atendimento,saudacao) 
-                              VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}','${modo_atendimento}','${saudacao}')`
-            return await this.querySync(sql,empresa) 
-        }else{
-            const sql = `UPDATE ${empresa}_dados.campanhas_discador 
-                            SET tipo_discador='${tipoDiscador}',
-                                agressividade=${agressividade},
-                                ordem_discagem='${ordemDiscagem}',
-                                tipo_discagem='${tipoDiscagem}',
-                                modo_atendimento='${modo_atendimento}',
-                                saudacao='${saudacao}'
-                          WHERE idCampanha = ${idCampanha}`
-            return await this.querySync(sql,empresa)      
-        }
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const conf = await this.verConfigDiscadorCampanha(empresa,idCampanha)
+                if(conf.length ===0){
+                    const sql = `INSERT INTO  ${empresa}_dados.campanhas_discador 
+                                            (idCampanha,tipo_discador,agressividade,ordem_discagem,tipo_discagem,modo_atendimento,saudacao) 
+                                    VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}','${modo_atendimento}','${saudacao}')`
+                    const rows = await this.querySync(conn,sql) 
+                    pool.end((err)=>{
+                        if(err) console.log('Campanhas.js 494', err)
+                    })
+                    resolve(rows)
+                }else{
+                    const sql = `UPDATE ${empresa}_dados.campanhas_discador 
+                                    SET tipo_discador='${tipoDiscador}',
+                                        agressividade=${agressividade},
+                                        ordem_discagem='${ordemDiscagem}',
+                                        tipo_discagem='${tipoDiscagem}',
+                                        modo_atendimento='${modo_atendimento}',
+                                        saudacao='${saudacao}'
+                                WHERE idCampanha = ${idCampanha}`
+                    const rows = await this.querySync(conn,sql)  
+                    pool.end((err)=>{
+                        if(err) console.log('Campanhas.js 508', err)
+                    })
+                    resolve(rows)    
+                }               
+            })
+        })  
     }
     //Ver configuracoes do discador
     async verConfigDiscadorCampanha(empresa,idCampanha){
-        const sql = `SELECT * 
-                       FROM ${empresa}_dados.campanhas_discador 
-                      WHERE idCampanha = ${idCampanha}`
-        return await this.querySync(sql,empresa)   
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT * 
+                            FROM ${empresa}_dados.campanhas_discador 
+                            WHERE idCampanha = ${idCampanha}`
+                const rows = await this.querySync(conn,sql)   
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 525', err)
+                })
+                resolve(rows)   
+                           
+            })
+        })  
     }
 
     //FILAS
     //Listar filas da campanha
     async listarFilasCampanha(empresa,idCampanha){
-        const sql = `SELECT idFila, nomeFila
-                       FROM ${empresa}_dados.campanhas_filas 
-                      WHERE idCampanha='${idCampanha}'`
-        return await this.querySync(sql,empresa)   
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT idFila, nomeFila
+                            FROM ${empresa}_dados.campanhas_filas 
+                            WHERE idCampanha='${idCampanha}'`
+                const rows = await this.querySync(conn,sql)  
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 544', err)
+                })
+                resolve(rows)   
+                           
+            })
+        })   
     }    
     //Incluir fila a campanhas
     async addFila(empresa,idCampanha,idFila,apelido,nomeFila){
-        let sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
-                    WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql,empresa)  
-        sql = `INSERT INTO ${empresa}_dados.campanhas_filas 
-                          (idCampanha,idFila,nomeFila,apelido) 
-                   VALUES (${idCampanha},${idFila},'${nomeFila}','${apelido}')`
-        return await this.querySync(sql,empresa)   
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
+                            WHERE idCampanha=${idCampanha}`
+                await this.querySync(conn,sql)  
+                sql = `INSERT INTO ${empresa}_dados.campanhas_filas 
+                                (idCampanha,idFila,nomeFila,apelido) 
+                        VALUES (${idCampanha},${idFila},'${nomeFila}','${apelido}')`
+                const rows = await this.querySync(conn,sql)  
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 564', err)
+                })
+                resolve(rows)   
+                           
+            })
+        })   
     }
 
     //Remove uma determinada fila da campanha
     async removerFilaCampanha(empresa,idCampanha,idFila){
-        const sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
-                      WHERE idCampanha=${idCampanha} AND idFila='${idFila}'`
-        return await this.querySync(sql,empresa)   
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
+                            WHERE idCampanha=${idCampanha} AND idFila='${idFila}'`
+                const rows = await this.querySync(conn,sql)  
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 581', err)
+                })
+                resolve(rows)   
+                           
+            })
+        })   
     }    
 
     //MAILING
     //ADICIONA O MAILING A UMA CAMPANHA
     async addMailingCampanha(empresa,idCampanha,idMailing){
-        const infoMailing = await _Mailing2.default.infoMailing(empresa,idMailing)
-        const tabelaDados = infoMailing[0].tabela_dados
-        const tabelaNumeros = infoMailing[0].tabela_numeros
-        //verifica se mailing ja existem na campanha
-        let sql = `SELECT id 
-                     FROM ${empresa}_dados.campanhas_mailing 
-                     WHERE idCampanha=${idCampanha} 
-                       AND idMailing=${idMailing}`
-        const r = await this.querySync(sql,empresa)
-        if(r.length==1){
-            return false
-        }
-
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const infoMailing = await _Mailing2.default.infoMailing(empresa,idMailing)
+                const tabelaDados = infoMailing[0].tabela_dados
+                const tabelaNumeros = infoMailing[0].tabela_numeros
+                //verifica se mailing ja existem na campanha
+                let sql = `SELECT id 
+                            FROM ${empresa}_dados.campanhas_mailing 
+                            WHERE idCampanha=${idCampanha} 
+                            AND idMailing=${idMailing}`
+                const r = await this.querySync(conn,sql)
+                
+                if(r.length==1){
+                    pool.end((err)=>{
+                        if(err) console.log('Campanhas.js 605', err)
+                    })
+                    resolve(false)
+                    return
+                }
+                //Inserindo coluna da campanha na tabela de numeros
+                sql = `ALTER TABLE ${empresa}_mailings.${tabelaNumeros} 
+                      ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT '1' AFTER produtivo`
+                await this.querySync(conn,sql)
+                //Atualiza os registros como disponíveis (1)
+                //sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`
+                //await this.querySync(sql,empresa)
+                
+                //Inserindo informacao do id do mailing na campanha 
+                sql = `INSERT INTO ${empresa}_dados.campanhas_mailing 
+                                    (idCampanha,idMailing) 
+                            VALUES ('${idCampanha}','${idMailing}')`
+                await this.querySync(conn,sql)
+                //Inserindo campos do mailing
+                sql = `SELECT * 
+                        FROM ${empresa}_dados.mailing_tipo_campo 
+                        WHERE idMailing=${idMailing}`
+                const campos =  await this.querySync(conn,sql)
+                sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
+                                    (idCampanha,idMailing,tabela,idCampo,ordem) 
+                            VALUES ` 
+                    for(let i=0; i<campos.length; i++){
+                        sql += `(${idCampanha},${idMailing},'${tabelaDados}',${campos[i].id},${i})`
+                        if((i+1)<campos.length){ sql +=', '}            
+                    }
+                //console.log(sql)
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 605', err)
+                })
+                resolve(true)                           
+            })
+        })   
         
-        //Inserindo coluna da campanha na tabela de numeros
-        sql = `ALTER TABLE ${empresa}_mailings.${tabelaNumeros} 
-               ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT '1' AFTER produtivo`
-        await this.querySync(sql,empresa)
-        //Atualiza os registros como disponíveis (1)
-        //sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`
-        //await this.querySync(sql,empresa)
-        
-        //Inserindo informacao do id do mailing na campanha 
-        sql = `INSERT INTO ${empresa}_dados.campanhas_mailing 
-                           (idCampanha,idMailing) 
-                    VALUES ('${idCampanha}','${idMailing}')`
-        await this.querySync(sql,empresa)
-        //Inserindo campos do mailing
-        sql = `SELECT * 
-                 FROM ${empresa}_dados.mailing_tipo_campo 
-                WHERE idMailing=${idMailing}`
-        const campos =  await this.querySync(sql,empresa)
-        sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
-                           (idCampanha,idMailing,tabela,idCampo,ordem) 
-                    VALUES ` 
-            for(let i=0; i<campos.length; i++){
-                sql += `(${idCampanha},${idMailing},'${tabelaDados}',${campos[i].id},${i})`
-                if((i+1)<campos.length){ sql +=', '}            
-            }
-        //console.log(sql)
-        await this.querySync(sql,empresa)
-        return true
     }
 
     //Lista os mailings adicionados em uma campanha
     async listarMailingCampanha(empresa,idCampanha){
-        const sql = `SELECT * 
-                       FROM ${empresa}_dados.campanhas_mailing 
-                      WHERE idCampanha=${idCampanha}
-                      LIMIT 1`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT * 
+                            FROM ${empresa}_dados.campanhas_mailing 
+                            WHERE idCampanha=${idCampanha}
+                            LIMIT 1`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 630', err)
+                })
+                resolve(rows)
+            })
+        })                
     }
 
     //Lista Mailings das campanhas ativas
     async listarMailingCampanhasAtivas(empresa){
-        const sql = `SELECT m.id, m.nome, m.totalNumeros, m.numerosInvalidos
-                       FROM ${empresa}_dados.mailings AS m 
-                       JOIN ${empresa}_dados.campanhas_mailing AS cm ON m.id=cm.idMailing
-                       JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS c ON c.id=cm.idCampanha
-                   ORDER BY m.id DESC
-                      LIMIT 10;`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT m.id, m.nome, m.totalNumeros, m.numerosInvalidos
+                            FROM ${empresa}_dados.mailings AS m 
+                            JOIN ${empresa}_dados.campanhas_mailing AS cm ON m.id=cm.idMailing
+                            JOIN ${empresa}_mailings.campanhas_tabulacao_mailing AS c ON c.id=cm.idCampanha
+                        ORDER BY m.id DESC
+                            LIMIT 10;`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 650', err)
+                })
+                resolve(rows)
+            })
+        })       
     }
 
     //Remove o mailing de uma campanha
     async removeMailingCampanha(empresa,idCampanha){
-        const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)
 
-        //Recuperando o id da campanha
-        let sql = `SELECT idCampanha 
-                     FROM ${empresa}_dados.campanhas_mailing 
-                    WHERE idCampanha=${idCampanha}`
-        const r = await this.querySync(sql,empresa)
-        if(r.length==0){
-            return false
-        }
-        //Removendo coluna da campanha no mailing
-        sql = `ALTER TABLE ${empresa}_mailings.${infoMailing[0].tabela_numeros} 
-                DROP COLUMN campanha_${idCampanha}`
-        await this.querySync(sql,empresa)
-      
-        //Removendo informacao do mailing da campanha
-        sql = `DELETE FROM ${empresa}_dados.campanhas_mailing 
-                WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql,empresa)
-        //Removendo filtros do mailing na campanha
-        sql = `DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
-                     WHERE idCampanha=${idCampanha}`
-        await this.querySync(sql,empresa)
-        //removendo campos do mailing na campanha
-        sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
-                WHERE idCampanha=${idCampanha}` 
-        await this.querySync(sql,empresa)
-        return true
+                //Recuperando o id da campanha
+                let sql = `SELECT idCampanha 
+                            FROM ${empresa}_dados.campanhas_mailing 
+                            WHERE idCampanha=${idCampanha}`
+                const r = await this.querySync(conn,sql)
+                if(r.length==0){
+                    return false
+                }
+                //Removendo coluna da campanha no mailing
+                sql = `ALTER TABLE ${empresa}_mailings.${infoMailing[0].tabela_numeros} 
+                        DROP COLUMN campanha_${idCampanha}`
+                await this.querySync(conn,sql)
+            
+                //Removendo informacao do mailing da campanha
+                sql = `DELETE FROM ${empresa}_dados.campanhas_mailing 
+                        WHERE idCampanha=${idCampanha}`
+                await this.querySync(conn,sql)
+                //Removendo filtros do mailing na campanha
+                sql = `DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
+                            WHERE idCampanha=${idCampanha}`
+                await this.querySync(conn,sql)
+                //removendo campos do mailing na campanha
+                sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
+                        WHERE idCampanha=${idCampanha}` 
+                await this.querySync(conn,sql)
+               
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 691', err)
+                })
+                resolve(true)
+            })
+        })       
     }
 
     //FILTROS DE DISCAGEM ##################################################################################
     //Aplica/remove um filtro de discagem
-    async filtrarRegistrosCampanha(empresa,parametros){     
-        const idCampanha = parametros.idCampanha;
-        const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)//informacoes do mailing
+    async filtrarRegistrosCampanha(empresa,parametros){  
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{     
+                const idCampanha = parametros.idCampanha;
+                const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)//informacoes do mailing
         
-        const idMailing = infoMailing[0].id;
-        const tabelaNumeros = infoMailing[0].tabela_numeros;
-        const tipo = parametros.tipo;
-        const valor = parametros.valor
-        const regiao = parametros.regiao 
+                const idMailing = infoMailing[0].id;
+                const tabelaNumeros = infoMailing[0].tabela_numeros;
+                const tipo = parametros.tipo;
+                const valor = parametros.valor
+                const regiao = parametros.regiao 
 
         
-        if(infoMailing.length==0){
-            //console.log('Mailing nao encontrado')
-            return false
-        }
-        const checkFilter = await this.checkFilter(empresa,idCampanha,idMailing,tipo,valor,regiao)//Verificando se ja existe filtro aplicado
-        
-        //verifica se filtro ja esta aplicado
-        if(checkFilter===true){
-            //console.log('checkFilter true')
-            let sql=""
-            if(regiao==""){//remo
-                //console.log(`Removendo filtro ${tipo}=${valor}`)
-                sql=`DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
-                     WHERE idCampanha=${idCampanha}
-                       AND idMailing=${idMailing}
-                       AND tipo='${tipo}'
-                       AND valor='${valor}'`
-            }else{
-                //console.log(`Removendo filtros ${tipo}=${valor}`)
-                sql=`DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
-                           WHERE idCampanha=${idCampanha}
-                             AND idMailing=${idMailing}
-                             AND tipo='${tipo}'
-                             AND valor='${valor}'
-                             AND regiao='${regiao}'`
-            }
-            //console.log(`Removendo filtros sql`,sql)   
-           
-            await this.querySync(sql,empresa)      
-            
-            
-            this.delFilterDial(empresa,tabelaNumeros,idCampanha,tipo,valor,regiao)
-            //Listar filtros restantes
-            sql = `SELECT * 
-                     FROM ${empresa}_dados.campanhas_mailing_filtros 
-                    WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
-            const fr = await this.querySync(sql,empresa)//Filtros Restantes
-            
-            if(fr.length>=1){
-                for (let i = 0; i < fr.length; i++) {
-                    this.addFilterDial(empresa,tabelaNumeros,idCampanha,fr[i].tipo,fr[i].valor,fr[i].regiao)
+                if(infoMailing.length==0){
+                    //console.log('Mailing nao encontrado')
+                    return false
                 }
-            }
+                const checkFilter = await this.checkFilter(empresa,idCampanha,idMailing,tipo,valor,regiao)//Verificando se ja existe filtro aplicado
+        
+                //verifica se filtro ja esta aplicado
+                if(checkFilter===true){
+                    //console.log('checkFilter true')
+                    let sql=""
+                    if(regiao==""){//remo
+                        //console.log(`Removendo filtro ${tipo}=${valor}`)
+                        sql=`DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
+                            WHERE idCampanha=${idCampanha}
+                            AND idMailing=${idMailing}
+                            AND tipo='${tipo}'
+                            AND valor='${valor}'`
+                    }else{
+                        //console.log(`Removendo filtros ${tipo}=${valor}`)
+                        sql=`DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
+                                WHERE idCampanha=${idCampanha}
+                                    AND idMailing=${idMailing}
+                                    AND tipo='${tipo}'
+                                    AND valor='${valor}'
+                                    AND regiao='${regiao}'`
+                    }
+                    //console.log(`Removendo filtros sql`,sql)   
+           
+                    await this.querySync(conn,sql)      
             
-            return true
-        }
-        let sql=`INSERT INTO ${empresa}_dados.campanhas_mailing_filtros 
-                         (idCampanha,idMailing,tipo,valor,regiao)
-                  VALUES (${idCampanha},${idMailing},'${tipo}','${valor}','${regiao}')`
-                  //console.log(`last sql`,sql)          
-        await this.querySync(sql,empresa)
-        this.addFilterDial(empresa,tabelaNumeros,idCampanha,tipo,valor,regiao)
-        return true
+            
+                    this.delFilterDial(empresa,tabelaNumeros,idCampanha,tipo,valor,regiao)
+                    //Listar filtros restantes
+                    sql = `SELECT * 
+                            FROM ${empresa}_dados.campanhas_mailing_filtros 
+                            WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
+                    const fr = await this.querySync(conn,sql)//Filtros Restantes
+            
+                    if(fr.length>=1){
+                        for (let i = 0; i < fr.length; i++) {
+                            this.addFilterDial(empresa,tabelaNumeros,idCampanha,fr[i].tipo,fr[i].valor,fr[i].regiao)
+                        }
+                    }
+                    pool.end((err)=>{
+                        if(err) console.log('Campanhas.js 758', err)
+                    })
+                    resolve(true)
+                }
+                let sql=`INSERT INTO ${empresa}_dados.campanhas_mailing_filtros 
+                                (idCampanha,idMailing,tipo,valor,regiao)
+                        VALUES (${idCampanha},${idMailing},'${tipo}','${valor}','${regiao}')`
+                        //console.log(`last sql`,sql)          
+                 await this.querySync(conn,sql)
+                this.addFilterDial(empresa,tabelaNumeros,idCampanha,tipo,valor,regiao)
+                
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                resolve(true)
+            })
+        })      
     }
 
 
     //Retorna todas as informações de um mailing que esta atribuido em uma campanha
     async infoMailingCampanha(empresa,idCampanha){
-        const sql =`SELECT m.* 
-                      FROM ${empresa}_dados.mailings AS m
-                      JOIN ${empresa}_dados.campanhas_mailing AS c
-                        ON c.idMailing=m.id
-                     WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql =`SELECT m.* 
+                            FROM ${empresa}_dados.mailings AS m
+                            JOIN ${empresa}_dados.campanhas_mailing AS c
+                                ON c.idMailing=m.id
+                            WHERE idCampanha=${idCampanha}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 790', err)
+                })
+                resolve(rows)
+            })
+        })
     }
     //Checa se já existe algum filtro aplicado com os parametros informados
     async checkFilter(empresa,idCampanha,idMailing,tipo,valor,regiao){
-        const sql =`SELECT id 
-                      FROM ${empresa}_dados.campanhas_mailing_filtros 
-                     WHERE idCampanha=${idCampanha}
-                       AND idMailing=${idMailing}
-                       AND tipo='${tipo}'
-                       AND valor='${valor}'
-                       AND regiao='${regiao}'`
-        const r = await this.querySync(sql,empresa)
-        if(r.length==0){
-            return false;
-        }
-        return true;
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql =`SELECT id 
+                            FROM ${empresa}_dados.campanhas_mailing_filtros 
+                            WHERE idCampanha=${idCampanha}
+                            AND idMailing=${idMailing}
+                            AND tipo='${tipo}'
+                            AND valor='${valor}'
+                            AND regiao='${regiao}'`
+                const r = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 810', err)
+                })
+                if(r.length==0){
+                    resolve(false)
+                    return
+                }                
+                resolve(true)
+            })
+        })  
     }
     //Remove um filtro de uma tabela
     async delFilterDial(empresa,tabela,idCampanha,tipo,valor,regiao){
-        console.log(`delFilterDial ${tipo}=${valor}`)
-        let filter=""
-        filter+=`${tipo}='${valor}'`
-        if(regiao!=0){ filter+=` AND uf='${regiao}'`}
-       
-        let sql = `UPDATE ${empresa}_mailings.${tabela} 
-                      SET campanha_${idCampanha}=1 
-                    WHERE ${filter}`       
-        console.log(`delFilter sql`,sql)
-        await this.querySync(sql,empresa)
-        return true
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                //console.log(`delFilterDial ${tipo}=${valor}`)
+                let filter=""
+                filter+=`${tipo}='${valor}'`
+                if(regiao!=0){ filter+=` AND uf='${regiao}'`}
+            
+                let sql = `UPDATE ${empresa}_mailings.${tabela} 
+                            SET campanha_${idCampanha}=1 
+                            WHERE ${filter}`       
+                console.log(`delFilter sql`,sql)
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 836', err)
+                })
+                resolve(true)
+            })
+        })
     }
     //Aplica um filtro a uma tabela
     async addFilterDial(empresa,tabela,idCampanha,tipo,valor,regiao){
-        console.log(`addFilterDial ${tipo}=${valor}`)
-        let filter=""
-        filter+=`${tipo}='${valor}'`
-        if(regiao!=0){ filter+=` AND uf='${regiao}'`}       
-        let sql = `UPDATE ${empresa}_mailings.${tabela} 
-                      SET campanha_${idCampanha}=0 
-                    WHERE ${filter}`          
-        await this.querySync(sql,empresa)
-        return true
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                //console.log(`addFilterDial ${tipo}=${valor}`)
+                let filter=""
+                filter+=`${tipo}='${valor}'`
+                if(regiao!=0){ filter+=` AND uf='${regiao}'`}       
+                let sql = `UPDATE ${empresa}_mailings.${tabela} 
+                            SET campanha_${idCampanha}=0 
+                            WHERE ${filter}`          
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 856', err)
+                })
+                resolve(true)
+            })
+        })
     }
 
     //Conta o total de numeros de uma tabela pelo UF, ou DDD
     async totalNumeros(empresa,tabela,uf,ddd){
-        let filter=""
-        if(uf!=0){ filter += ` AND uf="${uf}"` }
-        if(ddd!=undefined){ filter += ` AND ddd=${ddd}`}
-        const sql = `SELECT COUNT(id) AS total 
-                       FROM ${empresa}_mailings.${tabela}
-                       WHERE valido=1 ${filter}` 
-         
-        const r = await this.querySync(sql,empresa)
-        return r[0].total
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let filter=""
+                if(uf!=0){ filter += ` AND uf="${uf}"` }
+                if(ddd!=undefined){ filter += ` AND ddd=${ddd}`}
+                const sql = `SELECT COUNT(id) AS total 
+                            FROM ${empresa}_mailings.${tabela}
+                            WHERE valido=1 ${filter}` 
+                
+                const r = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 877', err)
+                })
+                resolve(r[0].total)
+            })
+        })
     }
     async totalNumeros_porTipo(empresa,tabela,uf,tipo){
-        let filter=""
-        if(uf!=0){ filter += ` AND uf="${uf}"` }
-        if(tipo!=undefined){ filter += ` AND tipo='${tipo}'`}
-        const sql = `SELECT COUNT(id) AS total 
-                       FROM ${empresa}_mailings.${tabela} 
-                      WHERE valido=1 ${filter}`       
-        const r = await this.querySync(sql,empresa)
-        return r[0].total
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let filter=""
+                if(uf!=0){ filter += ` AND uf="${uf}"` }
+                if(tipo!=undefined){ filter += ` AND tipo='${tipo}'`}
+                const sql = `SELECT COUNT(id) AS total 
+                            FROM ${empresa}_mailings.${tabela} 
+                            WHERE valido=1 ${filter}`       
+                const r = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 895', err)
+                })
+                resolve(r[0].total)
+            })
+        })
     }
     //Conta o total de registros filtrados de uma tabela pelo us
     async numerosFiltrados(empresa,idMailing,tabelaNumeros,idCampanha,uf){
-        let filter=""
-        if(uf!=0){ filter += ` AND uf="${uf}"` }
-        const sql = `SELECT COUNT(id) AS total
-                       FROM ${empresa}_mailings.${tabelaNumeros}
-                      WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
-        const r = await this.querySync(sql,empresa)
-        return r[0].total
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let filter=""
+                if(uf!=0){ filter += ` AND uf="${uf}"` }
+                const sql = `SELECT COUNT(id) AS total
+                            FROM ${empresa}_mailings.${tabelaNumeros}
+                            WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
+                const r = await this.querySync(conn,sql)
+                
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 914', err)
+                })
+                resolve(r[0].total)
+            })
+        })
         
         //Verifica os filtros de uma campanha
         /*let regiao="";
@@ -592,7 +926,7 @@ class Campanhas{
             regiao=` AND regiao='${uf}'`
         }
         let sql = `SELECT * FROM campanhas_mailing_filtros WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${regiao}`
-        const filtros = await this.querySync(sql,empresa)      
+        const filtros = await this.querySync(conn,sql)      
         let numerosFiltrados = 0
         let filters=""
         for(let i=0;i<filtros.length;i++){
@@ -617,243 +951,405 @@ class Campanhas{
         sql = `SELECT COUNT(id) AS numerosFiltrados
                  FROM ${connect.db.mailings}.${tabelaNumeros}
                 WHERE valido=1 ${filters}`
-        const numeros = await this.querySync(sql,empresa)
+        const numeros = await this.querySync(conn,sql)
         return numeros[0].numerosFiltrados*/
     }
     //Retorna os DDDS de uma tabela de numeros
     async dddsMailings(empresa,tabela,uf){
-        let filter=""
-        if(uf!=0){ filter = `WHERE uf='${uf}'` }
-        let sql = `SELECT DISTINCT ddd 
-                     FROM ${empresa}_mailings.${tabela} ${filter}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let filter=""
+                if(uf!=0){ filter = `WHERE uf='${uf}'` }
+                let sql = `SELECT DISTINCT ddd 
+                            FROM ${empresa}_mailings.${tabela} ${filter}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 965', err)
+                })
+                resolve(rows)
+            })
+        })
     }
     //Checa se existe algum filtro de DDD aplicado
-    async checkTypeFilter(empresa,idCampanha,tipo,valor,uf){     
-        let filter  =""
-         if(tipo!='uf'){
-             filter=` AND regiao = "${uf}"`
-         }
-        const sql =`SELECT id 
-                      FROM ${empresa}_dados.campanhas_mailing_filtros 
-                     WHERE idCampanha=${idCampanha}
-                       AND tipo='${tipo}' AND valor='${valor}'
-                       ${filter}`
-                     //  console.log('sql filtro',sql)
-        const r = await this.querySync(sql,empresa)
-        if(r.length==0){
-            return false;
-        }
-        return true;
+    async checkTypeFilter(empresa,idCampanha,tipo,valor,uf){  
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{     
+                let filter  =""
+                if(tipo!='uf'){
+                    filter=` AND regiao = "${uf}"`
+                }
+                const sql =`SELECT id 
+                            FROM ${empresa}_dados.campanhas_mailing_filtros 
+                            WHERE idCampanha=${idCampanha}
+                            AND tipo='${tipo}' AND valor='${valor}'
+                            ${filter}`
+                            //  console.log('sql filtro',sql)
+                const r = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 988', err)
+                })
+                if(r.length==0){
+                    resolve(false);
+                    return
+                }
+                resolve(true);
+               
+            })
+        })
     }
 
     //CONFIGURAR TELA DO AGENTE    
      //Lista todos os campos que foram configurados do mailing
      async camposConfiguradosDisponiveis(empresa,idMailing){
-        const sql = `SELECT id,campo,apelido,tipo
-                       FROM ${empresa}_dados.mailing_tipo_campo 
-                       WHERE idMailing='${idMailing}' AND conferido=1`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT id,campo,apelido,tipo
+                            FROM ${empresa}_dados.mailing_tipo_campo 
+                            WHERE idMailing='${idMailing}' AND conferido=1`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1011', err)
+                })
+                resolve(rows)
+            })
+        })
     }
     //Verifica se o campo esta selecionado
     async campoSelecionadoTelaAgente(empresa,campo,tabela,idCampanha){
-        const sql = `SELECT COUNT(id) AS total 
-                       FROM ${empresa}_dados.campanhas_campos_tela_agente 
-                      WHERE idCampo=${campo} AND idCampanha=${idCampanha} AND tabela='${tabela}'
-                       ORDER BY ordem ASC`
-        const total = await this.querySync(sql,empresa)     
-        if(total[0].total===0){
-            return false;
-        }
-        return true; 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT COUNT(id) AS total 
+                            FROM ${empresa}_dados.campanhas_campos_tela_agente 
+                            WHERE idCampo=${campo} AND idCampanha=${idCampanha} AND tabela='${tabela}'
+                            ORDER BY ordem ASC`
+                const total = await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) throw err
+                })    
+                if(total[0].total===0){
+                    resolve(false)
+                    return
+                }
+                resolve(true)
+            })
+        })
     }
     //Adiciona campo na tela do agente
     async addCampoTelaAgente(empresa,idCampanha,tabela,idCampo){
-        const sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
-                                (idCampanha,tabela,idCampo,ordem) 
-                         VALUES (${idCampanha},'${tabela}',${idCampo},0)`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
+                                        (idCampanha,tabela,idCampo,ordem) 
+                                VALUES (${idCampanha},'${tabela}',${idCampo},0)`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1048', err)
+                })
+                resolve(rows)
+            })
+        })
     }
     async camposTelaAgente(empresa,idCampanha,tabela){
-        const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo 
-                      FROM ${empresa}_dados.campanhas_campos_tela_agente AS t 
-                      JOIN ${empresa}_dados.mailing_tipo_campo AS m ON m.id=t.idCampo
-                       WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo 
+                            FROM ${empresa}_dados.campanhas_campos_tela_agente AS t 
+                            JOIN ${empresa}_dados.mailing_tipo_campo AS m ON m.id=t.idCampo
+                            WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1064', err)
+                })
+                resolve(rows)
+            })
+        })
     }
     //Remove campo da campanha
     async delCampoTelaAgente(empresa,idCampanha,idCampo){
-        const sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
-                       WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
+                            WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(rows)
+            })
+        })
     }
 
 
     //Campos adicionados na tela do agente
     /*async camposAdicionadosNaTelaAgente(idCampanha,tabela){
         const sql = `SELECT idCampo FROM campanhas_campos_tela_agente WHERE idCampanha=${idCampanha} AND tabela='${tabela}'`
-        return await this.querySync(sql,empresa)
+        return await this.querySync(conn,sql)
     }*/
 
 
 
-    
-
-    
-
-   
-
-    
-
-    
-
-   
-    
-    
-    
-    
-
-
-
-   
-   
-   
-    
-
-   
-
-    
-
     //BLACKLIST
+
+   
 
     //STATUS DE EVOLUCAO DE CAMPANHA
     async totalMailingsCampanha(empresa,idCampanha){
-        const sql = `SELECT m.totalNumeros-m.numerosInvalidos AS total, m.id AS idMailing
-                      FROM ${empresa}_dados.mailings as m 
-                      JOIN ${empresa}_dados.campanhas_mailing AS cm 
-                        ON cm.idMailing=m.id 
-                      WHERE cm.idCampanha=${idCampanha}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+        
+                const sql = `SELECT m.totalNumeros-m.numerosInvalidos AS total, m.id AS idMailing
+                            FROM ${empresa}_dados.mailings as m 
+                            JOIN ${empresa}_dados.campanhas_mailing AS cm 
+                                ON cm.idMailing=m.id 
+                            WHERE cm.idCampanha=${idCampanha}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(rows)
+            })
+        })
         
     }
 
     async mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,status){
-        const sql = `SELECT count(id) AS total 
-                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE contatado='${status}' AND idCampanha=${idCampanha} AND idMailing=${idMailing}`
-        const total_mailing= await this.querySync(sql,empresa)
-        return total_mailing[0].total
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT count(id) AS total 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE contatado='${status}' AND idCampanha=${idCampanha} AND idMailing=${idMailing}`
+                const total_mailing= await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(total_mailing[0].total)
+            })
+        })
     }   
 
    
     async mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,status){
-        let queryFilter="";
-        if(status==1){
-            queryFilter=`AND produtivo=1`
-        }else{
-            queryFilter=`AND (produtivo=0 OR produtivo is null)`
-        }
-        const sql = `SELECT count(id) AS total 
-                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${queryFilter}`
-        const total_mailing= await this.querySync(sql,empresa)
-        return total_mailing[0].total
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let queryFilter="";
+                if(status==1){
+                    queryFilter=`AND produtivo=1`
+                }else{
+                    queryFilter=`AND (produtivo=0 OR produtivo is null)`
+                }
+                const sql = `SELECT count(id) AS total 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${queryFilter}`
+                const total_mailing= await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(total_mailing[0].total)
+            })
+        })
     }   
 
     async dataUltimoRegMailingNaCampanha(empresa,idCampanha,idMailing){
-        const sql = `SELECT  DATE_FORMAT(data,'%d/%m/%Y') AS ultimaData
-                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ORDER BY data DESC`
-        const d= await this.querySync(sql,empresa)
-        if(d.length==0){
-            return ""
-        }
-        return d[0].ultimaData
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT  DATE_FORMAT(data,'%d/%m/%Y') AS ultimaData
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ORDER BY data DESC`
+                const d= await this.querySync(conn,sql)
+                if(d.length==0){
+                    return ""
+                }
+                
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(d[0].ultimaData)
+            })
+        })
     }   
 
     async mailingsAnteriores(empresa,idCampanha){
-        const sql = `SELECT DISTINCT idMailing 
-                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE idCampanha=${idCampanha}`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT DISTINCT idMailing 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE idCampanha=${idCampanha}`
+                const rows = await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(rows)
+            })
+        })
         
     }
 
     //AGENDAMENTO DE CAMPANHAS
     //Agenda campanha
     async agendarCampanha(empresa,idCampanha,dI,dT,hI,hT){ 
-        //verifica se a campanha ja possui agendamento
-        const r = await this.verAgendaCampanha(empresa,idCampanha)
-        if(r.length ===0){
-            const sql = `INSERT INTO ${empresa}_dados.campanhas_horarios 
-                                    (id_campanha,inicio,termino,hora_inicio,hora_termino) 
-                             VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
-            return await this.querySync(sql,empresa)
-        }else{
-            const sql = `UPDATE ${empresa}_dados.campanhas_horarios 
-                            SET inicio='${dI}',termino='${dT}',hora_inicio='${hI}',hora_termino='${hT}' 
-                          WHERE id_campanha='${idCampanha}'`
-            return await this.querySync(sql,empresa)
-        }
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                //verifica se a campanha ja possui agendamento
+                const r = await this.verAgendaCampanha(empresa,idCampanha)
+                if(r.length ===0){
+                    const sql = `INSERT INTO ${empresa}_dados.campanhas_horarios 
+                                            (id_campanha,inicio,termino,hora_inicio,hora_termino) 
+                                    VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
+                    const rows = await this.querySync(conn,sql)
+                    pool.end((err)=>{
+                        if(err) console.log('Campanhas.js 1167', err)
+                    })
+                    resolve(rows)
+                }else{
+                    const sql = `UPDATE ${empresa}_dados.campanhas_horarios 
+                                    SET inicio='${dI}',termino='${dT}',hora_inicio='${hI}',hora_termino='${hT}' 
+                                WHERE id_campanha='${idCampanha}'`
+                    const rows = await this.querySync(conn,sql)
+                    pool.end((err)=>{
+                        if(err) console.log('Campanhas.js 1176', err)
+                    })
+                    resolve(rows)
+                }
+            })
+        })
     }
     //Ver Agendamento da campanha
     async verAgendaCampanha(empresa,idCampanha){
-        const sql = `SELECT id,id_campanha,
-                            DATE_FORMAT(inicio, '%Y-%m-%d') as inicio,
-                            DATE_FORMAT(termino, '%Y-%m-%d') as termino,
-                            hora_inicio,hora_termino
-                       FROM ${empresa}_dados.campanhas_horarios 
-                      WHERE id_campanha=${idCampanha}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT id,id_campanha,
+                                    DATE_FORMAT(inicio, '%Y-%m-%d') as inicio,
+                                    DATE_FORMAT(termino, '%Y-%m-%d') as termino,
+                                    hora_inicio,hora_termino
+                            FROM ${empresa}_dados.campanhas_horarios 
+                            WHERE id_campanha=${idCampanha}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1196', err)
+                })
+                resolve(rows)
+            })
+        })
     }
    
     //#########  F I L A S  ############
     async novaFila(empresa,nomeFila,apelido,descricao){
-        let sql = `SELECT id 
-                     FROM ${empresa}_dados.filas 
-                    WHERE nome='${nomeFila}'`
-        const r = await this.querySync(sql,empresa)
-        if(r.length>=1){
-            return false
-        }
-        sql = `INSERT INTO ${empresa}_dados.filas (nome,apelido,descricao) VALUES('${nomeFila}','${apelido}','${descricao}')`
-        await this.querySync(sql,empresa)
-        return true
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let sql = `SELECT id 
+                            FROM ${empresa}_dados.filas 
+                            WHERE nome='${nomeFila}'`
+                const r = await this.querySync(conn,sql)
+                if(r.length>=1){
+                    return false
+                }
+                sql = `INSERT INTO ${empresa}_dados.filas (nome,apelido,descricao) VALUES('${nomeFila}','${apelido}','${descricao}')`
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1218', err)
+                })
+                resolve(true)
+            })
+        })
     }
 
     async listarFilas(empresa){
-        const sql = `SELECT id,apelido as nome, descricao  FROM ${empresa}_dados.filas ORDER BY id DESC`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+           const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+
+                const sql = `SELECT id,apelido as nome, descricao  FROM ${empresa}_dados.filas ORDER BY id DESC`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1233', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     } 
 
     async dadosFila(empresa,idFila){
-        const sql = `SELECT id,apelido as nome, nome as nomeFila, descricao 
-                       FROM ${empresa}_dados.filas 
-                      WHERE id=${idFila}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT id,apelido as nome, nome as nomeFila, descricao 
+                            FROM ${empresa}_dados.filas 
+                            WHERE id=${idFila}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1250', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     } 
 
     async nomeFila(empresa,idFila){
-        const sql = `SELECT nome 
-                       FROM ${empresa}_dados.filas 
-                      WHERE id=${idFila}`
-        const n = await this.querySync(sql,empresa)
-        return n[0].nome
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT nome 
+                            FROM ${empresa}_dados.filas 
+                            WHERE id=${idFila}`
+                const n = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1267', err)
+                })
+                resolve(n[0].nome)   
+                        
+            })
+        })  
     } 
 
     async editarFila(empresa,idFila,dados){
-        const sql = `UPDATE ${empresa}_dados.filas 
-                        SET apelido='${dados.name}',
-                            descricao='${dados.description}' 
-                        WHERE id='${idFila}'`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `UPDATE ${empresa}_dados.filas 
+                                SET apelido='${dados.name}',
+                                    descricao='${dados.description}' 
+                                WHERE id='${idFila}'`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1285', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     }
 
     async removerFila(empresa,idFila){
-        const sql = `DELETE FROM ${empresa}_dados.filas 
-                      WHERE id='${idFila}'`
-        await this.querySync(sql,empresa)
-        return true
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `DELETE FROM ${empresa}_dados.filas 
+                            WHERE id='${idFila}'`
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1301', err)
+                })
+                resolve(true)   
+                        
+            })
+        })  
     }
 
      
@@ -869,47 +1365,96 @@ class Campanhas{
 
     //total de campanhas que rodaram por dia
     async campanhasByDay(empresa,limit){
-        const sql = `SELECT COUNT(DISTINCT campanha) AS campanhas, DATE_FORMAT (data,'%d/%m/%Y') AS dia 
-                       FROM ${empresa}_dados.historico_atendimento 
-                       GROUP BY data 
-                       ORDER BY data DESC 
-                       LIMIT ${limit}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT COUNT(DISTINCT campanha) AS campanhas, DATE_FORMAT (data,'%d/%m/%Y') AS dia 
+                            FROM ${empresa}_dados.historico_atendimento 
+                            GROUP BY data 
+                            ORDER BY data DESC 
+                            LIMIT ${limit}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1332', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     }
     
     //Total de campanhas ativas
     async totalCampanhasAtivas(empresa){
-        const sql = `SELECT COUNT(id) as total 
-                       FROM ${empresa}_dados.campanhas
-                      WHERE status=1 AND estado=1`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT COUNT(id) as total 
+                            FROM ${empresa}_dados.campanhas
+                            WHERE status=1 AND estado=1`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1350', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     }
     
     async campanhasAtivas(empresa){
-       
-        const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo 
-                       FROM ${empresa}_dados.campanhas AS c 
-                  LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha
-                      WHERE c.status=1 AND c.estado=1 AND s.estado=1`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo 
+                            FROM ${empresa}_dados.campanhas AS c 
+                        LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha
+                            WHERE c.status=1 AND c.estado=1 AND s.estado=1`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1368', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     }
 
     //Total de campanhas em pausa
     async campanhasPausadas(empresa){
-        const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo
-                       FROM ${empresa}_dados.campanhas AS c 
-                  LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha 
-                      WHERE c.status=1 AND c.estado=2 OR c.estado=1 AND s.estado=2`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo
+                            FROM ${empresa}_dados.campanhas AS c 
+                        LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha 
+                            WHERE c.status=1 AND c.estado=2 OR c.estado=1 AND s.estado=2`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1387', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     }
 
     //Total de campanhas paradas
     async campanhasParadas(empresa){
-        const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo 
-                       FROM ${empresa}_dados.campanhas AS c 
-                  LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha 
-                      WHERE c.status=1 AND c.estado=3 OR c.estado=1 AND s.estado=3`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo 
+                            FROM ${empresa}_dados.campanhas AS c 
+                        LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha 
+                            WHERE c.status=1 AND c.estado=3 OR c.estado=1 AND s.estado=3`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1406', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     }
         
 
@@ -928,9 +1473,9 @@ class Campanhas{
     
 
     //######################Configuração das filas das campanhas######################
-    membrosNaFila(idFila,callback){
+   /* membrosNaFila(idFila,callback){
         const sql = `SELECT ramal FROM agentes_filas WHERE fila=${idFila} ORDER BY ordem ASC;`
-        _dbConnection2.default.banco.query(sql,callback)
+        connect.banco.query(sql,callback)
     }
 
       
@@ -941,8 +1486,8 @@ class Campanhas{
     totalAgentesDisponiveis(callback){
         const sql = `SELECT distinct ramal FROM agentes_filas AS a 
                        JOIN users AS u ON u.id=a.ramal WHERE u.logado=1 AND u.status=1 AND a.estado=1`
-        _dbConnection2.default.banco.query(sql,callback)
-    }
+        connect.banco.query(sql,callback)
+    }*/
     
     
 
@@ -957,109 +1502,132 @@ class Campanhas{
     
     //Status dos agentes das campanhas
     async agentesFalando(empresa){
-        //Estado 3 = Falando
-        const sql = `SELECT DISTINCT ramal AS agentes 
-                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                      WHERE falando=1`
-        return this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                //Estado 3 = Falando
+                const sql = `SELECT DISTINCT ramal AS agentes 
+                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                            WHERE falando=1`
+                const rows = this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1468', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     }
 
-    atualizaEstadoAgente(ramal,estado,idPausa,callback){
+   /* atualizaEstadoAgente(ramal,estado,idPausa,callback){
         const sql = `UPDATE agentes_filas SET estado=${estado}, idpausa=${idPausa} WHERE ramal=${ramal}`
-        _dbConnection2.default.banco.query(sql,(e,r)=>{
+        connect.banco.query(sql,(e,r)=>{
             if(e) throw e
 
             const sql = `UPDATE user_ramal SET estado=${estado} WHERE ramal=${ramal}`
-            _dbConnection2.default.banco.query(sql,(e,r)=>{
+            connect.banco.query(sql,(e,r)=>{
                 if(e) throw e
 
                 if(estado==2){
                     const sql = `UPDATE queue_members SET paused=1 WHERE membername=${ramal}`
-                    _dbConnection2.default.asterisk.query(sql,callback)
+                    connect.asterisk.query(sql,callback)
                 }else{
                     const sql = `UPDATE queue_members SET paused=0 WHERE membername=${ramal}`
-                    _dbConnection2.default.asterisk.query(sql,callback)
+                    connect.asterisk.query(sql,callback)
                 }
             })
         })
-    }
+    }*/
 
     async agentesEmPausa(empresa){
-        //Estado 2 = Em Pausa
-        const sql = `SELECT DISTINCT a.ramal AS agentes 
-                       FROM ${empresa}_dados.agentes_filas AS a 
-                       JOIN ${empresa}_dados.campanhas_filas AS f ON a.fila = f.id 
-                       JOIN ${empresa}_dados.campanhas AS c ON c.id=f.idCampanha 
-                       WHERE c.estado=1 AND c.status=1 AND a.estado=2`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                //Estado 2 = Em Pausa
+                const sql = `SELECT DISTINCT a.ramal AS agentes 
+                            FROM ${empresa}_dados.agentes_filas AS a 
+                            JOIN ${empresa}_dados.campanhas_filas AS f ON a.fila = f.id 
+                            JOIN ${empresa}_dados.campanhas AS c ON c.id=f.idCampanha 
+                            WHERE c.estado=1 AND c.status=1 AND a.estado=2`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1508', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     }
 
     async agentesDisponiveis(empresa){
-        //Estado 1 = Disponível
-        //Estado 0 = Deslogado
-        const sql = `SELECT DISTINCT a.ramal AS agentes 
-                       FROM ${empresa}_dados.agentes_filas AS a 
-                       JOIN ${empresa}_dados.campanhas_filas AS f ON a.fila = f.id 
-                       JOIN ${empresa}_dados.campanhas AS c ON c.id=f.idCampanha 
-                       WHERE c.estado=1 AND c.status=1 AND a.estado=1`
-                       
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                //Estado 1 = Disponível
+                //Estado 0 = Deslogado
+                const sql = `SELECT DISTINCT a.ramal AS agentes 
+                            FROM ${empresa}_dados.agentes_filas AS a 
+                            JOIN ${empresa}_dados.campanhas_filas AS f ON a.fila = f.id 
+                            JOIN ${empresa}_dados.campanhas AS c ON c.id=f.idCampanha 
+                            WHERE c.estado=1 AND c.status=1 AND a.estado=1`
+                            
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1530', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/*
     chamadasTravadas(callback){
         const sql = `SELECT * FROM campanhas_chamadas_simultaneas WHERE tratado is null`
-        _dbConnection2.default.banco.query(sql,callback)
+        connect.banco.query(sql,callback)
     }
 
     //Atualiza um registro como disponivel na tabulacao mailing
     liberaRegisto(idCampanha,idMailing,idRegistro,callback){ 
      const sql = `UPDATE campanhas_tabulacao_mailing SET estado=1, desc_estado='Disponível' 
                    WHERE idCampanha=${idCampanha},idMailing=${idMailing},idRegistro=${idRegistro}`
-     _dbConnection2.default.mailings.query(sql,callback)
+     connect.mailings.query(sql,callback)
     }
 
     removeChamadaSimultanea(idChamadaSimultanea,callback){
         const sql = `DELETE FROM campanhas_chamadas_simultaneas WHERE id=${idChamadaSimultanea}`
-        _dbConnection2.default.banco.query(sql,callback)
+        connect.banco.query(sql,callback)
     }
-
+*/
     //######################Gestão do Mailing das Campanhas ######################
     
 
     async campanhaDoMailing(empresa,idMailing){
-        const sql = `SELECT m.idCampanha,c.nome 
-                       FROM ${empresa}_dados.campanhas_mailing AS m 
-                       JOIN ${empresa}_dados.campanhas AS c ON m.idCampanha=c.id
-                      WHERE idMailing=${idMailing} AND c.status=1
-                      LIMIT 1`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT m.idCampanha,c.nome 
+                            FROM ${empresa}_dados.campanhas_mailing AS m 
+                            JOIN ${empresa}_dados.campanhas AS c ON m.idCampanha=c.id
+                            WHERE idMailing=${idMailing} AND c.status=1
+                            LIMIT 1`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1570', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })  
     }
-
+/*
     mailingConfigurado(empresa,idMailing,callback){
         const sql = `SELECT tabela_dados 
                        FROM ${empresa}_dados.mailings 
                        WHERE id=${idMailing} AND configurado=1`
-        _dbConnection2.default.banco.query(sql,callback)
+        connect.banco.query(sql,callback)
     }
-
+*/
     
 
      //Status dos Mailings das campanhas ativas
@@ -1068,38 +1636,78 @@ class Campanhas{
         connect.banco.query(sql,callback)
     }*/
     async totalMailings(empresa){
-        const sql = `SELECT SUM(totalReg) AS total 
-                       FROM ${empresa}_dados.mailings as m 
-                       JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
-                       JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
-                      WHERE c.estado=1 AND c.status=1`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT SUM(totalReg) AS total 
+                            FROM ${empresa}_dados.mailings as m 
+                            JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
+                            JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
+                            WHERE c.estado=1 AND c.status=1`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1603', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })
     }
 
     async totalRegistrosCampanha(empresa,idCampanha){
-        const sql = `SELECT SUM(totalNumeros-numerosInvalidos) AS total 
-                       FROM ${empresa}_dados.mailings as m 
-                       JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
-                       JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
-                      WHERE c.id=${idCampanha}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT SUM(totalNumeros-numerosInvalidos) AS total 
+                            FROM ${empresa}_dados.mailings as m 
+                            JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
+                            JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
+                            WHERE c.id=${idCampanha}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1622', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })
     }   
 
     async mailingsContatados(empresa){
-        const sql = `SELECT count(t.id) AS contatados 
-                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
-                       JOIN ${empresa}_dados.campanhas AS c ON c.id=t.idCampanha 
-                       WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT count(t.id) AS contatados 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
+                            JOIN ${empresa}_dados.campanhas AS c ON c.id=t.idCampanha 
+                            WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1640', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })
     }
 
     async mailingsNaoContatados(empresa){
-        const sql = `SELECT count(t.id) AS nao_contatados 
-                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
-                       JOIN ${empresa}_dados.campanhas AS c 
-                         ON c.id=t.idCampanha 
-                      WHERE t.contatado='N' AND c.estado=1 AND c.status=1`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{ 
+                const sql = `SELECT count(t.id) AS nao_contatados 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
+                            JOIN ${empresa}_dados.campanhas AS c 
+                                ON c.id=t.idCampanha 
+                            WHERE t.contatado='N' AND c.estado=1 AND c.status=1`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1659', err)
+                })
+                resolve(rows)   
+                        
+            })
+        })
     }
 
     //Status dos Mailings por campanha

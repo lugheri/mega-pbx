@@ -9,7 +9,6 @@ const app = customExpress();
 const httpServer = http.createServer(app);
 
 //Iniciando Discador
-//DiscadorController.dial() DESCONTINUADO
 DiscadorController.checkAccounts()
 
 

@@ -7,28 +7,16 @@ var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Cli
 
 
 class Dashboard{
-
-    /*
-    async querySync(sql,empresa){
-        const hostEmp = await Clients.serversDbs(empresa)
-        const connection = connect.poolConta(hostEmp)
-        const promisePool =  connection.promise();
-        const result = await promisePool.query(sql)
-        promisePool.end();
-        return result[0];       
-    }*/
-    
-    async querySync(sql,empresa){
-        return new Promise(async(resolve,reject)=>{
-            const hostEmp = await _Clients2.default.serversDbs(empresa)
-            const conn = _dbConnection2.default.poolConta(hostEmp)
-            conn.query(sql,(e,rows)=>{
-                if(e) reject(e);
+//Query Sync
+    async querySync(conn,sql){    
+       
+        return new Promise((resolve,reject)=>{            
+            conn.query(sql, (err,rows)=>{
+                if(err) return reject(err)
                 resolve(rows)
             })
-            conn.end()                        
         })
-    }
+    }   
 
     async painel(empresa){
        
@@ -55,9 +43,9 @@ class Dashboard{
         const emAtendimento = await _Discador2.default.chamadasEmAtendimento(empresa)   
         
        
-        console.log('totalChamadas',totalChamadas)
+        /*console.log('totalChamadas',totalChamadas)
         console.log('improdutivas',improdutivas)
-        console.log('produtivas',produtivas)
+        console.log('produtivas',produtivas)*/
         
         const dash={}
               dash['sinteticos']={}
@@ -77,6 +65,8 @@ class Dashboard{
               dash['sinteticos']['AnotherKpis']['ChamadasEmAtendimento']=emAtendimento       
 
         const campanhasAtivas = await _Campanhas2.default.listarCampanhasAtivas(empresa)
+
+        //console.log('campanhasAtivas',campanhasAtivas)
               
             dash["Campanhas"]=[]
             for(let i = 0; i<campanhasAtivas.length; i++) {
@@ -113,8 +103,10 @@ class Dashboard{
                 dash["Campanhas"].push(campanha)
 
             }
-
-        const mailings = await _Campanhas2.default.listarMailingCampanhasAtivas(empresa)
+           // console.log('dash Campanhas',dash)
+         
+         const mailings = await _Campanhas2.default.listarMailingCampanhasAtivas(empresa)
+         //console.log('mailings',mailings)
             dash["Mailings"]=[]
             const mailingsAdicionados=[]
             for(let i = 0; i<mailings.length; i++) {
@@ -148,17 +140,22 @@ class Dashboard{
                 mailingsAdicionados.push(idMailing)
             }
            
+          
             dash["dia"]=await _Discador2.default.diaAtual()
             dash["Agentes"]=[]
+           
             const agentes = await _Discador2.default.listarAgentesLogados(empresa)
             for(let i = 0; i<agentes.length; i++) {
                 
+               
                 const idAgente=agentes[i].id
+                
                 const totalAtendimento=await _Discador2.default.totalAtendimentosAgente(empresa,idAgente)
                 const Improdutivas=await _Discador2.default.chamadasProdutividade_Agente(empresa,0,idAgente)
                 const Produtivas=await _Discador2.default.chamadasProdutividade_Agente(empresa,1,idAgente)
                 const chManuais=await _Discador2.default.chamadasManuais_Agente(empresa,idAgente)
                 const tempoFalado=await _Discador2.default.tempoFaladoAgente(empresa,idAgente)
+               
                 let perc_improdutivas=0
                 let perc_produtivas=0
                 let perc_manuais=0
@@ -168,7 +165,7 @@ class Dashboard{
                     perc_manuais=Math.round((chManuais / totalAtendimento)*100)
                 }
 
-
+                
                 const agente={}
                       agente["nomeAgente"]=agentes[i].nome
                     let estadoAgente=agentes[i].estado
@@ -204,8 +201,9 @@ class Dashboard{
 
                       agente["tempoFalado"]=await this.converteSeg_tempo(tempoFalado)
                 dash["Agentes"].push(agente)
-            }         
-              
+                
+            }    
+           
           return dash
 
 
@@ -223,26 +221,36 @@ class Dashboard{
         return realTime
     }
 
-    async realTimeCallsCampain(empresa,idCampanha){           
-        let sql = `SELECT COUNT(id) as total 
-                     FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
-                    WHERE id_campanha=${idCampanha}
-                 ORDER BY id DESC LIMIT 1`
-        const t = await this.querySync(sql,empresa)
-        const totais = t[0].total
+    async realTimeCallsCampain(empresa,idCampanha){     
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async(err,conn)=>{
+            
+                let sql = `SELECT COUNT(id) as total 
+                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                            WHERE id_campanha=${idCampanha}
+                        ORDER BY id DESC LIMIT 1`
+                const t = await this.querySync(conn,sql)
+                const totais = t[0].total
 
-        sql = `SELECT COUNT(id) as conectadas 
-                       FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
-                      WHERE id_campanha=${idCampanha} AND falando=1 
-                      ORDER BY id DESC LIMIT 1`
-        const c = await this.querySync(sql,empresa)
-        const conectadas = c[0].conectadas
+                sql = `SELECT COUNT(id) as conectadas 
+                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                            WHERE id_campanha=${idCampanha} AND falando=1 
+                            ORDER BY id DESC LIMIT 1`
+                const c = await this.querySync(conn,sql,)
+                const conectadas = c[0].conectadas
 
-        const realTime={}
-              realTime['RealTimeChart']={}
-              realTime['RealTimeChart']['Ligando']=totais
-              realTime['RealTimeChart']['Falando']=conectadas
-        return realTime
+                const realTime={}
+                    realTime['RealTimeChart']={}
+                    realTime['RealTimeChart']['Ligando']=totais
+                    realTime['RealTimeChart']['Falando']=conectadas
+                
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                    }) 
+                resolve(realTime)
+            })
+        })
     }
     
     async converteSeg_tempo(segundos_totais){

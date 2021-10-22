@@ -33,7 +33,7 @@ class DiscadorController{
     //Discador Otimizado:
     async checkAccounts(){
         const clientesAtivos = await _Clients2.default.clientesAtivos()
-        let cache_timeout_ce
+        
         let cache_timeout_ca
         for(let i=0;i<clientesAtivos.length;++i){
             const empresa = clientesAtivos[i].prefix 
@@ -85,7 +85,7 @@ class DiscadorController{
 
         //#3 Verifica se existem campanhas ativas
         const campanhasAtivas = await _Discador2.default.campanhasAtivas(empresa);  
-        console.log(`campanhasAtivas:${empresa}`,campanhasAtivas)
+       //console.log(`campanhasAtivas:${empresa}`,campanhasAtivas)
         
         if(campanhasAtivas.length === 0){
             //console.log('')

@@ -35,6 +35,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
 
                 const sql = `SELECT u.id, u.nome 
                             FROM ${empresa}_dados.users AS u
@@ -44,6 +45,7 @@ class Report{
                                 
                 const users = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(users)
@@ -55,11 +57,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id,equipe 
                             FROM ${empresa}_dados.users_equipes 
                             WHERE status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
@@ -71,11 +75,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id,nome 
                             FROM ${empresa}_dados.campanhas 
                             WHERE status=1 AND estado=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
@@ -87,11 +93,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id,nome 
                             FROM ${empresa}_dados.mailings 
                             WHERE pronto=1 AND status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
@@ -103,6 +111,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT c.id
                             FROM ${empresa}_dados.campanhas AS c
                             JOIN ${empresa}_dados.campanhas_filas as f ON c.id=f.idCampanha
@@ -110,6 +119,7 @@ class Report{
                             WHERE a.ramal='${idAgente}' AND c.id=${idCampanha} LIMIT 1`
                 const u = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(u.length)
@@ -121,6 +131,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT us.id as ramal, us.nome, rm.estado as cod_estado, ea.estado, eq.equipe
                             FROM ${empresa}_dados.users AS us 
                             JOIN ${empresa}_dados.user_ramal AS rm ON rm.userID=us.id
@@ -130,6 +141,7 @@ class Report{
                             
                 const user = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(user)
@@ -141,6 +153,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql
                 if(acao=="login"){
                     sql = `SELECT id,DATE_FORMAT(data,'%Y-%m-%d') as data, hora
@@ -156,6 +169,7 @@ class Report{
                 }
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
@@ -167,12 +181,14 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT e.estado 
                             FROM ${empresa}_dados.user_ramal AS r
                             JOIN ${empresa}_dados.estadosAgente AS e ON r.estado=e.cod
                             WHERE r.ramal='${ramal}'`
                 const e = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(e[0].estado)
@@ -193,12 +209,14 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
 
                 const sql = `SELECT SUM(tempo_total) AS tempo
                             FROM ${empresa}_dados.tempo_pausa 
                             WHERE 1=1 ${filter}`
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(t[0].tempo)
@@ -210,6 +228,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let tempo=0
                 let sql = `SELECT TIMESTAMPDIFF (SECOND, datetime_estado, NOW()) as tempo
                             FROM ${empresa}_dados.user_ramal 
@@ -222,6 +241,7 @@ class Report{
                 const tempoEstado = await this.converteSeg_tempo(tempo)
                
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(tempoEstado)
@@ -242,6 +262,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
         
                 const sql = `SELECT c.ramal,u.nome,c.uniqueid,
                                     DATE_FORMAT(c.data,'%d/%m/%Y') AS dataCall,
@@ -254,6 +275,7 @@ class Report{
                 const c = await this.querySync(conn,sql)     
                  
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(c)
@@ -294,6 +316,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
         
                 const sql = `SELECT h.agente,u.nome,DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall,h.hora,h.uniqueid,h.campanha,h.tipo,h.numero_discado,h.contatado,h.produtivo,h.status_tabulacao
                             FROM ${empresa}_dados.historico_atendimento AS h
@@ -302,6 +325,7 @@ class Report{
                 //console.log('chamadasRealizadas',sql)
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
@@ -313,6 +337,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                             WHERE ramal='${idAgente}' AND tabulando=1 AND desligada=1
@@ -320,6 +345,7 @@ class Report{
                 const t = await this.querySync(conn,sql)    
                 
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(t.length)
@@ -331,6 +357,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                             WHERE ramal='${idAgente}' AND falando=1
@@ -338,6 +365,7 @@ class Report{
                 const f = await this.querySync(conn,sql) 
                
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(f.length)
@@ -349,6 +377,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `SELECT id,saida 
                             FROM ${empresa}_dados.tempo_ligacao
                             WHERE uniqueid=${uniqueid}
@@ -356,6 +385,7 @@ class Report{
                 const t = await this.querySync(conn,sql)
                 if(t.length==0){
                     pool.end((err)=>{
+                        
                         if(err) console.log('Reports ...', err)
                     })
                     resolve(0)
@@ -372,6 +402,7 @@ class Report{
                 //console.log('timeCall',sql)
                 const d = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(d[0].tempo)
@@ -383,11 +414,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `SELECT SUM(tempo_total) AS tempo
                             FROM ${empresa}_dados.tempo_ligacao
                             WHERE idAgente=${idAgente} AND tipoDiscador='receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(t[0].tempo)
@@ -399,11 +432,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `SELECT SUM(tempo_total) AS tempo
                             FROM ${empresa}_dados.tempo_ligacao
                             WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND tipoDiscador<>'manual' AND entrada>='${de}' AND saida <= '${ate}'`
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(t[0].tempo)
@@ -415,11 +450,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `SELECT SUM(tempo_total) AS tempo
                             FROM ${empresa}_dados.tempo_ligacao
                             WHERE idAgente=${idAgente} AND tipoDiscador='manual' AND entrada>='${de}' AND saida <= '${ate}'`
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(t[0].tempo)
@@ -437,6 +474,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
         
                 const sql = `SELECT COUNT(id) AS total
                             FROM ${empresa}_dados.historico_atendimento 
@@ -444,6 +482,7 @@ class Report{
                             //console.log('chamadasAtendidas',sql)
                 const ca = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(ca[0].total)
@@ -468,6 +507,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
 
                 const sql = `SELECT AVG(tempo_total) as tempoMedio 
                             FROM ${empresa}_dados.${tabela} 
@@ -475,6 +515,7 @@ class Report{
                             //console.log('tempoMedioAgente',sql)
                 const tm = await this.querySync(conn,sql)
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(Math.floor(tm[0].tempoMedio))
@@ -499,12 +540,14 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS produtivas
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE 1=1 ${filter};`
                             //console.log('chamadasProdutividade',sql)
                 const p=await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(p[0].produtivas)
@@ -516,11 +559,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS atendidas
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE agente>0 AND campanha=${campanha}`
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(a[0].atendidas)
@@ -532,11 +577,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS produtivas
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE produtivo=1 AND campanha=${campanha}`
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(a[0].produtivas)
@@ -548,11 +595,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS atendidas
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                             WHERE falando=1 AND id_campanha=${campanha}`
                     const a=await this.querySync(conn,sql);
                     pool.end((err)=>{
+                        
                         if(err) console.log('Reports ...', err)
                     })
                     resolve(a[0].atendidas)
@@ -564,11 +613,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS nao_atendidas
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE agente=0 AND campanha=${campanha}`
                 const na=await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(na[0].nao_atendidas)
@@ -580,11 +631,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS contatados
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE contatado='S' AND campanha=${idCampanha}`
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(c[0].contatados)
@@ -596,6 +649,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT agressividade 
                             FROM ${empresa}_dados.campanhas_discador
                             WHERE idCampanha=${idCampanha}`
@@ -604,6 +658,7 @@ class Report{
                     return 0
                 }
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(c[0].agressividade)
@@ -615,11 +670,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.campanhas_discador 
                                 SET agressividade=${agressividade}
                             WHERE idCampanha=${idCampanha}`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
@@ -632,11 +689,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT AVG(tempo_total) as tempoMedio 
                             FROM ${empresa}_dados.tempo_ligacao
                             WHERE idCampanha=${idCampanha}`
                 const tm=await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(tm[0].tempoMedio)
@@ -648,6 +707,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let filter = "";
                 if(status==1){
                     filter+=` AND produtivo=1`
@@ -658,8 +718,9 @@ class Report{
                             FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                             WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${filter}`
                 const total_mailing= await this.querySync(conn,sql)
-                return total_mailing[0].total
+                
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(total_mailing[0].total)
@@ -671,11 +732,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS chamadas
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE data='${hoje}' AND campanha=${idCampanha}`
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(c[0].chamadas)
@@ -687,12 +750,14 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT DISTINCT DATE_FORMAT(data,'%d/%m/%Y') AS dataCall, COUNT(id) AS chamadas
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE campanha=${idCampanha} AND data<'${hoje}' GROUP BY dataCall
                             ORDER BY dataCall ASC LIMIT 7`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
@@ -705,11 +770,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS chamadas
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE data='${hoje}' AND agente>0 AND campanha=${idCampanha}`
                 const c = await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(c[0].chamadas)
@@ -720,12 +787,14 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT DISTINCT DATE_FORMAT(data,'%d/%m/%Y') AS dataCall, COUNT(id) AS chamadas
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE campanha=${idCampanha} AND agente>0 AND data<'${hoje}' GROUP BY dataCall
                             ORDER BY dataCall ASC LIMIT 7`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
@@ -738,12 +807,14 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(h.id) AS chamadas
                             FROM ${empresa}_dados.historico_atendimento AS h
                             JOIN ${empresa}_dados.tabulacoes_status AS t ON h.status_tabulacao=t.id
                             WHERE h.data='${hoje}' AND h.campanha=${idCampanha} AND t.venda=1`
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(c[0].chamadas)
@@ -754,6 +825,7 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT DISTINCT DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall, COUNT(h.id) AS chamadas
                             FROM ${empresa}_dados.historico_atendimento AS h
                             JOIN ${empresa}_dados.tabulacoes_status AS t ON h.status_tabulacao=t.id
@@ -761,6 +833,7 @@ class Report{
                             ORDER BY dataCall ASC LIMIT 7`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
@@ -772,11 +845,13 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS abandonadas
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE data='${hoje}' AND obs_tabulacao='ABANDONADA' AND campanha=${idCampanha}`
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(a[0].abandonadas)
@@ -787,12 +862,14 @@ class Report{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT DISTINCT DATE_FORMAT(data,'%d/%m/%Y') AS dataCall, COUNT(id) AS chamadas
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE campanha=${idCampanha} AND data<'${hoje}' AND obs_tabulacao='ABANDONADA' GROUP BY dataCall
                             ORDER BY dataCall ASC LIMIT 7`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
+                    
                     if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
