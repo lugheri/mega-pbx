@@ -18,6 +18,7 @@ class Blacklist{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `INSERT INTO ${empresa}_mailings.blacklists 
                                         (nome,descricao,padrao) 
                                 VALUES ('${dados.nome}','${dados.descricao}','${dados.default}')`;

@@ -17,6 +17,7 @@ class Gravacao{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,
                                     r.date_record,
                                     r.time_record,
@@ -58,6 +59,7 @@ class Gravacao{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let filter=""
                 //Tempo de Gravação
                 if(minTime){
@@ -161,6 +163,7 @@ class Gravacao{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT *
                             FROM ${empresa}_dados.records
                             WHERE id=${idGravacao}`
@@ -177,6 +180,7 @@ class Gravacao{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT numero_discado AS numero
                             FROM ${empresa}_dados.historico_atendimento
                             WHERE uniqueid=${uniqueid}`
@@ -201,6 +205,7 @@ class Gravacao{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT callfilename,date_record
                             FROM ${empresa}_dados.records
                             WHERE uniqueid=${uniqueid}`
@@ -224,6 +229,7 @@ class Gravacao{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(0,'crm')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT prefix
                             FROM clients.accounts
                             WHERE client_number=${idEmpresa}`
@@ -249,6 +255,7 @@ class Gravacao{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT DATE_FORMAT(r.date,'%d/%m/%Y %H:%i:%S ') AS data,
                                     r.date_record,
                                     r.time_record,

@@ -30,6 +30,7 @@ class User{
         return new Promise (async (resolve,reject)=>{
             const pool = await connect.pool(empresa,'crm')
               pool.getConnection(async (err,conn)=>{                           
+                  if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -47,6 +48,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'crm')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const code =  await this.querySync(conn,sql)                  
                pool.end((err)=>{
                     if(err) console.log(err)
@@ -64,6 +66,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -79,6 +82,7 @@ class User{
              //Executando query
              const pool = await connect.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{                           
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const us =  await this.querySync(conn,sql) 
                 for(let i=0; i<us.length; i++){
                     const agente = us[i].id
@@ -98,6 +102,7 @@ class User{
             let sql
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 if(acao=='login'){
                     //checa a ultima acao do agente 
                     sql = `SELECT acao FROM ${empresa}_dados.registro_logins WHERE user_id=${usuarioId} ORDER BY id DESC LIMIT 1`
@@ -158,6 +163,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -176,6 +182,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -222,6 +229,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -238,6 +246,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'crm')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -257,6 +266,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                pool.end((err)=>{
                     if(err) console.log(err)
@@ -277,6 +287,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -290,6 +301,7 @@ class User{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{        
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `SELECT id 
                             FROM ${empresa}_dados.users 
                             WHERE usuario='${dados.usuario}'`;
@@ -359,6 +371,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -377,6 +390,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -394,6 +408,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -426,6 +441,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                pool.end((err)=>{
                     if(err) console.log(err)
@@ -444,6 +460,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -461,6 +478,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                pool.end((err)=>{
                     if(err) console.log(err)
@@ -486,6 +504,7 @@ class User{
              //Executando query
              const pool = await connect.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{                           
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                  const rows =  await this.querySync(conn,sql) 
  
                  pool.end((err)=>{
@@ -505,6 +524,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -523,6 +543,7 @@ class User{
              //Executando query
              const pool = await connect.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{                           
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                  const rows =  await this.querySync(conn,sql) 
  
                  pool.end((err)=>{
@@ -541,6 +562,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -562,6 +584,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -582,6 +605,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -600,6 +624,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -618,6 +643,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -637,6 +663,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -656,6 +683,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -674,6 +702,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -692,6 +721,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -711,6 +741,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -731,6 +762,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
@@ -751,6 +783,7 @@ class User{
             //Executando query
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{

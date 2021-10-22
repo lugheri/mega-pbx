@@ -17,6 +17,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
 
                 const sql = `INSERT INTO ${empresa}_dados.tabulacoes_listas 
                                         (data,nome,descricao,status) 
@@ -34,6 +35,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id,DATE_FORMAT(data,'%d/%m/%Y') as data,nome,descricao,status 
                             FROM ${empresa}_dados.tabulacoes_listas
                             WHERE status = 1`
@@ -50,6 +52,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id,DATE_FORMAT(data,'%d/%m/%Y') as data,nome,descricao,status 
                             FROM ${empresa}_dados.tabulacoes_listas 
                             WHERE id=${idLista}`
@@ -66,6 +69,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const nome = valores.nome
                 const descricao = valores.descricao
                 const status = valores.status
@@ -88,6 +92,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql=`SELECT id 
                         FROM ${empresa}_dados.tabulacoes_status 
                         WHERE idLista=${dados.idLista} 
@@ -128,6 +133,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.tabulacoes_status 
                             WHERE idLista=${idLista} AND status=1 
@@ -145,6 +151,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id
                             FROM ${empresa}_dados.tabulacoes_status 
                             WHERE idLista=${idLista} AND tipo='${tipo}' AND status=1 
@@ -162,6 +169,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.tabulacoes_status 
                             WHERE id=${idStatus}`
@@ -178,6 +186,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT tabulacao 
                             FROM ${empresa}_dados.tabulacoes_status 
                             WHERE id=${idStatus}`
@@ -202,6 +211,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const idLista = valores.idLista
                 const tabulacao = valores.tabulacao
                 const descricao = valores.descricao
@@ -244,6 +254,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.tabulacoes_status 
                                 SET status=0 
                             WHERE id=${idStatus}`
@@ -268,6 +279,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //Desativados
                 let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
                             SET ordem=-1 
@@ -303,6 +315,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql
 
                 if(posOrigem>posDestino){
@@ -333,6 +346,7 @@ class Tabulacoes{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
         
                 let sql = `UPDATE ${empresa}_dados.tabulacoes_status 
                             SET ordem=ordem+1 
