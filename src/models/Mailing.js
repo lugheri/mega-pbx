@@ -416,6 +416,10 @@ class Mailing{
                 //Verificando restantes para reexecução
                 if(jsonFile.length>0){
                     //continua a importação dos dados
+                    pool.end((err)=>{
+                        if(err) console.log('Mailings 434', err)
+                        console.log('Continuando importacao ...')
+                    }) 
                     await this.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,indice,rate)
                 }else{     
                     //Cria indice na coluna de cpf caso o mesmo exista
@@ -616,6 +620,10 @@ class Mailing{
                 //Verificando restantes para reexecução
                 if(jsonFile.length>0){
                     //console.log('Continuando separacao')
+                    pool.end((err)=>{
+                        if(err) console.log('Mailings 624', err)                        
+                        console.log('Continuando importacao dos numeros')
+                    })   
                     await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idReg,rate,verificarCPF)    
                 }else{
                     //console.log('encerrando')
@@ -1176,6 +1184,11 @@ class Mailing{
             pool.getConnection(async (err,conn)=>{ 
                 const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
                 if(infoMailing.length==0){
+                    pool.end((err)=>{
+                        if(err) console.log('Mailings 1188', err)
+                    }) 
+                    
+                    resolve(false)
                     return false
                 }
                 const idMailing = infoMailing[0].id

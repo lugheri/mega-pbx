@@ -15,7 +15,7 @@ class DashboardController{
 
     async painel(req,res){
         const empresa = await User.getEmpresa(req)
-
+        console.log('painel',empresa)
         const panelData= await Dashboard.painel(empresa)
         res.json(panelData)
     }

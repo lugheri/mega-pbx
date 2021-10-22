@@ -2,38 +2,7 @@
 var _Mailing = require('./Mailing'); var _Mailing2 = _interopRequireDefault(_Mailing);
 var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
-class Campanhas{   
-    /*
-    async querySync(conn,sql){
-        const hostEmp = await Clients.serversDbs(empresa)
-        const connection = connect.poolConta(hostEmp)
-        const promisePool =  connection.promise();
-        const result = await promisePool.query(sql)
-        promisePool.end();
-        return result[0];       
-    }*/
-    /*
-    async querySync(conn,sql){
-        return new Promise(async(resolve,reject)=>{
-            const hostEmp = await Clients.serversDbs(empresa)
-            const conn = connect.poolConta(hostEmp)
-            conn.query(sql,(e,rows)=>{
-                if(e) reject(e);
-                resolve(rows)
-            })
-            conn.end()                        
-        })
-    }
-   
-    
-    async querySync_astdb(sql){
-        const connection = connect.poolAsterisk
-        const promisePool =  connection.promise();
-        const result = await promisePool.query(sql)
-        //promisePool.end();
-        return result[0];
-    }*/
-
+class Campanhas{ 
     async querySync(conn,sql){         
         return new Promise((resolve,reject)=>{            
             conn.query(sql, (err,rows)=>{
@@ -191,6 +160,9 @@ class Campanhas{
                             WHERE idCampanha=${idCampanha}`
                 const fila = await this.querySync(conn,sql) 
                 if(fila.length==0){
+                    pool.end((err)=>{
+                        if(err) console.log('Campanhas.js 165', err)
+                    })
                     resolve(false);
                     return
                 }
@@ -253,6 +225,7 @@ class Campanhas{
                 pool.end((err)=>{
                     if(err) console.log('Campanhas.js 254', err)
                 })
+                resolve(true)
             })
         })         
     }
@@ -270,6 +243,7 @@ class Campanhas{
                 pool.end((err)=>{
                     if(err) console.log('Campanhas.js 271', err)
                 })
+                resolve(rows)
             })
         }) 
     }
@@ -601,16 +575,45 @@ class Campanhas{
                             WHERE idCampanha=${idCampanha} 
                             AND idMailing=${idMailing}`
                 const r = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.log('Campanhas.js 605', err)
-                })
+                
                 if(r.length==1){
+                    pool.end((err)=>{
+                        if(err) console.log('Campanhas.js 605', err)
+                    })
                     resolve(false)
                     return
                 }
+                //Inserindo coluna da campanha na tabela de numeros
+                sql = `ALTER TABLE ${empresa}_mailings.${tabelaNumeros} 
+                      ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT '1' AFTER produtivo`
+                await this.querySync(conn,sql)
+                //Atualiza os registros como disponíveis (1)
+                //sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`
+                //await this.querySync(sql,empresa)
                 
-                   
-                           
+                //Inserindo informacao do id do mailing na campanha 
+                sql = `INSERT INTO ${empresa}_dados.campanhas_mailing 
+                                    (idCampanha,idMailing) 
+                            VALUES ('${idCampanha}','${idMailing}')`
+                await this.querySync(conn,sql)
+                //Inserindo campos do mailing
+                sql = `SELECT * 
+                        FROM ${empresa}_dados.mailing_tipo_campo 
+                        WHERE idMailing=${idMailing}`
+                const campos =  await this.querySync(conn,sql)
+                sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
+                                    (idCampanha,idMailing,tabela,idCampo,ordem) 
+                            VALUES ` 
+                    for(let i=0; i<campos.length; i++){
+                        sql += `(${idCampanha},${idMailing},'${tabelaDados}',${campos[i].id},${i})`
+                        if((i+1)<campos.length){ sql +=', '}            
+                    }
+                //console.log(sql)
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 605', err)
+                })
+                resolve(true)                           
             })
         })   
         
@@ -1094,61 +1097,104 @@ class Campanhas{
 
     //BLACKLIST
 
-    /*
+   
 
     //STATUS DE EVOLUCAO DE CAMPANHA
     async totalMailingsCampanha(empresa,idCampanha){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
         
-        const sql = `SELECT m.totalNumeros-m.numerosInvalidos AS total, m.id AS idMailing
-                      FROM ${empresa}_dados.mailings as m 
-                      JOIN ${empresa}_dados.campanhas_mailing AS cm 
-                        ON cm.idMailing=m.id 
-                      WHERE cm.idCampanha=${idCampanha}`
-        return await this.querySync(conn,sql)
+                const sql = `SELECT m.totalNumeros-m.numerosInvalidos AS total, m.id AS idMailing
+                            FROM ${empresa}_dados.mailings as m 
+                            JOIN ${empresa}_dados.campanhas_mailing AS cm 
+                                ON cm.idMailing=m.id 
+                            WHERE cm.idCampanha=${idCampanha}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(rows)
+            })
+        })
         
     }
 
     async mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,status){
-        const sql = `SELECT count(id) AS total 
-                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE contatado='${status}' AND idCampanha=${idCampanha} AND idMailing=${idMailing}`
-        const total_mailing= await this.querySync(conn,sql)
-        return total_mailing[0].total
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT count(id) AS total 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE contatado='${status}' AND idCampanha=${idCampanha} AND idMailing=${idMailing}`
+                const total_mailing= await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(total_mailing[0].total)
+            })
+        })
     }   
 
    
     async mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,status){
-        let queryFilter="";
-        if(status==1){
-            queryFilter=`AND produtivo=1`
-        }else{
-            queryFilter=`AND (produtivo=0 OR produtivo is null)`
-        }
-        const sql = `SELECT count(id) AS total 
-                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${queryFilter}`
-        const total_mailing= await this.querySync(conn,sql)
-        return total_mailing[0].total
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                let queryFilter="";
+                if(status==1){
+                    queryFilter=`AND produtivo=1`
+                }else{
+                    queryFilter=`AND (produtivo=0 OR produtivo is null)`
+                }
+                const sql = `SELECT count(id) AS total 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${queryFilter}`
+                const total_mailing= await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(total_mailing[0].total)
+            })
+        })
     }   
 
     async dataUltimoRegMailingNaCampanha(empresa,idCampanha,idMailing){
-        const sql = `SELECT  DATE_FORMAT(data,'%d/%m/%Y') AS ultimaData
-                      FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ORDER BY data DESC`
-        const d= await this.querySync(conn,sql)
-        if(d.length==0){
-            return ""
-        }
-        return d[0].ultimaData
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT  DATE_FORMAT(data,'%d/%m/%Y') AS ultimaData
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ORDER BY data DESC`
+                const d= await this.querySync(conn,sql)
+                if(d.length==0){
+                    return ""
+                }
+                
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(d[0].ultimaData)
+            })
+        })
     }   
 
     async mailingsAnteriores(empresa,idCampanha){
-        const sql = `SELECT DISTINCT idMailing 
-                       FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                      WHERE idCampanha=${idCampanha}`
-        return await this.querySync(conn,sql);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                const sql = `SELECT DISTINCT idMailing 
+                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
+                            WHERE idCampanha=${idCampanha}`
+                const rows = await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 1079', err)
+                })
+                resolve(rows)
+            })
+        })
         
-    }*/
+    }
 
     //AGENDAMENTO DE CAMPANHAS
     //Agenda campanha

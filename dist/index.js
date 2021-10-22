@@ -9,8 +9,9 @@ const app = _customExpress2.default.call(void 0, );
 const httpServer = _http2.default.createServer(app);
 
 //Iniciando Discador
-//DiscadorController.dial() DESCONTINUADO
-_DiscadorController2.default.checkAccounts()
+
+
+//DiscadorController.checkAccounts()
 
 
 httpServer.listen(3000,()=>console.log('Servidor de testes online!'));

@@ -1,5 +1,45 @@
 import mysql from 'mysql2';
 import Clients from '../models/Clients'
+
+const connect = ()=>{};
+      connect.pool = async (empresa,type = 'dados',database_dados='clientes_ativos') =>{
+          
+        let host = 'localhost'
+        let database = 'mysql'
+        switch(type){
+            case 'crm':
+                host = process.env.CRMDB_HOST
+                database = 'clients'
+            break;
+            case 'asterisk':
+                host = process.env.ASTDB_HOST
+                database = 'asterisk'
+            break;
+            default:
+                host = await Clients.serversDbs(empresa)//'35.194.25.54'// 
+                database = database_dados
+        }
+            console.log(type,host)
+            return  mysql.createPool({
+                host     : host,
+                port     : 3306,
+                user     : process.env.DB_USER,
+                password : process.env.DB_PASS,
+                database : database
+        })
+    }
+export default connect;
+
+
+
+
+
+
+
+
+
+/*import mysql from 'mysql2';
+import Clients from '../models/Clients'
 //Definição de Ambiente
 //const environment = "dev"
 const environment = "DB_DEV"
@@ -34,7 +74,7 @@ switch(environment){
 
 const connect = ()=>{};
 
-/*MYSQL2*/
+/*MYSQL2*
 connect.pool = async (empresa,type = 'dados') =>{
     switch(type){
         case 'crm':
@@ -46,10 +86,10 @@ connect.pool = async (empresa,type = 'dados') =>{
             database = 'asterisk'
         break;
         default:
-            host = await Clients.serversDbs(empresa) 
-            database = 'clientes_ativos'
+            host = await Clients.serversDbs(empresa),//'35.194.25.54',//
+            database = `clientes_ativos`
     }
-        //console.log(type,host)
+        console.log(type,host)
         return  mysql.createPool({
             host               : host,
             port               : 3306,
@@ -62,109 +102,5 @@ connect.pool = async (empresa,type = 'dados') =>{
     })
 }
 
-/*
 
-connect.poolCRM=mysql.createConnection({    
-    host:crm_host,
-    user : user['name'],
-    password : user['pass'],
-    database : "clients"
-})
-connect.poolConta = (hostEmpresa) =>{
-    console.log('host',hostEmpresa)
-    return  mysql.createPool({
-            host               : '35.194.25.54',//'34.68.33.39',
-            port               : 3306,
-            user               : user['name'],
-            password           : user['pass'],
-            database           : `clientes_ativos`,
-            waitForConnections: true,
-            connectionLimit: 10,
-            queueLimit:0
-    })
-}
-connect.poolAsterisk=mysql.createPool({
-    host:astdb_host,
-    user : user['name'],
-    password : user['pass'],
-    database : "asterisk",
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit:0
-})
-
-
-
-
-/*
-connect.poolEmpresa=mysql.createPool({
-    host:host,
-    user : user['name'],
-    password : user['pass'],
-    database : db['clients'],
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit:0
-})
-
-
-
-connect.poolAsterisk=mysql.createPool({
-    host:astdb_host,
-    user : user['name'],
-    password : user['pass'],
-    database : "asterisk",
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit:0
-})
-
-/*
-
-connect.db=db
-
-connect.pool=mysql.createPool({
-        host:host,
-        user : user['name'],
-        password : user['pass'],
-        database : db['dados'],
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0
-    })
-
-
-
-connect.base=((database)=>{
-    return mysql.createConnection({        
-        host : host,
-        user : user['name'],
-        password : user['pass'],
-        database : database
-    })   
-})   
-
-connect.banco=mysql.createConnection({
-    host : host,
-    user : user['name'],
-    password : user['pass'],
-    database : db['dados']
-})
-
-connect.mailings=mysql.createConnection({
-    host : host,
-    user : user['name'],
-    password : user['pass'],
-    database : db['mailings']
-})
-connect.asterisk=mysql.createConnection({    
-    host : host,
-    user : user['name'],
-    password : user['pass'],
-    database : db['asterisk']
-})
-
-*/
-
-
-export default connect;
+export default connect;*/

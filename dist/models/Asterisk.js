@@ -11,44 +11,6 @@ var _Discador = require('./Discador'); var _Discador2 = _interopRequireDefault(_
 var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 class Asterisk{
-    /*
-    async querySync(conn,sql){
-        const hostEmp = await Clients.serversDbs(empresa)
-        const connection = connect.poolConta(hostEmp)
-        const promisePool =  connection.promise();
-        const result = await promisePool.query(sql)
-        promisePool.end();
-        return result[0];       
-    }
-    async querySync(conn,sql){
-        const connection = connect.poolAsterisk
-        const promisePool =  connection.promise();
-        const result = await promisePool.query(sql)
-        //promisePool.end();
-        return result[0];
-    }
-   
-    
-    async querySync(conn,sql){
-        return new Promise(async(resolve,reject)=>{
-            const hostEmp = await Clients.serversDbs(empresa)
-            const conn = connect.poolConta(hostEmp)
-            conn.query(sql,(e,rows)=>{
-                if(e) reject(e);
-                resolve(rows)
-            })
-                      
-        })
-    }
-    
-    async querySync(conn,sql){
-        const connection = connect.poolAsterisk
-        const promisePool =  connection.promise();
-        const result = await promisePool.query(sql)
-        //promisePool.end();
-        return result[0];
-    }*/
-    
     async querySync(conn,sql){         
         return new Promise((resolve,reject)=>{            
             conn.query(sql, (err,rows)=>{
@@ -57,10 +19,6 @@ class Asterisk{
             })
         })
     } 
-    
-
-   
-
     
     //######################Configuração das filas######################
     

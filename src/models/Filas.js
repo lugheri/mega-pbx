@@ -111,7 +111,7 @@ class Filas{
     async listar(empresa){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'asterisk')
-                    pool.getConnection(async (err,conn)=>{   
+            pool.getConnection(async (err,conn)=>{   
                 const sql = `SELECT * FROM asterisk.queues`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
