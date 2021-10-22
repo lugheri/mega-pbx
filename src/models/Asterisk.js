@@ -72,7 +72,7 @@ class Asterisk{
                 const check = await this.checkAgenteFila(empresa,queue_name,membername)
                 if(check){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Asterisk.js 75',err)
                     })
                     resolve(false) 
                     return false;
@@ -83,7 +83,7 @@ class Asterisk{
                                 VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Asterisk.js 83',err)
                 })
                 resolve(true) 
             })
@@ -99,7 +99,7 @@ class Asterisk{
                             WHERE queue_name = ${nomeFila}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Asterisk.js 102',err)
                 })
                 resolve(rows) 
             })
@@ -114,7 +114,7 @@ class Asterisk{
                             WHERE queue_name='${nomeFila}' AND membername='${membro}'`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Asterisk.js 117',err)
                 })
                 resolve(true) 
             })
@@ -129,7 +129,7 @@ class Asterisk{
                             WHERE queue_name='${queue_name}' AND membername='${membername}'`
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Asterisk.js 132',err)
                 })
                 resolve(r.length) 
             })
@@ -154,7 +154,7 @@ class Asterisk{
                 await this.querySync(conn,sql)
                 const rows = await this.servidorWebRTC(empresa)     
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Asterisk.js 157',err)
                 })
                 resolve(rows) 
             })
@@ -176,14 +176,14 @@ class Asterisk{
                                     WHERE ramal='${ramal}'`
                         await this.querySync(conn,sql)
                         pool.end((err)=>{
-                            if(err) console.log(err)
+                            if(err) console.log('Asterisk.js 179',err)
                         })
                         resolve(true)
                         return true
                     }
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Asterisk.js 186',err)
                 })
                 resolve(false) 
             })
@@ -199,7 +199,7 @@ class Asterisk{
                             WHERE status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Asterisk.js 202',err)
                 })
                 resolve(rows) 
             })
@@ -215,7 +215,7 @@ class Asterisk{
                             WHERE status=1`
                 const rows = this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Asterisk.js 218',err)
                 })
                 resolve(rows) 
             })
@@ -267,7 +267,7 @@ class Asterisk{
                             WHERE id='${idAtendimento}'`// AND na_fila=1`  
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Asterisk.js 270',err)
                 })
                 resolve(rows) 
             })
@@ -286,7 +286,7 @@ class Asterisk{
                             WHERE id='${idAtendimento}'`// AND na_fila=1`  
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Asterisk.js 289',err)
                 })
                 resolve(rows) 
             })

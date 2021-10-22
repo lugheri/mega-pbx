@@ -56,7 +56,7 @@ class Campanhas{
                                 VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 59', err)
                 })
                 resolve(rows) 
             })
@@ -74,7 +74,7 @@ class Campanhas{
                       ORDER BY status ASC, id ASC`
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 77', err)
                 })
                 resolve(rows) 
             })
@@ -96,7 +96,7 @@ class Campanhas{
                             WHERE c.id=${idCampanha}`
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 99', err)
                 })
                 resolve(rows) 
             })
@@ -112,7 +112,7 @@ class Campanhas{
                             WHERE id=${idCampanha}`
                 const c = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 115', err)
                 })
                 if(c.length==0){
                     resolve("")
@@ -135,7 +135,7 @@ class Campanhas{
                         ORDER BY status ASC, id ASC`
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 138', err)
                 })
                 resolve(rows) 
             })
@@ -151,7 +151,7 @@ class Campanhas{
                             WHERE id='${idCampanha}' AND status=1`
                             const rows =  await this.querySync(conn,sql) 
                             pool.end((err)=>{
-                                if(err) console.log(err)
+                                if(err) console.log('Campanhas.js 154', err)
                             })
                             resolve(rows) 
                         })
@@ -173,7 +173,7 @@ class Campanhas{
                 await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)              
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 176', err)
                 })
                 resolve(rows) 
             })
@@ -222,7 +222,7 @@ class Campanhas{
                         await this.querySync(connAst,sql)
                     }
                     poolAsterisk.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Campanhas.js 225', err)
                     })
                     resolve(true)
                 })
@@ -251,7 +251,7 @@ class Campanhas{
                             VALUES (${idCampanha},${idListaTabulacao},15)`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 254', err)
                 })
             })
         })         
@@ -268,7 +268,7 @@ class Campanhas{
                             WHERE idCampanha=${idCampanha}`
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 271', err)
                 })
             })
         }) 
@@ -291,7 +291,7 @@ class Campanhas{
                                 WHERE id=${idListaNaCampanha}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 294', err)
                 })
             })
         })   
@@ -306,7 +306,7 @@ class Campanhas{
                             WHERE idCampanha=${idCampanha}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 309', err)
                 })
             })
         })   
@@ -321,7 +321,7 @@ class Campanhas{
                             WHERE idCampanha=${idCampanha}`
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 324', err)
                 })
                 resolve(rows)
             })
@@ -340,7 +340,7 @@ class Campanhas{
                                 VALUES ('${dados.url}','${dados.descricao}','${dados.modoAbertura}')`
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 343', err)
                 })
                 resolve(rows)
             })
@@ -356,7 +356,7 @@ class Campanhas{
                             FROM ${empresa}_dados.campanhas_integracoes_disponiveis`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 359', err)
                 })
                 resolve(rows)
             })
@@ -375,7 +375,7 @@ class Campanhas{
                             WHERE id=${idIntegracao}`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 378', err)
                 })
                 resolve(rows)
             })
@@ -392,7 +392,7 @@ class Campanhas{
                             WHERE id=${idIntegracao}`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 395', err)
                 })
                 resolve(rows)
             })
@@ -410,7 +410,7 @@ class Campanhas{
                 sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes WHERE idIntegracao=${idIntegracao}`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 413', err)
                 })
                 resolve(rows)
             })
@@ -435,7 +435,7 @@ class Campanhas{
                             VALUES (${dados.idCampanha},${dados.idIntegracao})`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 438', err)
                 })
                 resolve(rows)
             })
@@ -453,7 +453,7 @@ class Campanhas{
                             WHERE c.idCampanha=${idCampanha}`
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 456', err)
                 })
                 resolve(rows)
             })
@@ -470,7 +470,7 @@ class Campanhas{
                                 AND idIntegracao=${idIntegracao}`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 473', err)
                 })
                 resolve(rows)
             })
@@ -491,7 +491,7 @@ class Campanhas{
                                     VALUES (${idCampanha},'${tipoDiscador}',${agressividade},'${ordemDiscagem}','${tipoDiscagem}','${modo_atendimento}','${saudacao}')`
                     const rows = await this.querySync(conn,sql) 
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Campanhas.js 494', err)
                     })
                     resolve(rows)
                 }else{
@@ -505,7 +505,7 @@ class Campanhas{
                                 WHERE idCampanha = ${idCampanha}`
                     const rows = await this.querySync(conn,sql)  
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Campanhas.js 508', err)
                     })
                     resolve(rows)    
                 }               
@@ -522,7 +522,7 @@ class Campanhas{
                             WHERE idCampanha = ${idCampanha}`
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 525', err)
                 })
                 resolve(rows)   
                            
@@ -541,7 +541,7 @@ class Campanhas{
                             WHERE idCampanha='${idCampanha}'`
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 544', err)
                 })
                 resolve(rows)   
                            
@@ -561,7 +561,7 @@ class Campanhas{
                         VALUES (${idCampanha},${idFila},'${nomeFila}','${apelido}')`
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 564', err)
                 })
                 resolve(rows)   
                            
@@ -578,7 +578,7 @@ class Campanhas{
                             WHERE idCampanha=${idCampanha} AND idFila='${idFila}'`
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 581', err)
                 })
                 resolve(rows)   
                            
@@ -602,7 +602,7 @@ class Campanhas{
                             AND idMailing=${idMailing}`
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 605', err)
                 })
                 if(r.length==1){
                     resolve(false)
@@ -627,7 +627,7 @@ class Campanhas{
                             LIMIT 1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 630', err)
                 })
                 resolve(rows)
             })
@@ -647,7 +647,7 @@ class Campanhas{
                             LIMIT 10;`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 650', err)
                 })
                 resolve(rows)
             })
@@ -688,7 +688,7 @@ class Campanhas{
                 await this.querySync(conn,sql)
                
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 691', err)
                 })
                 resolve(true)
             })
@@ -755,7 +755,7 @@ class Campanhas{
                         }
                     }
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Campanhas.js 758', err)
                     })
                     resolve(true)
                 }
@@ -787,7 +787,7 @@ class Campanhas{
                             WHERE idCampanha=${idCampanha}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 790', err)
                 })
                 resolve(rows)
             })
@@ -807,7 +807,7 @@ class Campanhas{
                             AND regiao='${regiao}'`
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 810', err)
                 })
                 if(r.length==0){
                     resolve(false)
@@ -833,7 +833,7 @@ class Campanhas{
                 console.log(`delFilter sql`,sql)
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 836', err)
                 })
                 resolve(true)
             })
@@ -853,7 +853,7 @@ class Campanhas{
                             WHERE ${filter}`          
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 856', err)
                 })
                 resolve(true)
             })
@@ -874,7 +874,7 @@ class Campanhas{
                 
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 877', err)
                 })
                 resolve(r[0].total)
             })
@@ -892,7 +892,7 @@ class Campanhas{
                             WHERE valido=1 ${filter}`       
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 895', err)
                 })
                 resolve(r[0].total)
             })
@@ -911,7 +911,7 @@ class Campanhas{
                 const r = await this.querySync(conn,sql)
                 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 914', err)
                 })
                 resolve(r[0].total)
             })
@@ -962,7 +962,7 @@ class Campanhas{
                             FROM ${empresa}_mailings.${tabela} ${filter}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 965', err)
                 })
                 resolve(rows)
             })
@@ -985,7 +985,7 @@ class Campanhas{
                             //  console.log('sql filtro',sql)
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 988', err)
                 })
                 if(r.length==0){
                     resolve(false);
@@ -1008,7 +1008,7 @@ class Campanhas{
                             WHERE idMailing='${idMailing}' AND conferido=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1011', err)
                 })
                 resolve(rows)
             })
@@ -1045,7 +1045,7 @@ class Campanhas{
                                 VALUES (${idCampanha},'${tabela}',${idCampo},0)`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1048', err)
                 })
                 resolve(rows)
             })
@@ -1061,7 +1061,7 @@ class Campanhas{
                             WHERE t.idCampanha=${idCampanha} AND t.tabela='${tabela}'`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1064', err)
                 })
                 resolve(rows)
             })
@@ -1076,7 +1076,7 @@ class Campanhas{
                             WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1079', err)
                 })
                 resolve(rows)
             })
@@ -1164,7 +1164,7 @@ class Campanhas{
                                     VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
                     const rows = await this.querySync(conn,sql)
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Campanhas.js 1167', err)
                     })
                     resolve(rows)
                 }else{
@@ -1173,7 +1173,7 @@ class Campanhas{
                                 WHERE id_campanha='${idCampanha}'`
                     const rows = await this.querySync(conn,sql)
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Campanhas.js 1176', err)
                     })
                     resolve(rows)
                 }
@@ -1193,7 +1193,7 @@ class Campanhas{
                             WHERE id_campanha=${idCampanha}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1196', err)
                 })
                 resolve(rows)
             })
@@ -1215,7 +1215,7 @@ class Campanhas{
                 sql = `INSERT INTO ${empresa}_dados.filas (nome,apelido,descricao) VALUES('${nomeFila}','${apelido}','${descricao}')`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1218', err)
                 })
                 resolve(true)
             })
@@ -1230,7 +1230,7 @@ class Campanhas{
                 const sql = `SELECT id,apelido as nome, descricao  FROM ${empresa}_dados.filas ORDER BY id DESC`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1233', err)
                 })
                 resolve(rows)   
                         
@@ -1247,7 +1247,7 @@ class Campanhas{
                             WHERE id=${idFila}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1250', err)
                 })
                 resolve(rows)   
                         
@@ -1264,7 +1264,7 @@ class Campanhas{
                             WHERE id=${idFila}`
                 const n = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1267', err)
                 })
                 resolve(n[0].nome)   
                         
@@ -1282,7 +1282,7 @@ class Campanhas{
                                 WHERE id='${idFila}'`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1285', err)
                 })
                 resolve(rows)   
                         
@@ -1298,7 +1298,7 @@ class Campanhas{
                             WHERE id='${idFila}'`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1301', err)
                 })
                 resolve(true)   
                         
@@ -1329,7 +1329,7 @@ class Campanhas{
                             LIMIT ${limit}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1332', err)
                 })
                 resolve(rows)   
                         
@@ -1347,7 +1347,7 @@ class Campanhas{
                             WHERE status=1 AND estado=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1350', err)
                 })
                 resolve(rows)   
                         
@@ -1365,7 +1365,7 @@ class Campanhas{
                             WHERE c.status=1 AND c.estado=1 AND s.estado=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1368', err)
                 })
                 resolve(rows)   
                         
@@ -1384,7 +1384,7 @@ class Campanhas{
                             WHERE c.status=1 AND c.estado=2 OR c.estado=1 AND s.estado=2`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1387', err)
                 })
                 resolve(rows)   
                         
@@ -1403,7 +1403,7 @@ class Campanhas{
                             WHERE c.status=1 AND c.estado=3 OR c.estado=1 AND s.estado=3`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1406', err)
                 })
                 resolve(rows)   
                         
@@ -1465,7 +1465,7 @@ class Campanhas{
                             WHERE falando=1`
                 const rows = this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1468', err)
                 })
                 resolve(rows)   
                         
@@ -1505,7 +1505,7 @@ class Campanhas{
                             WHERE c.estado=1 AND c.status=1 AND a.estado=2`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1508', err)
                 })
                 resolve(rows)   
                         
@@ -1527,7 +1527,7 @@ class Campanhas{
                             
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1530', err)
                 })
                 resolve(rows)   
                         
@@ -1567,7 +1567,7 @@ class Campanhas{
                             LIMIT 1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1570', err)
                 })
                 resolve(rows)   
                         
@@ -1600,7 +1600,7 @@ class Campanhas{
                             WHERE c.estado=1 AND c.status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1603', err)
                 })
                 resolve(rows)   
                         
@@ -1619,7 +1619,7 @@ class Campanhas{
                             WHERE c.id=${idCampanha}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1622', err)
                 })
                 resolve(rows)   
                         
@@ -1637,7 +1637,7 @@ class Campanhas{
                             WHERE t.contatado='S' AND c.estado=1 AND c.status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1640', err)
                 })
                 resolve(rows)   
                         
@@ -1656,7 +1656,7 @@ class Campanhas{
                             WHERE t.contatado='N' AND c.estado=1 AND c.status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Campanhas.js 1659', err)
                 })
                 resolve(rows)   
                         

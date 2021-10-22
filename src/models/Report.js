@@ -44,7 +44,7 @@ class Report{
                                 
                 const users = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(users)
             })
@@ -60,7 +60,7 @@ class Report{
                             WHERE status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -76,7 +76,7 @@ class Report{
                             WHERE status=1 AND estado=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -92,7 +92,7 @@ class Report{
                             WHERE pronto=1 AND status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -110,7 +110,7 @@ class Report{
                             WHERE a.ramal='${idAgente}' AND c.id=${idCampanha} LIMIT 1`
                 const u = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(u.length)
             })
@@ -130,7 +130,7 @@ class Report{
                             
                 const user = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(user)
             })
@@ -156,7 +156,7 @@ class Report{
                 }
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -173,7 +173,7 @@ class Report{
                             WHERE r.ramal='${ramal}'`
                 const e = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(e[0].estado)
             })
@@ -199,7 +199,7 @@ class Report{
                             WHERE 1=1 ${filter}`
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(t[0].tempo)
             })
@@ -222,7 +222,7 @@ class Report{
                 const tempoEstado = await this.converteSeg_tempo(tempo)
                
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(tempoEstado)
             })
@@ -254,7 +254,7 @@ class Report{
                 const c = await this.querySync(conn,sql)     
                  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(c)
             })
@@ -302,7 +302,7 @@ class Report{
                 //console.log('chamadasRealizadas',sql)
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -320,7 +320,7 @@ class Report{
                 const t = await this.querySync(conn,sql)    
                 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(t.length)
             })
@@ -338,7 +338,7 @@ class Report{
                 const f = await this.querySync(conn,sql) 
                
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(f.length)
             })
@@ -356,7 +356,7 @@ class Report{
                 const t = await this.querySync(conn,sql)
                 if(t.length==0){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Reports ...', err)
                     })
                     resolve(0)
                     return 0
@@ -372,7 +372,7 @@ class Report{
                 //console.log('timeCall',sql)
                 const d = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(d[0].tempo)
             })
@@ -388,7 +388,7 @@ class Report{
                             WHERE idAgente=${idAgente} AND tipoDiscador='receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(t[0].tempo)
             })
@@ -404,7 +404,7 @@ class Report{
                             WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND tipoDiscador<>'manual' AND entrada>='${de}' AND saida <= '${ate}'`
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(t[0].tempo)
             })
@@ -420,7 +420,7 @@ class Report{
                             WHERE idAgente=${idAgente} AND tipoDiscador='manual' AND entrada>='${de}' AND saida <= '${ate}'`
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(t[0].tempo)
             })
@@ -444,7 +444,7 @@ class Report{
                             //console.log('chamadasAtendidas',sql)
                 const ca = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(ca[0].total)
             })
@@ -475,7 +475,7 @@ class Report{
                             //console.log('tempoMedioAgente',sql)
                 const tm = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(Math.floor(tm[0].tempoMedio))
             })
@@ -505,7 +505,7 @@ class Report{
                             //console.log('chamadasProdutividade',sql)
                 const p=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(p[0].produtivas)
             })
@@ -521,7 +521,7 @@ class Report{
                             WHERE agente>0 AND campanha=${campanha}`
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(a[0].atendidas)
             })
@@ -537,7 +537,7 @@ class Report{
                             WHERE produtivo=1 AND campanha=${campanha}`
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(a[0].produtivas)
             })
@@ -553,7 +553,7 @@ class Report{
                             WHERE falando=1 AND id_campanha=${campanha}`
                     const a=await this.querySync(conn,sql);
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Reports ...', err)
                     })
                     resolve(a[0].atendidas)
                 })
@@ -569,7 +569,7 @@ class Report{
                             WHERE agente=0 AND campanha=${campanha}`
                 const na=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(na[0].nao_atendidas)
             })
@@ -585,7 +585,7 @@ class Report{
                             WHERE contatado='S' AND campanha=${idCampanha}`
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(c[0].contatados)
             })
@@ -604,7 +604,7 @@ class Report{
                     return 0
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(c[0].agressividade)
             })
@@ -620,7 +620,7 @@ class Report{
                             WHERE idCampanha=${idCampanha}`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -637,7 +637,7 @@ class Report{
                             WHERE idCampanha=${idCampanha}`
                 const tm=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(tm[0].tempoMedio)
             })
@@ -660,7 +660,7 @@ class Report{
                 const total_mailing= await this.querySync(conn,sql)
                 return total_mailing[0].total
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(total_mailing[0].total)
             })
@@ -676,7 +676,7 @@ class Report{
                             WHERE data='${hoje}' AND campanha=${idCampanha}`
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(c[0].chamadas)
             })
@@ -693,7 +693,7 @@ class Report{
                             ORDER BY dataCall ASC LIMIT 7`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -710,7 +710,7 @@ class Report{
                             WHERE data='${hoje}' AND agente>0 AND campanha=${idCampanha}`
                 const c = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(c[0].chamadas)
             })
@@ -726,7 +726,7 @@ class Report{
                             ORDER BY dataCall ASC LIMIT 7`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -744,7 +744,7 @@ class Report{
                             WHERE h.data='${hoje}' AND h.campanha=${idCampanha} AND t.venda=1`
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(c[0].chamadas)
             })
@@ -761,7 +761,7 @@ class Report{
                             ORDER BY dataCall ASC LIMIT 7`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -777,7 +777,7 @@ class Report{
                             WHERE data='${hoje}' AND obs_tabulacao='ABANDONADA' AND campanha=${idCampanha}`
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(a[0].abandonadas)
             })
@@ -793,7 +793,7 @@ class Report{
                             ORDER BY dataCall ASC LIMIT 7`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Reports ...', err)
                 })
                 resolve(rows)
             })

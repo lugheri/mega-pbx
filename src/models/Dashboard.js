@@ -235,7 +235,7 @@ class Dashboard{
                     realTime['RealTimeChart']['Falando']=conectadas
                 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Dashboard.js 238', err)
                 })
                 resolve(realTime)
             })

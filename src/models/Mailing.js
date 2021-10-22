@@ -108,7 +108,7 @@ class Mailing{
                 const retorno = await this.infoMailing(empresa,insertMailing['insertId']);     
                
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 111', err)
                 })
 
                 resolve(retorno)
@@ -129,7 +129,7 @@ class Mailing{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Mailings 132', err)
                 }) 
                 resolve(rows)   
             })
@@ -147,7 +147,7 @@ class Mailing{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Mailings 150', err)
                 }) 
                 resolve(rows)   
             })
@@ -164,7 +164,7 @@ class Mailing{
            pool.getConnection(async (err,conn)=>{                           
                const rows =  await this.querySync(conn,sql)                  
                pool.end((err)=>{
-                  if(err) console.log(err)
+                  if(err) console.log('Mailings 167', err)
                }) 
                resolve(rows)   
            }) 
@@ -181,7 +181,7 @@ class Mailing{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Mailings 184', err)
                 }) 
                 resolve(rows)   
             })
@@ -282,7 +282,7 @@ class Mailing{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 285', err)
                 }) 
                 resolve(rows)   
             })
@@ -431,7 +431,7 @@ class Mailing{
                         await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate,verificarCPF)  
                     })
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Mailings 434', err)
 
                         console.log('encerrou importacao dos dados')
                     }) 
@@ -631,7 +631,7 @@ class Mailing{
                     //console.log("sql final",sql)
                     await this.querySync(conn,sql) 
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Mailings 634', err)
                         resolve(true)
                         console.log('encerrou importacao dos numeros')
                     })          
@@ -672,7 +672,7 @@ class Mailing{
                             LIMIT ${rate}`
                 const row = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 675', err)
                 })
                 resolve(row)
             })
@@ -688,7 +688,7 @@ class Mailing{
                             WHERE id_key_base=${idReg}`
                 const row = await this.querySync(conn,sql)    
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 691', err)
                 })
                 resolve(row)
             })
@@ -728,7 +728,7 @@ class Mailing{
                             LIMIT 1`
                 const check = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 731', err)
                 })
                 if(check.length==0){
                     resolve(false)
@@ -750,7 +750,7 @@ class Mailing{
                             LIMIT 1`
                 const idCPF = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 753', err)
                 })
                 if(idCPF.length==0){
                     resolve(false)
@@ -826,7 +826,7 @@ class Mailing{
                                 
                     const r = await this.querySync(conn,sql)
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Mailings 829', err)
                     })
                     resolve(r[0].invalidos)
                     
@@ -955,7 +955,7 @@ class Mailing{
                                 WHERE valido=1`
                     const rows =  await this.querySync(conn,sql);
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Mailings 958', err)
                     })
                     resolve(rows) 
                 })
@@ -970,7 +970,7 @@ class Mailing{
                             FROM ${tabela}`
                 const rows =  await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 973', err)
                 })
                 resolve(rows) 
             })
@@ -988,13 +988,13 @@ class Mailing{
                     const sql = `UPDATE ${tabela} SET duplicado=1 WHERE id=${rpt[0].id}`     
                     await this.querySync(conn,sql)
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Mailings 991', err)
                     })
                     resolve(1) 
                 }            
               
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 997', err)
                 })
                 resolve(0) 
             })
@@ -1011,7 +1011,7 @@ class Mailing{
                 const r = await this.querySync(conn,sql)
                 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 1014', err)
                 })
                 resolve(r[0].numeros) 
             })
@@ -1027,7 +1027,7 @@ class Mailing{
                             WHERE id='${idBase}'`
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 1030', err)
                 })
                 resolve(r[0].totalReg)  
             })
@@ -1057,7 +1057,7 @@ class Mailing{
                                 WHERE configurado=1 AND status=1 ORDER BY id DESC`
                     const rows =  await this.querySync(conn,sql);
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Mailings 1060', err)
                     })
                     resolve(rows)  
             })
@@ -1082,7 +1082,7 @@ class Mailing{
                             LIMIT ${pag},${qtd}`
                     const retorno =  await this.querySync(conn,sql)
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Mailings 1085', err)
                     })
                     resolve(retorno)
             })
@@ -1106,7 +1106,7 @@ class Mailing{
                     res.attachment(`mailing_${r[0].nome}.csv`)
                     res.status(200).send(csv);
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Mailings 1109', err)
                     })
                     resolve(true)
                 })
@@ -1145,7 +1145,7 @@ class Mailing{
                     WHERE idMailing='${idMailing}'` //Removendo configurações da tela do agente
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 1148', err)
                 })
                 resolve(true)
             })
@@ -1162,7 +1162,7 @@ class Mailing{
                             WHERE id=${idMailing}`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 1165', err)
                 })
                 resolve(rows)
             })
@@ -1238,7 +1238,7 @@ class Mailing{
                     ufs[`${r[i].uf}`]['name']=`${filter.estado}`
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 1241', err)
                 }) 
                 
                 resolve(ufs)
@@ -1268,7 +1268,7 @@ class Mailing{
                         WHERE produtivo != 1`
                 await this.querySync(conn,sql)     
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 1271', err)
                 }) 
                 resolve(true)
             })
@@ -1285,7 +1285,7 @@ class Mailing{
                       WHERE uf='${uf}' GROUP BY ddd ORDER BY ddd ASC`
                       const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Mailings 1288', err)
                 }) 
                 resolve(rows)
             })
@@ -1303,7 +1303,7 @@ class Mailing{
                             ORDER BY uf ASC`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 1306', err)
                 }) 
                 resolve(rows)
             })
@@ -1320,7 +1320,7 @@ class Mailing{
                             WHERE valido=1`
                 const reg = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 1323', err)
                 })
                 resolve(reg[0].total)
             })
@@ -1336,7 +1336,7 @@ class Mailing{
                             WHERE contatado='S'`
                 const reg = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 1339', err)
                 })
             resolve(reg[0].total)
             })
@@ -1352,7 +1352,7 @@ class Mailing{
                               WHERE selecionado>0 AND contatado<>'S'`
                 const reg = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Mailings 1355', err)
                 })
                 
                 resolve(reg[0].total)

@@ -23,7 +23,7 @@ class Blacklist{
                                 VALUES ('${dados.nome}','${dados.descricao}','${dados.default}')`;
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 26',err)
                 })
                 resolve(rows) 
             })
@@ -38,7 +38,7 @@ class Blacklist{
                             FROM ${empresa}_mailings.blacklists`;
                 const rows = await this.queryTest(sql,empresa)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 41',err)
                 })
                 resolve(rows) 
             })
@@ -54,7 +54,7 @@ class Blacklist{
                             WHERE id=${idLista}`;
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 57',err)
                 })
                 resolve(rows) 
             })
@@ -72,7 +72,7 @@ class Blacklist{
                             WHERE id=${idLista}`;
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 75',err)
                 })
                 resolve(rows) 
             })
@@ -90,7 +90,7 @@ class Blacklist{
                                     WHERE idLista=${idLista}`;
                 await this.querySync(sql2,empresa)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 93',err)
                 })
                 resolve(true) 
             })
@@ -165,13 +165,13 @@ class Blacklist{
                                     VALUES (${idLista},now(),'${ddd}','${numero}','${tipo}')`
                     await this.querySync(conn,sql)
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Blacklist.js 168',err)
                     })
                     resolve(true) 
                     return true
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 174',err)
                 })
                 resolve(false) 
             })
@@ -187,7 +187,7 @@ class Blacklist{
                             WHERE numero LIKE '%${numero}%' AND idLista=${idLista}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 190',err)
                 })
                 resolve(rows) 
             })
@@ -202,7 +202,7 @@ class Blacklist{
                             FROM ${empresa}_mailings.blacklist_numeros LIMIT ${inicio},${limit}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 205',err)
                 })
                 resolve(rows) 
             })
@@ -217,7 +217,7 @@ class Blacklist{
                             WHERE numero='${numero}' AND idLista=${idLista}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 220',err)
                 })
             })
         })       
@@ -233,7 +233,7 @@ class Blacklist{
                 const test = await this.querySync(sqlTest)
                 if(test.length>=1){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Blacklist.js 236',err)
                     })
                     resolve(false) 
                     return false
@@ -243,7 +243,7 @@ class Blacklist{
                                 VALUES (${idCampanha},${idBlacklist})`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 246',err)
                 })
                 resolve(true) 
             })
@@ -260,7 +260,7 @@ class Blacklist{
                             WHERE idCampanha=${idCampanha}`
                 const rows =  await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 263',err)
                 })
                 resolve(rows) 
             })
@@ -275,7 +275,7 @@ class Blacklist{
                 WHERE idCampanha=${idCampanha} AND idBlacklist=${idBlacklist}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Blacklist.js 278',err)
                 }) 
             })
         })       

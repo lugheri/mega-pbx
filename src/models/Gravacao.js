@@ -44,7 +44,7 @@ class Gravacao{
                             LIMIT ${inicio},${limit}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Gravacao ...', err)
                 })
                 resolve(rows)
             })
@@ -150,7 +150,7 @@ class Gravacao{
                 console.log(sql)
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Gravacao ...', err)
                 })
                 resolve(rows)
             })
@@ -166,7 +166,7 @@ class Gravacao{
                             WHERE id=${idGravacao}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Gravacao ...', err)
                 })
                 resolve(rows)
             })
@@ -183,14 +183,14 @@ class Gravacao{
                 const n =  await this.querySync(conn,sql)
                 if(n.length==0){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Gravacao ...', err)
                     })
                     resolve(0)
                     return 0
                 }
                
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Gravacao ...', err)
                 })
                 resolve(n[0].numero)
             })
@@ -207,13 +207,13 @@ class Gravacao{
                 const g =  await this.querySync(conn,sql)
                 if(g.length==0){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Gravacao ...', err)
                     })
                     resolve(0)
                     return 0
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Gravacao ...', err)
                 })
                 resolve(g)
             })
@@ -231,14 +231,14 @@ class Gravacao{
 
                 if(e.length == 0){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Gravacao ...', err)
                     })
                     resolve(false)
                     return false
                 }
                 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Gravacao ...', err)
                 })
                 resolve(e[0].prefix)
             })
@@ -275,7 +275,7 @@ class Gravacao{
                             WHERE r.id=${idRec}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Gravacao ...', err)
                 })
                 resolve(rows)
             })

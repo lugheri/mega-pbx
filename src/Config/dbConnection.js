@@ -46,7 +46,7 @@ connect.pool = async (empresa,type = 'dados') =>{
             database = 'asterisk'
         break;
         default:
-            host = '35.194.25.54',//await Clients.serversDbs(empresa) 
+            host = await Clients.serversDbs(empresa) 
             database = 'clientes_ativos'
     }
         //console.log(type,host)

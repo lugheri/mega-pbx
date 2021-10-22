@@ -84,7 +84,7 @@ class Filas{
                                         '${wrapuptime}')`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(true)
             })
@@ -101,7 +101,7 @@ class Filas{
                             WHERE name='${nomeFila}'`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -115,7 +115,7 @@ class Filas{
                 const sql = `SELECT * FROM asterisk.queues`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -136,7 +136,7 @@ class Filas{
                             WHERE name='${nomeFila}'`
                 const rows =  await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -150,7 +150,7 @@ class Filas{
                 const sql = `UPDATE asterisk.queues SET name='${name}' WHERE name='${nomeFilaAtual}'`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -167,7 +167,7 @@ class Filas{
                 sql = `DELETE FROM asterisk.queue_members WHERE queue_name='${nomeFila}'`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
             })
         })      
@@ -182,7 +182,7 @@ class Filas{
                             WHERE idCampanha=${idCampanha}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -200,7 +200,7 @@ class Filas{
                             WHERE status=1 ORDER BY ordem ASC`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -216,7 +216,7 @@ class Filas{
                             WHERE userId=${idAgente}`
                 const rows= await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -234,7 +234,7 @@ class Filas{
                             ORDER BY f.id ASC;`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -251,7 +251,7 @@ class Filas{
                         ORDER BY u.nome ASC;`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -268,7 +268,7 @@ class Filas{
                 const check = await this.verificaMembroFila(empresa,ramal,idFila)
                 if(check){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Filas ...', err)
                     })
                     resolve(false)
                     return false
@@ -289,7 +289,7 @@ class Filas{
                 const penalty = 0
                 const rows = await Asterisk.addMembroFila(empresa,queue_name,queue_interface,membername,state_interface,penalty)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -312,7 +312,7 @@ class Filas{
                 const nomeFila = fila[0].nome
                 const rows = await Asterisk.removeMembroFila(empresa,nomeFila,ramal)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(rows)
             })
@@ -329,7 +329,7 @@ class Filas{
                             WHERE ramal=${idAgente} AND fila=${idFila}`
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Filas ...', err)
                 })
                 resolve(r.length)
             })

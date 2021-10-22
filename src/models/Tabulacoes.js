@@ -23,7 +23,7 @@ class Tabulacoes{
                                 VALUES (now(),'${dados.nome}','${dados.descricao}',1)`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(rows)
             })
@@ -39,7 +39,7 @@ class Tabulacoes{
                             WHERE status = 1`
                 const rows= await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(rows)
             })
@@ -55,7 +55,7 @@ class Tabulacoes{
                             WHERE id=${idLista}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(rows)
             })
@@ -76,7 +76,7 @@ class Tabulacoes{
                             WHERE id=${idLista}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(rows)
             })
@@ -109,7 +109,7 @@ class Tabulacoes{
                 await this.reordenaStatus(empresa,dados.idLista)
                 if(result.affectedRows==1){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Tabulacoes ...', err)
                     })
                     resolve(result)
                     return ;
@@ -117,7 +117,7 @@ class Tabulacoes{
                 }
                
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(false)
             })
@@ -134,7 +134,7 @@ class Tabulacoes{
                             ORDER BY ordem ASC`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(rows)
             })
@@ -151,7 +151,7 @@ class Tabulacoes{
                             ORDER BY ordem ASC`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(rows)
             })
@@ -167,7 +167,7 @@ class Tabulacoes{
                             WHERE id=${idStatus}`
                 const rows= await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(rows)
             })
@@ -185,13 +185,13 @@ class Tabulacoes{
             
                 if(t.length==0){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Tabulacoes ...', err)
                     })
                     resolve("")
                     return
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(t[0].tabulacao)
             })
@@ -227,13 +227,13 @@ class Tabulacoes{
                 const r = await this.querySync(conn,sql)
                 if(r.affectedRows==1){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Tabulacoes ...', err)
                     })
                     resolve(true)
                     return true
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(false)
             })
@@ -250,13 +250,13 @@ class Tabulacoes{
                 const r = await this.querySync(conn,sql)
                 if(r.affectedRows==1){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Tabulacoes ...', err)
                     })
                     resolve(true)
                     return true
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(false)
             })
@@ -292,7 +292,7 @@ class Tabulacoes{
                     await this.querySync(conn,sql)
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(true)
             })
@@ -321,7 +321,7 @@ class Tabulacoes{
                         WHERE id=${idStatus}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(true)
             })
@@ -345,7 +345,7 @@ class Tabulacoes{
                 await this.querySync(conn,sql)
             
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Tabulacoes ...', err)
                 })
                 resolve(true)
             })

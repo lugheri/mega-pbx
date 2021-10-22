@@ -20,7 +20,7 @@ class Clients{
             const r = await this.querySync(conn,sql)
             if(r.length==1){
               pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Clientes.js 23', err)
               })
               resolve({"error":true,"message":`O Tronco ${conta} já existe!`}) 
               return false
@@ -30,7 +30,7 @@ class Clients{
                         VALUES ('${conta}','${ip_provider}','${tech_prefix}','${type_dial}','${contact}',${qualify_frequency},${max_contacts},'${context}','${server_ip}','${dtmf_mode}','${force_rport}','${disallow}','${allow}','${rtp_symmetric}','${rewrite_contact}','${direct_media}','${allow_subscribe}','${transport}')`
             await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 33', err)
             })
             resolve({"error":false,"message":''}) 
         })
@@ -58,7 +58,7 @@ class Clients{
                         VALUES ('${conta}','${transport}','${conta}','${context}','${disallow}','${allow}','${direct_media}','${dtmf_mode}','${force_rport}','${rewrite_contact}','${rtp_symmetric}','${allow_subscribe}','${server_ip}')`
               const e = await this.querySync(conn,sql)
               pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Clientes.js 61', err)
               })
           })
       })
@@ -71,7 +71,7 @@ class Clients{
             const sql = `SELECT * FROM clients.trunks`
             const rows = await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 74', err)
             })
             resolve(rows) 
         })
@@ -86,7 +86,7 @@ class Clients{
             const sql = `SELECT * FROM clients.trunks WHERE conta='${conta}'`
             const rows = await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 89', err)
             })
             resolve(rows) 
           })
@@ -124,7 +124,7 @@ class Clients{
                     WHERE trunk='${conta}'`
             await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 127', err)
             })
             resolve(true) 
           })
@@ -163,7 +163,7 @@ class Clients{
                     WHERE id='${conta}'`
             const e = await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 166', err)
             })
             resolve(true) 
           })
@@ -178,7 +178,7 @@ class Clients{
                         WHERE conta='${conta}'`
           await this.querySync(conn,sql)
           pool.end((err)=>{
-            if(err) console.log(err)
+            if(err) console.log('Clientes.js 181', err)
           })
           resolve(true) 
         })
@@ -204,7 +204,7 @@ class Clients{
                       WHERE id='${conta}'`
           const e = await this.querySync(conn,sql)
           pool.end((err)=>{
-            if(err) console.log(err)
+            if(err) console.log('Clientes.js 207', err)
           }) 
         })
     })        
@@ -222,13 +222,13 @@ class Clients{
           const r = await this.querySync(conn,sql)   
           if(r.length==0){
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 225', err)
             })
             resolve(0)
             return 0
           }
           pool.end((err)=>{
-            if(err) console.log(err)
+            if(err) console.log('Clientes.js 231', err)
           })
           resolve(r[0].ip) 
         })
@@ -245,7 +245,7 @@ class Clients{
           const r = await this.querySync(conn,sql)
           if(r.length==1){
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 248', err)
             })
             resolve({"error":true,"message":`O Servidor ${ip_servidor} já existe!`}) 
             return 
@@ -255,7 +255,7 @@ class Clients{
                       VALUES ('${nome_dominio}','${ip_servidor}','${tipo}','${status}')`
           await this.querySync(conn,sql)
           pool.end((err)=>{
-            if(err) console.log(err)
+            if(err) console.log('Clientes.js 258', err)
           })
           resolve({"error":false,"message":''}) 
         })
@@ -269,7 +269,7 @@ class Clients{
             const sql = `SELECT * FROM clients.servers`
             const rows = await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 272', err)
             })
             resolve(rows) 
           })
@@ -283,7 +283,7 @@ class Clients{
           const sql = `SELECT * FROM clients.servers WHERE id=${idServer}`
           const rows = await this.querySync(conn,sql)
           pool.end((err)=>{
-            if(err) console.log(err)
+            if(err) console.log('Clientes.js 286', err)
           })
           resolve(rows) 
         })
@@ -302,7 +302,7 @@ class Clients{
                   WHERE id=${idServer}`
           await this.querySync(conn,sql)
           pool.end((err)=>{
-            if(err) console.log(err)
+            if(err) console.log('Clientes.js 305', err)
           })
         })
     }) 
@@ -317,7 +317,7 @@ class Clients{
                             WHERE id=${idServer}`
           const a = await this.querySync(conn,sql)
           pool.end((err)=>{
-            if(err) console.log(err)
+            if(err) console.log('Clientes.js 320', err)
           })
         })
     }) 
@@ -342,7 +342,7 @@ class Clients{
                   server['domain']=is[0]['nome']
                   server['ip']=is[0]['ip']
             pool.end((err)=>{
-               if(err) console.log(err)
+               if(err) console.log('Clientes.js 345', err)
             })
             resolve(server) 
           })
@@ -361,13 +361,13 @@ class Clients{
             const s = await this.querySync(conn,sql)
             if(s.length==0){
               pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Clientes.js 364', err)
               })
               resolve(false) 
               return false
             }
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 370', err)
             })
             resolve(s[0].ip) 
           })
@@ -382,13 +382,13 @@ class Clients{
             const r = await this.querySync(conn,sql)
           if(r[0].signed_contract==1){
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 385', err)
             })
             resolve({"approved":true})
             return 
           }else{
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 391', err)
             })
             resolve({"approved":false,"fidelidade":r[0].fidelidade})           
             return 
@@ -404,7 +404,7 @@ class Clients{
             const sql = `UPDATE clients.accounts SET signed_contract=1 WHERE prefix='${empresa}'`
             await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 407', err)
            })
            resolve(true) 
          })
@@ -501,7 +501,7 @@ class Clients{
               console.log('Concluindo')
 
               pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Clientes.js 504', err)
              })
              resolve({"error":false,"asterisk_domain":`${asterisk_domain}`,"server_ip":`${asterisk_server_ip}`}) 
            })
@@ -1093,7 +1093,7 @@ class Clients{
             ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;`
             await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1096', err)
            }) 
          })
       })
@@ -1150,7 +1150,7 @@ class Clients{
                     ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
             await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1153', err)
            }) 
          })
       })
@@ -1211,7 +1211,7 @@ class Clients{
                             VALUES ('${userId}','transport-wss','${userId}','${userId}','external','all','alaw,ulaw,opus','yes','yes','no','yes','yes','yes','yes')`
               const e = await this.querySync(connAst,sql)
               poolAsterisk.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Clientes.js 1214', err)
               })
             })
         
@@ -1226,7 +1226,7 @@ class Clients{
                 ('${empresa}', 1)`
             await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1229', err)
             })
           })
       })
@@ -1241,7 +1241,7 @@ class Clients{
                           WHERE asterisk_server='${asterisk_server}'`
             const s=await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1244', err)
             })
             resolve(s.length)
           })
@@ -1257,7 +1257,7 @@ class Clients{
                         WHERE prefix = '${prefix}'`
             const p = await this.querySync(conn,sql) 
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1260', err)
             })
             resolve(p.length)
           })
@@ -1274,7 +1274,7 @@ class Clients{
                           WHERE status=1`
             const rows = await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1277', err)
             })
             resolve(rows)
           })
@@ -1291,13 +1291,13 @@ class Clients{
             const trunks = await this.querySync(conn,sql)
             if(trunks.length==0){
               pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Clientes.js 1294', err)
               })
               resolve(false)
                 return false
             }
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1300', err)
             })
             resolve(trunks)
           })
@@ -1314,13 +1314,13 @@ class Clients{
             const tc = await this.querySync(conn,sql)
             if(tc.length==0){
               pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Clientes.js 1317', err)
               })
               resolve(0)
               return 0
             }
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1323', err)
             })
             resolve(tc[0].licenses)
           })
@@ -1337,13 +1337,13 @@ class Clients{
             const tc = await this.querySync(conn,sql)
             if(tc.length==0){
               pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Clientes.js 1340', err)
               })
               resolve(0)
               return 0
             }
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1346', err)
             })
             resolve(tc[0].total_channels)
           })
@@ -1360,13 +1360,13 @@ class Clients{
             const servers = await this.querySync(conn,sql)
             if(servers.length==0){
               pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Clientes.js 1363', err)
               })
               resolve(false)
               return false
             }            
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1369', err)
             })
             resolve(servers)
           })
@@ -1381,7 +1381,7 @@ class Clients{
             const sql = `SELECT * FROM clients.accounts LIMIT ${pagina},${reg}`
             const rows = await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1384', err)
             })
             resolve(rows)
           })
@@ -1395,7 +1395,7 @@ class Clients{
             const sql = `SELECT * FROM clients.accounts WHERE client_number=${idCliente}`
             const rows = await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1398', err)
             })
             resolve(rows)
           })
@@ -1426,7 +1426,7 @@ class Clients{
                     WHERE id=${idCliente}`
             await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1429', err)
             })
           })
       })
@@ -1446,7 +1446,7 @@ class Clients{
                     WHERE id=${idCliente}`
             await this.querySync(conn,sql)
             pool.end((err)=>{
-              if(err) console.log(err)
+              if(err) console.log('Clientes.js 1449', err)
             })
           })
       })

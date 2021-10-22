@@ -23,7 +23,7 @@ class Pausas{
                                 VALUES ('${dados.nome}','${dados.descricao}',1)`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Pausas ...', err)
                 })
                 resolve(rows)
             })
@@ -42,7 +42,7 @@ class Pausas{
                             WHERE id = ${idLista}`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Pausas ...', err)
                 })
                 resolve(rows)
             })
@@ -58,7 +58,7 @@ class Pausas{
                             WHERE id=${idLista}` 
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Pausas ...', err)
                 })
                 resolve(rows)
             })
@@ -74,7 +74,7 @@ class Pausas{
                             WHERE status = 1`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Pausas ...', err)
                 })
                 resolve(rows)
             })
@@ -93,7 +93,7 @@ class Pausas{
                                 VALUES ('1','${dados.nome}','${dados.descricao}','${tipo}','${dados.tempo}',1)`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Pausas ...', err)
                 })
                 resolve(rows)
             })
@@ -112,7 +112,7 @@ class Pausas{
                             WHERE id=${id}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Pausas ...', err)
                 })
                 resolve(rows)
             })
@@ -128,7 +128,7 @@ class Pausas{
                             WHERE id=${id}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Pausas ...', err)
                 })
                 resolve(true)
             })
@@ -142,7 +142,7 @@ class Pausas{
                 const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE id=${id}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Pausas ...', err)
                 })
                 resolve(rows)
             })
@@ -157,7 +157,7 @@ class Pausas{
                 const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE idLista=1 AND status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Pausas ...', err)
                 })
                 resolve(rows)
             })
@@ -174,7 +174,7 @@ class Pausas{
                 const r = await this.querySync(conn,sql)
             
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Pausas ...', err)
                 })
                 resolve(r[0].id)
             })

@@ -23,7 +23,7 @@ class Cronometro{
                                 VALUES (${ramal},now())`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Cronometro.js 26', err)
                 })
                 resolve(rows)
             })
@@ -40,7 +40,7 @@ class Cronometro{
                             WHERE idAgente=${ramal} AND saida is null`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Cronometro.js 43', err)
                 })
                 resolve(rows)
             })
@@ -59,7 +59,7 @@ class Cronometro{
                                 VALUES (${idAgente},${idPausa},now())`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Cronometro.js 62', err)
                 })
                 resolve(rows)
             })
@@ -76,7 +76,7 @@ class Cronometro{
                      WHERE idAgente=${idAgente} AND saida is null`
         const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Cronometro.js 79', err)
                 })
                 resolve(rows)
             })
@@ -94,7 +94,7 @@ class Cronometro{
                                 VALUES (${idCampanha},${idMailing},${idRegistro},${numero},now())`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Cronometro.js 97', err)
                 })
                 resolve(rows)
             })
@@ -111,7 +111,7 @@ class Cronometro{
                             WHERE numero=${numero} AND saida is null`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Cronometro.js 114', err)
                 })
                 resolve(rows)
             })
@@ -129,7 +129,7 @@ class Cronometro{
                                 VALUES (${idCampanha},${idMailing},${idRegistro},'${tipoChamada}',${numero},${ramal},${uniqueid},now())`
                const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Cronometro.js 132', err)
                 })
                 resolve(rows)
             })
@@ -147,7 +147,7 @@ class Cronometro{
                             WHERE idCampanha=${idCampanha} AND numero=${numero} AND idAgente=${ramal} AND saida is null`
                const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Cronometro.js 150', err)
                 })
                 resolve(rows)
             })
@@ -175,7 +175,7 @@ class Cronometro{
                                 VALUES (${idCampanha},${idMailing},${idRegistro},${numero},${ramal},now())`
                 await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Cronometro.js 178', err)
                 })
             })
         })      
@@ -197,7 +197,7 @@ class Cronometro{
                                 AND saida is null`
                 await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Cronometro.js 200', err)
                 })
             })
         })      

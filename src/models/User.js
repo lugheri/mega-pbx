@@ -61,7 +61,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             }) 
@@ -78,7 +78,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const code =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(code[0].client_number)   
             }) 
@@ -95,7 +95,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             })  
@@ -115,7 +115,7 @@ class User{
                 }    
                 
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(true) 
             })
@@ -171,7 +171,7 @@ class User{
                                 VALUES (NOW(),NOW(),${usuarioId},'${acao}')`
                 await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(true) 
             })
@@ -189,7 +189,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(true)   
             })  
@@ -207,7 +207,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(true)   
             })  
@@ -253,7 +253,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows[0].status)   
             })  
@@ -269,7 +269,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows[0].name)   
             })  
@@ -288,7 +288,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             })  
@@ -308,7 +308,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             })  
@@ -328,7 +328,7 @@ class User{
                     rt['error']=1
                     rt['message']=`Usuário ${dados.usuario} já existe`
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Users ...', err)
                      }) 
                     resolve(rt)
                     return
@@ -366,13 +366,13 @@ class User{
                                 VALUES ('${userId}','transport-wss','${userId}','${userId}','external','all','alaw,ulaw,opus','yes','yes','no','yes','yes','yes','yes')`
                     const e = await this.querySync(conn,sql)
                     poolAsterisk.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Users ...', err)
 
                         console.log("encerrou asterisk")
                     }) 
                 })
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Users ...', err)
 
                     console.log("encerrou dados")
                 }) 
@@ -392,7 +392,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             })    
@@ -410,7 +410,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             })    
@@ -427,7 +427,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows[0].total)   
             })            
@@ -459,7 +459,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             }) 
@@ -477,7 +477,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             }) 
@@ -494,7 +494,7 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             }) 
@@ -520,7 +520,7 @@ class User{
                  const rows =  await this.querySync(conn,sql) 
  
                  pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Users ...', err)
                  }) 
                  resolve(rows) 
              })
@@ -539,7 +539,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -557,7 +557,7 @@ class User{
                  const rows =  await this.querySync(conn,sql) 
  
                  pool.end((err)=>{
-                 if(err) console.log(err)
+                 if(err) console.log('Users ...', err)
                  }) 
                  resolve(rows) 
              })
@@ -575,7 +575,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -596,7 +596,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -616,7 +616,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -634,7 +634,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -652,7 +652,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -671,7 +671,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -690,7 +690,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -708,7 +708,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -726,7 +726,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -745,7 +745,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -765,7 +765,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -785,7 +785,7 @@ class User{
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
