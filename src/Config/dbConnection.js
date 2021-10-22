@@ -62,7 +62,7 @@ connect.pool = async (empresa,type = 'dados') =>{
     })
 }
 
-
+/*
 
 connect.poolCRM=mysql.createConnection({    
     host:crm_host,
@@ -105,7 +105,7 @@ connect.poolEmpresa=mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit:0
-})*/
+})
 
 
 

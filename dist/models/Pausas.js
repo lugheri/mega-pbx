@@ -2,107 +2,184 @@
 var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 
 class Pausas{
-    /*
-    async querySync(sql,empresa){
-        const hostEmp = await Clients.serversDbs(empresa)
-        const connection = connect.poolConta(hostEmp)
-        const promisePool =  connection.promise();
-        const result = await promisePool.query(sql)
-        promisePool.end();
-        return result[0];       
-    }*/
-    
-    async querySync(sql,empresa){
-        return new Promise(async(resolve,reject)=>{
-            const hostEmp = await _Clients2.default.serversDbs(empresa)
-            const conn = _dbConnection2.default.poolConta(hostEmp)
-            conn.query(sql,(e,rows)=>{
-                if(e) reject(e);
+    //Query Sync
+    async querySync(conn,sql){         
+        return new Promise((resolve,reject)=>{            
+            conn.query(sql, (err,rows)=>{
+                if(err) return reject(err)
                 resolve(rows)
             })
-            conn.end()                        
         })
-    }
+      }   
     //LISTA DE PAUSAS 
     
     //Criar Lista de Pausas
     async novaLista(empresa,dados){
-        const sql = `INSERT INTO ${empresa}_dados.pausas_listas 
-                                 (nome,descricao,status) 
-                          VALUES ('${dados.nome}','${dados.descricao}',1)`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `INSERT INTO ${empresa}_dados.pausas_listas 
+                                        (nome,descricao,status) 
+                                VALUES ('${dados.nome}','${dados.descricao}',1)`
+                const rows = await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.log('Pausas ...', err)
+                })
+                resolve(rows)
+            })
+        })      
     }
 
     //Editar Lista de Pausas
     async editarListaPausa(empresa,idLista,valores) {
-        const sql = `UPDATE ${empresa}_dados.pausas_listas 
-                        SET nome='${valores.nome}',
-                            descricao='${valores.descricao}',
-                            status='${valores.status}'
-                     WHERE id = ${idLista}`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `UPDATE ${empresa}_dados.pausas_listas 
+                                SET nome='${valores.nome}',
+                                    descricao='${valores.descricao}',
+                                    status='${valores.status}'
+                            WHERE id = ${idLista}`
+                const rows = await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.log('Pausas ...', err)
+                })
+                resolve(rows)
+            })
+        })      
     }
     //Dados da Lista de Pausas
     async dadosListaPausa(empresa,idLista) {
-        const sql = `SELECT * 
-                       FROM ${empresa}_dados.pausas_listas 
-                       WHERE id=${idLista}` 
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT * 
+                            FROM ${empresa}_dados.pausas_listas 
+                            WHERE id=${idLista}` 
+                const rows = await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.log('Pausas ...', err)
+                })
+                resolve(rows)
+            })
+        })      
     }
     //Listar listas de Pausas
     async listasPausa(empresa){
-        const sql = `SELECT * 
-                       FROM ${empresa}_dados.pausas_listas 
-                      WHERE status = 1`
-        return await this.querySync(sql,empresa);
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT * 
+                            FROM ${empresa}_dados.pausas_listas 
+                            WHERE status = 1`
+                const rows = await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.log('Pausas ...', err)
+                })
+                resolve(rows)
+            })
+        })      
     }
 
     //PAUSAS
     //Criar pausa
     async criarPausa(empresa,dados){
-        const tipo = 'manual';
-        const sql = `INSERT INTO ${empresa}_dados.pausas 
-                                 (idLista,nome,descricao,tipo,tempo,status) 
-                          VALUES ('1','${dados.nome}','${dados.descricao}','${tipo}','${dados.tempo}',1)`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const tipo = 'manual';
+                const sql = `INSERT INTO ${empresa}_dados.pausas 
+                                        (idLista,nome,descricao,tipo,tempo,status) 
+                                VALUES ('1','${dados.nome}','${dados.descricao}','${tipo}','${dados.tempo}',1)`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Pausas ...', err)
+                })
+                resolve(rows)
+            })
+        })      
     }
     //Editar pausa
     async editarPausa(empresa,id,valores){
-        const sql = `UPDATE ${empresa}_dados.pausas 
-                        SET nome='${valores.nome}',
-                            descricao='${valores.descricao}',
-                            tipo='${valores.tipo}',
-                            tempo='${valores.tempo}'
-                      WHERE id=${id}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `UPDATE ${empresa}_dados.pausas 
+                                SET nome='${valores.nome}',
+                                    descricao='${valores.descricao}',
+                                    tipo='${valores.tipo}',
+                                    tempo='${valores.tempo}'
+                            WHERE id=${id}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Pausas ...', err)
+                })
+                resolve(rows)
+            })
+        })      
     }
 
-    async removerPausa(empresa,id){        
-        const sql = `UPDATE ${empresa}_dados.pausas 
-                        SET status=0
-                      WHERE id=${id}`
-        await this.querySync(sql,empresa)
-        return true
+    async removerPausa(empresa,id){     
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{      
+                const sql = `UPDATE ${empresa}_dados.pausas 
+                                SET status=0
+                            WHERE id=${id}`
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Pausas ...', err)
+                })
+                resolve(true)
+            })
+        })      
     }
     //Ver pausa
     async dadosPausa(empresa,id){
-        const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE id=${id}`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE id=${id}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Pausas ...', err)
+                })
+                resolve(rows)
+            })
+        })      
     }
 
     //Listar pausa
     async listarPausas(empresa){
-        const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE idLista=1 AND status=1`
-        return await this.querySync(sql,empresa)
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE idLista=1 AND status=1`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Pausas ...', err)
+                })
+                resolve(rows)
+            })
+        })      
     }  
     
     async idPausaByTipo(empresa,tipo){
-        const sql = `SELECT id 
-                       FROM ${empresa}_dados.pausas 
-                      WHERE tipo='${tipo}' AND status=1`
-        const r = await this.querySync(sql,empresa)
-       
-        return r[0].id
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                const sql = `SELECT id 
+                            FROM ${empresa}_dados.pausas 
+                            WHERE tipo='${tipo}' AND status=1`
+                const r = await this.querySync(conn,sql)
+            
+                pool.end((err)=>{
+                    if(err) console.log('Pausas ...', err)
+                })
+                resolve(r[0].id)
+            })
+        })      
+
     }
 
 }

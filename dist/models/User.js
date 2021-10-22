@@ -8,7 +8,7 @@ class User{
     /*async querySync(sql,empresa){
         return new Promise(async(resolve,reject)=>{
             const hostEmp = await Clients.serversDbs(empresa)
-            const conn = connect.poolConta(hostEmp)
+            const conn =await connect.poolConta(hostEmp)
             conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 resolve(rows)
@@ -18,7 +18,7 @@ class User{
     }
     async querySync_crmdb(sql){
         return new Promise(async(resolve,reject)=>{
-            const conn = connect.poolCRM
+            const conn =await connect.poolCRM
             conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 
@@ -27,7 +27,7 @@ class User{
         })    
     }
     async querySync_astdb(sql){
-        const conn = connect.poolAsterisk
+        const conn =await connect.poolAsterisk
             conn.query(sql,(e,rows)=>{
                 if(e) reject(e);
                 
@@ -57,11 +57,11 @@ class User{
                         WHERE prefix='${empresa}'
                         AND status=1`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'crm')
+            const pool = await _dbConnection2.default.pool(empresa,'crm')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             }) 
@@ -74,11 +74,11 @@ class User{
                         FROM accounts
                         WHERE prefix='${empresa}'`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'crm')
+            const pool = await _dbConnection2.default.pool(empresa,'crm')
             pool.getConnection(async (err,conn)=>{                           
                 const code =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(code[0].client_number)   
             }) 
@@ -91,11 +91,11 @@ class User{
                         FROM ${empresa}_dados.users 
                         WHERE usuario='${usuario}' AND status=1`;
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             })  
@@ -106,7 +106,7 @@ class User{
         return new Promise (async (resolve,reject)=>{ 
             let sql = `SELECT id FROM ${empresa}_dados.users WHERE logado>0 AND status=1`
              //Executando query
-             const pool =  _dbConnection2.default.pool(empresa,'dados')
+             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{                           
                 const us =  await this.querySync(conn,sql) 
                 for(let i=0; i<us.length; i++){
@@ -115,7 +115,7 @@ class User{
                 }    
                 
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(true) 
             })
@@ -125,7 +125,7 @@ class User{
     async registraLogin(empresa,usuarioId,acao){
         return new Promise (async (resolve,reject)=>{        
             let sql
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
                 if(acao=='login'){
                     //checa a ultima acao do agente 
@@ -171,7 +171,7 @@ class User{
                                 VALUES (NOW(),NOW(),${usuarioId},'${acao}')`
                 await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(true) 
             })
@@ -185,11 +185,11 @@ class User{
                           WHERE id=${agente}`
 
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(true)   
             })  
@@ -203,11 +203,11 @@ class User{
                       WHERE token='${token}' AND id=${agente}`
                           
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(true)   
             })  
@@ -249,11 +249,11 @@ class User{
             const sql = `SELECT status FROM ${empresa}_dados.users  WHERE  id=${idAgente}`
                           
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows[0].status)   
             })  
@@ -265,11 +265,11 @@ class User{
             const sql = `SELECT name FROM clients.accounts WHERE prefix='${empresa}'`
                           
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'crm')
+            const pool = await _dbConnection2.default.pool(empresa,'crm')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows[0].name)   
             })  
@@ -284,11 +284,11 @@ class User{
                       WHERE status=1 AND logado=1`
                           
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             })  
@@ -304,11 +304,11 @@ class User{
                        LIMIT ${limit}`
                           
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             })  
@@ -317,7 +317,7 @@ class User{
 
     async newUser(empresa,dados){
         return new Promise (async (resolve,reject)=>{ 
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{        
                 let sql = `SELECT id 
                             FROM ${empresa}_dados.users 
@@ -328,7 +328,7 @@ class User{
                     rt['error']=1
                     rt['message']=`Usuário ${dados.usuario} já existe`
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Users ...', err)
                      }) 
                     resolve(rt)
                     return
@@ -345,7 +345,7 @@ class User{
                             VALUES ('${userId}','${userId}',0)`
                 const r = await this.querySync(conn,sql)
 
-                const poolAsterisk =  _dbConnection2.default.pool(empresa,'asterisk')
+                const poolAsterisk = await _dbConnection2.default.pool(empresa,'asterisk')
                 poolAsterisk.getConnection(async (err,conn)=>{
 
                     
@@ -366,13 +366,13 @@ class User{
                                 VALUES ('${userId}','transport-wss','${userId}','${userId}','external','all','alaw,ulaw,opus','yes','yes','no','yes','yes','yes','yes')`
                     const e = await this.querySync(conn,sql)
                     poolAsterisk.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.log('Users ...', err)
 
                         console.log("encerrou asterisk")
                     }) 
                 })
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Users ...', err)
 
                     console.log("encerrou dados")
                 }) 
@@ -388,11 +388,11 @@ class User{
                         LEFT JOIN ${empresa}_dados.users_equipes AS e ON u.equipe=e.id 
                         WHERE u.id=${user}`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             })    
@@ -406,11 +406,11 @@ class User{
                         FROM ${empresa}_dados.users 
                         WHERE id=${idAgente}`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             })    
@@ -423,11 +423,11 @@ class User{
                         FROM ${empresa}_dados.users
                         WHERE status=1`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows[0].total)   
             })            
@@ -455,11 +455,11 @@ class User{
                         WHERE u.status=${status} 
                         ORDER BY u.id DESC`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             }) 
@@ -473,11 +473,11 @@ class User{
                         WHERE status = ${status} 
                         ORDER BY ordem ASC`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             }) 
@@ -490,11 +490,11 @@ class User{
                         FROM ${empresa}_dados.users 
                         WHERE id='${userId}'`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log(err)
+                   if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows)   
             }) 
@@ -515,12 +515,12 @@ class User{
                             SET ${fields} modificado=NOW()
                         WHERE id=${userId}`
              //Executando query
-             const pool =  _dbConnection2.default.pool(empresa,'dados')
+             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{                           
                  const rows =  await this.querySync(conn,sql) 
  
                  pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.log('Users ...', err)
                  }) 
                  resolve(rows) 
              })
@@ -534,12 +534,12 @@ class User{
                                     (supervisor,equipe,descricao,status) 
                             VALUES (${dados.supervisor},'${dados.equipe}','${dados.descricao}',1)`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -552,12 +552,12 @@ class User{
                         FROM ${empresa}_dados.users_equipes 
                         WHERE status=${status}`
              //Executando query
-             const pool =  _dbConnection2.default.pool(empresa,'dados')
+             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{                           
                  const rows =  await this.querySync(conn,sql) 
  
                  pool.end((err)=>{
-                 if(err) console.log(err)
+                 if(err) console.log('Users ...', err)
                  }) 
                  resolve(rows) 
              })
@@ -570,12 +570,12 @@ class User{
                         FROM ${empresa}_dados.users_equipes 
                         WHERE id=${idEquipe}`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -591,12 +591,12 @@ class User{
                                 status=${dados.status} 
                         WHERE id=${idEquipe}`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -611,12 +611,12 @@ class User{
                                     (cargo,descricao,status)
                             VALUES ('${dados.cargo}','${dados.descricao}',1)`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -629,12 +629,12 @@ class User{
                         FROM ${empresa}_dados.users_cargos 
                         WHERE status=${status}`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -647,12 +647,12 @@ class User{
                         FROM ${empresa}_dados.users_cargos 
                         WHERE id=${idCargo}`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -666,12 +666,12 @@ class User{
                                 descricao='${dados.descricao}' 
                         WHERE id=${idCargo}`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -685,12 +685,12 @@ class User{
                                     (nivel,descricao,status)
                             VALUES ('${dados.nivel}','${dados.descricao}',1)`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -703,12 +703,12 @@ class User{
                         FROM ${empresa}_dados.users_niveis 
                         WHERE status=${status}`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -721,12 +721,12 @@ class User{
                         FROM ${empresa}_dados.users_niveis 
                         WHERE id='${idNivel}'`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -740,12 +740,12 @@ class User{
                                 descricao='${dados.descricao}'
                         WHERE id=${idNivel}`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -760,12 +760,12 @@ class User{
                         FROM ${empresa}_dados.user_ramal 
                         WHERE estado=estado=2`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })
@@ -780,12 +780,12 @@ class User{
                         FROM ${empresa}_dados.user_ramal 
                         WHERE estado=1`
             //Executando query
-            const pool =  _dbConnection2.default.pool(empresa,'dados')
+            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 const rows =  await this.querySync(conn,sql) 
 
                 pool.end((err)=>{
-                if(err) console.log(err)
+                if(err) console.log('Users ...', err)
                 }) 
                 resolve(rows) 
             })

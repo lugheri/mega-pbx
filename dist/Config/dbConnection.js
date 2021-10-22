@@ -49,7 +49,7 @@ connect.pool = async (empresa,type = 'dados') =>{
             host = await _Clients2.default.serversDbs(empresa) 
             database = 'clientes_ativos'
     }
-        console.log(type,host)
+        //console.log(type,host)
         return  _mysql22.default.createPool({
             host               : host,
             port               : 3306,
@@ -62,9 +62,9 @@ connect.pool = async (empresa,type = 'dados') =>{
     })
 }
 
+/*
 
-
-connect.poolCRM=_mysql22.default.createConnection({    
+connect.poolCRM=mysql.createConnection({    
     host:crm_host,
     user : user['name'],
     password : user['pass'],
@@ -72,7 +72,7 @@ connect.poolCRM=_mysql22.default.createConnection({
 })
 connect.poolConta = (hostEmpresa) =>{
     console.log('host',hostEmpresa)
-    return  _mysql22.default.createPool({
+    return  mysql.createPool({
             host               : '35.194.25.54',//'34.68.33.39',
             port               : 3306,
             user               : user['name'],
@@ -83,7 +83,7 @@ connect.poolConta = (hostEmpresa) =>{
             queueLimit:0
     })
 }
-connect.poolAsterisk=_mysql22.default.createPool({
+connect.poolAsterisk=mysql.createPool({
     host:astdb_host,
     user : user['name'],
     password : user['pass'],
@@ -91,19 +91,8 @@ connect.poolAsterisk=_mysql22.default.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit:0
-}) 
-connect.poolMailing=(hostEmpresa,empresa)=>{
-    return _mysql22.default.createPool({
-        host               : '35.194.25.54',//'34.68.33.39',
-        port               : 3306,
-        user               : user['name'],
-        password           : user['pass'],
-        database           : `${empresa}_mailings`,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit:0
-    })
-}
+})
+
 
 
 
@@ -116,7 +105,19 @@ connect.poolEmpresa=mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit:0
-})*/
+})
+
+
+
+connect.poolAsterisk=mysql.createPool({
+    host:astdb_host,
+    user : user['name'],
+    password : user['pass'],
+    database : "asterisk",
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit:0
+})
 
 /*
 
