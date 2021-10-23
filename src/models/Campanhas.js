@@ -1,6 +1,7 @@
 import connect from '../Config/dbConnection';
 import Mailing from './Mailing';
 import Clients from './Clients';
+import moment from 'moment';
 
 class Campanhas{ 
     async querySync(conn,sql){         
@@ -1256,6 +1257,12 @@ class Campanhas{
     //AGENDAMENTO DE CAMPANHAS
     //Agenda campanha
     async agendarCampanha(empresa,idCampanha,dI,dT,hI,hT){ 
+        const hoje = moment().format("Y-MM-DD")
+        let dataInicio = dI
+        let dataFinal = dT
+        if(dI=="0000-00-00")){dataInicio=hoje;}
+        if(dT=="0000-00-00")){dataFinal=hoje;}
+       
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
@@ -1265,7 +1272,7 @@ class Campanhas{
                 if(r.length ===0){
                     const sql = `INSERT INTO ${empresa}_dados.campanhas_horarios 
                                             (id_campanha,inicio,termino,hora_inicio,hora_termino) 
-                                    VALUES (${idCampanha},'${dI}','${dT}','${hI}','${hT}')`
+                                    VALUES (${idCampanha},'${dataInicio}','${dataFinal}','${hI}','${hT}')`
                     const rows = await this.querySync(conn,sql)
                     pool.end((err)=>{
                         if(err) console.log('Campanhas.js 1167', err)
@@ -1273,7 +1280,7 @@ class Campanhas{
                     resolve(rows)
                 }else{
                     const sql = `UPDATE ${empresa}_dados.campanhas_horarios 
-                                    SET inicio='${dI}',termino='${dT}',hora_inicio='${hI}',hora_termino='${hT}' 
+                                    SET inicio='${dataInicio}',termino='${dataFinal}',hora_inicio='${hI}',hora_termino='${hT}' 
                                 WHERE id_campanha='${idCampanha}'`
                     const rows = await this.querySync(conn,sql)
                     pool.end((err)=>{
