@@ -2,19 +2,22 @@
 
 
 class Clients{
-    async querySync(conn,sql){         
-      return new Promise((resolve,reject)=>{            
-          conn.query(sql, (err,rows)=>{
-              if(err) return reject(err)
-              resolve(rows)
-          })
-      })
-    }   
+  async querySync(conn,sql){         
+    return new Promise((resolve,reject)=>{            
+        conn.query(sql, (err,rows)=>{
+            if(err){ 
+                console.error({"errorCode":err.code,"message":err.message,"stack":err.stack, "sql":sql}) 
+                resolve(false);
+            }
+            resolve(rows)
+        })
+    })
+  }      
 
   //TRONCOS 
   async registerTrunk(conta,ip_provider,tech_prefix,type_dial,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport){
     return new Promise (async (resolve,reject)=>{ 
-      const pool = await _dbConnection2.default.pool(0,'crm')  
+      const conn = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{        
             if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let sql = `SELECT id FROM clients.trunks WHERE conta='${conta}'`

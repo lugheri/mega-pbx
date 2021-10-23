@@ -7,11 +7,14 @@ class Gravacao{
     async querySync(conn,sql){         
         return new Promise((resolve,reject)=>{            
             conn.query(sql, (err,rows)=>{
-                if(err) return reject(err)
+                if(err){ 
+                    console.error({"errorCode":err.code,"message":err.message,"stack":err.stack, "sql":sql}) 
+                    resolve(false);
+                }
                 resolve(rows)
             })
         })
-    }   
+      }      
     
     async listarGravacoes(empresa,inicio,limit){
         return new Promise (async (resolve,reject)=>{ 
@@ -233,7 +236,7 @@ class Gravacao{
                 const sql = `SELECT prefix
                             FROM clients.accounts
                             WHERE client_number=${idEmpresa}`
-                const e = await this.querySync_crmdb(sql)
+                const e = await this.querySync(conn,sql)
 
                 if(e.length == 0){
                     pool.end((err)=>{
