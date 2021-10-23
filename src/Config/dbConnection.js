@@ -16,7 +16,7 @@ const connect = ()=>{};
                 database = 'asterisk'
             break;
             default:
-                host = '35.194.25.54'// await Clients.serversDbs(empresa)//
+                host =  await Clients.serversDbs(empresa)//'35.194.25.54'//
                 database = database_dados
         }
             console.log(type,host)
@@ -25,7 +25,10 @@ const connect = ()=>{};
                 port     : 3306,
                 user     : process.env.DB_USER,
                 password : process.env.DB_PASS,
-                database : database
+                database : database,
+                waitForConnections: true,
+                connectionLimit: 0,
+                queueLimit: 0
         })
     }
 export default connect;

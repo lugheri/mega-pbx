@@ -16,6 +16,7 @@ class Clients{
     return new Promise (async (resolve,reject)=>{ 
       const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{        
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let sql = `SELECT id FROM clients.trunks WHERE conta='${conta}'`
             const r = await this.querySync(conn,sql)
             if(r.length==1){
@@ -42,6 +43,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'asterisk')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
               //Criando AOR 
               let sql = `INSERT INTO asterisk.ps_aors 
                                     (id,contact,max_contacts,qualify_frequency) 
@@ -68,6 +70,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `SELECT * FROM clients.trunks`
             const rows = await this.querySync(conn,sql)
             pool.end((err)=>{
@@ -82,6 +85,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             console.log('info trunk')
             const sql = `SELECT * FROM clients.trunks WHERE conta='${conta}'`
             const rows = await this.querySync(conn,sql)
@@ -97,6 +101,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let sql = `UPDATE clients.trunks 
                     SET ip_provider='${ip_provider}',
                         tech_prefix='${tech_prefix}',
@@ -135,6 +140,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'asterisk')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             //Criando AOR 
             let sql = `UPDATE ps_aors 
                           SET contact='${contact}',
@@ -174,6 +180,7 @@ class Clients{
     return new Promise (async (resolve,reject)=>{ 
       const pool = await _dbConnection2.default.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
+          if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
           let sql = `DELETE FROM clients.trunks 
                         WHERE conta='${conta}'`
           await this.querySync(conn,sql)
@@ -189,6 +196,7 @@ class Clients{
     return new Promise (async (resolve,reject)=>{ 
       const pool = await _dbConnection2.default.pool(0,'asterisk')  
         pool.getConnection(async (err,conn)=>{ 
+          if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
           //Removendo AOR 
           let sql = `DELETE FROM asterisk.ps_aors 
                           WHERE id='${conta}'`
@@ -215,6 +223,7 @@ class Clients{
     return new Promise (async (resolve,reject)=>{ 
       const pool = await _dbConnection2.default.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
+          if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
           const sql = `SELECT d.ip
                         FROM clients.accounts AS c 
                         JOIN clients.servers_db AS d ON c.server_db = d.id 
@@ -241,6 +250,7 @@ class Clients{
     return new Promise (async (resolve,reject)=>{ 
       const pool = await _dbConnection2.default.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
+          if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
           let sql = `SELECT id FROM clients.servers WHERE ip='${ip_servidor}'`
           const r = await this.querySync(conn,sql)
           if(r.length==1){
@@ -266,6 +276,7 @@ class Clients{
     return new Promise (async (resolve,reject)=>{ 
       const pool = await _dbConnection2.default.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
+          if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `SELECT * FROM clients.servers`
             const rows = await this.querySync(conn,sql)
             pool.end((err)=>{
@@ -280,6 +291,7 @@ class Clients{
     return new Promise (async (resolve,reject)=>{ 
       const pool = await _dbConnection2.default.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
+          if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
           const sql = `SELECT * FROM clients.servers WHERE id=${idServer}`
           const rows = await this.querySync(conn,sql)
           pool.end((err)=>{
@@ -294,6 +306,7 @@ class Clients{
     return new Promise (async (resolve,reject)=>{ 
       const pool = await _dbConnection2.default.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
+          if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
           const sql = `UPDATE clients.servers
                     SET nome='${nome_dominio}',
                         ip='${ip_servidor}',
@@ -312,6 +325,7 @@ class Clients{
     return new Promise (async (resolve,reject)=>{ 
       const pool = await _dbConnection2.default.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
+          if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
           //Removendo AOR 
           let sql = `DELETE FROM clients.servers
                             WHERE id=${idServer}`
@@ -330,6 +344,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let sql = `SELECT id, nome, ip
                    FROM clients.servers
                   WHERE mega='${mega}' AND tipo='${tipo}' 
@@ -353,6 +368,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let sql = `SELECT id 
                    FROM clients.servers_db
                   WHERE mega='${mega}' AND tipo='${tipo}' AND status=1 AND clientes<limite
@@ -378,6 +394,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `SELECT signed_contract, fidelidade FROM clients.accounts WHERE prefix='${empresa}'`
             const r = await this.querySync(conn,sql)
           if(r[0].signed_contract==1){
@@ -401,6 +418,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `UPDATE clients.accounts SET signed_contract=1 WHERE prefix='${empresa}'`
             await this.querySync(conn,sql)
             pool.end((err)=>{
@@ -437,6 +455,7 @@ class Clients{
         return new Promise (async (resolve,reject)=>{ 
           const pool = await _dbConnection2.default.pool(0,'crm')  
             pool.getConnection(async (err,conn)=>{ 
+              if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
               let sql = `INSERT INTO clients.clientes 
                                (desde,nome,status)
                         VALUES (now(),'${nomeEmpresa}',0)`
@@ -512,6 +531,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(empresa,'dados')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let sql = `CREATE DATABASE IF NOT EXISTS clientes_ativos;`
             await this.querySync(conn,sql)        
         
@@ -1103,6 +1123,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(empresa,'dados')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let sql = `CREATE DATABASE IF NOT EXISTS ${empresa}_mailings;`
             await this.querySync(conn,sql)
 
@@ -1160,6 +1181,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(empresa,'dados')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const firstRamal = (accountId-1000)*1000
             let sql = `INSERT INTO ${empresa}_dados.asterisk_ari 
                               (id, server, user, pass, active, debug)
@@ -1236,6 +1258,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `SELECT id 
                           FROM clients.accounts 
                           WHERE asterisk_server='${asterisk_server}'`
@@ -1252,6 +1275,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let sql = `SELECT id 
                         FROM clients.accounts
                         WHERE prefix = '${prefix}'`
@@ -1269,6 +1293,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `SELECT prefix 
                           FROM clients.accounts
                           WHERE status=1`
@@ -1285,6 +1310,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `SELECT trunk, tech_prefix, type_dial 
                           FROM clients.accounts 
                           WHERE prefix='${empresa}'`
@@ -1308,6 +1334,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `SELECT licenses
                           FROM clients.accounts 
                           WHERE prefix='${empresa}'`
@@ -1331,6 +1358,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `SELECT total_channels
                           FROM clients.accounts 
                           WHERE prefix='${empresa}'`
@@ -1354,6 +1382,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `SELECT server_id, asterisk_server, asterisk_domain 
                           FROM clients.accounts 
                           WHERE prefix='${empresa}'`
@@ -1377,6 +1406,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let pagina=(pag-1)*reg
             const sql = `SELECT * FROM clients.accounts LIMIT ${pagina},${reg}`
             const rows = await this.querySync(conn,sql)
@@ -1392,6 +1422,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             const sql = `SELECT * FROM clients.accounts WHERE client_number=${idCliente}`
             const rows = await this.querySync(conn,sql)
             pool.end((err)=>{
@@ -1406,6 +1437,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let sql = `UPDATE clients.accounts
                       SET name='${nome}',
                           fidelidade=${fidelidade},
@@ -1436,6 +1468,7 @@ class Clients{
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             let sql = `UPDATE clients.accounts
                           SET status='0'
                         WHERE client_number=${idCliente}`

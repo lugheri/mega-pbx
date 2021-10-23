@@ -56,7 +56,7 @@ class DiscadorController{
     }
 
     async campanhasEmpresa(empresa){
-       // console.log('campanha empresa')
+        //console.log('campanha empresa')
         await this.debug(' ',' ',empresa)
         await this.debug('EMPRESA==>',empresa,empresa)
         
@@ -64,7 +64,9 @@ class DiscadorController{
         //PASSO 1 - VERIFICAÇÃO
         await this.debug('PASSO 1 - VERIFICAÇÃO','',empresa)
         //#1 Conta as chamadas simultaneas para registrar no log        
-        const rcs = await _Discador2.default.registrarChamadasSimultaneas(empresa)
+        //const rcs = await Discador.registrarChamadasSimultaneas(empresa)
+      
+        
         //console.log(`registrarChamadasSimultaneas:${empresa}`,rcs)
 
         //#2 Verifica possiveis chamadas presas e remove das chamadas simultâneas

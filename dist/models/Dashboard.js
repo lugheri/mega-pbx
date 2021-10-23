@@ -225,6 +225,7 @@ class Dashboard{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async(err,conn)=>{
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
             
                 let sql = `SELECT COUNT(id) as total 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 

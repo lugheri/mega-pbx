@@ -49,6 +49,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 if(err) throw err
             
                 let campos='';
@@ -127,6 +128,7 @@ class Mailing{
             //Executando query
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                    if(err) console.log('Mailings 132', err)
@@ -145,6 +147,7 @@ class Mailing{
             //Executando query
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                    if(err) console.log('Mailings 150', err)
@@ -162,6 +165,7 @@ class Mailing{
            //Executando query
            const pool =  await _dbConnection2.default.pool(empresa,'dados')
            pool.getConnection(async (err,conn)=>{                           
+               if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                const rows =  await this.querySync(conn,sql)                  
                pool.end((err)=>{
                   if(err) console.log('Mailings 167', err)
@@ -179,6 +183,7 @@ class Mailing{
             //Executando query
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                 if(err) console.log('Mailings 184', err)
@@ -280,6 +285,7 @@ class Mailing{
             //Executando query
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log('Mailings 285', err)
@@ -293,6 +299,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{    
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{         
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
         
                 //Tabela para importação dos dados
                 const tabelaDados = `${empresa}_mailings.${dataTab}`
@@ -416,6 +423,10 @@ class Mailing{
                 //Verificando restantes para reexecução
                 if(jsonFile.length>0){
                     //continua a importação dos dados
+                    pool.end((err)=>{
+                        if(err) console.log('Mailings 434', err)
+                        console.log('Continuando importacao ...')
+                    }) 
                     await this.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,indice,rate)
                 }else{     
                     //Cria indice na coluna de cpf caso o mesmo exista
@@ -445,6 +456,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{   
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{          
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //Verifica se o numero possui cpf
                 let colunaCPF=""
                 const sql_col_cpf = `SELECT nome_original_campo as colCPF
@@ -616,6 +628,10 @@ class Mailing{
                 //Verificando restantes para reexecução
                 if(jsonFile.length>0){
                     //console.log('Continuando separacao')
+                    pool.end((err)=>{
+                        if(err) console.log('Mailings 624', err)                        
+                        console.log('Continuando importacao dos numeros')
+                    })   
                     await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idReg,rate,verificarCPF)    
                 }else{
                     //console.log('encerrando')
@@ -665,6 +681,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{   
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
        
                 const sql = `SELECT id_key_base,${colCPF}${colddd}${colNumero}${colNumeroCompleto}valido
                             FROM ${empresa}_mailings.${tabelaDados}
@@ -683,6 +700,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{  
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_mailings.${dataTab}
                                 SET tratado=1
                             WHERE id_key_base=${idReg}`
@@ -722,6 +740,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{  
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id_key_base
                             FROM ${tabelaDados}
                             WHERE ${colunaCPF}='${cpf}'
@@ -743,6 +762,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{  
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id_key_base
                             FROM ${empresa}_mailings.${dataTab}
                             WHERE ${colunaCPF}='${cpf}'
@@ -820,6 +840,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
                 pool.getConnection(async (err,conn)=>{ 
+                    if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                     const sql = `SELECT COUNT(id) AS invalidos
                                 FROM  ${empresa}_mailings.${tabelaNumeros} 
                                 WHERE valido=0`
@@ -950,6 +971,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
                 pool.getConnection(async (err,conn)=>{ 
+                    if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                     const sql = `SELECT count(id_key_base) as total 
                                 FROM ${tabela}
                                 WHERE valido=1`
@@ -966,6 +988,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT count(id) as total 
                             FROM ${tabela}`
                 const rows =  await this.querySync(conn,sql);
@@ -981,6 +1004,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
                 pool.getConnection(async (err,conn)=>{ 
+                    if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id FROM ${tabela} WHERE numero='${numero}' LIMIT 1`       
                 const rpt = await this.querySync(conn,sql)
                 //console.log('duplicado',rpt.length)
@@ -1005,6 +1029,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
                 pool.getConnection(async (err,conn)=>{ 
+                    if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS numeros
                             FROM ${empresa}_mailings.${tabela} 
                             WHERE campanha_${campanha}=0 AND uf='${uf}' AND valido=1 `
@@ -1022,6 +1047,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
                         pool.getConnection(async (err,conn)=>{ 
+                            if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT totalReg
                             FROM ${empresa}_dados.mailings 
                             WHERE id='${idBase}'`
@@ -1039,6 +1065,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
                 pool.getConnection(async (err,conn)=>{ 
+                    if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                     const sql = `SELECT id,
                                         DATE_FORMAT (data,'%d/%m/%Y') AS data_importacao,
                                         DATE_FORMAT (termino_importacao,'%d/%m/%Y') AS conclusao_importacao,
@@ -1069,6 +1096,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
                 pool.getConnection(async (err,conn)=>{ 
+                    if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                     let sql = `SELECT tabela_dados 
                                 FROM ${empresa}_dados.mailings 
                                 WHERE id=${id}`
@@ -1094,6 +1122,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
                 pool.getConnection(async (err,conn)=>{ 
+                    if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                     let sql = `SELECT tabela_dados,nome 
                                 FROM ${empresa}_dados.mailings 
                                 WHERE id=${idMailing}` 
@@ -1118,6 +1147,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `SELECT tabela_dados,tabela_numeros 
                             FROM ${empresa}_dados.mailings 
                             WHERE id=${idMailing}`
@@ -1157,6 +1187,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT configurado,totalReg,totalNumeros,numerosInvalidos,pronto,status 
                             FROM ${empresa}_dados.mailings 
                             WHERE id=${idMailing}`
@@ -1174,8 +1205,14 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const infoMailing = await _Campanhas2.default.infoMailingCampanha(empresa,idCampanha)
                 if(infoMailing.length==0){
+                    pool.end((err)=>{
+                        if(err) console.log('Mailings 1188', err)
+                    }) 
+                    
+                    resolve(false)
                     return false
                 }
                 const idMailing = infoMailing[0].id
@@ -1250,6 +1287,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const infoMailing = await this.infoMailing(empresa,idMailing)
                 const tabelaNumeros =  infoMailing[0].tabela_numeros
                 const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
@@ -1280,6 +1318,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT ddd, COUNT(id) AS total 
                        FROM ${empresa}_mailings.${tabela} 
                       WHERE uf='${uf}' GROUP BY ddd ORDER BY ddd ASC`
@@ -1297,6 +1336,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT uf AS UF, COUNT(id) AS numeros, COUNT(DISTINCT id_registro) AS registros 
                             FROM ${empresa}_mailings.${tabela} 
                             GROUP BY uf 
@@ -1315,6 +1355,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS total 
                             FROM ${empresa}_mailings.${tabela}
                             WHERE valido=1`
@@ -1331,6 +1372,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS total 
                             FROM ${empresa}_mailings.${tabela} 
                             WHERE contatado='S'`
@@ -1347,6 +1389,7 @@ class Mailing{
         return new Promise (async (resolve,reject)=>{  
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS total 
                                FROM ${empresa}_mailings.${tabela}
                               WHERE selecionado>0 AND contatado<>'S'`

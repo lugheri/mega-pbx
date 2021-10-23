@@ -14,7 +14,7 @@ class Asterisk{
     async querySync(conn,sql){         
         return new Promise((resolve,reject)=>{            
             conn.query(sql, (err,rows)=>{
-                if(err) return reject(err)
+                if(err) console.log('err',err)//return reject(err)
                 resolve(rows)
             })
         })
@@ -27,6 +27,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'asterisk')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const check = await this.checkAgenteFila(empresa,queue_name,membername)
                 if(check){
                     pool.end((err)=>{
@@ -52,6 +53,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'asterisk')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM asterisk.queue_members 
                             WHERE queue_name = ${nomeFila}`
@@ -68,6 +70,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'asterisk')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `DELETE FROM asterisk.queue_members 
                             WHERE queue_name='${nomeFila}' AND membername='${membro}'`
                 await this.querySync(conn,sql)
@@ -82,6 +85,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'asterisk')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT uniqueid 
                             FROM asterisk.queue_members 
                             WHERE queue_name='${queue_name}' AND membername='${membername}'`
@@ -105,6 +109,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 await this.setUniqueid(empresa,ramal,uniqueid)
                 const sql = `INSERT INTO ${empresa}_dados.records
                                         (date,date_record,time_record,ramal,uniqueid,numero,callfilename)
@@ -123,6 +128,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `SELECT uniqueid 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                             WHERE ramal='${ramal}' LIMIT 1`
@@ -152,6 +158,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT ip 
                             FROM ${empresa}_dados.servidor_webrtc 
                             WHERE status=1`
@@ -168,6 +175,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.servidor_webrtc 
                             WHERE status=1`
@@ -217,6 +225,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //Dados recebidos pelo AGI       
                 //console.log(`RAMAL DO AGENTE: ${ramal}`)
                 //dados da campanha
@@ -236,6 +245,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //Dados recebidos pelo AGI       
                 //console.log(`RAMAL DO AGENTE: ${ramal}`)
                 //dados da campanha

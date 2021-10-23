@@ -18,6 +18,7 @@ class Pausas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `INSERT INTO ${empresa}_dados.pausas_listas 
                                         (nome,descricao,status) 
                                 VALUES ('${dados.nome}','${dados.descricao}',1)`
@@ -35,6 +36,7 @@ class Pausas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.pausas_listas 
                                 SET nome='${valores.nome}',
                                     descricao='${valores.descricao}',
@@ -53,6 +55,7 @@ class Pausas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.pausas_listas 
                             WHERE id=${idLista}` 
@@ -69,6 +72,7 @@ class Pausas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.pausas_listas 
                             WHERE status = 1`
@@ -87,6 +91,7 @@ class Pausas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const tipo = 'manual';
                 const sql = `INSERT INTO ${empresa}_dados.pausas 
                                         (idLista,nome,descricao,tipo,tempo,status) 
@@ -104,6 +109,7 @@ class Pausas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.pausas 
                                 SET nome='${valores.nome}',
                                     descricao='${valores.descricao}',
@@ -123,6 +129,7 @@ class Pausas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{      
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.pausas 
                                 SET status=0
                             WHERE id=${id}`
@@ -139,6 +146,7 @@ class Pausas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE id=${id}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
@@ -154,6 +162,7 @@ class Pausas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * FROM ${empresa}_dados.pausas WHERE idLista=1 AND status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
@@ -168,6 +177,7 @@ class Pausas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id 
                             FROM ${empresa}_dados.pausas 
                             WHERE tipo='${tipo}' AND status=1`

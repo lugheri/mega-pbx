@@ -20,6 +20,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `INSERT INTO ${empresa}_dados.campanhas 
                                         (dataCriacao,tipo,nome,descricao,estado,status) 
                                 VALUES (now(),'${tipo}','${nome}','${descricao}',0,1)`
@@ -37,6 +38,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                        FROM ${empresa}_dados.campanhas 
                       WHERE status=1 
@@ -54,6 +56,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT c.nome, s.estado,
                                     DATE_FORMAT(h.inicio,'%d/%m/%Y') AS dataInicio,
                                     DATE_FORMAT(h.hora_inicio,'%H:%i') AS horaInicio,
@@ -76,6 +79,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.campanhas 
                             WHERE id=${idCampanha}`
@@ -97,6 +101,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.campanhas 
                             WHERE estado=1 
@@ -116,6 +121,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * FROM ${empresa}_dados.campanhas
                             WHERE id='${idCampanha}' AND status=1`
                             const rows =  await this.querySync(conn,sql) 
@@ -132,6 +138,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.campanhas 
                                 SET tipo='${valores.tipo}',
                                     nome='${valores.nome}',
@@ -154,6 +161,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //Fila da campanha 
                 let sql = `SELECT idFila, nomeFila 
                             FROM ${empresa}_dados.campanhas_filas 
@@ -213,6 +221,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //Removendo listas anteriores
                 let sql = `DELETE FROM ${empresa}_dados.campanhas_listastabulacao
                                 WHERE idCampanha=${idCampanha}`
@@ -235,6 +244,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT cl.id as idListaNaCampanha, t.nome AS nomeListaTabulacao, idCampanha, idListaTabulacao, maxTime 
                             FROM ${empresa}_dados.campanhas_listastabulacao AS cl 
                         LEFT JOIN ${empresa}_dados.tabulacoes_listas AS t ON t.id=cl.idListaTabulacao
@@ -261,6 +271,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `DELETE FROM ${empresa}_dados.campanhas_listastabulacao 
                                 WHERE id=${idListaNaCampanha}`
                 await this.querySync(conn,sql)
@@ -275,6 +286,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.campanhas_listastabulacao 
                                 SET maxTime=${time} 
                             WHERE idCampanha=${idCampanha}`
@@ -290,6 +302,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT maxTime 
                             FROM ${empresa}_dados.campanhas_listastabulacao 
                             WHERE idCampanha=${idCampanha}`
@@ -309,6 +322,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `INSERT INTO ${empresa}_dados.campanhas_integracoes_disponiveis 
                                         (url,descricao,modoAbertura)
                                 VALUES ('${dados.url}','${dados.descricao}','${dados.modoAbertura}')`
@@ -326,6 +340,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.campanhas_integracoes_disponiveis`
                 const rows = await this.querySync(conn,sql) 
@@ -342,6 +357,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.campanhas_integracoes_disponiveis 
                             SET url='${dados.url}',
                                 descricao='${dados.descricao}',
@@ -361,6 +377,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.campanhas_integracoes_disponiveis 
                             WHERE id=${idIntegracao}`
@@ -378,6 +395,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes_disponiveis WHERE id=${idIntegracao}`
                 await this.querySync(conn,sql) 
                 
@@ -397,6 +415,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `SELECT id FROM ${empresa}_dados.campanhas_integracoes
                             WHERE idCampanha=${dados.idCampanha}`
                 const r = await this.querySync(conn,sql) 
@@ -421,6 +440,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT i.* 
                             FROM ${empresa}_dados.campanhas_integracoes AS c 
                             JOIN ${empresa}_dados.campanhas_integracoes_disponiveis AS i ON i.id=c.idIntegracao 
@@ -439,6 +459,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `DELETE FROM ${empresa}_dados.campanhas_integracoes 
                             WHERE idCampanha=${idCampanha}
                                 AND idIntegracao=${idIntegracao}`
@@ -458,6 +479,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const conf = await this.verConfigDiscadorCampanha(empresa,idCampanha)
                 if(conf.length ===0){
                     const sql = `INSERT INTO  ${empresa}_dados.campanhas_discador 
@@ -491,6 +513,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.campanhas_discador 
                             WHERE idCampanha = ${idCampanha}`
@@ -510,6 +533,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT idFila, nomeFila
                             FROM ${empresa}_dados.campanhas_filas 
                             WHERE idCampanha='${idCampanha}'`
@@ -527,6 +551,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
                             WHERE idCampanha=${idCampanha}`
                 await this.querySync(conn,sql)  
@@ -548,6 +573,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `DELETE FROM ${empresa}_dados.campanhas_filas 
                             WHERE idCampanha=${idCampanha} AND idFila='${idFila}'`
                 const rows = await this.querySync(conn,sql)  
@@ -566,6 +592,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const infoMailing = await _Mailing2.default.infoMailing(empresa,idMailing)
                 const tabelaDados = infoMailing[0].tabela_dados
                 const tabelaNumeros = infoMailing[0].tabela_numeros
@@ -624,6 +651,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.campanhas_mailing 
                             WHERE idCampanha=${idCampanha}
@@ -642,6 +670,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT m.id, m.nome, m.totalNumeros, m.numerosInvalidos
                             FROM ${empresa}_dados.mailings AS m 
                             JOIN ${empresa}_dados.campanhas_mailing AS cm ON m.id=cm.idMailing
@@ -662,6 +691,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)
 
                 //Recuperando o id da campanha
@@ -704,6 +734,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{     
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const idCampanha = parametros.idCampanha;
                 const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)//informacoes do mailing
         
@@ -783,6 +814,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql =`SELECT m.* 
                             FROM ${empresa}_dados.mailings AS m
                             JOIN ${empresa}_dados.campanhas_mailing AS c
@@ -801,6 +833,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql =`SELECT id 
                             FROM ${empresa}_dados.campanhas_mailing_filtros 
                             WHERE idCampanha=${idCampanha}
@@ -825,6 +858,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //console.log(`delFilterDial ${tipo}=${valor}`)
                 let filter=""
                 filter+=`${tipo}='${valor}'`
@@ -847,6 +881,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //console.log(`addFilterDial ${tipo}=${valor}`)
                 let filter=""
                 filter+=`${tipo}='${valor}'`
@@ -868,6 +903,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let filter=""
                 if(uf!=0){ filter += ` AND uf="${uf}"` }
                 if(ddd!=undefined){ filter += ` AND ddd=${ddd}`}
@@ -887,6 +923,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let filter=""
                 if(uf!=0){ filter += ` AND uf="${uf}"` }
                 if(tipo!=undefined){ filter += ` AND tipo='${tipo}'`}
@@ -906,6 +943,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let filter=""
                 if(uf!=0){ filter += ` AND uf="${uf}"` }
                 const sql = `SELECT COUNT(id) AS total
@@ -959,6 +997,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let filter=""
                 if(uf!=0){ filter = `WHERE uf='${uf}'` }
                 let sql = `SELECT DISTINCT ddd 
@@ -976,6 +1015,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{     
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let filter  =""
                 if(tipo!='uf'){
                     filter=` AND regiao = "${uf}"`
@@ -1006,6 +1046,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id,campo,apelido,tipo
                             FROM ${empresa}_dados.mailing_tipo_campo 
                             WHERE idMailing='${idMailing}' AND conferido=1`
@@ -1022,6 +1063,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) AS total 
                             FROM ${empresa}_dados.campanhas_campos_tela_agente 
                             WHERE idCampo=${campo} AND idCampanha=${idCampanha} AND tabela='${tabela}'
@@ -1043,6 +1085,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
                                         (idCampanha,tabela,idCampo,ordem) 
                                 VALUES (${idCampanha},'${tabela}',${idCampo},0)`
@@ -1058,6 +1101,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT t.id AS idJoin, m.id, m.campo, m.apelido, m.tipo 
                             FROM ${empresa}_dados.campanhas_campos_tela_agente AS t 
                             JOIN ${empresa}_dados.mailing_tipo_campo AS m ON m.id=t.idCampo
@@ -1075,6 +1119,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
                             WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
                 const rows = await this.querySync(conn,sql)
@@ -1104,6 +1149,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
         
                 const sql = `SELECT m.totalNumeros-m.numerosInvalidos AS total, m.id AS idMailing
                             FROM ${empresa}_dados.mailings as m 
@@ -1124,6 +1170,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT count(id) AS total 
                             FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                             WHERE contatado='${status}' AND idCampanha=${idCampanha} AND idMailing=${idMailing}`
@@ -1141,6 +1188,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let queryFilter="";
                 if(status==1){
                     queryFilter=`AND produtivo=1`
@@ -1163,6 +1211,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT  DATE_FORMAT(data,'%d/%m/%Y') AS ultimaData
                             FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                             WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ORDER BY data DESC`
@@ -1183,6 +1232,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT DISTINCT idMailing 
                             FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
                             WHERE idCampanha=${idCampanha}`
@@ -1202,6 +1252,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //verifica se a campanha ja possui agendamento
                 const r = await this.verAgendaCampanha(empresa,idCampanha)
                 if(r.length ===0){
@@ -1231,6 +1282,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id,id_campanha,
                                     DATE_FORMAT(inicio, '%Y-%m-%d') as inicio,
                                     DATE_FORMAT(termino, '%Y-%m-%d') as termino,
@@ -1251,6 +1303,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `SELECT id 
                             FROM ${empresa}_dados.filas 
                             WHERE nome='${nomeFila}'`
@@ -1272,6 +1325,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
            const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
 
                 const sql = `SELECT id,apelido as nome, descricao  FROM ${empresa}_dados.filas ORDER BY id DESC`
                 const rows = await this.querySync(conn,sql)
@@ -1288,6 +1342,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT id,apelido as nome, nome as nomeFila, descricao 
                             FROM ${empresa}_dados.filas 
                             WHERE id=${idFila}`
@@ -1305,6 +1360,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT nome 
                             FROM ${empresa}_dados.filas 
                             WHERE id=${idFila}`
@@ -1322,6 +1378,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `UPDATE ${empresa}_dados.filas 
                                 SET apelido='${dados.name}',
                                     descricao='${dados.description}' 
@@ -1340,6 +1397,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `DELETE FROM ${empresa}_dados.filas 
                             WHERE id='${idFila}'`
                 await this.querySync(conn,sql)
@@ -1368,6 +1426,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(DISTINCT campanha) AS campanhas, DATE_FORMAT (data,'%d/%m/%Y') AS dia 
                             FROM ${empresa}_dados.historico_atendimento 
                             GROUP BY data 
@@ -1388,6 +1447,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT COUNT(id) as total 
                             FROM ${empresa}_dados.campanhas
                             WHERE status=1 AND estado=1`
@@ -1405,6 +1465,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo 
                             FROM ${empresa}_dados.campanhas AS c 
                         LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha
@@ -1424,6 +1485,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo
                             FROM ${empresa}_dados.campanhas AS c 
                         LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha 
@@ -1443,6 +1505,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT c.id as campanha, c.nome, c.descricao, TIMEDIFF (NOW(),DATA) AS tempo 
                             FROM ${empresa}_dados.campanhas AS c 
                         LEFT JOIN ${empresa}_dados.campanhas_status AS s ON c.id = s.idCampanha 
@@ -1505,6 +1568,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //Estado 3 = Falando
                 const sql = `SELECT DISTINCT ramal AS agentes 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas
@@ -1543,6 +1607,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //Estado 2 = Em Pausa
                 const sql = `SELECT DISTINCT a.ramal AS agentes 
                             FROM ${empresa}_dados.agentes_filas AS a 
@@ -1563,6 +1628,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 //Estado 1 = Disponível
                 //Estado 0 = Deslogado
                 const sql = `SELECT DISTINCT a.ramal AS agentes 
@@ -1606,6 +1672,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT m.idCampanha,c.nome 
                             FROM ${empresa}_dados.campanhas_mailing AS m 
                             JOIN ${empresa}_dados.campanhas AS c ON m.idCampanha=c.id
@@ -1639,6 +1706,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT SUM(totalReg) AS total 
                             FROM ${empresa}_dados.mailings as m 
                             JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
@@ -1658,6 +1726,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT SUM(totalNumeros-numerosInvalidos) AS total 
                             FROM ${empresa}_dados.mailings as m 
                             JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
@@ -1677,6 +1746,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT count(t.id) AS contatados 
                             FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
                             JOIN ${empresa}_dados.campanhas AS c ON c.id=t.idCampanha 
@@ -1695,6 +1765,7 @@ class Campanhas{
         return new Promise (async (resolve,reject)=>{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
              pool.getConnection(async (err,conn)=>{ 
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT count(t.id) AS nao_contatados 
                             FROM ${empresa}_mailings.campanhas_tabulacao_mailing AS t 
                             JOIN ${empresa}_dados.campanhas AS c 
