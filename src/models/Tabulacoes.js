@@ -5,11 +5,14 @@ class Tabulacoes{
    async querySync(conn,sql){         
     return new Promise((resolve,reject)=>{            
         conn.query(sql, (err,rows)=>{
-            if(err) return reject(err)
+            if(err){ 
+                console.error({"errorCode":err.code,"message":err.message,"stack":err.stack, "sql":sql}) 
+                resolve(false);
+            }
             resolve(rows)
         })
     })
-  }   
+  }    
 
     //LISTA DE TABULACOES 
     //Criar Lista de Tabulacaoes
