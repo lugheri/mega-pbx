@@ -8,35 +8,17 @@ import moment from 'moment';
 import Clients from './Clients'
 
 class Mailing{
-    /*
-    async querySync(sql,empresa){
-        const hostEmp = await Clients.serversDbs(empresa)
-        const connection = connect.poolConta(hostEmp)
-        const promisePool =  connection.promise();
-        const result = await promisePool.query(sql)
-        promisePool.end();
-        return result[0];       
-    }
-    async querySync(conn,sql,empresa){
-        return new Promise(async(resolve,reject)=>{
-            const hostEmp = await Clients.serversDbs(empresa)
-            conn.query
-            const conn = connect.poolConta(hostEmp)
-            conn.query(sql,(e,rows)=>{
-                if(e) reject(e);
-                resolve(rows)
-            })
-            conn.end()                        
-        })
-    }*/
     async querySync(conn,sql){         
         return new Promise((resolve,reject)=>{            
             conn.query(sql, (err,rows)=>{
-                if(err) return reject(err)
+                if(err){ 
+                    console.error({"errorCode":err.code,"message":err.message,"stack":err.stack, "sql":sql}) 
+                    resolve(false);
+                }
                 resolve(rows)
             })
         })
-    } 
+      }    
 
 
 

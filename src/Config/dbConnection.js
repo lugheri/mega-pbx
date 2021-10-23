@@ -25,7 +25,10 @@ const connect = ()=>{};
                 port     : 3306,
                 user     : process.env.DB_USER,
                 password : process.env.DB_PASS,
-                database : database
+                database : database,
+                waitForConnections: true,
+                connectionLimit: 0,
+                queueLimit: 0
         })
     }
 export default connect;

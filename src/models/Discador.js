@@ -17,16 +17,16 @@ class Discador{
     async querySync(conn,sql){         
         return new Promise((resolve,reject)=>{            
             conn.query(sql, (err,rows)=>{
-                if(err) return  console.error('err',err)//return reject(err)
-                
+                if(err){ 
+                    console.error({"errorCode":err.code,"message":err.message,"stack":err.stack, "sql":sql}) 
+                    resolve(false);
+                }
                 resolve(rows)
-                
             })
-            
         })
-    } 
+      }    
     
-    async mode(empresa){
+    async mode(empresa){      
         return 0
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - mode','Empresa nao recebida')
@@ -644,6 +644,7 @@ class Discador{
             return false
         }
         return new Promise (async (resolve,reject)=>{ 
+           
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});

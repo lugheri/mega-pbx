@@ -8,15 +8,17 @@ import Clients from './Clients'
 
 class Dashboard{
 //Query Sync
-    async querySync(conn,sql){    
-       
-        return new Promise((resolve,reject)=>{            
-            conn.query(sql, (err,rows)=>{
-                if(err) return reject(err)
-                resolve(rows)
-            })
+async querySync(conn,sql){         
+    return new Promise((resolve,reject)=>{            
+        conn.query(sql, (err,rows)=>{
+            if(err){ 
+                console.error({"errorCode":err.code,"message":err.message,"stack":err.stack, "sql":sql}) 
+                resolve(false);
+            }
+            resolve(rows)
         })
-    }   
+    })
+  }    
 
     async painel(empresa){
        
