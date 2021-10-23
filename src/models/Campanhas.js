@@ -93,8 +93,9 @@ class Campanhas{
                 })
                 if(c.length==0){
                     resolve("")
+                    return
                 }
-                if(c[0].nome===undefined) {
+                if(!c[0].nome) {
                     resolve("/")
                     return 
                 }
