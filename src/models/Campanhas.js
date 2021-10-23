@@ -93,8 +93,9 @@ class Campanhas{
                 })
                 if(c.length==0){
                     resolve("")
+                    return
                 }
-                if(c[0].nome===undefined) {
+                if(!c[0].nome) {
                     resolve("/")
                     return 
                 }
@@ -1260,8 +1261,8 @@ class Campanhas{
         const hoje = moment().format("Y-MM-DD")
         let dataInicio = dI
         let dataFinal = dT
-        if(dI=="0000-00-00")){dataInicio=hoje;}
-        if(dT=="0000-00-00")){dataFinal=hoje;}
+        if(dI=="0000-00-00"){dataInicio=hoje;}
+        if(dT=="0000-00-00"){dataFinal=hoje;}
        
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
