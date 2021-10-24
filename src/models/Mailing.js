@@ -324,7 +324,7 @@ class Mailing{
 
     async tabelaMailing(empresa,idMailing){
         return new Promise (async (resolve,reject)=>{
-            const sql = `SELECT tabela_dados, tabela_numeros, totalNumeros
+            const sql = `SELECT tabela_dados, tabela_numeros, totalNumeros, pronto
                        FROM ${empresa}_dados.mailings
                       WHERE id=${idMailing}`
             //Executando query
