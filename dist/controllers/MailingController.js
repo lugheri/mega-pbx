@@ -121,7 +121,7 @@ class MailingController{
             const infoTabela= await _Mailing2.default.tabelaMailing(empresa,idMailing)
             if(infoTabela.length != 0){
                 const tabela = infoTabela[0].tabela_numeros
-                const totalRegistros = await _Mailing2.default.totalRegistros(empresa,tabela);
+                const totalRegistros = infoTabela[0].totalNumeros
                 const contatados = await _Mailing2.default.registrosContatados(empresa,tabela)
                 const naoContatados = await _Mailing2.default.registrosNaoContatados(empresa,tabela)
             
@@ -276,7 +276,7 @@ class MailingController{
         const infoTabela= await _Mailing2.default.tabelaMailing(empresa,idMailing)
         if(infoTabela.length != 0){
             const tabela = infoTabela[0].tabela_numeros
-            const totalRegistros = await _Mailing2.default.totalRegistros(empresa,tabela);
+            const totalRegistros = infoTabela[0].totalNumeros
             const contatados = await _Mailing2.default.registrosContatados(empresa,tabela)
             const naoContatados = await _Mailing2.default.registrosNaoContatados(empresa,tabela)
 
