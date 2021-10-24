@@ -26,6 +26,7 @@ class Mailing{
     }
 
     removeCaracteresEspeciais(valor){
+        if(valor===undefined) return ""
         const valorFormatado =  valor.replace(" ", "_")
                                      .replace("/", "_")
                                      .replace(".", "_")
@@ -35,7 +36,7 @@ class Mailing{
     }
 
     removeCaracteresEspeciais_numero(valor){
-     
+        if(valor===undefined) return 101
         const numeroFormatado =  valor.toString()
                                      .replace(" ", "")
                                      .replace("/", "")
@@ -112,6 +113,7 @@ class Mailing{
                 
                 const insertMailing = await this.addInfoMailing(empresa,nome,tableData,tableNumbers,filename,header,delimitador)
                 const infoMailing = await this.infoMailing(empresa,insertMailing['insertId']);
+                resolve(infoMailing)
 
                 const idBase = infoMailing[0].id
                 const dataTab=infoMailing[0].tabela_dados
@@ -123,13 +125,13 @@ class Mailing{
                 })
                 if(tipoImportacao=='horizontal'){
                     console.log('horizontal')
-                    this.importandoDadosMailing(empresa,idBase,jsonFile,header,dataTab,numTab,idKey,transferRate,infoMailing)
+                    await this.importandoDadosMailing(empresa,idBase,jsonFile,header,dataTab,numTab,idKey,transferRate,infoMailing)
                     
                 }else{
                    
                 }    
                 console.log('retornando mailing')
-                resolve(infoMailing)
+                
                       
             })            
         })   
@@ -516,6 +518,7 @@ class Mailing{
                         ddd=jsonFile[0][colunaDDD]  
                             
                         ddd = this.removeCaracteresEspeciais_numero(ddd) 
+                        //console.log('ddd',ddd)
                     }  
                     
                     for(let n=0; n<colunaNumero.length; n++){//Numeros
@@ -523,9 +526,11 @@ class Mailing{
                         let numero = jsonFile[0][colunaNumero[n]]
                               
                             numero = this.removeCaracteresEspeciais_numero(numero)
+                            //console.log('numero',numero)
                         
                         if(numero){ 
-                            let numeroCompleto = ddd+numero     
+                            let numeroCompleto = ddd.toString()+numero.toString()
+                            //console.log('numeroCompleto ddd+numero',numeroCompleto)    
                         //  console.log('numero',numeroCompleto)              
                             let duplicado = 0//await this.checaDuplicidade(empresa,numeroCompleto,tabelaNumeros)
                             //Inserindo ddd e numero na query
@@ -537,10 +542,11 @@ class Mailing{
                     }
                     
                     for(let nc=0; nc<colunaNumeroCompleto.length; nc++){//Numeros
-                        console.log('numero',colunaNumeroCompleto[nc])
+                        //console.log('numero',colunaNumeroCompleto[nc])
                         let numeroCompleto = jsonFile[0][colunaNumeroCompleto[nc]]
-                             console.log('numeroCompleto',numeroCompleto) 
+                            // console.log('numeroCompleto',numeroCompleto) 
                             numeroCompleto = this.removeCaracteresEspeciais_numero(numeroCompleto)
+                            //console.log('numeroCompleto valid',numeroCompleto) 
                         //console.log('numeroCompleto',numeroCompleto)    
                         if(numeroCompleto){
                             let dddC = numeroCompleto.toString().slice(0,2)     

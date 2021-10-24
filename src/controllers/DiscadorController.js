@@ -8,7 +8,8 @@ import Cronometro from '../models/Cronometro'
 import moment from 'moment';
 
 class DiscadorController{         
-    async debug(title="",msg="",empresa=""){        
+    async debug(title="",msg="",empresa=""){     
+        return false   
         const debug= await Discador.mode(empresa)        
         if(debug==1){
            //console.log(`${title}`,msg)
@@ -254,7 +255,7 @@ class DiscadorController{
 
                 await this.debug(' . . . . . . . . . . . PASSO 2.6 - Separa o registro','',empresa)
                 await this.prepararDiscagem(empresa,idCampanha,parametrosDiscador,idMailing,tabela_dados,tabela_numeros,registro,idFila,nomeFila,qtdChamadasSimultaneas,limiteDiscagem)
-                
+                return true
                 await this.debug(' ','',empresa)
                 await this.debug(' . . . . . . PASSO 2 CONCLUÍDO','',empresa)
                 
@@ -391,6 +392,7 @@ class DiscadorController{
         
         await this.debug(' ','',empresa)
         await this.debug(' . . . . . . . . . . . . . PASSO 3 CONCLUÍDO','',empresa)
+        return true
     }
 
 

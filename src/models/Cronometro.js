@@ -77,11 +77,11 @@ class Cronometro{
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-        const sql = `UPDATE ${empresa}_dados.tempo_pausa 
-                        SET saida=NOW(), 
-                            tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW()) 
-                     WHERE idAgente=${idAgente} AND saida is null`
-        const rows = await this.querySync(conn,sql);
+                const sql = `UPDATE ${empresa}_dados.tempo_pausa 
+                                SET saida=NOW(), 
+                                    tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW()) 
+                            WHERE idAgente=${idAgente} AND saida is null`
+                const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
                     if(err) console.log('Cronometro.js 79', err)
                 })
@@ -189,6 +189,7 @@ class Cronometro{
                 pool.end((err)=>{
                     if(err) console.log('Cronometro.js 178', err)
                 })
+                resolve(true) 
             })
         })      
     }
@@ -212,6 +213,7 @@ class Cronometro{
                 pool.end((err)=>{
                     if(err) console.log('Cronometro.js 200', err)
                 })
+                resolve(true) 
             })
         })      
     } 

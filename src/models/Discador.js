@@ -12,13 +12,14 @@ class Discador{
         // if(debug==1){
             //console.log(`${title}`,msg)
         // }
+        return false
     }
    
     async querySync(conn,sql){         
         return new Promise((resolve,reject)=>{            
             conn.query(sql, (err,rows)=>{
                 if(err){ 
-                    console.error({"errorCode":err.code,"message":err.message,"stack":err.stack, "sql":sql}) 
+                    console.error({"errorCode":err.code,"arquivo":"Discador.js:querySync","message":err.message,"stack":err.stack, "sql":sql}) 
                     resolve(false);
                 }
                 resolve(rows)
@@ -36,9 +37,8 @@ class Discador{
             console.log('entrando na promise')
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 
                 const sql = `SELECT debug 
                             FROM ${empresa}_dados.asterisk_ari
@@ -59,9 +59,9 @@ class Discador{
     //INFORMACOES DO AGENTE
     async agentesLogados(empresa){
         return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`mysql`)
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message, "line:":err.path});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:agentesLogados","message":err.message, "line:":err.path});
 
                 const sql = `SELECT COUNT(id) AS logados
                             FROM ${empresa}_dados.user_ramal
@@ -82,7 +82,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"listarAgentesLogados.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT u.id,u.nome,u.usuario,r.estado
                             FROM ${empresa}_dados.users AS u
@@ -102,7 +102,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"agentesPorEstado.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT COUNT(id) AS agentes
                             FROM ${empresa}_dados.user_ramal
@@ -120,7 +120,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT COUNT(c.id) AS campanhasAtivas
                             FROM ${empresa}_dados.campanhas AS c
@@ -141,7 +141,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT c.nome AS campanhasAtivas
                             FROM ${empresa}_dados.campanhas AS c
@@ -173,7 +173,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividadeDia_porAgente","message":err.message,"stack":err.stack});
 
                 let queryFilter="";
                 if(statusProdutividade==1){
@@ -200,7 +200,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividade_CampanhasAtivas","message":err.message,"stack":err.stack});
 
                 let queryFilter="";
                 if(statusProdutividade==1){
@@ -227,7 +227,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividade_CampanhasAtivas_dia","message":err.message,"stack":err.stack});
 
                 let queryFilter="";
                 if(statusProdutividade==1){
@@ -253,7 +253,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadas_CampanhasAtivas_dia","message":err.message,"stack":err.stack});
 
                 let queryFilter="";
                 if(statusProdutividade==1){
@@ -279,7 +279,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividade_porCampanha","message":err.message,"stack":err.stack});
 
                 let queryFilter="";
                 if(statusProdutividade==1){
@@ -306,7 +306,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividade_porMailing","message":err.message,"stack":err.stack});
 
                 let queryFilter="";
                 if(statusProdutividade==1){
@@ -332,7 +332,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasPorContato_CampanhasAtivas","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT COUNT(t.id) AS contatados
                             FROM ${empresa}_dados.campanhas AS c
@@ -352,7 +352,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasAbandonadas_CampanhasAtivas","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT COUNT(h.id) AS abandonadas
                             FROM ${empresa}_dados.campanhas AS c
@@ -372,7 +372,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:totalChamadas_CampanhasAtivas","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT COUNT(t.id) AS chamadas
                             FROM ${empresa}_dados.campanhas AS c
@@ -392,7 +392,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasPorContato_dia","message":err.message,"stack":err.stack});
 
                 const hoje = moment().format("Y-MM-DD")
                 const sql = `SELECT COUNT(id) AS contatados
@@ -411,7 +411,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasAbandonadas_dia","message":err.message,"stack":err.stack});
 
                 const hoje = moment().format("Y-MM-DD")
                 const sql = `SELECT COUNT(id) AS abandonadas
@@ -431,7 +431,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:totalChamadas_CampanhasAtivas_dia","message":err.message,"stack":err.stack});
 
                 const hoje = moment().format("Y-MM-DD")
                 const sql = `SELECT COUNT(id) AS chamadas
@@ -450,7 +450,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasEmAtendimento","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT COUNT(id) AS chamadas
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas
@@ -468,7 +468,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:logChamadasSimultaneas","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT ${campo} as total 
                             FROM ${empresa}_dados.log_chamadas_simultaneas
@@ -501,7 +501,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:totalAtendimentosAgente","message":err.message,"stack":err.stack});
 
                 const hoje = moment().format("Y-MM-DD")
                 const sql = `SELECT COUNT(id) AS atendimentos
@@ -519,9 +519,9 @@ class Discador{
     
     async chamadasProdutividade_Agente(empresa,statusProdutividade,idAgente){
         return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`mysql`)
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividade_Agente","message":err.message,"stack":err.stack});
 
                 let queryFilter="";
                 if(statusProdutividade==1){
@@ -548,7 +548,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`megaconecta_mailings`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasManuais_Agente","message":err.message,"stack":err.stack});
 
                 const hoje = moment().format("Y-MM-DD")
                 const sql = `SELECT COUNT(id) AS manuais
@@ -568,7 +568,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:tempoFaladoAgente","message":err.message,"stack":err.stack});
 
                 const hoje = moment().format("Y-MM-DD")
                 const sql = `SELECT SUM(tempo_total) AS tempoFalado
@@ -610,7 +610,7 @@ class Discador{
 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:registrarChamadasSimultaneas","message":err.message,"stack":err.stack});
 
 
                 await this.debug(' . PASSO 1.1','Registrando chamadas simultaneas',empresa)
@@ -647,7 +647,7 @@ class Discador{
            
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasSimultaneas","message":err.message,"stack":err.stack});
 
                 let filter=""
                 switch(parametro){
@@ -687,7 +687,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message, "stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:clearCalls","message":err.message, "stack":err.stack});
 
 
                 await this.debug(' . PASSO 1.2','Removendo chamadas presas',empresa)
@@ -761,7 +761,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:clearCallsCampanhas","message":err.message,"stack":err.stack});
 
 
                 let sql = `SELECT id_campanha,tabela_numeros,id_numero,id_mailing
@@ -800,6 +800,7 @@ class Discador{
                 pool.end((err)=>{
                     if(err) console.log(err)
                     }) 
+                    resolve(true)
             })
         })       
     }
@@ -812,7 +813,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:clearCallsAgent","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT id_campanha,tabela_numeros,id_numero,id_mailing
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
@@ -849,6 +850,7 @@ class Discador{
                 pool.end((err)=>{
                     if(err) console.log(err)
                     }) 
+                    resolve(true)
                
             })
         })       
@@ -862,7 +864,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:clearCallbyId","message":err.message,"stack":err.stack});
 
 
                 let sql = `SELECT id_campanha,tabela_numeros,id_numero,id_mailing
@@ -897,7 +899,8 @@ class Discador{
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.log(err)
-                    }) 
+                }) 
+                resolve(true)
             })
         })       
     }
@@ -911,7 +914,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
 
                 await this.debug(' . PASSO 1.3','Verificando Campanhas Ativas',empresa)     
@@ -942,7 +945,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . PASSO 1.4',`Verifica a fila da Campanha`,empresa)
                 const sql = `SELECT idFila, nomeFila 
@@ -964,7 +967,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . PASSO 1.5',`Verifica se existe mailing adicionado`,empresa)
                 const sql = `SELECT idMailing 
@@ -987,7 +990,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . . PASSO 1.6',`Verifica se existe mailing configurado`,empresa)
                 const sql = `SELECT id,tabela_dados,tabela_numeros 
@@ -1010,7 +1013,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . . . PASSO 1.7',`Verifica se existe mailing possui Agendamento`,empresa)
                 const sql = `SELECT id 
@@ -1034,7 +1037,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . . . . PASSO 1.8',`Verifica se a campanha esta dentro da data de agendamento`,empresa)
                 const sql = `SELECT id 
@@ -1057,7 +1060,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . . . . . PASSO 1.8.1',`Verifica se a campanha esta dentro do horario de agendamento`,empresa)                                
                 const sql = `SELECT id 
@@ -1090,7 +1093,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . . . . . PASSO 2.1 - Verificando se existem agentes na fila','',empresa) 
                 const sql =  `SELECT COUNT(id) AS total 
@@ -1114,7 +1117,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . . . . . . PASSO 2.2 - Verificando se os agentes estao logados e disponiveis','',empresa) 
                 /*const sql = `SELECT ramal 
@@ -1145,7 +1148,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . . . . . . . PASSO 2.3 - Verificando configuração do discador','',empresa)
                 const sql = `SELECT * 
@@ -1167,7 +1170,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT COUNT(id) AS total 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas
@@ -1191,7 +1194,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
         
                 let limit=limitRegistros;
@@ -1282,7 +1285,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . . . . . . . . . . PASSO 2.6 - Verificando se o numero selecionado já esta em atendimento','',empresa)
             
@@ -1315,7 +1318,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT id 
                                 FROM ${empresa}_dados.campanhas_chamadas_simultaneas
@@ -1343,7 +1346,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
                         SET data=now(), 
@@ -1382,7 +1385,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT ramal 
                             FROM ${empresa}_dados.agentes_filas AS a 
@@ -1417,7 +1420,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const hoje = moment().format("YMMDDHHmmss")
                 const protocolo = hoje+'0'+ramal
@@ -1481,7 +1484,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT tipo,valor,regiao
                             FROM ${empresa}_dados.campanhas_mailing_filtros 
@@ -1512,7 +1515,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT id,id_campanha,id_mailing,id_registro
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
@@ -1546,7 +1549,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let saudacao = 'masculino'
                 let sql = `SELECT id_campanha 
@@ -1597,7 +1600,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //verificando se a campanha ja possui status
                 const statusCampanha = await this.statusCampanha(empresa,idCampanha)
@@ -1640,7 +1643,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql =`SELECT * 
                             FROM ${empresa}_dados.campanhas_status 
@@ -1665,7 +1668,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 await this.debug(' . . . . . . . . . . . . . . PASSO 3.4 - Discando','',empresa)
                 //Recuperando dados do asterisk
@@ -1702,15 +1705,15 @@ class Discador{
 
    /*Funcoes auxiliares do dicador******************************************************************************/
     //Registra o histórico de atendimento de uma chamada
-        async registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_registro,id_numero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado){
-            if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
+    async registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_registro,id_numero,ramal,uniqueid,tipo_ligacao,numero,tabulacao,observacoes,contatado){
+        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - registrarHistoricoAtendimento','Empresa nao recebida')
             return false
         }
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //console.log('registra atendimento')
                 const sql = `INSERT INTO ${empresa}_dados.historico_atendimento 
@@ -1733,7 +1736,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
         
                 const sql = `INSERT INTO ${empresa}_dados.campanhas_agendamentos
@@ -1752,7 +1755,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT a.id 
                             FROM ${empresa}_dados.campanhas_agendamentos AS a 
@@ -1773,7 +1776,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT *
                             FROM ${empresa}_dados.campanhas_agendamentos 
@@ -1860,7 +1863,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{                 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
         
                 const dadosAtendimento = await this.dadosAtendimento(empresa,idAtendimento)
@@ -2050,7 +2053,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //Recuperando estado anterior do agente
                 const estadoAnterior = await this.infoEstadoAgente(empresa,agente)
@@ -2364,7 +2367,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.user_ramal 
@@ -2394,7 +2397,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT * 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
@@ -2433,7 +2436,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                         SET desligada=1
@@ -2459,7 +2462,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                             WHERE id=${idAtendimento} AND ramal=0`
@@ -2480,7 +2483,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                             WHERE id=${idAtendimento}`
@@ -2510,7 +2513,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //Separando a campanha que o agente pertence
                 const sql = `SELECT * 
@@ -2534,7 +2537,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //Separando a campanha que o agente pertence
                 const sql = `SELECT * 
@@ -2561,14 +2564,15 @@ class Discador{
             return false
         }
         return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
+            const pool = await connect.pool(empresa,'dados',`mysql`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //console.log(empresa,ramal)
                 const sql = `SELECT estado, TIMESTAMPDIFF (SECOND, datetime_estado, NOW()) as tempo
                             FROM ${empresa}_dados.user_ramal 
-                            WHERE ramal=${ramal}`        
+                            WHERE ramal=${ramal}
+                            LIMIT 1`        
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -2589,7 +2593,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.agentes_pausados
@@ -2613,7 +2617,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 
                 const sql = `SELECT m.id, m.modo_atendimento, m.id_campanha 
@@ -2639,7 +2643,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //Separando a campanha que o agente pertence
                 let sql = `SELECT id,
@@ -2777,7 +2781,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT COUNT(produtivo) AS totalTabulacoes,
                                     SUM(produtivo) AS produtivas,
@@ -2804,7 +2808,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT campo 
                             FROM ${empresa}_dados.mailing_tipo_campo 
@@ -2839,7 +2843,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT campo 
                             FROM ${empresa}_dados.mailing_tipo_campo 
@@ -2875,7 +2879,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //Separando a campanha que o agente pertence
                 let sql = `SELECT id,
@@ -2977,7 +2981,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //Separando a campanha que o agente pertence
                 let sql = `SELECT id 
@@ -3011,7 +3015,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //Separando a campanha que o agente pertence
                 let sql = `SELECT id 
@@ -3041,7 +3045,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT *
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
@@ -3064,7 +3068,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT id as ramal, nome 
                             FROM ${empresa}_dados.users 
@@ -3087,7 +3091,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const infoMailing = await Mailing.infoMailing(empresa,idMailing)
                 //console.log(infoMailing)
@@ -3113,7 +3117,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
 
                 //Caso o mailing seja 0 sera considerado como um historico de chamada manual
@@ -3201,7 +3205,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{     
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT nome_registro,numero_discado,agente,                    
                             DATE_FORMAT (data,'%d/%m/%Y') AS dia,
@@ -3215,7 +3219,7 @@ class Discador{
                 const dados = await this.querySync(conn,sql)
                 if(dados.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                        if(err) console.log(err)
                     }) 
                     resolve([]) 
                     return 
@@ -3238,7 +3242,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT h.id,
                                     nome_registro,
@@ -3271,7 +3275,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT nome_registro 
                             FROM ${empresa}_dados.historico_atendimento 
@@ -3301,7 +3305,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT id 
                         FROM ${empresa}_dados.historico_atendimento 
@@ -3340,7 +3344,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql
                 if(tipo=="clicks"){
@@ -3366,7 +3370,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT *
                             FROM ${empresa}_dados.historico_atendimento
@@ -3463,7 +3467,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT idListaTabulacao,maxTime 
                             FROM ${empresa}_dados.campanhas_listastabulacao 
@@ -3518,7 +3522,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //Atualiza Chamada como tabulando 
                 const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas
@@ -3528,6 +3532,7 @@ class Discador{
                 pool.end((err)=>{
                     if(err) console.log(err)
                     }) 
+                    resolve(true) 
             })
         }) 
     }
@@ -3538,7 +3543,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //Verifica se existe integração criada
                 let sql = `SELECT idIntegracao 
@@ -3575,7 +3580,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //informacoes do mailing 
                 let sql = `SELECT id_registro,id_numero,ramal,id_campanha,id_mailing,tabela_dados,tabela_numeros,numero
@@ -3764,7 +3769,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT ${tipo} AS chamadas 
                             FROM ${empresa}_dados.log_chamadas_simultaneas 
