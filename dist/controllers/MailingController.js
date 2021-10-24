@@ -17,7 +17,8 @@ class MailingController{
         const delimitador = req.body.delimitador 
         const header = req.body.header
         const nome = req.body.nome
-        //const transferRate = req.body.taxaTransferencia
+        const tipoImportacao="horizontal"
+        
       
         //Abrindo o Arquivo
         _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{
@@ -26,8 +27,10 @@ class MailingController{
             //Criando tabela do novo mailing   
             const hoje = _moment2.default.call(void 0, ).format("YMMDDHHmmss")
             const nomeTabela = hoje   
-            const keys = Object.keys(jsonFile[0])     
-            const infoMailing=await _Mailing2.default.criarTabelaMailing(empresa,keys,nome,nomeTabela,header,filename,delimitador)
+            //Colunas de titulos do arquivo
+            const keys = Object.keys(jsonFile[0])           
+            
+            const infoMailing=await _Mailing2.default.criarTabelaMailing(empresa,tipoImportacao,keys,nome,nomeTabela,header,filename,delimitador,jsonFile)
             
             res.json(infoMailing)
         })        
@@ -83,10 +86,10 @@ class MailingController{
         const header = infoMailing[0].header
         const delimitador = infoMailing[0].delimitador
         const file=path+filename
+        const tipoImportacao="horizontal"
 
         const tabData=infoMailing[0].tabela_dados
         const tabNumbers=infoMailing[0].tabela_numeros
-
        
         await _Mailing2.default.configuraTipoCampos(empresa,idBase,header,tipoCampos)//Configura os tipos de campos
         _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
@@ -94,8 +97,16 @@ class MailingController{
             let idKey = 1
             let transferRate=1
             const fileOriginal=jsonFile
-            await _Mailing2.default.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,tabData,tabNumbers,idKey,transferRate)
-            //await Mailing.importaDados_e_NumerosBase(empresa,idBase,jsonFile,file,header,tabData,tabNumbers,idKey,transferRate)
+            if(tipoImportacao=="horizontal"){
+                const infoMailing = await _Mailing2.default.infoMailing(empresa,idBase)
+                const dataTab = infoMailing[0].tabela_dados
+                const numTab = infoMailing[0].tabela_numeros
+
+                await _Mailing2.default.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
+            }else{
+                await _Mailing2.default.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,tabData,tabNumbers,idKey,transferRate)
+            }
+            
         }) 
     }
     

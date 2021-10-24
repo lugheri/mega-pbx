@@ -19,7 +19,7 @@ const connect = ()=>{};
                 host =  await _Clients2.default.serversDbs(empresa)//'35.194.25.54'//
                 database = database_dados
         }
-            console.log(type,host)
+            //console.log(type,host)
             return  _mysql22.default.createPool({
                 host     : host,
                 port     : 3306,
