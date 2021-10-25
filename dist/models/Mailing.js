@@ -410,7 +410,7 @@ class Mailing{
                         WHERE id='${idBase}'`
                 await this.querySync(conn,sql)   
 
-                let sql=`INSERT INTO ${empresa}_dados.mailing_tipo_campo 
+                sql=`INSERT INTO ${empresa}_dados.mailing_tipo_campo 
                                 (idMailing,campo,nome_original_campo,apelido,tipo,conferido,ordem) 
                         VALUES `;       
 
