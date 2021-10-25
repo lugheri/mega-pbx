@@ -239,8 +239,7 @@ class Mailing{
                 let totalReg=tR[0].total
                 //atualiza no resumo do mailing
                 let sql = `UPDATE ${empresa}_dados.mailings 
-                            SET configurado=1, 
-                                totalReg='${totalReg}'
+                            SET totalReg='${totalReg}'
                             WHERE id='${idBase}'`
                 await this.querySync(conn,sql)        
 
@@ -402,32 +401,37 @@ class Mailing{
 
     async configuraTipoCampos(empresa,idBase,header,campos){
         return new Promise (async (resolve,reject)=>{      
-      
-            let sql=`INSERT INTO ${empresa}_dados.mailing_tipo_campo 
-                            (idMailing,campo,nome_original_campo,apelido,tipo,conferido,ordem) 
-                     VALUES `;       
-
-            for(let i=0; i<campos.length; i++){
-                let nomeCampo=this.removeCaracteresEspeciais(campos[i].name)               
-                let nomeOriginal=campos[i].name//.replace("-", "_").replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
-                let apelido = campos[i].apelido
-                if(header==0){
-                    nomeCampo=`campo_${i+1}`
-                    nomeOriginal=nomeCampo
-                }
-                //Caso o tipo seja nome a ordem será zero
-                let ordem = i+1
-                if(campos[i].tipo=="nome"){
-                    ordem=0
-                }
-                sql +=`(${idBase},'${nomeCampo}','${nomeOriginal}','${apelido}','${campos[i].tipo}',1,${ordem})`
-                if((i+1)<campos.length){ sql +=', '}
-            }
-            
-            //Executando query
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:configuraTipoCampos","message":err.message,"stack":err.stack});
+                
+                let sql = `UPDATE ${empresa}_dados.mailings 
+                            SET configurado=1
+                        WHERE id='${idBase}'`
+                await this.querySync(conn,sql)   
+
+                let sql=`INSERT INTO ${empresa}_dados.mailing_tipo_campo 
+                                (idMailing,campo,nome_original_campo,apelido,tipo,conferido,ordem) 
+                        VALUES `;       
+
+                for(let i=0; i<campos.length; i++){
+                    let nomeCampo=this.removeCaracteresEspeciais(campos[i].name)               
+                    let nomeOriginal=campos[i].name//.replace("-", "_").replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
+                    let apelido = campos[i].apelido
+                    if(header==0){
+                        nomeCampo=`campo_${i+1}`
+                        nomeOriginal=nomeCampo
+                    }
+                    //Caso o tipo seja nome a ordem será zero
+                    let ordem = i+1
+                    if(campos[i].tipo=="nome"){
+                        ordem=0
+                    }
+                    sql +=`(${idBase},'${nomeCampo}','${nomeOriginal}','${apelido}','${campos[i].tipo}',1,${ordem})`
+                    if((i+1)<campos.length){ sql +=', '}
+                }
+            
+                //Executando query
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log('Mailings 285', err)
@@ -1390,7 +1394,7 @@ class Mailing{
                                         pronto,
                                         status 
                                 FROM ${empresa}_dados.mailings 
-                                WHERE configurado=1 AND status=1 ORDER BY id DESC`
+                                WHERE status=1 ORDER BY id DESC`
                     const rows =  await this.querySync(conn,sql);
                     pool.end((err)=>{
                         if(err) console.log('Mailings 1060', err)
