@@ -2519,6 +2519,7 @@ class Discador{
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                             WHERE numero='${numero}'`
+                            
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
                     if(err) console.log(err)
@@ -3165,7 +3166,7 @@ class Discador{
                     LEFT JOIN ${empresa}_dados.tabulacoes_status AS t ON t.id=h.status_tabulacao 
                         WHERE 1=1 ${fNumeros} 
                     ORDER BY h.id DESC 
-                        LIMIT 50`
+                        LIMIT 10`
                 const dados = await this.querySync(conn,sql)
                 for(let i=0; i<dados.length; i++){      
                     const registro={}
@@ -3260,7 +3261,7 @@ class Discador{
                         LEFT JOIN ${empresa}_dados.tabulacoes_status AS t ON t.id=h.status_tabulacao
                             WHERE agente='${ramal}' 
                         ORDER BY h.id DESC
-                            LIMIT 50`
+                            LIMIT 15`
                             
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{

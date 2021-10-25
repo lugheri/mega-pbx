@@ -758,6 +758,12 @@ class DiscadorController{
         }
 
         const idMailing = req.params.idMailing
+        if(idMailing==0){
+            res.json([])
+            return 
+        }
+
+
         const idReg = req.params.idRegistro
         
         const historico = await _Discador2.default.historicoRegistro(empresa,idMailing,idReg)

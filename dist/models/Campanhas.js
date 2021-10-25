@@ -1261,8 +1261,17 @@ class Campanhas{
         const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
         let dataInicio = dI
         let dataFinal = dT
-        if(dI=="0000-00-00"){dataInicio=hoje;}
-        if(dT=="0000-00-00"){dataFinal=hoje;}
+
+
+        let setData_I = `inicio='${dataInicio}',`
+        let setData_F = `termino='${dataFinal}',`
+        let setHora_I = `hora_inicio='${hI}',`
+        let setHora_F = `hora_termino='${hT}',`
+        if((dI=="0000-00-00")||(dI=="")){setData_I="";}
+        if((dT=="0000-00-00")||(dT=="")){setData_F="";}
+        if((hI=="00:00:00")||(hI=="")){setHora_I="";}
+        if((hT=="00:00:00")||(hT=="")){setHora_F="";}
+        
        
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
@@ -1281,8 +1290,9 @@ class Campanhas{
                     resolve(rows)
                 }else{
                     const sql = `UPDATE ${empresa}_dados.campanhas_horarios 
-                                    SET inicio='${dataInicio}',termino='${dataFinal}',hora_inicio='${hI}',hora_termino='${hT}' 
+                                    SET ${setData_I}${setData_F}${setHora_I}${setHora_F}id_campanha='${idCampanha}'
                                 WHERE id_campanha='${idCampanha}'`
+                                console.log('sql',sql)
                     const rows = await this.querySync(conn,sql)
                     pool.end((err)=>{
                         if(err) console.log('Campanhas.js 1176', err)
