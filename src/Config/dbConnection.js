@@ -27,7 +27,7 @@ const connect = ()=>{};
                 password : process.env.DB_PASS,
                 database : database,
                 waitForConnections: true,
-                connectionLimit: 0,
+                connectionLimit: 10,
                 queueLimit: 0
         })
     }
