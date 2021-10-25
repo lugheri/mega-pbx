@@ -605,9 +605,6 @@ class Discador{
             return false
         }
         return new Promise (async (resolve,reject)=>{ 
-            console.log('error promise')
-            if(reject) console.log('err')//return reject(err)
-
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:registrarChamadasSimultaneas","message":err.message,"stack":err.stack});

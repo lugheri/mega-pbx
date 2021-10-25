@@ -65,7 +65,7 @@ class DiscadorController{
         //PASSO 1 - VERIFICAÇÃO
         await this.debug('PASSO 1 - VERIFICAÇÃO','',empresa)
         //#1 Conta as chamadas simultaneas para registrar no log        
-        //const rcs = await Discador.registrarChamadasSimultaneas(empresa)
+        const rcs = await Discador.registrarChamadasSimultaneas(empresa)
       
         
         //console.log(`registrarChamadasSimultaneas:${empresa}`,rcs)
