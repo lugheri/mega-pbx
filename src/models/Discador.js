@@ -3013,23 +3013,24 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
-
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:dadosChamadaAtendida","message":err.message,"stack":err.stack});
+                     
                 //Separando a campanha que o agente pertence
                 let sql = `SELECT id 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                             WHERE ramal='${ramal}' 
                             AND (tipo_ligacao='discador' OR tipo_ligacao='retorno' OR tipo_ligacao='manual')`
-                    //discador='power' OR tipo_discador='preview' OR tipo_discador='clicktocall')`
+                            //discador='power' OR tipo_discador='preview' OR tipo_discador='clicktocall')`
                 const calldata = await this.querySync(conn,sql)
                 if(calldata.length==0){
-                    return "Chamada interna"
+                    resolve("Chamada interna")
+                    return 
                 }
                 const idAtendimento = calldata[0].id           
-                const rows = await this.infoChamada_byIdAtendimento(empresa,idAtendimento)
+                const rows = await this.infoChamada_byIdAtendimento(empresa,idAtendimento)  
                 pool.end((err)=>{
                     if(err) console.log(err)
-                    }) 
+                }) 
                 resolve(rows) 
             })
         })         
