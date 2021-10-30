@@ -303,6 +303,22 @@ class Mailing{
         })   
     }
 
+    async resumoDadosBase(empresa,tabela_dados){
+        return new Promise (async (resolve,reject)=>{ 
+            const sql = `SELECT * FROM ${empresa}_mailings.${tabela_dados} LIMIT 10`
+            const pool =  await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:resumoDadosBase","message":err.message,"stack":err.stack}); 
+                const rows =  await this.querySync(conn,sql)   
+                pool.end((err)=>{
+                    if(err) console.log('Mailings 167', err)
+                }) 
+                resolve(rows)    
+            }) 
+        })              
+
+    }
+
     async infoMailingAtivo(empresa,idMailing){
         return new Promise (async (resolve,reject)=>{ 
             const sql = `SELECT * 
@@ -495,7 +511,8 @@ class Mailing{
                 //Inicia a query
                 let sqlNumbers=`INSERT INTO ${empresa}_mailings.${numTab}
                                         (id_mailing,id_registro,ddd,numero,uf,tipo,valido,duplicado,erro,tentativas,status_tabulacao,contatado,produtivo)
-                                    VALUES `;                
+                                    VALUES `; 
+                let SepNumeros=''               
 
                 //Le o total de registros a serem importados
                 const totalBase = jsonFile.length
@@ -513,6 +530,8 @@ class Mailing{
 
                 let idReg = indice
 
+                
+
                 for(let i=0; i<rate; i++){
                     let idRegistro = (idBase * 1000000) + idReg                   
                     
@@ -522,7 +541,7 @@ class Mailing{
                         ddd=jsonFile[0][colunaDDD]  
                             
                         ddd = this.removeCaracteresEspeciais_numero(ddd) 
-                        //console.log('ddd',ddd)
+                      //  console.log('ddd',ddd)
                     }  
                     
                     for(let n=0; n<colunaNumero.length; n++){//Numeros
@@ -530,27 +549,29 @@ class Mailing{
                         let numero = jsonFile[0][colunaNumero[n]]
                               
                             numero = this.removeCaracteresEspeciais_numero(numero)
-                            //console.log('numero',numero)
+                          //  console.log('numero',numero)
                         
                         if(numero){ 
                             let numeroCompleto = ddd.toString()+numero.toString()
-                            //console.log('numeroCompleto ddd+numero',numeroCompleto)    
+                           // console.log('numeroCompleto ddd+numero',numeroCompleto)    
                         //  console.log('numero',numeroCompleto)              
                             let duplicado = 0//await this.checaDuplicidade(empresa,numeroCompleto,tabelaNumeros)
                             //Inserindo ddd e numero na query
                             numeroCompleto= this.removeCaracteresEspeciais_numero(numeroCompleto)
                             const infoN = this.validandoNumero(ddd,numeroCompleto)                            
                             
-                            sqlNumbers+=`(${idBase},${idRegistro},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['message']}',0,0,0,0),`;
+                            SepNumeros+=`(${idBase},${idRegistro},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['message']}',0,0,0,0),`;
                         }
                     }
                     
                     for(let nc=0; nc<colunaNumeroCompleto.length; nc++){//Numeros
                         //console.log('numero',colunaNumeroCompleto[nc])
                         let numeroCompleto = jsonFile[0][colunaNumeroCompleto[nc]]
+                        //console.log('Recebido',colunaNumeroCompleto[nc],numeroCompleto)
                             // console.log('numeroCompleto',numeroCompleto) 
                             numeroCompleto = this.removeCaracteresEspeciais_numero(numeroCompleto)
-                            //console.log('numeroCompleto valid',numeroCompleto) 
+                           // console.log('tratado',numeroCompleto)
+                            // console.log('numeroCompleto valid',numeroCompleto) 
                         //console.log('numeroCompleto',numeroCompleto)    
                         if(numeroCompleto){
                             let dddC = numeroCompleto.toString().slice(0,2)     
@@ -558,18 +579,19 @@ class Mailing{
                             numeroCompleto= this.removeCaracteresEspeciais_numero(numeroCompleto)
                             const infoN = this.validandoNumero(dddC,numeroCompleto)                            
                         
-                            sqlNumbers+=` (${idBase},${idRegistro},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['message']}',0,0,0,0),`;
+                            SepNumeros+=` (${idBase},${idRegistro},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['message']}',0,0,0,0),`;
                         }
                     }
                     idReg++
                     jsonFile.shift()//Removendo campos importados do arquivo carregado   
                 }                 
-                
-                let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'            
-
-                //console.log('queryNumeros',queryNumeros)
-                await this.querySync(conn,queryNumeros)   
-                    
+                if(SepNumeros!=''){
+                    sqlNumbers+SepNumeros
+                    let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'            
+                    console.log('query numeros',queryNumeros)
+               
+                    await this.querySync(conn,queryNumeros)   
+                }    
                 let tN = await this.totalNumeros(empresa,`${empresa}_mailings.${numTab}`)//Nome da empresa ja incluido no nome da tabela
                 let totalNumeros=tN[0].total
                 let sql = `UPDATE ${empresa}_dados.mailings 

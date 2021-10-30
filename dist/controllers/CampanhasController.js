@@ -637,15 +637,15 @@ class CampanhasController{
         const queue_thereare='silence/1'
         const queue_youarenext='silence/1'
         const reportholdtime='no'
-        const retry=5
+        const retry=1
         const ringinuse='yes'
         const servicelevel=60
-        const strategy='rrmemory'
-        const timeout=30
+        const strategy='leastrecent'
+        const timeout=1
         const timeoutpriority='app'
         const timeoutrestart='no'
         const weight=0
-        const wrapuptime=2
+        const wrapuptime=0
 
         const nomeFila = `${empresa}-${apelido.replace(" ","_").replace("/", "_")}`
         const r = await _Campanhas2.default.novaFila(empresa,nomeFila,apelido,description)

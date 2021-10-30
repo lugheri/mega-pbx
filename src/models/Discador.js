@@ -29,27 +29,6 @@ class Discador{
     
     async mode(empresa){      
         return 0
-        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - mode','Empresa nao recebida')
-            return false
-        }       
-        return new Promise (async (resolve,reject)=>{ 
-            console.log('entrando na promise')
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
-
-                
-                const sql = `SELECT debug 
-                            FROM ${empresa}_dados.asterisk_ari
-                            WHERE active=1`
-                const mode = await this.querySync(conn,sql);
-                pool.end((err)=>{
-                    if(err) console.log(err)
-                    }) 
-                resolve(mode[0].debug)
-            })
-        })        
     }
     /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     * INFORMAÇÕES DO DISCADOR / AGENTES
@@ -69,7 +48,7 @@ class Discador{
                             
                 const ul = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                 })
                 resolve(ul[0].logados) 
             })
@@ -91,7 +70,7 @@ class Discador{
                             LIMIT 5;`
                 const q = await this.querySync(conn,sql);
                pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(q) 
             })
@@ -109,7 +88,7 @@ class Discador{
                             WHERE estado=${estado}`
                 const ul = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(ul[0].agentes) 
             })
@@ -130,7 +109,7 @@ class Discador{
                             WHERE c.estado=1 AND c.status=1 AND af.ramal=${agente}`
                 const c = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(c[0].campanhasAtivas) 
             })
@@ -151,7 +130,7 @@ class Discador{
                             WHERE c.estado=1 AND c.status=1 AND af.ramal=${agente}`
                 const ca = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 if(ca.length==0){
                     resolve("")
@@ -186,7 +165,7 @@ class Discador{
                             WHERE data='${data}' AND agente=${idAgente};`
                 const p = await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(p[0].produtivas) 
             })
@@ -216,7 +195,7 @@ class Discador{
                             WHERE c.estado=1 AND c.status=1 ${queryFilter};`
                 const p=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(p[0].produtivas) 
             })
@@ -242,7 +221,7 @@ class Discador{
                     
                 const p=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(p[0].produtivas) 
             })
@@ -268,7 +247,7 @@ class Discador{
                         
                 const p=await this.querySync(conn,sql);                
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(p[0].produtivas) 
             })
@@ -293,9 +272,9 @@ class Discador{
                                 AND idMailing=${idMailing}
                                 ${queryFilter};`
                 const p=await this.querySync(conn,sql);
-                // //console.log(sql)
+                //console.log(sql)
                pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(p[0].produtivas) 
             })
@@ -319,7 +298,7 @@ class Discador{
                             WHERE idMailing=${idMailing} ${queryFilter};`
                 const p=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(p[0].produtivas) 
             })
@@ -341,7 +320,7 @@ class Discador{
                             WHERE c.estado=1 AND c.status=1 AND t.contatado='${statusContatado}';`
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(c[0].contatados) 
             })
@@ -361,7 +340,7 @@ class Discador{
                             WHERE c.estado=1 AND c.status=1 AND h.obs_tabulacao='ABANDONADA';`
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(a[0].abandonadas) 
             })
@@ -381,7 +360,7 @@ class Discador{
                             WHERE c.estado=1 AND c.status=1;`
                 const p=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(p[0].chamadas) 
             })
@@ -400,7 +379,7 @@ class Discador{
                             WHERE data='${hoje}' AND contatado='${statusContatado}';`
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(c[0].contatados) 
             })
@@ -419,7 +398,7 @@ class Discador{
                             WHERE data='${hoje}' AND h.obs_tabulacao='ABANDONADA';`
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(a[0].abandonadas) 
             })
@@ -439,7 +418,7 @@ class Discador{
                             WHERE data='${hoje}';`
                 const p=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(p[0].chamadas) 
             })
@@ -457,7 +436,7 @@ class Discador{
                             WHERE falando=1`
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(c[0].chamadas) 
             })
@@ -480,7 +459,7 @@ class Discador{
                     return 0
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(c[0].total) 
             })
@@ -509,7 +488,7 @@ class Discador{
                             WHERE data='${hoje}' AND agente='${idAgente}'`
                 const a= await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(a[0].atendimentos) 
             })
@@ -536,7 +515,7 @@ class Discador{
                             WHERE tipo!='manual' AND data='${hoje}' AND agente='${idAgente}' ${queryFilter}`
                 const a= await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(a[0].atendimentos) 
             })
@@ -546,7 +525,7 @@ class Discador{
 
     async chamadasManuais_Agente(empresa,idAgente){
         return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`megaconecta_mailings`)
+            const pool = await connect.pool(empresa,'dados',`${empresa}_mailings`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasManuais_Agente","message":err.message,"stack":err.stack});
 
@@ -556,7 +535,7 @@ class Discador{
                             WHERE tipo='manual' AND data='${hoje}' AND agente='${idAgente}'`
                 const a= await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(a[0].manuais) 
             })
@@ -578,7 +557,7 @@ class Discador{
                                 AND saida <= '${hoje} 23:59:59'`; 
                 const t= await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                 }) 
                 if(t[0].tempoFalado==null){
                     resolve(0) 
@@ -607,7 +586,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:registrarChamadasSimultaneas","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"empresa":empresa,"arquivo":"Discador.js:registrarChamadasSimultaneas","message":err.message,"stack":err.stack});
 
 
                 await this.debug(' . PASSO 1.1','Registrando chamadas simultaneas',empresa)
@@ -627,7 +606,7 @@ class Discador{
                                 //console.log(sql)
                 await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -666,7 +645,7 @@ class Discador{
                             ${filter} ORDER BY id DESC LIMIT 1`
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(r[0].total) 
             })
@@ -699,7 +678,7 @@ class Discador{
                 const r = await this.querySync(conn,sql)
                 if(r.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false)
                     return
@@ -742,7 +721,7 @@ class Discador{
                         WHERE id=${idChamada}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -795,7 +774,7 @@ class Discador{
                         WHERE idCampanha=${idCampanha}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(true)
             })
@@ -818,7 +797,7 @@ class Discador{
                 const infoChamada = await this.querySync(conn,sql)
                 if(infoChamada.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false)
                     return
@@ -845,7 +824,7 @@ class Discador{
                             WHERE ramal=${ramal}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(true)
                
@@ -895,7 +874,7 @@ class Discador{
                         WHERE id=${idAtendimento}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                 }) 
                 resolve(true)
             })
@@ -926,7 +905,7 @@ class Discador{
                 const q = await this.querySync(conn,sql)
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -949,7 +928,7 @@ class Discador{
                             FROM ${empresa}_dados.campanhas_filas WHERE idCampanha='${idCampanha}'`
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(t[0].rows) 
             })
@@ -972,7 +951,7 @@ class Discador{
                             WHERE idCampanha=${idCampanha}`
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -995,7 +974,7 @@ class Discador{
                             WHERE id=${idMailing} AND configurado=1`
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1018,7 +997,7 @@ class Discador{
                             WHERE id_campanha=${idCampanha}`
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1042,7 +1021,7 @@ class Discador{
                             WHERE id_campanha=${idCampanha} AND inicio<='${hoje}' AND termino>='${hoje}'`;
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1065,7 +1044,7 @@ class Discador{
                             WHERE id_campanha=${idCampanha} AND hora_inicio<='${hora}' AND hora_termino>='${hora}'`;
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1098,7 +1077,7 @@ class Discador{
                             WHERE fila=${idFila}` 
                 const a = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(a[0].total) 
             })
@@ -1130,7 +1109,7 @@ class Discador{
                                 AND estado=1`
                 const a = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(a[0].total) 
             })
@@ -1152,7 +1131,7 @@ class Discador{
                             FROM ${empresa}_dados.campanhas_discador WHERE idCampanha=${idCampanha}`
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1167,7 +1146,7 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:qtdChamadasSimultaneas","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT COUNT(id) AS total 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas
@@ -1175,7 +1154,7 @@ class Discador{
                 const q = await this.querySync(conn,sql)  
                 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(q[0].total) 
             })
@@ -1188,6 +1167,8 @@ class Discador{
             //console.log('{[(!)]} - filtrarRegistro','Empresa nao recebida')
             return false
         }
+
+        //console.log('tipoDiscador recebido',tipoDiscador)
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -1195,15 +1176,18 @@ class Discador{
 
         
                 let limit=limitRegistros;
+                //console.log(empresa,"limit",limit)
                 if(limitRegistros<0){
                     limit=0
                 }else if(limitRegistros>10){
                     limit=10
                 }
+                //console.log(empresa,"limit",limit)
 
                 if(tipoDiscador!="power"){
                     limit=1
                 }
+                //console.log(empresa,"limit",limit)
        
                 await this.debug(' . . . . . . . . . . . PASSO 2.5 - Verificando se existem registros disponíveis','',empresa)
                 //Estados do registro
@@ -1220,7 +1204,10 @@ class Discador{
                 sql = `SELECT id as idNumero,id_registro,numero 
                         FROM ${empresa}_mailings.${tabela_numeros}
                         WHERE valido=1 AND discando=0 AND campanha_${idCampanha}>0
-                    ORDER BY selecionado ASC, campanha_${idCampanha} ASC, id ${ordemDiscagem},RAND() LIMIT ${limit}`
+                    ORDER BY selecionado ASC, campanha_${idCampanha} ASC, id ${ordemDiscagem},RAND() 
+                       LIMIT ${limit}`
+
+                //console.log(empresa,'filtra reg',sql)
                     
                 const n = await this.querySync(conn,sql)
                 //console.log('--->Registros filtrados',n.length)
@@ -1246,7 +1233,7 @@ class Discador{
                         await this.querySync(conn,sql)
                     }
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                        if(err) console.error(err)
                     }) 
                     resolve(n) 
                     return                
@@ -1263,10 +1250,10 @@ class Discador{
                         AND TIMESTAMPDIFF (MINUTE, data, NOW()) >= max_time_retry
                     ORDER BY t.tentativas ASC, n.id ${ordemDiscagem}
                         LIMIT ${limit}`
-
+                        //console.log(empresa,'filtra reg 2',sql)
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1293,14 +1280,14 @@ class Discador{
                 if(r.length==0){
                     await this.debug(` . . . . . . . . . . . . . PASSO 2.6 - Numero ${numero} livre`,'',empresa)
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false) 
                     return 
                 }
                 await this.debug(` . . . . . . . . . . . . . PASSO 2.6 - Numero ${numero} ocupado`,'',empresa)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -1323,7 +1310,7 @@ class Discador{
                                 LIMIT 1`
                 const q = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(q) 
             })
@@ -1366,7 +1353,7 @@ class Discador{
                         WHERE id=${idNumero}`
                 await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -1394,14 +1381,14 @@ class Discador{
                 const r =  await this.querySync(conn,sql)    
                 if(r.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(0) 
                     return
                 }
                
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(r[0].ramal) 
             })
@@ -1466,7 +1453,7 @@ class Discador{
                                         0)`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1489,7 +1476,7 @@ class Discador{
                             AND idMailing=${idMailing}`;
                 const rows = await this.querySync(conn,sql)        
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1521,7 +1508,7 @@ class Discador{
                 const dadosAtendimento = await this.querySync(conn,sql)
                 if(dadosAtendimento.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false) 
                     return 
@@ -1531,7 +1518,7 @@ class Discador{
                             WHERE id=${idAtendimento}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(dadosAtendimento) 
             })
@@ -1556,7 +1543,7 @@ class Discador{
                 
                 if(ch.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(saudacao) 
                     return ;
@@ -1572,14 +1559,14 @@ class Discador{
                 (s[0].saudacao=="undefined")||
                 (s[0].saudacao==undefined)){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(saudacao) 
                     return ;
                 }
                 saudacao=s[0].saudacao
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(saudacao) 
             })
@@ -1625,7 +1612,7 @@ class Discador{
                     await this.querySync(conn,sql)               
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -1647,7 +1634,7 @@ class Discador{
                             WHERE idCampanha = ${idCampanha}`
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     
                 resolve(rows) 
@@ -1687,7 +1674,7 @@ class Discador{
 
                     await this.debug('Data Call',call,empresa)  
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(true)
                 })                 
@@ -1718,7 +1705,7 @@ class Discador{
                                 VALUES (now(),now(),'${protocolo}',${idCampanha},'${idMailing}',${id_registro},${id_numero},${ramal},'${uniqueid}','${tipo_ligacao}','${numero}',${tabulacao},'${observacoes}','${contatado}')`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1741,7 +1728,7 @@ class Discador{
                                 VALUES (NOW(),${ramal},${campanha},${mailing},${id_numero},${id_registro},${numero},'${data}','${hora}:00',0)`
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1762,7 +1749,7 @@ class Discador{
                             LIMIT 1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -1844,7 +1831,7 @@ class Discador{
                             WHERE id=${idAgendamento}`
                     await this.querySync(conn,sql)
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(true) 
                 })
@@ -1866,7 +1853,7 @@ class Discador{
                 const dadosAtendimento = await this.dadosAtendimento(empresa,idAtendimento)
                 if(dadosAtendimento.length === 0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false) 
                     return false
@@ -2033,7 +2020,7 @@ class Discador{
                 }
                 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -2112,7 +2099,7 @@ class Discador{
                             await this.querySync(conn,sql)
                             Cronometro.pararOciosidade(empresa,agente)
                             pool.end((err)=>{
-                                if(err) console.log(err)
+                                if(err) console.error(err)
                             }) 
                             resolve(false) 
                             return ;
@@ -2205,7 +2192,7 @@ class Discador{
                             Cronometro.pararOciosidade(empresa,agente)
                             Cronometro.entrouEmPausa(empresa,idPausa,agente)
                             pool.end((err)=>{
-                                if(err) console.log(err)
+                                if(err) console.error(err)
                             }) 
                             resolve(false) 
                             return 
@@ -2229,7 +2216,7 @@ class Discador{
                                 WHERE userId=${agente}`
                         await this.querySync(conn,sql)
                         pool.end((err)=>{
-                            if(err) console.log(err)
+                            if(err) console.error(err)
                         }) 
                         resolve(false)
                         return 
@@ -2312,7 +2299,7 @@ class Discador{
                                 WHERE ramal=${agente}`
                         await this.querySync(conn,sql)
                         pool.end((err)=>{
-                            if(err) console.log(err)
+                            if(err) console.error(err)
                         }) 
                         resolve(false)
                         return 
@@ -2348,7 +2335,7 @@ class Discador{
                         WHERE userId=${agente}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -2372,13 +2359,13 @@ class Discador{
                 const rows = await this.querySync(conn,sql)
                 if(rows.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(0) 
                     return
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows[0].estado) 
             })
@@ -2402,7 +2389,7 @@ class Discador{
                 const infoChamada = await this.querySync(conn,sql)
                 if(infoChamada.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false)
                     return false
@@ -2416,7 +2403,7 @@ class Discador{
                 //Para cronometro do atendimento
                 await Cronometro.saiuLigacao(empresa,infoChamada[0].id_campanha,infoChamada[0].numero,ramal)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(infoChamada) 
             })
@@ -2443,7 +2430,7 @@ class Discador{
                 //Para cronometro do atendimento
                 await Cronometro.saiuLigacao(empresa,idcampanha,numero,ramal)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -2465,7 +2452,7 @@ class Discador{
                             WHERE id=${idAtendimento} AND ramal=0`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -2486,7 +2473,7 @@ class Discador{
                             WHERE id=${idAtendimento}`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -2516,10 +2503,10 @@ class Discador{
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                             WHERE numero='${numero}'`
-                            
+                            console.log(sql)
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -2543,7 +2530,7 @@ class Discador{
                             WHERE id='${idAtendimento}'`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -2573,7 +2560,7 @@ class Discador{
                             LIMIT 1`        
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -2598,7 +2585,7 @@ class Discador{
                             WHERE ramal='${ramal}'`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -2625,7 +2612,7 @@ class Discador{
                             WHERE a.ramal=${ramal} AND na_fila=1`                      
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -2648,6 +2635,7 @@ class Discador{
                                 protocolo,
                                 id_registro,
                                 id_numero,
+                                tipo_ligacao,
                                 tipo_discador,
                                 retorno,
                                 modo_atendimento,
@@ -2661,9 +2649,9 @@ class Discador{
                 const calldata = await this.querySync(conn,sql)
                 if(calldata.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
-                    resolve(false)
+                    resolve({"sistemcall":false,"dialcall":false})
                     return
                 }       
                 
@@ -2683,9 +2671,9 @@ class Discador{
                 //Caso a chamada nao possua id de registro
                 if(idReg==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
-                    resolve("Chamada Interna") 
+                    resolve({"sistemcall":false,"dialcall":false}) 
                     return 
                 }
 
@@ -2696,11 +2684,22 @@ class Discador{
                         JOIN ${empresa}_dados.campanhas_campos_tela_agente as cc ON cd.id=cc.idCampo
                         WHERE cc.idMailing=${idMailing}
                         AND cc.idCampanha=${idCampanha}
-                        AND (cd.tipo='dados' OR cd.tipo='nome')
+                        AND (cd.tipo='dados' OR cd.tipo='nome' OR cd.tipo='cpf')
                     ORDER BY cc.ordem ASC`;
             
                 const campos_dados = await this.querySync(conn,sql)
                 //montando a query de busca dos dados 
+
+                    if((calldata[0].tipo_ligacao=='discador')||(infoChamada[0].tipo_ligacao==='retorno')){
+                        info['sistemcall']=false
+                        info['dialcall']=true
+                    }else if(calldata[0].tipo_ligacao=='interna'){
+                        info['sistemcall']=true
+                        info['dialcall']=false
+                    }else{
+                        info['sistemcall']=false
+                        info['dialcall']=false
+                    }
                 
                     info['idAtendimento']=idAtendimento
                     //Integração                    
@@ -2764,7 +2763,7 @@ class Discador{
                     info['dadosCampanha']=dadosCampanha
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(info) 
             })
@@ -2790,7 +2789,7 @@ class Discador{
                 tabs[0]['idNumero']=id
                 tabs[0]['numero']=numero
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(tabs[0]) 
             })
@@ -2815,7 +2814,7 @@ class Discador{
                 const campoNome = await this.querySync(conn,sql)
                 if(campoNome.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false)
                     return 
@@ -2826,7 +2825,7 @@ class Discador{
                         WHERE id_key_base=${idRegistro}`
                 const nome = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(nome[0].nome) 
             })
@@ -2850,7 +2849,7 @@ class Discador{
                 const campoNome = await this.querySync(conn,sql)
                 if(campoNome.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false)
                     return 
@@ -2861,7 +2860,7 @@ class Discador{
                         WHERE id_key_base=${idRegistro}`
                 const nome = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(nome[0].cpf) 
             })
@@ -2894,7 +2893,7 @@ class Discador{
                 const calldata = await this.querySync(conn,sql)
                 if(calldata.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false)
                     return false
@@ -2963,7 +2962,7 @@ class Discador{
                 info['dadosCampanha']=dadosCampanha
                 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(info) 
             })
@@ -2998,7 +2997,7 @@ class Discador{
                 await this.querySync(conn,sql)        
                 const rows = await this.infoChamada_byIdAtendimento(empresa,idAtendimento)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -3023,13 +3022,14 @@ class Discador{
                             //discador='power' OR tipo_discador='preview' OR tipo_discador='clicktocall')`
                 const calldata = await this.querySync(conn,sql)
                 if(calldata.length==0){
-                    resolve("Chamada interna")
+                    
+                    resolve({"sistemcall":false,"dialcall":false})
                     return 
                 }
                 const idAtendimento = calldata[0].id           
                 const rows = await this.infoChamada_byIdAtendimento(empresa,idAtendimento)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                 }) 
                 resolve(rows) 
             })
@@ -3051,7 +3051,7 @@ class Discador{
                             WHERE ramal='${ramal}'`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -3074,7 +3074,7 @@ class Discador{
                             WHERE id=${ramal}`
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -3100,7 +3100,7 @@ class Discador{
                             WHERE id_key_base=${idRegistro}`
                 const rows = await this.querySync(conn,sql)     
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -3132,7 +3132,7 @@ class Discador{
                     const infoMailing = await Mailing.infoMailing(empresa,idMailing)
                     if(infoMailing.length==0){
                         pool.end((err)=>{
-                            if(err) console.log(err)
+                            if(err) console.error(err)
                         }) 
                         resolve(false) 
                         return false
@@ -3189,7 +3189,7 @@ class Discador{
                 }
                   
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(historico) 
             })
@@ -3218,14 +3218,14 @@ class Discador{
                 const dados = await this.querySync(conn,sql)
                 if(dados.length==0){
                     pool.end((err)=>{
-                        if(err) console.log(err)
+                        if(err) console.error(err)
                     }) 
                     resolve([]) 
                     return 
                 }
              
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(dados) 
             })
@@ -3263,7 +3263,7 @@ class Discador{
                             
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(rows) 
             })
@@ -3286,14 +3286,14 @@ class Discador{
                 const n = await this.querySync(conn,sql)
                 if(n.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve("")
                     return false
                 }
                  
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(n[0].nome_registro) 
             })
@@ -3314,7 +3314,7 @@ class Discador{
                 const h =  await this.querySync(conn,sql)
                 if(h.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false)
                     return false
@@ -3332,7 +3332,7 @@ class Discador{
                     await this.querySync(conn,sql)
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true) 
             })
@@ -3358,7 +3358,7 @@ class Discador{
                 }
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(t[0].total)
             })
@@ -3377,7 +3377,7 @@ class Discador{
                 const h = await this.querySync(conn,sql)
                 if(h.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(true)
                     return true
@@ -3389,7 +3389,7 @@ class Discador{
                 //console.log(estado)
                 if(estado==3){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(false)
                     return false
@@ -3448,7 +3448,7 @@ class Discador{
                     //console.log(estado)
                 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(true)
             })
@@ -3500,13 +3500,13 @@ class Discador{
                         tabulacoes['improdutivas'][i]['tipo']='improdutivo'
                     }
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(tabulacoes)
                     return tabulacoes
                 }
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(false)
             })
@@ -3529,7 +3529,7 @@ class Discador{
                             WHERE id='${idAtendimento}'`;
                 await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve(true) 
             })
@@ -3551,7 +3551,7 @@ class Discador{
                 const i = await this.querySync(conn,sql)
                 if(i.length==0){
                     pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                     resolve({"status":false})
                     return 
@@ -3568,7 +3568,7 @@ class Discador{
                     infoInt['modo']=info[0].modoAbertura
                     infoInt['link']=url
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(infoInt)
             })
@@ -3602,7 +3602,7 @@ class Discador{
                                 .replace('{NOME_CLIENTE}',nomeCliente)
                                 
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(link)
             })
@@ -3775,7 +3775,7 @@ class Discador{
                             ORDER BY id DESC LIMIT ${limit}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log(err)
+                    if(err) console.error(err)
                     }) 
                 resolve(p[0].produtivas) 
             })

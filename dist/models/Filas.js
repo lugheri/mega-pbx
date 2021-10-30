@@ -300,7 +300,7 @@ class Filas{
                 const queue_name = fila[0].nome
                 const queue_interface = `PJSIP/${ramal}`
                 const membername = ramal
-                const state_interface = ''//`${queue_interface}@megatrunk`
+                const state_interface = `PJSIP/${ramal}`//`${queue_interface}@megatrunk`
                 const penalty = 0
                 const rows = await _Asterisk2.default.addMembroFila(empresa,queue_name,queue_interface,membername,state_interface,penalty)
                 pool.end((err)=>{

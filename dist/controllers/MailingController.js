@@ -40,40 +40,38 @@ class MailingController{
         const empresa = await _User2.default.getEmpresa(req)
         const idBase = req.params.idBase
         const infoMailing=await _Mailing2.default.infoMailing(empresa,idBase)
-        const path=`tmp/files/`
-        const filename = infoMailing[0].arquivo
         const header = infoMailing[0].header
-        const delimitador = infoMailing[0].delimitador
-        const file=path+filename
 
-        //Abre arquivo
-        _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{
-            const title = Object.keys(jsonFile[0]) 
+        //Abrindo Mailing Importado 
+        const resumoBase = await _Mailing2.default.resumoDadosBase(empresa,infoMailing[0].tabela_dados)
 
-            const campos=[]
-            for(let i=0; i<title.length; i++){
-                let item={}
-                item['titulo']=title[i]//.replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "");
+        const title = Object.keys(resumoBase[0]) 
+              title.shift();
+        console.log(title)
+        const campos=[]
+        for(let i=0; i<title.length; i++){
+            let item={}
+                item['titulo']=title[i]
                 item['ordem']=i+1
-                let data=[]
-                for(let d=0; d<10; d++){
-                    if(d<=(jsonFile.length-1)){
-                        let value=jsonFile[d][title[i]]
-                                                                 
-                        data.push(value)
-                    }                    
-                }
-
-                let typeField=await _Mailing2.default.verificaTipoCampo(header,title[i],jsonFile[1][title[i]]) 
-
-                item['tipoSugerido']=typeField
-                item['previewData']={data}
-
-                campos.push(item)
-                
+            let data=[]
+            for(let d=0; d<10; d++){
+                if(d<=(resumoBase.length-1)){
+                    let value=resumoBase[d][title[i]]
+                                                             
+                    data.push(value)
+                }                    
             }
-            res.json(campos) 
-        })       
+
+            let typeField=await _Mailing2.default.verificaTipoCampo(header,title[i],resumoBase[1][title[i]]) 
+
+            item['tipoSugerido']=typeField
+            item['previewData']={data}
+
+            campos.push(item)            
+        }
+
+        res.json(campos)    
+
     }
 
     async concluirConfigBase(req,res){
@@ -93,8 +91,7 @@ class MailingController{
         const tabNumbers=infoMailing[0].tabela_numeros
         
         await _Mailing2.default.configuraTipoCampos(empresa,idBase,header,tipoCampos)//Configura os tipos de campos
-        _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
-            
+        _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo            
             let idKey = 1
             let transferRate=1
             const fileOriginal=jsonFile
@@ -106,8 +103,7 @@ class MailingController{
                 await _Mailing2.default.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
             }else{
                 await _Mailing2.default.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,tabData,tabNumbers,idKey,transferRate)
-            }
-            
+            }            
         }) 
     }
     

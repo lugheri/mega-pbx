@@ -32,6 +32,21 @@ class ClientsController{
         await Clients.createTrunk(conta,ip_provider,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport)
         res.json(true)
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    //TRUNKS
+    
     async listTrunks(req,res){
         const troncos = await Clients.listTrunks()
         res.json(troncos)
@@ -140,6 +155,7 @@ class ClientsController{
         const totalChannels = channelsUser*licenses
         console.log('newAccount')
         const r = await Clients.newAccount(mega,nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels, trunk, tech_prefix, type_dial,type_server)
+                                
         res.json(r)
     }
 
