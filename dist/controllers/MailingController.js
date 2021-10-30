@@ -17,7 +17,8 @@ class MailingController{
         const delimitador = req.body.delimitador 
         const header = req.body.header
         const nome = req.body.nome
-        //const transferRate = req.body.taxaTransferencia
+        const tipoImportacao="horizontal"
+        
       
         //Abrindo o Arquivo
         _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{
@@ -26,8 +27,10 @@ class MailingController{
             //Criando tabela do novo mailing   
             const hoje = _moment2.default.call(void 0, ).format("YMMDDHHmmss")
             const nomeTabela = hoje   
-            const keys = Object.keys(jsonFile[0])     
-            const infoMailing=await _Mailing2.default.criarTabelaMailing(empresa,keys,nome,nomeTabela,header,filename,delimitador)
+            //Colunas de titulos do arquivo
+            const keys = Object.keys(jsonFile[0])           
+            
+            const infoMailing=await _Mailing2.default.criarTabelaMailing(empresa,tipoImportacao,keys,nome,nomeTabela,header,filename,delimitador,jsonFile)
             
             res.json(infoMailing)
         })        
@@ -37,43 +40,42 @@ class MailingController{
         const empresa = await _User2.default.getEmpresa(req)
         const idBase = req.params.idBase
         const infoMailing=await _Mailing2.default.infoMailing(empresa,idBase)
-        const path=`tmp/files/`
-        const filename = infoMailing[0].arquivo
         const header = infoMailing[0].header
-        const delimitador = infoMailing[0].delimitador
-        const file=path+filename
 
-        //Abre arquivo
-        _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{
-            const title = Object.keys(jsonFile[0]) 
+        //Abrindo Mailing Importado 
+        const resumoBase = await _Mailing2.default.resumoDadosBase(empresa,infoMailing[0].tabela_dados)
 
-            const campos=[]
-            for(let i=0; i<title.length; i++){
-                let item={}
-                item['titulo']=title[i]//.replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "");
+        const title = Object.keys(resumoBase[0]) 
+              title.shift();
+        console.log(title)
+        const campos=[]
+        for(let i=0; i<title.length; i++){
+            let item={}
+                item['titulo']=title[i]
                 item['ordem']=i+1
-                let data=[]
-                for(let d=0; d<10; d++){
-                    if(d<=(jsonFile.length-1)){
-                        let value=jsonFile[d][title[i]]
-                                                                 
-                        data.push(value)
-                    }                    
-                }
-
-                let typeField=await _Mailing2.default.verificaTipoCampo(header,title[i],jsonFile[1][title[i]]) 
-
-                item['tipoSugerido']=typeField
-                item['previewData']={data}
-
-                campos.push(item)
-                
+            let data=[]
+            for(let d=0; d<10; d++){
+                if(d<=(resumoBase.length-1)){
+                    let value=resumoBase[d][title[i]]
+                                                             
+                    data.push(value)
+                }                    
             }
-            res.json(campos) 
-        })       
+
+            let typeField=await _Mailing2.default.verificaTipoCampo(header,title[i],resumoBase[1][title[i]]) 
+
+            item['tipoSugerido']=typeField
+            item['previewData']={data}
+
+            campos.push(item)            
+        }
+
+        res.json(campos)    
+
     }
 
     async concluirConfigBase(req,res){
+        res.json(true)
         const empresa = await _User2.default.getEmpresa(req)
         const idBase = req.body.idBase
         const tipoCampos = req.body.fields
@@ -83,19 +85,25 @@ class MailingController{
         const header = infoMailing[0].header
         const delimitador = infoMailing[0].delimitador
         const file=path+filename
+        const tipoImportacao="horizontal"
 
         const tabData=infoMailing[0].tabela_dados
         const tabNumbers=infoMailing[0].tabela_numeros
-
-       
+        
         await _Mailing2.default.configuraTipoCampos(empresa,idBase,header,tipoCampos)//Configura os tipos de campos
-        _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo
-            res.json(true)
+        _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo            
             let idKey = 1
             let transferRate=1
             const fileOriginal=jsonFile
-            await _Mailing2.default.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,tabData,tabNumbers,idKey,transferRate)
-            //await Mailing.importaDados_e_NumerosBase(empresa,idBase,jsonFile,file,header,tabData,tabNumbers,idKey,transferRate)
+            if(tipoImportacao=="horizontal"){
+                const infoMailing = await _Mailing2.default.infoMailing(empresa,idBase)
+                const dataTab = infoMailing[0].tabela_dados
+                const numTab = infoMailing[0].tabela_numeros
+
+                await _Mailing2.default.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
+            }else{
+                await _Mailing2.default.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,tabData,tabNumbers,idKey,transferRate)
+            }            
         }) 
     }
     
@@ -109,9 +117,13 @@ class MailingController{
             const infoTabela= await _Mailing2.default.tabelaMailing(empresa,idMailing)
             if(infoTabela.length != 0){
                 const tabela = infoTabela[0].tabela_numeros
-                const totalRegistros = await _Mailing2.default.totalRegistros(empresa,tabela);
-                const contatados = await _Mailing2.default.registrosContatados(empresa,tabela)
-                const naoContatados = await _Mailing2.default.registrosNaoContatados(empresa,tabela)
+                const totalRegistros = infoTabela[0].totalNumeros
+                let contatados = 0
+                let naoContatados = 0
+                if(infoTabela[0].pronto!=0){
+                    contatados = await _Mailing2.default.registrosContatados(empresa,tabela)
+                    naoContatados = await _Mailing2.default.registrosNaoContatados(empresa,tabela)
+                }
             
                 const trabalhados = contatados + naoContatados
                 const naoTrabalhados = totalRegistros-trabalhados
@@ -264,7 +276,7 @@ class MailingController{
         const infoTabela= await _Mailing2.default.tabelaMailing(empresa,idMailing)
         if(infoTabela.length != 0){
             const tabela = infoTabela[0].tabela_numeros
-            const totalRegistros = await _Mailing2.default.totalRegistros(empresa,tabela);
+            const totalRegistros = infoTabela[0].totalNumeros
             const contatados = await _Mailing2.default.registrosContatados(empresa,tabela)
             const naoContatados = await _Mailing2.default.registrosNaoContatados(empresa,tabela)
 
