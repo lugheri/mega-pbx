@@ -222,16 +222,22 @@ class Clients{
   }
 
   //DBS SERVERS
-  async serversDbs(prefix){
+  async serversDbs(prefix,environment) {
     return new Promise (async (resolve,reject)=>{ 
       const pool = await connect.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
-          if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-          const sql = `SELECT d.ip
+          if(err) return console.error({"errorCode":err.code,"arquivo":"Clients.js:serversDbs","message":err.message,"stack":err.stack});
+          let campo_ip='d.ip'
+          if(environment=='dev'){
+            campo_ip='d.ip_externo'
+          }
+          
+          const sql = `SELECT ${campo_ip} AS 'ip'
                         FROM clients.accounts AS c 
                         JOIN clients.servers_db AS d ON c.server_db = d.id 
                         WHERE c.prefix = '${prefix}'`
-          const r = await this.querySync(conn,sql)   
+                        
+          const r = await this.querySync(conn,sql)            
           if(r.length==0){
             pool.end((err)=>{
               if(err) console.log('Clientes.js 225', err)
@@ -246,6 +252,7 @@ class Clients{
         })
     }) 
   }
+  
   
 
   //SERVERS
