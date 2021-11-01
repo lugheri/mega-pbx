@@ -53,7 +53,11 @@ class FilasController{
         const destino =  req.body.destino
 
         if(destino=="D"){//Adiciona membro a fila
+            console.log('empresa',empresa)
+            console.log('ramal',ramal)
+            console.log('idFila',idFila)
             const r = await Filas.addMembroFila(empresa,ramal,idFila)
+            console.log(r)
             res.json(r)  
             return false;          
         }

@@ -17,7 +17,7 @@ class Discador{
    
     async querySync(conn,sql){         
         return new Promise((resolve,reject)=>{            
-            conn.query(sql, (err,rows)=>{
+            conn.execute(sql, (err,rows)=>{
                 if(err){ 
                     console.error({"errorCode":err.code,"arquivo":"Discador.js:querySync","message":err.message,"stack":err.stack, "sql":sql}) 
                     resolve(false);
@@ -2602,14 +2602,19 @@ class Discador{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err){
+                    console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                    resolve(false)
+                    return 
+                } 
 
                 
                 const sql = `SELECT m.id, m.modo_atendimento, m.id_campanha 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas AS m  
                             JOIN ${empresa}_dados.campanhas_filas AS cf ON m.id_campanha = cf.idCampanha
                             JOIN ${empresa}_dados.agentes_filas AS a ON a.fila=cf.idFila
-                            WHERE a.ramal=${ramal} AND na_fila=1`                      
+                            WHERE a.ramal=${ramal} AND na_fila=1`    
+                            console.log(sql)                  
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.error(err)
@@ -2646,6 +2651,7 @@ class Discador{
                                 tabela_numeros
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                             WHERE id='${idAtendimento}'`
+                            console.log('sql infoChamada_byIdAtendimento',sql)
                 const calldata = await this.querySync(conn,sql)
                 if(calldata.length==0){
                     pool.end((err)=>{
@@ -2658,6 +2664,7 @@ class Discador{
                 
                 const idMailing = calldata[0].id_mailing
                 const tipo_discador = calldata[0].tipo_discador
+                const tipo_ligacao= calldata[0].tipo_ligacao
                 const idReg = calldata[0].id_registro
                 const id_numero = calldata[0].id_numero
                 const tabela_dados = calldata[0].tabela_dados
@@ -2716,7 +2723,7 @@ class Discador{
 
                     info['modo_atendimento']=modo_atendimento
                     info['idMailing']=idMailing              
-                    info['idMailing']=idMailing
+                    info['tipo_ligacao']=tipo_ligacao
                     info['protocolo']=protocolo
                     info['nome_registro']=await this.campoNomeRegistro(empresa,idMailing,idReg,tabela_dados)
                     info['campos']={}
@@ -2823,6 +2830,7 @@ class Discador{
                 sql = `SELECT ${campo} as nome
                         FROM ${empresa}_mailings.${tabelaDados}
                         WHERE id_key_base=${idRegistro}`
+                        console.log(sql)
                 const nome = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.error(err)

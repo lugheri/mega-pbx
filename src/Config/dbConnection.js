@@ -29,6 +29,7 @@ const connect = ()=>{};
               hosts['PG']['LOCAL']['crm']=process.env.CRM_DB_LOCAL_HOST_PG
               hosts['PG']['PUBLIC']={}
               hosts['PG']['PUBLIC']['ast']=process.env.AST_DB_PUBLIC_HOST_PG
+              hosts['PG']['PUBLIC']['ast']=process.env.AST_DB_PUBLIC_HOST_PG
               hosts['PG']['PUBLIC']['crm']=process.env.CRM_DB_PUBLIC_HOST_PG
 
         switch(server_db){
@@ -44,7 +45,7 @@ const connect = ()=>{};
                 host = await Clients.serversDbs(empresa,process.env.TYPE_IP)
                 database = database_dados
         }        
-        
+       
         if(process.env.DEBUG=='ON'){
             console.log('Ambiente',process.env.ENVIRONMENT);
             console.log('Server DB',server_db)
@@ -60,8 +61,9 @@ const connect = ()=>{};
             password : process.env.DB_PASS,
             database : database,
             waitForConnections: true,
-            connectionLimit: 0,
-            queueLimit: 0
+            connectionLimit: 10,
+            queueLimit: 0,
+            connectTimeout : 20000 
         })
     }
 export default connect;

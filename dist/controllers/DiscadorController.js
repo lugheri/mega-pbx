@@ -32,8 +32,12 @@ class DiscadorController{
     }
 
     //Discador Otimizado:
-    async checkAccounts(){
-        const clientesAtivos = await _Clients2.default.clientesAtivos()
+    async checkAccounts(clientes=""){
+        let clientesAtivos=clientes
+       
+        if(clientes.length==0){
+            clientesAtivos = await _Clients2.default.clientesAtivos()
+        }
         
         let cache_timeout_ca
         for(let i=0;i<clientesAtivos.length;++i){
@@ -54,33 +58,32 @@ class DiscadorController{
                 }else{
                     this.campanhasEmpresa(empresa)
                 }   
-            },1000) 
-            
-            
-            
+            },1000)             
         }
-        cache_timeout_ca=setTimeout(async ()=>{  
-             await this.checkAccounts();
-        },5000)
+        cache_timeout_ca=setTimeout(async ()=>{             
+             await this.checkAccounts(clientesAtivos);
+        },10000)
         
     }
 
     async campanhasEmpresa(empresa){
-        //console.log('campanha empresa')
+        //console.log('campanha empresa',empresa)
         //await this.debug(' ',' ',empresa)
         //await this.debug('EMPRESA==>',empresa,empresa)
         
         ////await this.debug(empresa,'Iniciando Discador',empresa)
         //PASSO 1 - VERIFICAÇÃO
         //await this.debug('PASSO 1 - VERIFICAÇÃO','',empresa)
-        //#1 Conta as chamadas simultaneas para registrar no log        
+        //#1 Conta as chamadas simultaneas para registrar no log   
+         
         const rcs = await _Discador2.default.registrarChamadasSimultaneas(empresa)
-      
+       
         
          //await this.debug(`registrarChamadasSimultaneas:${empresa}`,rcs,empresa)
 
         //#2 Verifica possiveis chamadas presas e remove das chamadas simultâneas
         const cc = await _Discador2.default.clearCalls(empresa) 
+        //console.log('TESTE',empresa,'............. ok')
          //await this.debug(`clearCalls:${empresa}`,cc,empresa)
         
         //# - VERIFICA SE POSSUI RETORNOS AGENDADOS
@@ -790,7 +793,10 @@ class DiscadorController{
     async modoAtendimento(req,res){
         const empresa = await _User2.default.getEmpresa(req)
         const ramal = req.params.ramal
+        console.log(ramal)
+
         const dadosChamada = await _Discador2.default.modoAtendimento(empresa,ramal)
+        console.log('dadosChamada',dadosChamada)
         if(dadosChamada.length==0){
             const mode={}
                   mode['sistemcall']=false
@@ -803,12 +809,14 @@ class DiscadorController{
         }else{
             const idAtendimento = dadosChamada[0].id
             const modo_atendimento = dadosChamada[0].modo_atendimento
+            console.log('idAtendimento',idAtendimento)
             const infoChamada = await _Discador2.default.infoChamada_byIdAtendimento(empresa,idAtendimento)
+            console.log('infoChamada',infoChamada)
             const mode={}
-            if((infoChamada[0].tipo_ligacao=='discador')||(infoChamada[0].tipo_ligacao==='retorno')){
+            if((infoChamada['tipo_ligacao']=='discador')||(infoChamada['tipo_ligacao']==='retorno')){
                 mode['sistemcall']=false
                 mode['dialcall']=true
-            }else if(infoChamada[0].tipo_ligacao=='interna'){
+            }else if(infoChamada['tipo_ligacao']=='interna'){
                 mode['sistemcall']=true
                 mode['dialcall']=false
             }else{

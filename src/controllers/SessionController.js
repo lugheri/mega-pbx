@@ -4,6 +4,7 @@ import md5 from 'md5';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import Clients from '../models/Clients'
+import Redis from '../Config/Redis'
 
 class SessionController{
     async store(req,res){          
@@ -24,10 +25,11 @@ class SessionController{
            
             if(userData[0].senha!=md5(senha)){
                 return res.json({WrongPassword: 'Senha errada!'})
-            }else{
-               
+            }else{               
                 const acao='login'
                 const idAccount = await Clients.accountId(empresa)
+                await Redis.setter('empresas',await Clients.clientesAtivos())
+
                 const token = jwt.sign({userId:userData[0].id,empresa:empresa,idAccount:idAccount},process.env.APP_SECRET,{
                     expiresIn:'12h'
                 })
@@ -49,8 +51,7 @@ class SessionController{
                     }else{
                         res.json({ "error":true,"message":"Aguardando aceite dos termos de uso!"})
                     }
-                } 
-                            
+                }                             
             }
         }
     }
