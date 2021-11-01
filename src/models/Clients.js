@@ -224,13 +224,13 @@ class Clients{
   }
 
   //DBS SERVERS
-  async serversDbs(prefix,environment) {
+  async serversDbs(prefix,TYPE_IP) {
     return new Promise (async (resolve,reject)=>{ 
       const pool = await connect.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
           if(err) return console.error({"errorCode":err.code,"arquivo":"Clients.js:serversDbs","message":err.message,"stack":err.stack});
           let campo_ip='d.ip'
-          if(environment=='dev'){
+          if(TYPE_IP=='PUBLIC'){
             campo_ip='d.ip_externo'
           }
           
@@ -1313,6 +1313,26 @@ class Clients{
               if(err) console.log('Clientes.js 1260', err)
             })
             resolve(p.length)
+          })
+      })        
+    }
+
+    async accountId(prefix){
+      return new Promise (async (resolve,reject)=>{ 
+        const pool = await connect.pool(0,'crm')  
+          pool.getConnection(async (err,conn)=>{ 
+            if(err) return console.error({"errorCode":err.code,"arquivo":"Clients.js:checkPrefix","message":err.message,"stack":err.stack});
+            let sql = `SELECT client_number 
+                        FROM clients.accounts
+                        WHERE prefix = '${prefix}'`
+            const p = await this.querySync(conn,sql)
+            pool.end((err)=>{
+              if(err) console.log('Clientes.js 1260', err)
+            })
+            if(p.length==0){
+              resolve(0)
+            }
+            resolve(p[0].client_number)
           })
       })        
     }

@@ -41,8 +41,8 @@ class Asterisk{
                 }
 
                 const sql = `INSERT INTO asterisk.queue_members 
-                                        (queue_name,interface,membername,state_interface,penalty) 
-                                VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
+                                        (queue_name,interface,membername,state_interface,penalty,paused,) 
+                                VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}',0)`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.log('Asterisk.js 83',err)

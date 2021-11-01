@@ -66,7 +66,7 @@ class DiscadorController{
     }
 
     async campanhasEmpresa(empresa){
-        //console.log('campanha empresa')
+        console.log('campanha empresa',empresa)
         //await this.debug(' ',' ',empresa)
         //await this.debug('EMPRESA==>',empresa,empresa)
         

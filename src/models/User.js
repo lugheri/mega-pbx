@@ -198,11 +198,11 @@ class User{
         return empresa
     }
 
-    async getHostEmpresa(req){
+    async getAccountId(req){
         const authHeader = req.headers.authorization;
         const payload = jwt.verify(authHeader, process.env.APP_SECRET);
-        const hostDB = payload.hostDB
-        return hostDB
+        const accountId = payload.idAccount
+        return accountId
     }
 
     
