@@ -1674,7 +1674,7 @@ class Mailing{
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:totalNumeros","message":err.message,"stack":err.stack});
                 const sql = `SELECT count(id) as total 
-                            FROM ${tabela}`
+                            FROM ${tabela} WHERE valido=1`
                 const rows =  await this.querySync(conn,sql);
                 pool.end((err)=>{
                     if(err) console.log('Mailings 973', err)
