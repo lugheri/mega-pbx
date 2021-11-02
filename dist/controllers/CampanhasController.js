@@ -646,16 +646,17 @@ class CampanhasController{
         const timeoutrestart='no'
         const weight=0
         const wrapuptime=0
-
-        const nomeFila = `${empresa}-${apelido.replace(" ","_").replace("/", "_")}`
-        const r = await _Campanhas2.default.novaFila(empresa,nomeFila,apelido,description)
-        if(r==false){
+        const idEmpresa = await _User2.default.getAccountId(req)
+        const f = await _Campanhas2.default.novaFila(empresa,idEmpresa,apelido,description)
+        if(f==false){
             const rt={}
             rt['error']=true
-            rt['message']=`Já existe uma fila criada com o nome '${apelido}'`
+            rt['message']=`Já existe uma fila criada com o nome '${nomeFila}'`
             res.send(rt)
             return false            
         }
+        
+        const nomeFila = f
         const asterisk = await _Filas2.default.criarFila(empresa,nomeFila,musiconhold,monitorType,monitorFormat,announce_frequency,announce_holdtime,announce_position,autofill,autopause,autopausebusy,autopausedelay,autopauseunavail,joinempty,leavewhenempty,maxlen,memberdelay,penaltymemberslimit,periodic_announce_frequency,queue_callswaiting,queue_thereare,queue_youarenext,reportholdtime,retry,ringinuse,servicelevel,strategy,timeout,timeoutpriority,timeoutrestart,weight,wrapuptime)
         res.send(asterisk)
     }

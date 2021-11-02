@@ -47,6 +47,8 @@ class MailingController{
 
         const title = Object.keys(resumoBase[0]) 
               title.shift();
+              title.pop();
+              title.pop();
         console.log(title)
         const campos=[]
         for(let i=0; i<title.length; i++){
@@ -89,8 +91,10 @@ class MailingController{
 
         const tabData=infoMailing[0].tabela_dados
         const tabNumbers=infoMailing[0].tabela_numeros
-        
+
+       
         await _Mailing2.default.configuraTipoCampos(empresa,idBase,header,tipoCampos)//Configura os tipos de campos
+       
         _Mailing2.default.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo            
             let idKey = 1
             let transferRate=1
@@ -100,7 +104,9 @@ class MailingController{
                 const dataTab = infoMailing[0].tabela_dados
                 const numTab = infoMailing[0].tabela_numeros
 
-                await _Mailing2.default.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
+                await _Mailing2.default.importarMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,idKey,transferRate)
+
+               // await Mailing.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
             }else{
                 await _Mailing2.default.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,tabData,tabNumbers,idKey,transferRate)
             }            

@@ -344,6 +344,7 @@ class Filas{
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.agentes_filas 
                             WHERE ramal=${idAgente} AND fila=${idFila}`
+                            console.log(sql)
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.log('Filas ...', err)

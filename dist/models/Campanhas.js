@@ -1324,24 +1324,33 @@ class Campanhas{
     }
    
     //#########  F I L A S  ############
-    async novaFila(empresa,nomeFila,apelido,descricao){
+    async novaFila(empresa,idEmpresa,apelido,descricao){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql = `SELECT id 
                             FROM ${empresa}_dados.filas 
-                            WHERE nome='${nomeFila}'`
+                            WHERE apelido='${apelido}'`
                 const r = await this.querySync(conn,sql)
                 if(r.length>=1){
+                    resolve(0)
                     return false
                 }
-                sql = `INSERT INTO ${empresa}_dados.filas (nome,apelido,descricao) VALUES('${nomeFila}','${apelido}','${descricao}')`
+                sql = `INSERT INTO ${empresa}_dados.filas 
+                                  (apelido,descricao) 
+                            VALUES('${apelido}','${descricao}')`
+                const f = await this.querySync(conn,sql)
+                const idFila = f['insertId']
+                const nomeFila = `${idEmpresa}00${idFila}`
+                sql = `UPDATE ${empresa}_dados.filas 
+                          SET nome='${nomeFila}'
+                        WHERE id='${idFila}'`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.log('Campanhas.js 1218', err)
                 })
-                resolve(true)
+                resolve(nomeFila)
             })
         })
     }

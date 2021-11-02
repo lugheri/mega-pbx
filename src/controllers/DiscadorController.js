@@ -6,6 +6,7 @@ import User from '../models/User'
 import Clients from '../models/Clients';
 import Cronometro from '../models/Cronometro'
 import moment from 'moment';
+import Redis from '../Config/Redis';
 
 class DiscadorController{         
     async debug(title="",msg="",empresa=""){     
@@ -33,11 +34,17 @@ class DiscadorController{
 
     //Discador Otimizado:
     async checkAccounts(){
-        const clientesAtivos = await Clients.clientesAtivos()
-        
-        let cache_timeout_ca
-        for(let i=0;i<clientesAtivos.length;++i){
-            const empresa = clientesAtivos[i].prefix 
+        let clientesAtivos=await Redis.getter('empresas')          
+        if(!clientesAtivos){
+            clientesAtivos=await Clients.clientesAtivos()
+            await Redis.setter('empresas',clientesAtivos)
+          
+        }       
+
+        const clientes = JSON.parse(clientesAtivos);       
+       
+        for(let i=0;i<clientes.length;++i){
+            const empresa = clientes[i].prefix 
              //await this.debug(`${empresa} - loop`,i,empresa)
            //  //await this.debug('EMPRESA==>',empresa)           ,empresa 
             //Funcoes de controle
@@ -50,37 +57,36 @@ class DiscadorController{
             setTimeout(async ()=>{  
                 if(process.env.ENVIRONMENT=='dev'){
                 
-                    this.campanhasEmpresa('megaconecta')
+                    //this.campanhasEmpresa('megaconecta')
                 }else{
                     this.campanhasEmpresa(empresa)
                 }   
-            },1000) 
-            
-            
-            
+            },1000)             
         }
-        cache_timeout_ca=setTimeout(async ()=>{  
+        setTimeout(async ()=>{             
              await this.checkAccounts();
-        },5000)
+        },10000)
         
     }
 
     async campanhasEmpresa(empresa){
-        console.log('campanha empresa',empresa)
+        //console.log('campanha empresa',empresa)
         //await this.debug(' ',' ',empresa)
         //await this.debug('EMPRESA==>',empresa,empresa)
         
         ////await this.debug(empresa,'Iniciando Discador',empresa)
         //PASSO 1 - VERIFICAÇÃO
         //await this.debug('PASSO 1 - VERIFICAÇÃO','',empresa)
-        //#1 Conta as chamadas simultaneas para registrar no log        
+        //#1 Conta as chamadas simultaneas para registrar no log   
+        
         const rcs = await Discador.registrarChamadasSimultaneas(empresa)
-      
+       
         
          //await this.debug(`registrarChamadasSimultaneas:${empresa}`,rcs,empresa)
 
         //#2 Verifica possiveis chamadas presas e remove das chamadas simultâneas
         const cc = await Discador.clearCalls(empresa) 
+        //console.log('TESTE',empresa,'............. ok')
          //await this.debug(`clearCalls:${empresa}`,cc,empresa)
         
         //# - VERIFICA SE POSSUI RETORNOS AGENDADOS
@@ -790,7 +796,10 @@ class DiscadorController{
     async modoAtendimento(req,res){
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
+        console.log(ramal)
+
         const dadosChamada = await Discador.modoAtendimento(empresa,ramal)
+        console.log('dadosChamada',dadosChamada)
         if(dadosChamada.length==0){
             const mode={}
                   mode['sistemcall']=false
@@ -803,12 +812,14 @@ class DiscadorController{
         }else{
             const idAtendimento = dadosChamada[0].id
             const modo_atendimento = dadosChamada[0].modo_atendimento
+            console.log('idAtendimento',idAtendimento)
             const infoChamada = await Discador.infoChamada_byIdAtendimento(empresa,idAtendimento)
+            console.log('infoChamada',infoChamada)
             const mode={}
-            if((infoChamada[0].tipo_ligacao=='discador')||(infoChamada[0].tipo_ligacao==='retorno')){
+            if((infoChamada['tipo_ligacao']=='discador')||(infoChamada['tipo_ligacao']==='retorno')){
                 mode['sistemcall']=false
                 mode['dialcall']=true
-            }else if(infoChamada[0].tipo_ligacao=='interna'){
+            }else if(infoChamada['tipo_ligacao']=='interna'){
                 mode['sistemcall']=true
                 mode['dialcall']=false
             }else{

@@ -52,7 +52,7 @@ class Mailing{
             return Number(value);
         return 0;
     }
-
+                            
     async criarTabelaMailing(empresa,tipoImportacao,keys,nome,nomeTabela,header,filename,delimitador,jsonFile){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
@@ -113,11 +113,12 @@ class Mailing{
                 
                 const insertMailing = await this.addInfoMailing(empresa,nome,tableData,tableNumbers,filename,header,delimitador)
                 const infoMailing = await this.infoMailing(empresa,insertMailing['insertId']);
-                resolve(infoMailing)
+               
 
                 const idBase = infoMailing[0].id
                 const dataTab=infoMailing[0].tabela_dados
                 const numTab=infoMailing[0].tabela_numeros
+                
                 const idKey = 1
                 const transferRate=1
                 pool.end((err)=>{
@@ -125,17 +126,362 @@ class Mailing{
                 })
                 if(tipoImportacao=='horizontal'){
                     console.log('horizontal')
-                    await this.importandoDadosMailing(empresa,idBase,jsonFile,header,dataTab,numTab,idKey,transferRate,infoMailing)
-                    
+                    await this.importaResumoMailing(empresa,idBase,jsonFile,header,dataTab)
                 }else{
-                   
+                    //Importacao Vertical
                 }    
-                console.log('retornando mailing')
-                
-                      
+               resolve(infoMailing)                      
             })            
         })   
     }
+
+    async importaResumoMailing(empresa,idBase,jsonFile,header,dataTab){
+        return new Promise (async (resolve,reject)=>{    
+            const pool =  await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{         
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:importandoDadosMailing","message":err.message,"stack":err.stack});
+        
+                //Tabela para importação dos dados
+                const tabelaDados = `${empresa}_mailings.${dataTab}`
+
+                //contador de erros
+                let erros=0
+
+                //Lendo linha de titulo das colunas do arquivo e da tabela de dados
+                let campos_arquivo = Object.keys(jsonFile[0]) 
+                //Populando array com o titulo das colunas conforme foram formatadas na tabela
+                let campos_tabela = []                
+                for(let i = 0; i <campos_arquivo.length;i++){
+                    //Verifica se o arquivo possui linha de titulo
+                    if(header==0){
+                        let n = i+1
+                        campos_tabela.push("`campo_"+n+"`")
+                    }else{
+                        campos_tabela.push("`"+this.removeCaracteresEspeciais(campos_arquivo[i])+"`")
+                    }
+                } 
+
+                //Iniciar query de importação
+                let sqlData="INSERT INTO "+tabelaDados
+                            +"(`id_key_base`,"+campos_tabela+",`valido`,`tratado`)"
+                            +"VALUES ";
+
+                //Iniciar separação dos registros
+
+                //Id do registro
+                let indice = 1
+                const totalBase = jsonFile.length
+                let resumo=10
+                if(totalBase<=10){
+                    resumo=totalBase
+                }
+                //Iniciando o loop dos dados a serem inseridos de acordo com o transferRate
+                for(let i=0; i<resumo; i++){
+                    //Cria o indice do registro de acordo com o id da base, um inicializador (1000000) + o indice do idKey(1+)
+                    let indiceReg = (idBase * 1000000) + indice
+                    let regValido=1//Flag de registro valido
+                    let linha_arquivo
+
+                    //Começa a montagem da query de cada registro       
+                    sqlData+=" (";  
+                    sqlData+=`${indiceReg},`                    
+                    //Verifica primeiro campo                   
+                
+
+                    if(header==0 && i == 0){//Caso o arquivo nao tenha linha de titulos, insere a 1 linha na tabela
+                        linha_arquivo =  Object.keys(jsonFile[i])
+                    }else{
+                        linha_arquivo =  Object.values(jsonFile[i])
+                    }
+
+                  
+                   
+                    //Separando valores
+                    for(let v=0; v<linha_arquivo.length;v++){
+                        let valor = linha_arquivo[v]    
+                        //verifica se o valor eh objeto de
+                        if(typeof linha_arquivo[0] === 'object'){
+                            valor = Object.values(linha_arquivo[0])
+                        }
+
+                        //Insere o valor formatado de cada coluna na query    
+                        sqlData+="'"+valor.toString().replace(/'/gi,'')+"',"
+                    }
+                    sqlData+=`${regValido},`//CPF
+                    sqlData+='0)'//Tratado                   
+
+                    //Fecha a query
+                    if(i>=resumo-1){
+                        sqlData+=`;`;
+                    }else{
+                        sqlData+=`,`; 
+                    }
+                    //Incrementa o indice para proximo loop
+                    indice++
+                    //Removendo campos importados do arquivo carregado 
+                   
+                } 
+
+                //Executa a query de insersão de dados   
+                
+                console.log('insert',sqlData)
+                await this.querySync(conn,sqlData)                
+               
+                pool.end((err)=>{
+                    if(err) console.log('Mailings 225', err)
+                })
+                resolve(true)
+                return        
+            })
+        })
+    }
+
+    async importarMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,idKey,transferRate){
+        return new Promise (async (resolve,reject)=>{    
+            const pool =  await _dbConnection2.default.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{         
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:importandoDadosMailing","message":err.message,"stack":err.stack});
+                            
+                //IMPORTA O REGISTRO E SEUS NUMEROS
+                let sql
+                //LIMPA BASE A SER IMPORTADA
+                if(transferRate==1){
+                    sql = `TRUNCATE ${empresa}_mailings.${dataTab}`;
+                    await this.querySync(conn,sql) 
+                }
+
+                //contador de erros
+                let erros=0
+                const tabelaDados = `${empresa}_mailings.${dataTab}`
+                const tabelaNumeros = `${empresa}_mailings.${numTab}`
+
+                //PERCORRE REGISTROS
+                let campos_arquivo = Object.keys(jsonFile[0]) 
+                //Populando array com o titulo das colunas conforme foram formatadas na tabela
+                let campos_tabela = []                
+                for(let i = 0; i <campos_arquivo.length;i++){
+                    //Verifica se o arquivo possui linha de titulo
+                    if(header==0){
+                        let n = i+1
+                        campos_tabela.push("`campo_"+n+"`")
+                    }else{
+                        campos_tabela.push("`"+this.removeCaracteresEspeciais(campos_arquivo[i])+"`")
+                    }
+                } 
+               
+
+                //Le o total de registros a serem importados
+                const totalBase = jsonFile.length
+
+                //Calculanto taxa de transferencia da importacao dos registros
+                let rateInicial=transferRate
+                let minRate = 100
+                let maxRate = 5000
+                let multiplicador = 1
+                if(transferRate==1){
+                    rateInicial=totalBase
+                }
+                //Calcula o rate de transferencia
+                const rate = await this.calcRate(totalBase,minRate,maxRate,rateInicial,multiplicador)
+                
+                //Iniciar query de importação
+                let sqlData="INSERT INTO "+tabelaDados
+                            +"(`id_key_base`,"+campos_tabela+",`valido`,`tratado`)"
+                            +"VALUES ";
+
+                //Iniciar query de importação dos numeros
+                let colunaDDD=""
+                let colunaNumero=[]
+                let colunaNumeroCompleto=[]
+                
+                //Verificando coluna dos ddds
+                const col_sql_ddds = `SELECT nome_original_campo as campo 
+                                        FROM ${empresa}_dados.mailing_tipo_campo 
+                                       WHERE idMailing=${idBase} 
+                                         AND tipo='ddd'`
+                                         console.log('col_sql_ddds',col_sql_ddds)
+                const col_ddd = await this.querySync(conn,col_sql_ddds)
+
+               
+                
+                //verificando coluna dos numeros
+                const col_sql_numeros = `SELECT nome_original_campo as campo 
+                                    FROM ${empresa}_dados.mailing_tipo_campo 
+                                    WHERE idMailing=${idBase} 
+                                        AND tipo='telefone'`                                
+                const col_numeros = await this.querySync(conn,col_sql_numeros)                
+
+                //verificando colunas de  ddd e numero
+                const col_sql_completo = `SELECT nome_original_campo as campo 
+                                        FROM ${empresa}_dados.mailing_tipo_campo 
+                                    WHERE idMailing=${idBase} 
+                                        AND tipo='ddd_e_telefone'`                       
+                const col_numeroCompleto = await this.querySync(conn,col_sql_completo)               
+                
+                if(col_ddd.length>0){
+                    colunaDDD=col_ddd[0].campo
+                }
+                if(col_numeros.length>0){
+                    for(let i=0; i<col_numeros.length; i++){
+                        colunaNumero.push(col_numeros[i].campo)
+                    }
+                }
+                if(col_numeroCompleto.length>0){
+                    for(let i=0; i<col_numeroCompleto.length; i++){
+                        colunaNumeroCompleto.push(col_numeroCompleto[i].campo)
+                    }
+                } 
+
+                //console.log('colunaNumero',colunaNumero)
+                //console.log('colunaNumeroCompleto',colunaNumeroCompleto)              
+                
+               
+                //Inicia a query
+                let sqlNumbers=`INSERT INTO ${empresa}_mailings.${numTab}
+                                        (id_mailing,id_registro,ddd,numero,uf,tipo,valido,duplicado,erro,tentativas,status_tabulacao,contatado,produtivo)
+                                    VALUES `; 
+
+                //Id do registro
+                let indice = idKey
+
+                //Iniciando o loop dos dados a serem inseridos de acordo com o transferRate
+                for(let i=0; i<rate; i++){
+                    //Cria o indice do registro de acordo com o id da base, um inicializador (1000000) + o indice do idKey(1+)
+                    let indiceReg = (idBase * 1000000) + indice
+                    let regValido=1//Flag de registro valido
+                    let linha_arquivo
+
+                    //Começa a montagem da query de cada registro       
+                    sqlData+=" (";  
+                    sqlData+=`${indiceReg},`                    
+                    //Verifica primeiro campo                    
+                    if(header==0 && indice == 1){//Caso o arquivo nao tenha linha de titulos, insere a 1 linha na tabela
+                        linha_arquivo =  Object.keys(jsonFile[0])
+                    }else{
+                        linha_arquivo =  Object.values(jsonFile[0])
+                    }
+                   
+                    //Separando valores
+                    for(let v=0; v<linha_arquivo.length;v++){
+                        let valor = linha_arquivo[v]    
+                        //verifica se o valor eh objeto de
+                        if(typeof linha_arquivo[0] === 'object'){
+                            valor = Object.values(linha_arquivo[0])
+                        }
+
+                        //Insere o valor formatado de cada coluna na query    
+                        sqlData+="'"+valor.toString().replace(/'/gi,'')+"',"
+
+                        //Separa o numero do registro
+                    }            
+                    
+                    
+                    //SEPARANDO OS NUMEROS
+                    let ddd = 0 
+                    if(colunaDDD!=""){      
+                        ddd=jsonFile[0][colunaDDD]                             
+                        ddd = this.removeCaracteresEspeciais_numero(ddd)//  console.log('ddd',ddd)
+                    }  
+                    
+                    for(let n=0; n<colunaNumero.length; n++){//Numeros
+                        let numero = jsonFile[0][colunaNumero[n]]
+                            numero = this.removeCaracteresEspeciais_numero(numero)//  console.log('numero',numero)
+                        
+                        if(numero){ 
+                            let numeroCompleto = ddd.toString()+numero.toString()//console.log('numeroCompleto ddd+numero',numeroCompleto)    
+                            //  console.log('numero',numeroCompleto)              
+                            let duplicado = 0//await this.checaDuplicidade(empresa,numeroCompleto,tabelaNumeros)
+                            //Inserindo ddd e numero na query
+                            numeroCompleto= this.removeCaracteresEspeciais_numero(numeroCompleto)
+                            const infoN = this.validandoNumero(ddd,numeroCompleto)                            
+                            
+                            sqlNumbers+=`(${idBase},${indiceReg},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['message']}',0,0,0,0),`;
+                        }
+                    }
+                    
+                    for(let nc=0; nc<colunaNumeroCompleto.length; nc++){//Numeros
+                        //console.log('numero',colunaNumeroCompleto[nc])
+                        let numeroCompleto = jsonFile[0][colunaNumeroCompleto[nc]]
+                        //console.log('Recebido',colunaNumeroCompleto[nc],numeroCompleto)
+                            // console.log('numeroCompleto',numeroCompleto) 
+                            numeroCompleto = this.removeCaracteresEspeciais_numero(numeroCompleto)
+                           // console.log('tratado',numeroCompleto)
+                            // console.log('numeroCompleto valid',numeroCompleto) 
+                        //console.log('numeroCompleto',numeroCompleto)    
+                        if(numeroCompleto){
+                            let dddC = numeroCompleto.toString().slice(0,2)     
+                            let duplicado = 0 //await this.checaDuplicidade(numeroCompleto,tabelaNumeros)
+                            numeroCompleto= this.removeCaracteresEspeciais_numero(numeroCompleto)
+                            const infoN = this.validandoNumero(dddC,numeroCompleto)
+                            sqlNumbers+=` (${idBase},${indiceReg},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['message']}',0,0,0,0),`;
+                        }
+                    }
+                    sqlData+=`${regValido},`//CPF
+                    sqlData+='0)'//Tratado                   
+
+                    //Fecha a query
+                    if(i>=rate-1){
+                        sqlData+=`;`;
+                    }else{
+                        sqlData+=`,`; 
+                    }
+                    //Incrementa o indice para proximo loop
+                    indice++
+                    //Removendo campos importados do arquivo carregado 
+                    jsonFile.shift()  
+                } 
+                
+                //Executa a query de insersão de dados    
+                //console.log('sqlData',sqlData)
+                //console.log('queryNumeros',sqlNumbers)
+              
+                await this.querySync(conn,sqlData)
+                let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'  
+                await this.querySync(conn,queryNumeros)   
+                let tN = await this.totalNumeros(empresa,`${empresa}_mailings.${numTab}`)//Nome da empresa ja incluido no nome da tabela
+                let totalNumeros=tN[0].total
+                
+                //Conta quantos registros ja foram importados      
+                let tR = await this.totalReg(empresa,tabelaDados)//Nome da empresa ja incluido no nome da tabela
+                let totalReg=tR[0].total
+                //atualiza no resumo do mailing
+                sql = `UPDATE ${empresa}_dados.mailings 
+                            SET totalReg='${totalReg}',
+                                totalNumeros='${totalNumeros}'
+                            WHERE id='${idBase}'`
+                await this.querySync(conn,sql)        
+
+                //Verificando restantes para reexecução
+                if(jsonFile.length>0){
+                    //continua a importação dos dados
+                    pool.end((err)=>{
+                        if(err) console.log('Mailings 219', err)
+                        console.log('Continuando importacao ...')
+                    }) 
+                    await this.importarMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,indice,rate)
+                    return true
+                }else{   
+                    const invalidos = await this.numerosInvalidos(empresa,numTab)
+                    sql = `UPDATE ${empresa}_dados.mailings
+                              SET termino_importacao=now(), 
+                           pronto=1,
+                           numerosInvalidos=${invalidos}
+                       WHERE id='${idBase}'`
+                    await this.querySync(conn,sql)       
+                    pool.end((err)=>{
+                        if(err) console.log('Mailings 225', err)
+                        console.log('encerrou importacao dos dados')
+                    })
+                    //console.log('resolvendo promise importacao dos dados')
+                    
+                    
+                }   
+            })
+        })
+    }
+
+
+
 
     //Inserindo os dados do mailing  
     async importandoDadosMailing(empresa,idBase,jsonFile,header,dataTab,numTab,idKey,transferRate,infoMailing){
@@ -306,6 +652,7 @@ class Mailing{
     async resumoDadosBase(empresa,tabela_dados){
         return new Promise (async (resolve,reject)=>{ 
             const sql = `SELECT * FROM ${empresa}_mailings.${tabela_dados} LIMIT 10`
+            console.log('sql',sql)
             const pool =  await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:resumoDadosBase","message":err.message,"stack":err.stack}); 
@@ -431,6 +778,7 @@ class Mailing{
                         VALUES `;       
 
                 for(let i=0; i<campos.length; i++){
+                    
                     let nomeCampo=this.removeCaracteresEspeciais(campos[i].name)               
                     let nomeOriginal=campos[i].name//.replace("-", "_").replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
                     let apelido = campos[i].apelido
@@ -448,6 +796,7 @@ class Mailing{
                 }
             
                 //Executando query
+              
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log('Mailings 285', err)
@@ -588,7 +937,7 @@ class Mailing{
                 if(SepNumeros!=''){
                     sqlNumbers+SepNumeros
                     let queryNumeros = sqlNumbers.slice(0,sqlNumbers.length-1)+';'            
-                    console.log('query numeros',queryNumeros)
+                    //console.log('query numeros',queryNumeros)
                
                     await this.querySync(conn,queryNumeros)   
                 }    
@@ -612,7 +961,7 @@ class Mailing{
                     //console.log('encerrando')
                     //gravando log
                     const invalidos = await this.numerosInvalidos(empresa,numTab)
-                    console.log('invalidos',invalidos)
+                    //console.log('invalidos',invalidos)
 
                     sql = `UPDATE ${empresa}_dados.mailings 
                             SET termino_importacao=now(), 

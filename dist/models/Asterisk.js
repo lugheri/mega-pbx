@@ -41,8 +41,8 @@ class Asterisk{
                 }
 
                 const sql = `INSERT INTO asterisk.queue_members 
-                                        (queue_name,interface,membername,state_interface,penalty) 
-                                VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}')`
+                                        (queue_name,interface,membername,state_interface,penalty,paused) 
+                                VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}',0)`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.log('Asterisk.js 83',err)
@@ -235,6 +235,7 @@ class Asterisk{
                 const sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
                                 SET uniqueid='${uniqueid}',ramal='${ramal}', na_fila=0, atendido=1
                             WHERE id='${idAtendimento}'`// AND na_fila=1`  
+                           
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.log('Asterisk.js 270',err)
