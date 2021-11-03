@@ -34,19 +34,20 @@ class DiscadorController{
 
     //Discador Otimizado:
     async checkAccounts(){
-        let clientesAtivos=await Redis.getter('empresas')          
+        
+        let clientesAtivos=await Redis.getter('empresas')    
+        
         if(!clientesAtivos){
             clientesAtivos=await Clients.clientesAtivos()
-            await Redis.setter('empresas',clientesAtivos)
-          
+            await Redis.setter('empresas',clientesAtivos,600)
+            console.log('Setando empresas ativas no Redis')           
         }       
-
-        const clientes = JSON.parse(clientesAtivos);       
        
+        const clientes = clientesAtivos;  
+        console.log('Dial Loop')
         for(let i=0;i<clientes.length;++i){
             const empresa = clientes[i].prefix 
-             //await this.debug(`${empresa} - loop`,i,empresa)
-           //  //await this.debug('EMPRESA==>',empresa)           ,empresa 
+             
             //Funcoes de controle
             //Desloga todos usuarios as 23h59
             const horaAtual = moment().format("HH:mm")
@@ -55,17 +56,13 @@ class DiscadorController{
             }     
 
             setTimeout(async ()=>{  
-                if(process.env.ENVIRONMENT=='dev'){
-                
-                    //this.campanhasEmpresa('megaconecta')
-                }else{
-                    this.campanhasEmpresa(empresa)
-                }   
+                // this.campanhasEmpresa('megaconecta')
+                this.campanhasEmpresa(empresa)
             },1000)             
         }
         setTimeout(async ()=>{             
              await this.checkAccounts();
-        },10000)
+        },5000)
         
     }
 
@@ -81,6 +78,7 @@ class DiscadorController{
         
         const rcs = await Discador.registrarChamadasSimultaneas(empresa)
        
+      
         
          //await this.debug(`registrarChamadasSimultaneas:${empresa}`,rcs,empresa)
 
@@ -160,6 +158,7 @@ class DiscadorController{
                 await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador)    
             },500)     
         }
+        
     }
 
     async iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador){

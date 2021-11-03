@@ -225,15 +225,16 @@ class Clients{
   }
 
   //DBS SERVERS
-  async serversDbs(prefix,TYPE_IP) {
-    let hostEmpresa = await Redis.getter('hostEmpresa')
-    if(hostEmpresa){
-      const hosts = JSON.parse(hostEmpresa)
-      if(hosts[prefix]){
-        return(hosts[prefix][TYPE_IP])
-      } 
+  async serversDbs(prefix,TYPE_IP){ 
+
+    let hostEmpresa = await Redis.getter(`${prefix}_host`)
+    if(hostEmpresa){      
+     // console.log('Empresa localizada no redis',prefix,hostEmpresa[prefix][TYPE_IP])
+      return(hostEmpresa[prefix][TYPE_IP])       
     }
-  
+    console.log(prefix,"Empresa nao encontrada")
+   
+    
     return new Promise (async (resolve,reject)=>{ 
       const pool = await connect.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
@@ -242,6 +243,7 @@ class Clients{
           if(TYPE_IP=='PUBLIC'){
             campo_ip='d.ip_externo'
           }
+           
             
           const sql = `SELECT d.ip as ip_local, d.ip_externo as ip_publico
                         FROM clients.accounts AS c 
@@ -259,13 +261,21 @@ class Clients{
           pool.end((err)=>{
             if(err) console.log('Clientes.js 231', err)
           })
-          const hostEmpresa = {}
-                hostEmpresa[`${prefix}`]={}
-                hostEmpresa[`${prefix}`]['LOCAL']=r[0].ip_local
-                hostEmpresa[`${prefix}`]['PUBLIC']=r[0].ip_publico
-          await Redis.setter("hostEmpresa",hostEmpresa)
-          resolve(hostEmpresa[prefix][TYPE_IP]) 
-        })
+          let hostEmpresas_REDIS = await Redis.getter(`${prefix}_host`)
+          if(!hostEmpresas_REDIS){
+            console.log("=========================================CRIANDO REDIS=========================================")
+            const hostEmpresa = {}
+                  hostEmpresa[`${prefix}`]={}
+                  hostEmpresa[`${prefix}`]['LOCAL']=r[0].ip_local
+                  hostEmpresa[`${prefix}`]['PUBLIC']=r[0].ip_publico
+                  console.log('hostEmpresas_REDIS',hostEmpresa)
+                  console.log('Gravou no Redis',prefix)    
+                  console.log('Host Completo',hostEmpresa)   
+                await Redis.setter(`${prefix}_host`,hostEmpresa,7200)    
+                resolve(hostEmpresa[prefix][TYPE_IP])      
+         
+          }
+      })
     }) 
   }
   
@@ -1352,8 +1362,7 @@ class Clients{
     }
 
 
-    async clientesAtivos(){
-      console.log('Chamou Clientes')
+    async clientesAtivos(){      
       return new Promise (async (resolve,reject)=>{ 
         const pool = await connect.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 

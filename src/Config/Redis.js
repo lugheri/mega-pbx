@@ -1,26 +1,26 @@
-import redis from 'promise-redis'
+import connection from './dbConnection'
 
-class Redis{
-
-    async connect(){
-        const redisConn = redis()
-        const client = redisConn.createClient(6379,'35.247.227.4')
-        client.on("error", (error) => {
-            console.error(error);
-        });
-
-        return client
-    }
+class Redis{   
 
     async getter(collection){
-        const client = await this.connect()
+        const client = await connection.redisConn()
         const result = await client.get(collection);     
-        return result
+        return JSON.parse(result)
     }
 
-    async setter(collection,data){     
-        const client = await this.connect()   
+    async setter(collection,data,expires){     
+        //console.log('Setou ',collection,data)
+        const client = await connection.redisConn()   
         await client.set(collection, JSON.stringify(data));
+        if(expires) await client.expire(collection,expires)
+
+        return true
+    }
+
+    async delete(collection){
+        const client = await connection.redisConn()
+        await client.del(collection)
+
         return true
     }
 
