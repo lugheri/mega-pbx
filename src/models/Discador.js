@@ -4,7 +4,8 @@ import Campanhas from './Campanhas';
 import Mailing from './Mailing';
 import Cronometro from './Cronometro';
 import moment from 'moment';
-import Clients from './Clients'
+import Redis from '../Config/Redis'
+
 
 class Discador{
     async debug(title="",msg="",empresa){
@@ -582,23 +583,30 @@ class Discador{
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - registrarChamadasSimultaneas','Empresa nao recebida')
             return false
-        }
+        }       
+
+        await this.debug(' . PASSO 1.1','Registrando chamadas simultaneas',empresa)      
+       
+
+        const chamadas_simultaneas = await this.chamadasSimultaneas(empresa,'todas') 
+        const chamadas_conectadas = await this.chamadasSimultaneas(empresa,'conectadas')
+        const chamadas_manuais = await this.chamadasSimultaneas(empresa,'manuais')
+
+        /*
+
         return new Promise (async (resolve,reject)=>{ 
+            
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
+                
                 if(err) return console.error({"errorCode":err.code,"empresa":empresa,"arquivo":"Discador.js:registrarChamadasSimultaneas","message":err.message,"stack":err.stack});
-
-
-                await this.debug(' . PASSO 1.1','Registrando chamadas simultaneas',empresa)
-                const chamadas_simultaneas = await this.chamadasSimultaneas(empresa,'todas')
-                const chamadas_conectadas = await this.chamadasSimultaneas(empresa,'conectadas')
-                const chamadas_manuais = await this.chamadasSimultaneas(empresa,'manuais')
                 
                 //removendo do log chamadas do dia anterior
                 let sql = `DELETE FROM ${empresa}_dados.log_chamadas_simultaneas  
                                 WHERE DATA < DATE_SUB(NOW(), INTERVAL 15 SECOND);`
                                 //console.log(sql)
                 await this.querySync(conn,sql);
+                
                 //Inserindo informacoes de chamadas para o grafico de chamadas simultaneas
                 sql = `INSERT INTO ${empresa}_dados.log_chamadas_simultaneas 
                                     (data,total,conectadas,manuais) 
@@ -610,7 +618,7 @@ class Discador{
                     }) 
                 resolve(true) 
             })
-        })          
+        })   */       
     }
 
     //Conta as chamadas simultaneas
@@ -619,8 +627,9 @@ class Discador{
             //console.log('{[(!)]} - chamadasSimultaneas','Empresa nao recebida')
             return false
         }
+        
+        await Redis.delete(`${empresa}_ChamadaSimultaneas_${parametro}`)
         return new Promise (async (resolve,reject)=>{ 
-           
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasSimultaneas","message":err.message,"stack":err.stack});
@@ -633,25 +642,28 @@ class Discador{
                     case 'manuais':
                         filter=`AND tipo_discador='manual'`
                     break;
-                    case 'total':
+                    case 'todas':
                         filter=""
                     break;
                     default:
                         filter=``
                 }
                 const sql = `SELECT COUNT(id) as total 
-                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
-                            WHERE 1=1
-                            ${filter} ORDER BY id DESC LIMIT 1`
+                               FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
+                              WHERE 1=1
+                              ${filter} LIMIT 1`
                 const r = await this.querySync(conn,sql)
+                const total = r[0].total
+                //console.log('total ', parametro, total)
+                await Redis.setter(`${empresa}_ChamadaSimultaneas_${parametro}`,total,5)
                 pool.end((err)=>{
                     if(err) console.error(err)
-                    }) 
-                resolve(r[0].total) 
+                })                     
+                resolve(total) 
             })
-        })         
-        
-    }
+        })     
+    }    
+
 
      //Remove Chamadas presas nas chamadas simultaneas
     //Remove apenas as chamadas nao tratadas do power dentro da regra de limite disponivel

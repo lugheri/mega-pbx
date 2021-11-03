@@ -3,7 +3,7 @@ import Discador from '../models/Discador'
 import Campanhas from '../models/Campanhas'
 import Report from '../models/Report'
 import moment from 'moment'
-import Clients from './Clients'
+import Redis from '../Config/Redis'
 
 
 class Dashboard{
@@ -212,9 +212,13 @@ async querySync(conn,sql){
         
     }
 
-    async realTimeCalls(empresa){       
-        const totais = await Discador.logChamadasSimultaneas(empresa,'total',1)
-        const conectadas = await Discador.logChamadasSimultaneas(empresa,'conectadas',1)
+    async realTimeCalls(empresa){  
+        
+        const totais = await Redis.getter(`${empresa}_ChamadaSimultaneas_todas`)
+        const conectadas = await Redis.getter(`${empresa}_ChamadaSimultaneas_conectadas`)
+        
+        //const totais = await Discador.logChamadasSimultaneas(empresa,'total',1)
+        //const conectadas = await Discador.logChamadasSimultaneas(empresa,'conectadas',1)
         const realTime={}
               realTime['RealTimeChart']={}
               const ligando = totais - conectadas
