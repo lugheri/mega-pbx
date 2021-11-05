@@ -44,7 +44,7 @@ class DiscadorController{
         }       
        
         const clientes = clientesAtivos;  
-        console.log('Dial Loop')
+        console.log('Dial Loop',process.env.ENVIRONMENT)
         for(let i=0;i<clientes.length;++i){
             const empresa = clientes[i].prefix 
              
@@ -68,48 +68,37 @@ class DiscadorController{
 
     async campanhasEmpresa(empresa){
         //console.log('campanha empresa',empresa)
-        //await this.debug(' ',' ',empresa)
-        //await this.debug('EMPRESA==>',empresa,empresa)
-        
-        ////await this.debug(empresa,'Iniciando Discador',empresa)
         //PASSO 1 - VERIFICAÇÃO
-        //await this.debug('PASSO 1 - VERIFICAÇÃO','',empresa)
         //#1 Conta as chamadas simultaneas para registrar no log   
-        
         const rcs = await Discador.registrarChamadasSimultaneas(empresa)
        
-      
-        
-         //await this.debug(`registrarChamadasSimultaneas:${empresa}`,rcs,empresa)
-
         //#2 Verifica possiveis chamadas presas e remove das chamadas simultâneas
         const cc = await Discador.clearCalls(empresa) 
         //console.log('TESTE',empresa,'............. ok')
-         //await this.debug(`clearCalls:${empresa}`,cc,empresa)
         
         //# - VERIFICA SE POSSUI RETORNOS AGENDADOS
         const hoje = moment().format("Y-MM-DD")
         const hora = moment().format("HH:mm:ss")
-         //await this.debug('Verificando retornos para', `${hoje} as ${hora}`,empresa)
+       
+        //CONSULTA DE AGENDAMENTOS
+        //console.log('Verificando retornos para', `${hoje} as ${hora}`,empresa)
         const agendamento = await Discador.checaAgendamento(empresa,hoje,hora);
         if(agendamento.length >= 1){
              //await this.debug('Iniciando agendamento!',empresa)
             //seta registro para agente
-            await Discador.abreRegistroAgendado(empresa,agendamento[0].id)
-            return false 
+            const regAgendado = await Discador.abreRegistroAgendado(empresa,agendamento[0].id)
+            
+            if(regAgendado!==false){
+                return false 
+            }
         }
 
         //#3 Verifica se existem campanhas ativas
         const campanhasAtivas = await Discador.campanhasAtivas(empresa);  
-        //await this.debug(`campanhasAtivas:${empresa}`,campanhasAtivas,empresa)
-        
+        console.log(empresa,'campanhasAtivas',campanhasAtivas.length)
         if(campanhasAtivas.length === 0){
-             //await this.debug('',empresa)
-             //await this.debug('[!]',`Empresa: ${empresa},  ..................................STOP[!]`)      ,empresa 
-             //await this.debug(`[!] ${empresa} Alert:`,'Nenhuma campanha ativa!'),empresa 
-             //await this.debug('',empresa)
-            //await this.debug('[!]','Nenhuma campanha ativa![!]',empresa)
-             //await this.debug('continuando....',empresa)
+            //console.log('[!]',`Empresa: ${empresa},  ..................................STOP[!]`)
+            //console.log(`[!] ${empresa} Alert:`,'Nenhuma campanha ativa!')
             return false
         }
 
@@ -138,6 +127,7 @@ class DiscadorController{
             }
             //#8 Verifica se a campanha ativas esta dentro da data de agendamento 
             const hoje = moment().format("Y-MM-DD")
+            console.log(hoje)
             const dataAgenda = await Discador.agendamentoCampanha_data(empresa,idCampanha,hoje)
              //await this.debug(`agendamentoCampanha_data:${empresa}`,dataAgenda,empresa)
             if(dataAgenda.length === 0){
@@ -146,6 +136,7 @@ class DiscadorController{
                 await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
             }
             const agora = moment().format("HH:mm:ss")
+            console.log(agora)
             const horarioAgenda = await Discador.agendamentoCampanha_horario(empresa,idCampanha,agora)
              //await this.debug(`agendamentoCampanha_horario:${empresa}`,horarioAgenda,empresa)
             if(horarioAgenda.length === 0){
@@ -153,6 +144,7 @@ class DiscadorController{
                 const estado = 2
                 await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
             }
+            
             //Iniciando Passo 2
             setTimeout(async ()=>{  
                 await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador)    
@@ -755,15 +747,18 @@ class DiscadorController{
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
         const estadoRamal = await Discador.statusRamal(empresa,ramal)
+        
         let estado = 0
         if(estadoRamal.length>0){
             if(estadoRamal[0].estado!=undefined){
                 estado=estadoRamal[0].estado
             }
         }
-        const estados=['deslogado','disponivel','em pausa','falando','indisponivel'];
+       
+        const estados=['deslogado','disponivel','em pausa','falando','indisponivel','tela reg.','ch manual','lig. manual'];
         const status = {}
               status['idEstado']=estado
+              console.log('estado',estado)
               status['estado']=estados[estadoRamal[0].estado]
               status['tempo']=await Report.converteSeg_tempo(estadoRamal[0].tempo) 
 

@@ -1031,7 +1031,9 @@ class Discador{
                 const sql = `SELECT id 
                             FROM ${empresa}_dados.campanhas_horarios 
                             WHERE id_campanha=${idCampanha} AND inicio<='${hoje}' AND termino>='${hoje}'`;
-                const rows = await this.querySync(conn,sql)   
+                            
+                const rows = await this.querySync(conn,sql)
+                 
                 pool.end((err)=>{
                     if(err) console.error(err)
                     }) 
@@ -1054,7 +1056,9 @@ class Discador{
                 const sql = `SELECT id 
                             FROM ${empresa}_dados.campanhas_horarios 
                             WHERE id_campanha=${idCampanha} AND hora_inicio<='${hora}' AND hora_termino>='${hora}'`;
+                         
                 const rows = await this.querySync(conn,sql)
+              
                 pool.end((err)=>{
                     if(err) console.error(err)
                     }) 
@@ -1605,9 +1609,9 @@ class Discador{
                 await this.debug('[!]','',empresa)
                 //console.log('')  
                 
-                //console.log('[!]',`Empresa: ${empresa}, Campanha: ${idCampanha} ..................................STOP[!]`)       
-                //console.log(`[!] ${empresa} Alert:`,msg) 
-                //console.log('')  
+                console.log('[!]',`Empresa: ${empresa}, Campanha: ${idCampanha} ..................................STOP[!]`)       
+                 console.log(`[!] ${empresa} Alert:`,msg) 
+                 console.log('')  
 
                 if(statusCampanha.length==0){
                     //Caso nao, insere o status
@@ -1777,6 +1781,7 @@ class Discador{
                 let sql = `SELECT *
                             FROM ${empresa}_dados.campanhas_agendamentos 
                             WHERE id=${idAgendamento}`
+                         
                 const a = await this.querySync(conn,sql)
                 const ramal=a[0].ramal
                 const protocolo=0
@@ -1785,8 +1790,12 @@ class Discador{
                 const modo_atendimento='auto'
                 const id_campanha=a[0].campanha
                 const id_mailing=a[0].mailing
-                
+               
                 const infoMailing = await Mailing.infoMailing(empresa,id_mailing)
+                if(infoMailing.length==0){
+                    resolve(false)
+                    return
+                }
 
                 const tabela_dados = infoMailing[0].tabela_dados
                 const tabela_numeros = infoMailing[0].tabela_numeros
@@ -1799,56 +1808,56 @@ class Discador{
                 const atendido=0
                 const na_fila=0
                 const falando=1
-
                 sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
-                                            (data,ramal,protocolo,tipo_ligacao,tipo_discador,retorno,modo_atendimento,
-                                            id_campanha,
-                                            id_mailing,
-                                            tabela_dados,
-                                            tabela_numeros,
-                                            id_registro,
-                                            id_numero,
-                                            numero,
-                                            fila,
-                                            tratado,
-                                            atendido,
-                                            na_fila,
-                                            falando) 
-                                    VALUES (now(),
-                                            '${ramal}',
-                                            '${protocolo}',
-                                            '${tipo_ligacao}',
-                                            '${tipo_discador}',
-                                            1,
-                                            '${modo_atendimento}',
-                                            '${id_campanha}',
-                                            '${id_mailing}',
-                                            '${tabela_dados}',
-                                            '${tabela_numeros}',
-                                            ${id_registro},
-                                            ${id_numero},
-                                            '${numero}',
-                                            ${fila},
-                                            ${tratado},
-                                            ${atendido},
-                                            ${na_fila},
-                                            ${falando})`
-                    //console.log('sql insert',sql)                        
-                    await this.querySync(conn,sql)
+                                                (data,ramal,protocolo,tipo_ligacao,tipo_discador,retorno,modo_atendimento,
+                                                id_campanha,
+                                                id_mailing,
+                                                tabela_dados,
+                                                tabela_numeros,
+                                                id_registro,
+                                                id_numero,
+                                                numero,
+                                                fila,
+                                                tratado,
+                                                atendido,
+                                                na_fila,
+                                                falando) 
+                                        VALUES (now(),
+                                                '${ramal}',
+                                                '${protocolo}',
+                                                '${tipo_ligacao}',
+                                                '${tipo_discador}',
+                                                1,
+                                                '${modo_atendimento}',
+                                                '${id_campanha}',
+                                                '${id_mailing}',
+                                                '${tabela_dados}',
+                                                '${tabela_numeros}',
+                                                ${id_registro},
+                                                ${id_numero},
+                                                '${numero}',
+                                                ${fila},
+                                                ${tratado},
+                                                ${atendido},
+                                                ${na_fila},
+                                                ${falando})`
+                        //console.log('sql insert',sql)                        
+                        await this.querySync(conn,sql)
 
-                    await this.alterarEstadoAgente(empresa,ramal,3,0)
+                        await this.alterarEstadoAgente(empresa,ramal,3,0)
 
-                    sql = `UPDATE ${empresa}_dados.campanhas_agendamentos 
-                            SET tratado=1 
-                            WHERE id=${idAgendamento}`
-                    await this.querySync(conn,sql)
-                    pool.end((err)=>{
-                    if(err) console.error(err)
-                    }) 
-                    resolve(true) 
-                })
+                        sql = `UPDATE ${empresa}_dados.campanhas_agendamentos 
+                                SET tratado=1 
+                                WHERE id=${idAgendamento}`
+                        await this.querySync(conn,sql)
+                        pool.end((err)=>{
+                        if(err) console.error(err)
+                        }) 
+                        resolve(true)
+                        return  
+                    
+                 })
             })         
-
     }   
                         
     async tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal,idNumero,removeNumero){
@@ -2319,6 +2328,20 @@ class Discador{
                     Cronometro.pararOciosidade(empresa,agente)
                     this.clearCallsAgent(empresa,agente)
                 }  
+
+                if(estado==5){
+                    const poolAsterisk = await connect.pool(empresa,'asterisk')
+                    poolAsterisk.getConnection(async (err,connAst)=>{
+                        //teste de remover agente do asterisk quando deslogado
+                        sql = `UPDATE asterisk.queue_members
+                                SET paused=1 
+                                WHERE membername=${agente}`
+                        await this.querySync(connAst,sql) 
+                        poolAsterisk.end((err)=>{
+                            if(err) console.log('Discador.js ...', err )
+                        }) 
+                    })     
+                }
 
                 if(estado==6){
                     const poolAsterisk = await connect.pool(empresa,'asterisk')
