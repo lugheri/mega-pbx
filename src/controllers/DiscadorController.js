@@ -44,7 +44,7 @@ class DiscadorController{
         }       
        
         const clientes = clientesAtivos;  
-        console.log('Dial Loop',process.env.ENVIRONMENT)
+       // console.log('Dial Loop',process.env.ENVIRONMENT)
         for(let i=0;i<clientes.length;++i){
             const empresa = clientes[i].prefix 
              
@@ -56,7 +56,7 @@ class DiscadorController{
             }     
 
             setTimeout(async ()=>{  
-                // this.campanhasEmpresa('megaconecta')
+               
                 this.campanhasEmpresa(empresa)
             },1000)             
         }
@@ -95,7 +95,7 @@ class DiscadorController{
 
         //#3 Verifica se existem campanhas ativas
         const campanhasAtivas = await Discador.campanhasAtivas(empresa);  
-        console.log(empresa,'campanhasAtivas',campanhasAtivas.length)
+        //console.log(empresa,'campanhasAtivas',campanhasAtivas.length)
         if(campanhasAtivas.length === 0){
             //console.log('[!]',`Empresa: ${empresa},  ..................................STOP[!]`)
             //console.log(`[!] ${empresa} Alert:`,'Nenhuma campanha ativa!')
@@ -126,8 +126,8 @@ class DiscadorController{
                  //await this.debug(`Campanha sem agendamento:${empresa}`,true,empresa)
             }
             //#8 Verifica se a campanha ativas esta dentro da data de agendamento 
-            const hoje = moment().format("Y-MM-DD")
-            console.log(hoje)
+            const hoje = moment().format("YYYY-MM-DD")
+            //console.log(hoje)
             const dataAgenda = await Discador.agendamentoCampanha_data(empresa,idCampanha,hoje)
              //await this.debug(`agendamentoCampanha_data:${empresa}`,dataAgenda,empresa)
             if(dataAgenda.length === 0){
@@ -136,7 +136,7 @@ class DiscadorController{
                 await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
             }
             const agora = moment().format("HH:mm:ss")
-            console.log(agora)
+            //console.log(agora)
             const horarioAgenda = await Discador.agendamentoCampanha_horario(empresa,idCampanha,agora)
              //await this.debug(`agendamentoCampanha_horario:${empresa}`,horarioAgenda,empresa)
             if(horarioAgenda.length === 0){
@@ -746,24 +746,31 @@ class DiscadorController{
     async statusRamal(req,res){
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
-        const estadoRamal = await Discador.statusRamal(empresa,ramal)
-        
+        let estadoRamal = await Redis.getter(`${ramal}_estadoRamal`)
         let estado = 0
-        if(estadoRamal.length>0){
-            if(estadoRamal[0].estado!=undefined){
-                estado=estadoRamal[0].estado
+        let tempo = 0        
+        if(estadoRamal == null){            
+            estadoRamal = await Discador.statusRamal(empresa,ramal)
+            console.log('estado ramal banco',estadoRamal)
+            if((estadoRamal.length>0)||(estadoRamal[0].estado!=undefined)){
+                estado = estadoRamal[0].estado;
+                tempo=await Report.converteSeg_tempo(estadoRamal[0].tempo)
             }
-        }
+        }else{
+            console.log('estado ramal Redis',estadoRamal)
+            estado = estadoRamal['estado']
+            const now = moment(new Date());         
+            const duration = moment.duration(now.diff(estadoRamal['hora']))
+            tempo = await Report.converteSeg_tempo(duration.asSeconds()) 
+        }        
        
         const estados=['deslogado','disponivel','em pausa','falando','indisponivel','tela reg.','ch manual','lig. manual'];
         const status = {}
               status['idEstado']=estado
-              console.log('estado',estado)
-              status['estado']=estados[estadoRamal[0].estado]
-              status['tempo']=await Report.converteSeg_tempo(estadoRamal[0].tempo) 
-
-              const client = process.env.client_id
-              status['client']=client
+              status['estado']=estados[estado]
+              status['tempo']=tempo 
+              /*const client = process.env.client_id
+              status['client']=client*/
         res.json(status);
     }
 

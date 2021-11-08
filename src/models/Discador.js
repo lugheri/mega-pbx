@@ -1609,9 +1609,11 @@ class Discador{
                 await this.debug('[!]','',empresa)
                 //console.log('')  
                 
-                console.log('[!]',`Empresa: ${empresa}, Campanha: ${idCampanha} ..................................STOP[!]`)       
-                 console.log(`[!] ${empresa} Alert:`,msg) 
-                 console.log('')  
+                // console.log('[!]',`Empresa: ${empresa}, Campanha: ${idCampanha} ..................................STOP[!]`)
+                
+                
+                // console.log(`[!] ${empresa} Alert:`,msg) 
+                // console.log('')  
 
                 if(statusCampanha.length==0){
                     //Caso nao, insere o status
@@ -2055,6 +2057,7 @@ class Discador{
             //console.log('{[(!)]} - alterarEstadoAgente','Empresa nao recebida')
             return false
         }
+        
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -2062,8 +2065,13 @@ class Discador{
 
                 //Recuperando estado anterior do agente
                 const estadoAnterior = await this.infoEstadoAgente(empresa,agente)
+                const horaAtual = moment().format("YYYY-MM-DD HH:mm:ss")
+                const estadoAgente={}
+                //Removendo informação anterior do Redis
+                await Redis.delete(`${agente}_estadoRamal`)
 
                 //zerando cronometro do estado anterior
+
 
                 let sql
                 //REMOVENDO AGENTE DE PAUSA
@@ -2090,7 +2098,9 @@ class Discador{
                     sql = `SELECT deslogado 
                             FROM ${empresa}_dados.user_ramal 
                             WHERE ramal=${agente}`
-                    const user = await this.querySync(conn,sql)
+                    const user = await this.querySync(conn,sql)                   
+
+
                     let deslogar=0
                     if(user.length>=1){
                         deslogar = user[0].deslogado
@@ -2118,6 +2128,11 @@ class Discador{
                                     SET estado=4, deslogado=0, datetime_estado=NOW() 
                                     WHERE userId=${agente}`
                             await this.querySync(conn,sql)
+
+                            estadoAgente['estado']=4
+                            estadoAgente['hora']=horaAtual                    
+                            await Redis.setter(`${agente}_estadoRamal`,estadoAgente)
+
                             Cronometro.pararOciosidade(empresa,agente)
                             pool.end((err)=>{
                                 if(err) console.error(err)
@@ -2210,6 +2225,11 @@ class Discador{
                                     SET estado=2, datetime_estado=NOW() 
                                     WHERE userId=${agente}`
                             await this.querySync(conn,sql)
+
+                            estadoAgente['estado']=2
+                            estadoAgente['hora']=horaAtual                    
+                            await Redis.setter(`${agente}_estadoRamal`,estadoAgente)
+
                             Cronometro.pararOciosidade(empresa,agente)
                             Cronometro.entrouEmPausa(empresa,idPausa,agente)
                             pool.end((err)=>{
@@ -2236,6 +2256,11 @@ class Discador{
                                 SET estado=${estadoAnterior}, datetime_estado=NOW()
                                 WHERE userId=${agente}`
                         await this.querySync(conn,sql)
+                        
+                        estadoAgente['estado']=estadoAnterior
+                        estadoAgente['hora']=horaAtual                    
+                        await Redis.setter(`${agente}_estadoRamal`,estadoAgente)
+
                         pool.end((err)=>{
                             if(err) console.error(err)
                         }) 
@@ -2319,6 +2344,10 @@ class Discador{
                                 SET deslogado=1, datetime_estado=NOW() 
                                 WHERE ramal=${agente}`
                         await this.querySync(conn,sql)
+                        
+                       
+
+
                         pool.end((err)=>{
                             if(err) console.error(err)
                         }) 
@@ -2369,6 +2398,11 @@ class Discador{
                         SET estado=${estado}, datetime_estado=NOW() 
                         WHERE userId=${agente}`
                 await this.querySync(conn,sql)
+
+                estadoAgente['estado']=estado
+                estadoAgente['hora']=horaAtual                    
+                await Redis.setter(`${agente}_estadoRamal`,estadoAgente)
+
                 pool.end((err)=>{
                     if(err) console.error(err)
                     }) 

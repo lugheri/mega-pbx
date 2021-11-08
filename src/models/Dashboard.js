@@ -73,7 +73,13 @@ async querySync(conn,sql){
             dash["Campanhas"]=[]
             for(let i = 0; i<campanhasAtivas.length; i++) {
                 const campanha={}
+                let statusDaCampanha=0
+                let mensagemCampanha="!"
                 const statusCampanha=await Discador.statusCampanha(empresa,campanhasAtivas[i].id)
+                if(statusCampanha.length>0){
+                    statusDaCampanha=statusCampanha[0].estado
+                    mensagemCampanha=statusCampanha[0].mensagem
+                }
                 const idMailing = await Campanhas.listarMailingCampanha(empresa,campanhasAtivas[i].id) 
 
                 const totalRegistros=await Campanhas.totalRegistrosCampanha(empresa,campanhasAtivas[i].id)
@@ -94,8 +100,8 @@ async querySync(conn,sql){
                
                 campanha["nomeCampanha"]=campanhasAtivas[i].nome
                 campanha["idCampanha"]=campanhasAtivas[i].id
-                campanha["statusCampanha"]=statusCampanha[0].estado
-                campanha["descricaoStatusCampanha"]=statusCampanha[0].mensagem
+                campanha["statusCampanha"]=statusDaCampanha
+                campanha["descricaoStatusCampanha"]=mensagemCampanha
                 campanha["descricaoCampanha"]=campanhasAtivas[i].descricao
                 campanha["PercentualTrabalhado"]=PercentualTrabalhado
                 campanha["Improdutivas"]=Improdutivas_mailingAtual
