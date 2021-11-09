@@ -56,7 +56,6 @@ class DiscadorController{
             }     
 
             setTimeout(async ()=>{  
-               
                 this.campanhasEmpresa(empresa)
             },1000)             
         }
@@ -134,23 +133,26 @@ class DiscadorController{
                 const msg = "Esta campanha esta fora da sua data de agendamento!"
                 const estado = 2
                 await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
-            }
-            const agora = moment().format("HH:mm:ss")
-            //console.log(agora)
-            const horarioAgenda = await Discador.agendamentoCampanha_horario(empresa,idCampanha,agora)
-             //await this.debug(`agendamentoCampanha_horario:${empresa}`,horarioAgenda,empresa)
-            if(horarioAgenda.length === 0){
-                const msg = "Esta campanha esta fora do horario de agendamento!"
-                const estado = 2
-                await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
-            }
-            
-            //Iniciando Passo 2
-            setTimeout(async ()=>{  
-                await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador)    
-            },500)     
-        }
-        
+                //console.log('data',msg)
+            }else{
+                const agora = moment().format("HH:mm:ss")
+                //console.log(agora)
+                const horarioAgenda = await Discador.agendamentoCampanha_horario(empresa,idCampanha,agora)
+                //console.log('horario',horarioAgenda)
+                //console.log('horario',horarioAgenda.length)
+           
+                //await this.debug(`agendamentoCampanha_horario:${empresa}`,horarioAgenda,empresa)
+                if(horarioAgenda.length === 0){
+                    const msg = "Esta campanha esta fora do horario de agendamento!"
+                    const estado = 2
+                    await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
+                    //console.log('horario',msg)
+                }else{            
+                    //Iniciando Passo 2
+                    await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador)    
+                }
+            }   
+        }        
     }
 
     async iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador){
