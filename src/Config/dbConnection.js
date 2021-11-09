@@ -74,7 +74,7 @@ const connect = ()=>{};
                 host = await Clients.serversDbs(empresa,process.env.TYPE_IP)
                 database = database_dados
         }        
-       
+        
         if(process.env.DEBUG=='ON'){
             console.log('Ambiente',process.env.ENVIRONMENT);
             console.log('Server DB',server_db)

@@ -1057,7 +1057,7 @@ class Discador{
                             FROM ${empresa}_dados.campanhas_horarios 
                             WHERE id_campanha=${idCampanha} AND hora_inicio<='${hora}' AND hora_termino>='${hora}'`;
                          
-                const rows = await this.querySync(conn,sql)
+                const rows = await this.querySync(conn,sql)              
               
                 pool.end((err)=>{
                     if(err) console.error(err)
@@ -1712,6 +1712,7 @@ class Discador{
             //console.log('{[(!)]} - registrarHistoricoAtendimento','Empresa nao recebida')
             return false
         }
+        await Redis.delete(`${empresa}_historicoChamadas_${ramal}`)
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -2019,7 +2020,7 @@ class Discador{
                         WHERE produtivo=1`
                 await this.querySync(conn,sql)  
                 
-                
+                await Redis.delete(`${empresa}_historicoChamadas_${ramal}`)
                 //Grava informações no histórico de chamadas
                 sql = `INSERT INTO ${empresa}_dados.historico_atendimento 
                                     (data,hora,campanha,mailing,id_registro,id_numero,nome_registro,agente,protocolo,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado,produtivo) 
@@ -3315,6 +3316,16 @@ class Discador{
             //console.log('{[(!)]} - historicoChamadas','Empresa nao recebida')
             return false
         }
+
+
+        //Checa se existem chamadas no redis
+        let historico = await Redis.getter(`${empresa}_historicoChamadas_${ramal}`)
+        if(historico!==null){
+            console.log(`Retornando historico de chamadas do ramal ${ramal} do redis`)
+            return historico
+        }
+
+
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -3342,6 +3353,7 @@ class Discador{
                 pool.end((err)=>{
                     if(err) console.error(err)
                     }) 
+                await Redis.setter(`${empresa}_historicoChamadas_${ramal}`,rows)
                 resolve(rows) 
             })
         })         
@@ -3378,6 +3390,7 @@ class Discador{
     }
 
     async gravaDadosChamadaManual(empresa,numero,nome,observacoes){
+        
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
