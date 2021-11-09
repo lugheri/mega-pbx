@@ -214,7 +214,14 @@ class CampanhasController{
     async listarFilasCampanha(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.idCampanha)
-        const filasCampanha = await Campanhas.listarFilasCampanha(empresa,idCampanha)
+        const filasCampanha=[]
+        const infoFilas = await Campanhas.listarFilasCampanha(empresa,idCampanha)
+        for(let i=0;i<infoFilas.length; i++){
+            const fila={}
+                  fila['idFila']=infoFilas[i].idFila
+                  fila['nomeFila']=`(${infoFilas[i].nomeFila}) ${infoFilas[i].apelido}`
+            filasCampanha.push(fila)
+        }
         res.json(filasCampanha) 
     }
     //Adiciona a fila na campanha

@@ -543,7 +543,7 @@ class Campanhas{
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT idFila, nomeFila
+                const sql = `SELECT idFila, nomeFila, apelido
                             FROM ${empresa}_dados.campanhas_filas 
                             WHERE idCampanha='${idCampanha}'`
                 const rows = await this.querySync(conn,sql)  
