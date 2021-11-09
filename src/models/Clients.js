@@ -103,6 +103,7 @@ class Clients{
     }
 
     async updateRegisterTrunk(conta,ip_provider,tech_prefix,type_dial,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport){
+      
       return new Promise (async (resolve,reject)=>{ 
         const pool = await connect.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
@@ -470,6 +471,10 @@ class Clients{
 
     async newAccount(mega,nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
         console.log('criando prefixo')
+
+        
+
+
         if(await this.checkPrefix(prefixo)>0){
           return({"error":true,"message":`O prefixo '${prefixo}' já existe!`})
              
@@ -1380,6 +1385,11 @@ class Clients{
     }
 
     async getTrunk(empresa){
+      const redis_trunks = await Redis.getter(`${empresa}_trunks`)
+      if(redis_trunks!==null){
+        return redis_trunks
+      }
+
       return new Promise (async (resolve,reject)=>{ 
         const pool = await connect.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
@@ -1398,6 +1408,7 @@ class Clients{
             pool.end((err)=>{
               if(err) console.log('Clientes.js 1300', err)
             })
+            await Redis.setter(`${empresa}_trunks`,trunks,120)
             resolve(trunks)
           })
       })
@@ -1507,6 +1518,7 @@ class Clients{
     }
 
     async editarCliente(idCliente,nome,fidelidade,licenses,channels_by_user,total_channels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain){
+     
       return new Promise (async (resolve,reject)=>{ 
         const pool = await connect.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 

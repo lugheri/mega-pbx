@@ -2,6 +2,7 @@
 var _Mailing = require('./Mailing'); var _Mailing2 = _interopRequireDefault(_Mailing);
 var _Clients = require('./Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
+var _Redis = require('../Config/Redis'); var _Redis2 = _interopRequireDefault(_Redis);
 
 class Campanhas{ 
     async querySync(conn,sql){         
@@ -57,6 +58,10 @@ class Campanhas{
     }
 
     async infoCampanha(empresa,idCampanha){
+        const infoCampanha = await _Redis2.default.getter(`${empresa}_infoCampanha_${idCampanha}`)
+        if(infoCampanha!==null){
+            return infoCampanha
+        }
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
@@ -74,6 +79,7 @@ class Campanhas{
                 pool.end((err)=>{
                     if(err) console.log('Campanhas.js 99', err)
                 })
+                await _Redis2.default.setter(`${empresa}_infoCampanha_${idCampanha}`,rows)
                 resolve(rows) 
             })
         })
@@ -127,19 +133,25 @@ class Campanhas{
 
     //Retorna Campanha
     async dadosCampanha(empresa,idCampanha){
+
+        const redis_dadosCampanha = await _Redis2.default.getter(`${empresa}_dadosCampanha_${idCampanha}`)
+        if(redis_dadosCampanha!==null){
+            return redis_dadosCampanha
+        }
         return new Promise (async (resolve,reject)=>{ 
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * FROM ${empresa}_dados.campanhas
                             WHERE id='${idCampanha}' AND status=1`
-                            const rows =  await this.querySync(conn,sql) 
-                            pool.end((err)=>{
-                                if(err) console.log('Campanhas.js 154', err)
-                            })
-                            resolve(rows) 
-                        })
-                    })          
+                const rows =  await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 154', err)
+                })
+                await _Redis2.default.setter(`${empresa}_dadosCampanha_${idCampanha}`,rows,360)
+                resolve(rows) 
+            })
+        })          
     }
 
     //Atualiza campanha
@@ -155,7 +167,14 @@ class Campanhas{
                                     estado=${valores.estado},
                                     status=${valores.status} 
                             WHERE id=${idCampanha}`
-                await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)              
+                await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)
+                
+                //Limpando cache das campanhas
+                await _Redis2.default.delete(`${empresa}_campanhasAtivas`)
+                await _Redis2.default.delete(`${empresa}_agendamentoCampanha`)
+                await _Redis2.default.delete(`${empresa}_dadosCampanha_${idCampanha}`)
+                await _Redis2.default.delete(`${empresa}_infoCampanha_${idCampanha}`)
+
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
                     if(err) console.log('Campanhas.js 176', err)
@@ -543,7 +562,7 @@ class Campanhas{
             const pool = await _dbConnection2.default.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT idFila, nomeFila
+                const sql = `SELECT idFila, nomeFila, apelido
                             FROM ${empresa}_dados.campanhas_filas 
                             WHERE idCampanha='${idCampanha}'`
                 const rows = await this.querySync(conn,sql)  
@@ -1258,6 +1277,11 @@ class Campanhas{
     //AGENDAMENTO DE CAMPANHAS
     //Agenda campanha
     async agendarCampanha(empresa,idCampanha,dI,dT,hI,hT){ 
+
+        await _Redis2.default.delete(`${empresa}_dataCampanha_${idCampanha}`)
+        await _Redis2.default.delete(`${empresa}_horarioCampanha_${idCampanha}`)
+
+
         const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
         let dataInicio = dI
         let dataFinal = dT

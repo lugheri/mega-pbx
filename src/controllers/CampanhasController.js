@@ -13,6 +13,7 @@ class CampanhasController{
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.id);
         const r = await Discador.statusCampanha(empresa,idCampanha)
+        console.log('Status Campanha',r)
         res.json(r)
     }
 
@@ -79,6 +80,7 @@ class CampanhasController{
         if(valores.estado!=1){
             await Discador.clearCallsCampanhas(empresa,idCampanha)
         }
+        await Discador.atualizaStatus(empresa,idCampanha,'...',valores.estado)
         res.json(true)    
     }
 
@@ -219,7 +221,7 @@ class CampanhasController{
         for(let i=0;i<infoFilas.length; i++){
             const fila={}
                   fila['idFila']=infoFilas[i].idFila
-                  fila['nomeFila']=`(${infoFilas[i].nomeFila}) ${infoFilas[i].apelido}`
+                  fila['nomeFila']=`(${infoFilas[i].nomeFila}) - ${infoFilas[i].apelido}`
             filasCampanha.push(fila)
         }
         res.json(filasCampanha) 

@@ -94,6 +94,7 @@ class DiscadorController{
 
         //#3 Verifica se existem campanhas ativas
         const campanhasAtivas = await Discador.campanhasAtivas(empresa);  
+        //console.log('campanhas ativas',campanhasAtivas)
         //console.log(empresa,'campanhasAtivas',campanhasAtivas.length)
         if(campanhasAtivas.length === 0){
             //console.log('[!]',`Empresa: ${empresa},  ..................................STOP[!]`)
@@ -127,36 +128,32 @@ class DiscadorController{
             //#8 Verifica se a campanha ativas esta dentro da data de agendamento 
             const hoje = moment().format("YYYY-MM-DD")
             //console.log(hoje)
-            const dataAgenda = await Discador.agendamentoCampanha_data(empresa,idCampanha,hoje)
-             //await this.debug(`agendamentoCampanha_data:${empresa}`,dataAgenda,empresa)
-            if(dataAgenda.length === 0){
+            const dataAgenda = await Discador.agendamentoCampanha_data(empresa,idCampanha)
+            if((dataAgenda['inicio']>=hoje)||(dataAgenda['termino']<=hoje)){
                 const msg = "Esta campanha esta fora da sua data de agendamento!"
                 const estado = 2
                 await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
-                //console.log('data',msg)
-            }else{
-                const agora = moment().format("HH:mm:ss")
-                //console.log(agora)
-                const horarioAgenda = await Discador.agendamentoCampanha_horario(empresa,idCampanha,agora)
-                //console.log('horario',horarioAgenda)
-                //console.log('horario',horarioAgenda.length)
-           
-                //await this.debug(`agendamentoCampanha_horario:${empresa}`,horarioAgenda,empresa)
-                if(horarioAgenda.length === 0){
-                    const msg = "Esta campanha esta fora do horario de agendamento!"
-                    const estado = 2
-                    await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
-                    //console.log('horario',msg)
-                }else{            
-                    //Iniciando Passo 2
-                    await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador)    
-                }
-            }   
+                //console.log(msg)
+                return false
+            }
+
+            const agora = moment().format("HH:mm:ss")
+            //console.log(agora)
+            const horarioAgenda = await Discador.agendamentoCampanha_horario(empresa,idCampanha)
+            if((horarioAgenda['hora_inicio']>=agora)||(horarioAgenda['hora_termino']<=agora)){
+                const msg = "Esta campanha esta fora do seu horário de agendamento!"
+                const estado = 2
+                await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
+                //console.log(msg)
+                return false
+            }
+            //Iniciando Passo 2
+            await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador)    
         }        
     }
 
     async iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador){
-        
+        //console.log('iniciaPreparacaoDiscador')
         //PASSO 2 - PREPARAÇÃO DO DISCADOR
         //await this.debug(' ','',empresa)
         //await this.debug(' . . . . . . PASSO 2 - PREPARAÇÃO DO DISCADOR','',empresa)
@@ -252,6 +249,7 @@ class DiscadorController{
             for(let i=0; i<registros.length; i++){
                 const registro = registros[i]
                             
+                /*
                 const numero = registros[i].numero
                 const ocupado = await Discador.checaNumeroOcupado(empresa,numero)  
                 //#6 Verifica se o numero selecionado ja nao esta em atendimento
@@ -261,8 +259,7 @@ class DiscadorController{
                     let msg='O numero selecionado esta em atendimento'
                     let estado = 2
                     await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
-                    return false;
-                }
+                }*/
 
                 //Iniciar Passo 3    
                 let msg='Campanha discando'
@@ -271,8 +268,8 @@ class DiscadorController{
 
                 //await this.debug(' . . . . . . . . . . . PASSO 2.6 - Separa o registro','',empresa)
                 //console.log(empresa,'envia preparaDiscagem',i, registro['id_registro'])
-                 this.prepararDiscagem(empresa,idCampanha,parametrosDiscador,idMailing,tabela_dados,tabela_numeros,registro,idFila,nomeFila,qtdChamadasSimultaneas,limiteDiscagem)
-              
+                this.prepararDiscagem(empresa,idCampanha,parametrosDiscador,idMailing,tabela_dados,tabela_numeros,registro,idFila,nomeFila,qtdChamadasSimultaneas,limiteDiscagem)
+                              
                 
             }
             return true

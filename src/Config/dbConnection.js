@@ -1,6 +1,7 @@
 import mysql from 'mysql2';
 import Clients from '../models/Clients'
 import redis from 'promise-redis'
+import Redis from './Redis'
 
 const connect = ()=>{};
       connect.redisConn = async () => {
@@ -76,6 +77,7 @@ const connect = ()=>{};
         }        
         
         if(process.env.DEBUG=='ON'){
+            //await Redis.delete(`${empresa}_host`)
             console.log('Ambiente',process.env.ENVIRONMENT);
             console.log('Server DB',server_db)
             console.log('Type IP',process.env.TYPE_IP)

@@ -4,6 +4,7 @@ var _md5 = require('md5'); var _md52 = _interopRequireDefault(_md5);
 var _jsonwebtoken = require('jsonwebtoken'); var _jsonwebtoken2 = _interopRequireDefault(_jsonwebtoken);
 var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User);
 var _Clients = require('../models/Clients'); var _Clients2 = _interopRequireDefault(_Clients);
+var _Redis = require('../Config/Redis'); var _Redis2 = _interopRequireDefault(_Redis);
 
 class SessionController{
     async store(req,res){          
@@ -24,10 +25,11 @@ class SessionController{
            
             if(userData[0].senha!=_md52.default.call(void 0, senha)){
                 return res.json({WrongPassword: 'Senha errada!'})
-            }else{
-               
+            }else{               
                 const acao='login'
                 const idAccount = await _Clients2.default.accountId(empresa)
+                await _Redis2.default.setter('empresas',await _Clients2.default.clientesAtivos())
+
                 const token = _jsonwebtoken2.default.sign({userId:userData[0].id,empresa:empresa,idAccount:idAccount},process.env.APP_SECRET,{
                     expiresIn:'12h'
                 })
@@ -49,8 +51,7 @@ class SessionController{
                     }else{
                         res.json({ "error":true,"message":"Aguardando aceite dos termos de uso!"})
                     }
-                } 
-                            
+                }                             
             }
         }
     }

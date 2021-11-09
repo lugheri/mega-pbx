@@ -66,6 +66,7 @@ class FilasController{
             res.json(true)
             return false;          
         }     
+        await Redis.delete(`${empresa}_agentesNaFila_${idFila}`)
         res.json(false)   
     }
 
@@ -86,6 +87,7 @@ class FilasController{
                 
             }   
         }
+        await Redis.delete(`${empresa}_agentesNaFila_${idFila}`)
         res.json(true) 
 
     }

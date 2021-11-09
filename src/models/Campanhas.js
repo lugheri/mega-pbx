@@ -2,6 +2,7 @@ import connect from '../Config/dbConnection';
 import Mailing from './Mailing';
 import Clients from './Clients';
 import moment from 'moment';
+import Redis from '../Config/Redis'
 
 class Campanhas{ 
     async querySync(conn,sql){         
@@ -57,6 +58,10 @@ class Campanhas{
     }
 
     async infoCampanha(empresa,idCampanha){
+        const infoCampanha = await Redis.getter(`${empresa}_infoCampanha_${idCampanha}`)
+        if(infoCampanha!==null){
+            return infoCampanha
+        }
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
@@ -74,6 +79,7 @@ class Campanhas{
                 pool.end((err)=>{
                     if(err) console.log('Campanhas.js 99', err)
                 })
+                await Redis.setter(`${empresa}_infoCampanha_${idCampanha}`,rows)
                 resolve(rows) 
             })
         })
@@ -127,19 +133,25 @@ class Campanhas{
 
     //Retorna Campanha
     async dadosCampanha(empresa,idCampanha){
+
+        const redis_dadosCampanha = await Redis.getter(`${empresa}_dadosCampanha_${idCampanha}`)
+        if(redis_dadosCampanha!==null){
+            return redis_dadosCampanha
+        }
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT * FROM ${empresa}_dados.campanhas
                             WHERE id='${idCampanha}' AND status=1`
-                            const rows =  await this.querySync(conn,sql) 
-                            pool.end((err)=>{
-                                if(err) console.log('Campanhas.js 154', err)
-                            })
-                            resolve(rows) 
-                        })
-                    })          
+                const rows =  await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 154', err)
+                })
+                await Redis.setter(`${empresa}_dadosCampanha_${idCampanha}`,rows,360)
+                resolve(rows) 
+            })
+        })          
     }
 
     //Atualiza campanha
@@ -155,7 +167,15 @@ class Campanhas{
                                     estado=${valores.estado},
                                     status=${valores.status} 
                             WHERE id=${idCampanha}`
-                await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)              
+                await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)
+                
+                //Limpando cache das campanhas
+                await Redis.delete(`${empresa}_campanhasAtivas`)
+                await Redis.delete(`${empresa}_agendamentoCampanha`)
+                await Redis.delete(`${empresa}_dadosCampanha_${idCampanha}`)
+                await Redis.delete(`${empresa}_infoCampanha_${idCampanha}`)
+               
+
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
                     if(err) console.log('Campanhas.js 176', err)
@@ -1258,6 +1278,11 @@ class Campanhas{
     //AGENDAMENTO DE CAMPANHAS
     //Agenda campanha
     async agendarCampanha(empresa,idCampanha,dI,dT,hI,hT){ 
+
+        await Redis.delete(`${empresa}_dataCampanha_${idCampanha}`)
+        await Redis.delete(`${empresa}_horarioCampanha_${idCampanha}`)
+
+
         const hoje = moment().format("Y-MM-DD")
         let dataInicio = dI
         let dataFinal = dT

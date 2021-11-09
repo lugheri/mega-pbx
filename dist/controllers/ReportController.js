@@ -438,6 +438,7 @@ class ReportController{
         res.send(monitoramentoCampanha);
     }
 
+    
     async atualizaAgressividade(req,res){
         const empresa = await _User2.default.getEmpresa(req)
         const idCampanha  = req.params.idCampanha

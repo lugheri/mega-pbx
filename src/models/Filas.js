@@ -235,6 +235,23 @@ class Filas{
         })      
     }
 
+    async filasAgente(empresa,ramal){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                const sql = `SELECT fila
+                               FROM ${empresa}_dados.agentes_filas
+                              WHERE ramal=${ramal}`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Filas ...', err)
+                })
+                resolve(rows)
+            })
+        })      
+    }
+
     async membrosNaFila(empresa,idFila){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')

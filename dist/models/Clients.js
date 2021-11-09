@@ -1,4 +1,5 @@
 "use strict";Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _dbConnection = require('../Config/dbConnection'); var _dbConnection2 = _interopRequireDefault(_dbConnection);
+var _Redis = require('../Config/Redis'); var _Redis2 = _interopRequireDefault(_Redis);
 
 
 class Clients{
@@ -102,6 +103,7 @@ class Clients{
     }
 
     async updateRegisterTrunk(conta,ip_provider,tech_prefix,type_dial,contact,qualify_frequency,max_contacts,context,server_ip,dtmf_mode,force_rport,disallow,allow,rtp_symmetric,rewrite_contact,direct_media,allow_subscribe,transport){
+      
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
@@ -224,7 +226,16 @@ class Clients{
   }
 
   //DBS SERVERS
-  async serversDbs(prefix,TYPE_IP) {
+  async serversDbs(prefix,TYPE_IP){ 
+
+    let hostEmpresa = await _Redis2.default.getter(`${prefix}_host`)
+    if(hostEmpresa){      
+     // console.log('Empresa localizada no redis',prefix,hostEmpresa[prefix][TYPE_IP])
+      return(hostEmpresa[prefix][TYPE_IP])       
+    }
+    console.log(prefix,"Empresa nao encontrada")
+   
+    
     return new Promise (async (resolve,reject)=>{ 
       const pool = await _dbConnection2.default.pool(0,'crm')  
         pool.getConnection(async (err,conn)=>{ 
@@ -233,12 +244,13 @@ class Clients{
           if(TYPE_IP=='PUBLIC'){
             campo_ip='d.ip_externo'
           }
-          
-          const sql = `SELECT ${campo_ip} AS 'ip'
+           
+            
+          const sql = `SELECT d.ip as ip_local, d.ip_externo as ip_publico
                         FROM clients.accounts AS c 
                         JOIN clients.servers_db AS d ON c.server_db = d.id 
                         WHERE c.prefix = '${prefix}'`
-                        
+                          
           const r = await this.querySync(conn,sql)            
           if(r.length==0){
             pool.end((err)=>{
@@ -250,8 +262,21 @@ class Clients{
           pool.end((err)=>{
             if(err) console.log('Clientes.js 231', err)
           })
-          resolve(r[0].ip) 
-        })
+          let hostEmpresas_REDIS = await _Redis2.default.getter(`${prefix}_host`)
+          if(!hostEmpresas_REDIS){
+            console.log("=========================================CRIANDO REDIS=========================================")
+            const hostEmpresa = {}
+                  hostEmpresa[`${prefix}`]={}
+                  hostEmpresa[`${prefix}`]['LOCAL']=r[0].ip_local
+                  hostEmpresa[`${prefix}`]['PUBLIC']=r[0].ip_publico
+                  console.log('hostEmpresas_REDIS',hostEmpresa)
+                  console.log('Gravou no Redis',prefix)    
+                  console.log('Host Completo',hostEmpresa)   
+                await _Redis2.default.setter(`${prefix}_host`,hostEmpresa,7200)    
+                resolve(hostEmpresa[prefix][TYPE_IP])      
+         
+          }
+      })
     }) 
   }
   
@@ -446,6 +471,10 @@ class Clients{
 
     async newAccount(mega,nomeEmpresa,prefixo,fidelidade,licenses,channelsUser,totalChannels,trunk,tech_prefix,type_dial,type_server){
         console.log('criando prefixo')
+
+        
+
+
         if(await this.checkPrefix(prefixo)>0){
           return({"error":true,"message":`O prefixo '${prefixo}' já existe!`})
              
@@ -1338,8 +1367,7 @@ class Clients{
     }
 
 
-    async clientesAtivos(){
-      console.log('Chamou Clientes')
+    async clientesAtivos(){      
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
@@ -1357,6 +1385,11 @@ class Clients{
     }
 
     async getTrunk(empresa){
+      const redis_trunks = await _Redis2.default.getter(`${empresa}_trunks`)
+      if(redis_trunks!==null){
+        return redis_trunks
+      }
+
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
@@ -1375,6 +1408,7 @@ class Clients{
             pool.end((err)=>{
               if(err) console.log('Clientes.js 1300', err)
             })
+            await _Redis2.default.setter(`${empresa}_trunks`,trunks,120)
             resolve(trunks)
           })
       })
@@ -1484,6 +1518,7 @@ class Clients{
     }
 
     async editarCliente(idCliente,nome,fidelidade,licenses,channels_by_user,total_channels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain){
+     
       return new Promise (async (resolve,reject)=>{ 
         const pool = await _dbConnection2.default.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 

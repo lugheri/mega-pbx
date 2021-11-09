@@ -6,6 +6,7 @@ var _User = require('../models/User'); var _User2 = _interopRequireDefault(_User
 var _Clients = require('../models/Clients'); var _Clients2 = _interopRequireDefault(_Clients);
 var _Cronometro = require('../models/Cronometro'); var _Cronometro2 = _interopRequireDefault(_Cronometro);
 var _moment = require('moment'); var _moment2 = _interopRequireDefault(_moment);
+var _Redis = require('../Config/Redis'); var _Redis2 = _interopRequireDefault(_Redis);
 
 class DiscadorController{         
     async debug(title="",msg="",empresa=""){     
@@ -32,18 +33,21 @@ class DiscadorController{
     }
 
     //Discador Otimizado:
-    async checkAccounts(clientes=""){
-        let clientesAtivos=clientes
-       
-        if(clientes.length==0){
-            clientesAtivos = await _Clients2.default.clientesAtivos()
-        }
+    async checkAccounts(){
         
-        let cache_timeout_ca
-        for(let i=0;i<clientesAtivos.length;++i){
-            const empresa = clientesAtivos[i].prefix 
-             //await this.debug(`${empresa} - loop`,i,empresa)
-           //  //await this.debug('EMPRESA==>',empresa)           ,empresa 
+        let clientesAtivos=await _Redis2.default.getter('empresas')    
+        
+        if(!clientesAtivos){
+            clientesAtivos=await _Clients2.default.clientesAtivos()
+            await _Redis2.default.setter('empresas',clientesAtivos,600)
+            console.log('Setando empresas ativas no Redis')           
+        }       
+       
+        const clientes = clientesAtivos;  
+       // console.log('Dial Loop',process.env.ENVIRONMENT)
+        for(let i=0;i<clientes.length;++i){
+            const empresa = clientes[i].prefix 
+             
             //Funcoes de controle
             //Desloga todos usuarios as 23h59
             const horaAtual = _moment2.default.call(void 0, ).format("HH:mm")
@@ -52,63 +56,49 @@ class DiscadorController{
             }     
 
             setTimeout(async ()=>{  
-                if(process.env.ENVIRONMENT=='dev'){
-                
-                    this.campanhasEmpresa('megaconecta')
-                }else{
-                    this.campanhasEmpresa(empresa)
-                }   
+                this.campanhasEmpresa(empresa)
             },1000)             
         }
-        cache_timeout_ca=setTimeout(async ()=>{             
-             await this.checkAccounts(clientesAtivos);
-        },10000)
+        setTimeout(async ()=>{             
+             await this.checkAccounts();
+        },5000)
         
     }
 
     async campanhasEmpresa(empresa){
-        //console.log('campanha empresa',empresa)
-        //await this.debug(' ',' ',empresa)
-        //await this.debug('EMPRESA==>',empresa,empresa)
-        
-        ////await this.debug(empresa,'Iniciando Discador',empresa)
+        console.log('campanha empresa',empresa)
         //PASSO 1 - VERIFICAÇÃO
-        //await this.debug('PASSO 1 - VERIFICAÇÃO','',empresa)
         //#1 Conta as chamadas simultaneas para registrar no log   
-         
         const rcs = await _Discador2.default.registrarChamadasSimultaneas(empresa)
        
-        
-         //await this.debug(`registrarChamadasSimultaneas:${empresa}`,rcs,empresa)
-
         //#2 Verifica possiveis chamadas presas e remove das chamadas simultâneas
         const cc = await _Discador2.default.clearCalls(empresa) 
         //console.log('TESTE',empresa,'............. ok')
-         //await this.debug(`clearCalls:${empresa}`,cc,empresa)
         
         //# - VERIFICA SE POSSUI RETORNOS AGENDADOS
         const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
         const hora = _moment2.default.call(void 0, ).format("HH:mm:ss")
-         //await this.debug('Verificando retornos para', `${hoje} as ${hora}`,empresa)
+       
+        //CONSULTA DE AGENDAMENTOS
+        //console.log('Verificando retornos para', `${hoje} as ${hora}`,empresa)
         const agendamento = await _Discador2.default.checaAgendamento(empresa,hoje,hora);
         if(agendamento.length >= 1){
              //await this.debug('Iniciando agendamento!',empresa)
             //seta registro para agente
-            await _Discador2.default.abreRegistroAgendado(empresa,agendamento[0].id)
-            return false 
+            const regAgendado = await _Discador2.default.abreRegistroAgendado(empresa,agendamento[0].id)
+            
+            if(regAgendado!==false){
+                return false 
+            }
         }
 
         //#3 Verifica se existem campanhas ativas
         const campanhasAtivas = await _Discador2.default.campanhasAtivas(empresa);  
-        //await this.debug(`campanhasAtivas:${empresa}`,campanhasAtivas,empresa)
-        
+        //console.log('campanhas ativas',campanhasAtivas)
+        //console.log(empresa,'campanhasAtivas',campanhasAtivas.length)
         if(campanhasAtivas.length === 0){
-             //await this.debug('',empresa)
-             //await this.debug('[!]',`Empresa: ${empresa},  ..................................STOP[!]`)      ,empresa 
-             //await this.debug(`[!] ${empresa} Alert:`,'Nenhuma campanha ativa!'),empresa 
-             //await this.debug('',empresa)
-            //await this.debug('[!]','Nenhuma campanha ativa![!]',empresa)
-             //await this.debug('continuando....',empresa)
+            //console.log('[!]',`Empresa: ${empresa},  ..................................STOP[!]`)
+            //console.log(`[!] ${empresa} Alert:`,'Nenhuma campanha ativa!')
             return false
         }
 
@@ -136,31 +126,34 @@ class DiscadorController{
                  //await this.debug(`Campanha sem agendamento:${empresa}`,true,empresa)
             }
             //#8 Verifica se a campanha ativas esta dentro da data de agendamento 
-            const hoje = _moment2.default.call(void 0, ).format("Y-MM-DD")
-            const dataAgenda = await _Discador2.default.agendamentoCampanha_data(empresa,idCampanha,hoje)
-             //await this.debug(`agendamentoCampanha_data:${empresa}`,dataAgenda,empresa)
-            if(dataAgenda.length === 0){
+            const hoje = _moment2.default.call(void 0, ).format("YYYY-MM-DD")
+            //console.log(hoje)
+            const dataAgenda = await _Discador2.default.agendamentoCampanha_data(empresa,idCampanha)
+            if((dataAgenda['inicio']>=hoje)||(dataAgenda['termino']<=hoje)){
                 const msg = "Esta campanha esta fora da sua data de agendamento!"
                 const estado = 2
                 await _Discador2.default.atualizaStatus(empresa,idCampanha,msg,estado)
+                //console.log(msg)
+                return false
             }
+
             const agora = _moment2.default.call(void 0, ).format("HH:mm:ss")
-            const horarioAgenda = await _Discador2.default.agendamentoCampanha_horario(empresa,idCampanha,agora)
-             //await this.debug(`agendamentoCampanha_horario:${empresa}`,horarioAgenda,empresa)
-            if(horarioAgenda.length === 0){
-                const msg = "Esta campanha esta fora do horario de agendamento!"
+            //console.log(agora)
+            const horarioAgenda = await _Discador2.default.agendamentoCampanha_horario(empresa,idCampanha)
+            if((horarioAgenda['hora_inicio']>=agora)||(horarioAgenda['hora_termino']<=agora)){
+                const msg = "Esta campanha esta fora do seu horário de agendamento!"
                 const estado = 2
                 await _Discador2.default.atualizaStatus(empresa,idCampanha,msg,estado)
+                //console.log(msg)
+                return false
             }
             //Iniciando Passo 2
-            setTimeout(async ()=>{  
-                await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador)    
-            },500)     
-        }
+            await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador)    
+        }        
     }
 
     async iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador){
-        
+        console.log('iniciaPreparacaoDiscador')
         //PASSO 2 - PREPARAÇÃO DO DISCADOR
         //await this.debug(' ','',empresa)
         //await this.debug(' . . . . . . PASSO 2 - PREPARAÇÃO DO DISCADOR','',empresa)
@@ -256,17 +249,17 @@ class DiscadorController{
             for(let i=0; i<registros.length; i++){
                 const registro = registros[i]
                             
+                /*
                 const numero = registros[i].numero
-                const ocupado = await _Discador2.default.checaNumeroOcupado(empresa,numero)  
+                const ocupado = await Discador.checaNumeroOcupado(empresa,numero)  
                 //#6 Verifica se o numero selecionado ja nao esta em atendimento
            
                  //await this.debug(`checaNumeroOcupado:${empresa}`,ocupado,empresa)
                 if(ocupado === true){  
                     let msg='O numero selecionado esta em atendimento'
                     let estado = 2
-                    await _Discador2.default.atualizaStatus(empresa,idCampanha,msg,estado)
-                    return false;
-                }
+                    await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
+                }*/
 
                 //Iniciar Passo 3    
                 let msg='Campanha discando'
@@ -275,8 +268,8 @@ class DiscadorController{
 
                 //await this.debug(' . . . . . . . . . . . PASSO 2.6 - Separa o registro','',empresa)
                 //console.log(empresa,'envia preparaDiscagem',i, registro['id_registro'])
-                 this.prepararDiscagem(empresa,idCampanha,parametrosDiscador,idMailing,tabela_dados,tabela_numeros,registro,idFila,nomeFila,qtdChamadasSimultaneas,limiteDiscagem)
-              
+                this.prepararDiscagem(empresa,idCampanha,parametrosDiscador,idMailing,tabela_dados,tabela_numeros,registro,idFila,nomeFila,qtdChamadasSimultaneas,limiteDiscagem)
+                              
                 
             }
             return true
@@ -752,21 +745,31 @@ class DiscadorController{
     async statusRamal(req,res){
         const empresa = await _User2.default.getEmpresa(req)
         const ramal = req.params.ramal
-        const estadoRamal = await _Discador2.default.statusRamal(empresa,ramal)
+        let estadoRamal = await _Redis2.default.getter(`${ramal}_estadoRamal`)
         let estado = 0
-        if(estadoRamal.length>0){
-            if(estadoRamal[0].estado!=undefined){
-                estado=estadoRamal[0].estado
+        let tempo = 0        
+        if(estadoRamal == null){            
+            estadoRamal = await _Discador2.default.statusRamal(empresa,ramal)
+            console.log('estado ramal banco',estadoRamal)
+            if((estadoRamal.length>0)||(estadoRamal[0].estado!=undefined)){
+                estado = estadoRamal[0].estado;
+                tempo=await _Report2.default.converteSeg_tempo(estadoRamal[0].tempo)
             }
-        }
-        const estados=['deslogado','disponivel','em pausa','falando','indisponivel'];
+        }else{
+            console.log('estado ramal Redis',estadoRamal)
+            estado = estadoRamal['estado']
+            const now = _moment2.default.call(void 0, new Date());         
+            const duration = _moment2.default.duration(now.diff(estadoRamal['hora']))
+            tempo = await _Report2.default.converteSeg_tempo(duration.asSeconds()) 
+        }        
+       
+        const estados=['deslogado','disponivel','em pausa','falando','indisponivel','tela reg.','ch manual','lig. manual'];
         const status = {}
               status['idEstado']=estado
-              status['estado']=estados[estadoRamal[0].estado]
-              status['tempo']=await _Report2.default.converteSeg_tempo(estadoRamal[0].tempo) 
-
-              const client = process.env.client_id
-              status['client']=client
+              status['estado']=estados[estado]
+              status['tempo']=tempo 
+              /*const client = process.env.client_id
+              status['client']=client*/
         res.json(status);
     }
 
