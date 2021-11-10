@@ -227,11 +227,11 @@ class Clients{
 
   //DBS SERVERS
   async serversDbs(prefix,TYPE_IP){ 
-
-    let hostEmpresa = await Redis.getter(`${prefix}_host`)
-    if(hostEmpresa){      
+    //await Redis.delete(`host:${prefix}`) 
+    let hostEmpresas_REDIS = await Redis.getter(`host:${prefix}`)
+    if(hostEmpresas_REDIS!==null){      
      // console.log('Empresa localizada no redis',prefix,hostEmpresa[prefix][TYPE_IP])
-      return(hostEmpresa[prefix][TYPE_IP])       
+      return(hostEmpresas_REDIS[prefix][TYPE_IP])       
     }
     console.log(prefix,"Empresa nao encontrada")
    
@@ -262,20 +262,15 @@ class Clients{
           pool.end((err)=>{
             if(err) console.log('Clientes.js 231', err)
           })
-          let hostEmpresas_REDIS = await Redis.getter(`${prefix}_host`)
-          if(!hostEmpresas_REDIS){
-            console.log("=========================================CRIANDO REDIS=========================================")
-            const hostEmpresa = {}
-                  hostEmpresa[`${prefix}`]={}
-                  hostEmpresa[`${prefix}`]['LOCAL']=r[0].ip_local
-                  hostEmpresa[`${prefix}`]['PUBLIC']=r[0].ip_publico
-                  console.log('hostEmpresas_REDIS',hostEmpresa)
-                  console.log('Gravou no Redis',prefix)    
-                  console.log('Host Completo',hostEmpresa)   
-                await Redis.setter(`${prefix}_host`,hostEmpresa,7200)    
-                resolve(hostEmpresa[prefix][TYPE_IP])      
-         
-          }
+          const hostEmpresa = {}
+                hostEmpresa[`${prefix}`]={}
+                hostEmpresa[`${prefix}`]['LOCAL']=r[0].ip_local
+                hostEmpresa[`${prefix}`]['PUBLIC']=r[0].ip_publico
+          console.log('hostEmpresas_REDIS',hostEmpresa)
+          console.log('Gravou no Redis',prefix)    
+          console.log('Host Completo',hostEmpresa)   
+          await Redis.setter(`host:${prefix}`,hostEmpresa,300)    
+          resolve(hostEmpresa[prefix][TYPE_IP])         
       })
     }) 
   }
@@ -1347,6 +1342,10 @@ class Clients{
     }
 
     async accountId(prefix){
+      const accountId = await Redis.getter(`${prefix}:accountId`)
+      if(accountId!==null){
+        return accountId
+      }
       return new Promise (async (resolve,reject)=>{ 
         const pool = await connect.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
@@ -1361,6 +1360,7 @@ class Clients{
             if(p.length==0){
               resolve(0)
             }
+            await Redis.setter(`${prefix}:accountId`,p[0].client_number,600)
             resolve(p[0].client_number)
           })
       })        
@@ -1438,16 +1438,22 @@ class Clients{
       })
     }
 
-    async maxChannels(empresa){
+
+    async planoEmpresa(empresa){
+      const redis_planoEmpresa = await Redis.getter(`${empresa}:planoEmpresa`)
+      if(redis_planoEmpresa!==null){
+        return redis_planoEmpresa
+      }
+
       return new Promise (async (resolve,reject)=>{ 
         const pool = await connect.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 
             if(err) return console.error({"errorCode":err.code,"arquivo":"Clients.js:maxChannels","message":err.message,"stack":err.stack});
-            const sql = `SELECT total_channels
-                          FROM clients.accounts 
+            const sql = `SELECT total_channels,ilimitado
+                           FROM clients.accounts 
                           WHERE prefix='${empresa}'`
-            const tc = await this.querySync(conn,sql)
-            if(tc.length==0){
+            const rows = await this.querySync(conn,sql)
+            if(rows.length==0){
               pool.end((err)=>{
                 if(err) console.log('Clientes.js 1340', err)
               })
@@ -1457,7 +1463,8 @@ class Clients{
             pool.end((err)=>{
               if(err) console.log('Clientes.js 1346', err)
             })
-            resolve(tc[0].total_channels)
+            await Redis.setter(`${empresa}:planoEmpresa`,rows[0],120)
+            resolve(rows[0])
           })
       })       
     }

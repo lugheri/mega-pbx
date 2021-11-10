@@ -3,6 +3,7 @@ import Clients from './Clients'
 import jwt from 'jsonwebtoken';
 import md5 from 'md5';
 import Discador from './Discador';
+import Redis from '../Config/Redis';
 
 class User{
     async querySync(conn,sql){         
@@ -21,6 +22,11 @@ class User{
     async findEmpresa(usuario){
         const u = usuario.split('@');
         const empresa = u[1]
+       
+        const dadosEmpresa = await Redis.getter(`${empresa}:findEmpresa`)
+        if(dadosEmpresa!==null){
+            return dadosEmpresa
+        }
         const sql = `SELECT client_number,prefix
                        FROM accounts
                       WHERE prefix='${empresa}'
@@ -33,13 +39,18 @@ class User{
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
-                    }) 
+                })
+                await Redis.setter(`${empresa}:findEmpresa`,rows,300) 
                 resolve(rows)   
             }) 
         }) 
     }
 
     async codEmpresa(empresa){
+        const codEmpresa = await Redis.getter(`${empresa}:codEmpresa`)
+        if(codEmpresa!==null){
+            return codEmpresa
+        }
         return new Promise (async (resolve,reject)=>{ 
             const sql = `SELECT client_number
                         FROM accounts
@@ -49,15 +60,20 @@ class User{
             pool.getConnection(async (err,conn)=>{                           
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const code =  await this.querySync(conn,sql)                  
-               pool.end((err)=>{
+                pool.end((err)=>{
                     if(err) console.log(err)
-                    }) 
+                }) 
+                await Redis.setter(`${empresa}:codEmpresa`,code[0].client_number,1800)
                 resolve(code[0].client_number)   
             }) 
         })
     }
     
     async findUser(empresa,usuario){
+        const findUser = await Redis.getter(`${empresa}:findUser:${usuario}`)
+        if(findUser!==null){
+            return findUser
+        }
         return new Promise (async (resolve,reject)=>{ 
             const sql = `SELECT *
                         FROM ${empresa}_dados.users 
@@ -69,7 +85,8 @@ class User{
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
                     if(err) console.log(err)
-                    }) 
+                }) 
+                await Redis.setter(`${empresa}:findUser`,rows,120)
                 resolve(rows)   
             })  
         })
@@ -97,6 +114,7 @@ class User{
     }
 
     async registraLogin(empresa,usuarioId,acao){
+        await Redis.delete(`${usuarioId}:estadoRamal`)
         return new Promise (async (resolve,reject)=>{        
             let sql
             const pool = await connect.pool(empresa,'dados')
@@ -118,7 +136,7 @@ class User{
                         }
                     } 
                     //Atualiza em todas as filas estado como 1
-                    sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=4 WHERE ramal=${usuarioId}`
+                    sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=4, idpausa=0 WHERE ramal=${usuarioId}`
                     await this.querySync(conn,sql) 
                                         
                     sql = `UPDATE ${empresa}_dados.users SET logado=1, ultimo_acesso=NOW() WHERE id=${usuarioId}`
@@ -128,7 +146,7 @@ class User{
                     await this.querySync(conn,sql) 
                 }else{                
                     //Atualiza em todas as filas estado como 0
-                    sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0 WHERE ramal=${usuarioId}`
+                    sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0, idpausa=0 WHERE ramal=${usuarioId}`
                     await this.querySync(conn,sql) 
 
                     //Remove qualquer chamada presa do agente
@@ -218,7 +236,7 @@ class User{
                 return 0
             }
         }
-        return estadoRamal[0].estado
+        return estadoRamal['estado']
     }
 
     async statusAgente(empresa,idAgente){

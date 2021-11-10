@@ -1,7 +1,6 @@
 import mysql from 'mysql2';
 import Clients from '../models/Clients'
 import redis from 'promise-redis'
-import Redis from './Redis'
 
 const connect = ()=>{};
       connect.redisConn = async () => {

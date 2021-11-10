@@ -66,7 +66,7 @@ class FilasController{
             res.json(true)
             return false;          
         }     
-        await Redis.delete(`${empresa}_agentesNaFila_${idFila}`)
+        await Redis.delete(`${empresa}:agentesNaFila:${idFila}`)
         res.json(false)   
     }
 
@@ -74,6 +74,7 @@ class FilasController{
         const empresa = await User.getEmpresa(req)
         const idFila = req.params.idFila
         const destino = req.params.destino
+        await Redis.delete(`${empresa}:agentesNaFila:${idFila}`)
         if(destino=="D"){
             const agentesForaFila = await Filas.membrosForaFila(empresa,idFila)
             for(let i=0; i<agentesForaFila.length; i++){
@@ -87,7 +88,7 @@ class FilasController{
                 
             }   
         }
-        await Redis.delete(`${empresa}_agentesNaFila_${idFila}`)
+        
         res.json(true) 
 
     }
