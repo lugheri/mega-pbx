@@ -98,6 +98,11 @@ class Discador{
     }  
     
     async campanhasAtivasAgente(empresa,agente){
+        const redis_campanhasAtivasAgente = await Redis.getter(`${empresa}:campanhasAtivasAgente:${agente}`)
+        
+        if(redis_campanhasAtivasAgente!==null){
+            return redis_campanhasAtivasAgente
+        }        
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{  
@@ -112,8 +117,10 @@ class Discador{
                 const c = await this.querySync(conn,sql);
                 pool.end((err)=>{
                     if(err) console.error(err)
-                    }) 
-                resolve(c[0].campanhasAtivas) 
+                }) 
+                const campanhasAtivasAgente=c[0].campanhasAtivas
+                await Redis.setter(`${empresa}:campanhasAtivasAgente:${agente}`,campanhasAtivasAgente)
+                resolve(campanhasAtivasAgente) 
             })
         })              
     }
@@ -629,7 +636,7 @@ class Discador{
             return false
         }
         
-        await Redis.delete(`${empresa}_ChamadaSimultaneas_${parametro}`)
+        await Redis.delete(`${empresa}:ChamadaSimultaneas:${parametro}`)
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -656,7 +663,7 @@ class Discador{
                 const r = await this.querySync(conn,sql)
                 const total = r[0].total
                 //console.log('total ', parametro, total)
-                await Redis.setter(`${empresa}_ChamadaSimultaneas_${parametro}`,total,5)
+                await Redis.setter(`${empresa}:ChamadaSimultaneas:${parametro}`,total,5)
                 pool.end((err)=>{
                     if(err) console.error(err)
                 })                     
@@ -901,7 +908,7 @@ class Discador{
             return false
         }
 
-        const redis_campanhasAtivas = await Redis.getter(`${empresa}_campanhasAtivas`)
+        const redis_campanhasAtivas = await Redis.getter(`${empresa}:campanhasAtivas`)
         if(redis_campanhasAtivas!==null){
            
             return redis_campanhasAtivas
@@ -925,7 +932,7 @@ class Discador{
                     pool.end((err)=>{
                         if(err) console.error(err)
                     }) 
-                    await Redis.setter(`${empresa}_campanhasAtivas`,rows,7200)
+                    await Redis.setter(`${empresa}:campanhasAtivas`,rows,7200)
                     resolve(rows) 
                 })
             })      
@@ -1033,7 +1040,7 @@ class Discador{
             return false
         }
 
-        const redis_dataCampanha = await Redis.getter(`${empresa}_dataCampanha_${idCampanha}`)
+        const redis_dataCampanha = await Redis.getter(`${empresa}:dataCampanha:${idCampanha}`)
         if(redis_dataCampanha!==null){
             return redis_dataCampanha
         }
@@ -1060,7 +1067,7 @@ class Discador{
                 const dataCampanha={};
                       dataCampanha['inicio']= moment(rows[0].inicio).format("YYYY-MM-DD")
                       dataCampanha['termino']= moment(rows[0].termino).format("YYYY-MM-DD")
-                await Redis.setter(`${empresa}_dataCampanha_${idCampanha}`,dataCampanha)                 
+                await Redis.setter(`${empresa}:dataCampanha:${idCampanha}`,dataCampanha)                 
                 
                 resolve(dataCampanha) 
             })
@@ -1073,7 +1080,7 @@ class Discador{
             return false
         }
 
-        const redis_horarioCampanha = await Redis.getter(`${empresa}_horarioCampanha_${idCampanha}`)
+        const redis_horarioCampanha = await Redis.getter(`${empresa}:horarioCampanha:${idCampanha}`)
         if(redis_horarioCampanha!==null){
             return redis_horarioCampanha
         }
@@ -1093,7 +1100,7 @@ class Discador{
                 const horarioCampanha={};
                       horarioCampanha['hora_inicio']=rows[0].inicio
                       horarioCampanha['hora_termino']=rows[0].termino
-                await Redis.setter(`${empresa}_horarioCampanha_${idCampanha}`,horarioCampanha)            
+                await Redis.setter(`${empresa}:horarioCampanha:${idCampanha}`,horarioCampanha)            
               
                 pool.end((err)=>{
                     if(err) console.error(err)
@@ -1119,7 +1126,7 @@ class Discador{
             return false
         }
 
-        const redis_agentesNaFila = await Redis.getter(`${empresa}_agentesNaFila_${idFila}`)
+        const redis_agentesNaFila = await Redis.getter(`${empresa}:agentesNaFila:${idFila}`)
         if(redis_agentesNaFila!==null){
             return redis_agentesNaFila
         }        
@@ -1139,7 +1146,7 @@ class Discador{
                 }) 
 
                 const agentesNaFila = a[0].total                
-                await Redis.setter(`${empresa}_agentesNaFila_${idFila}`,agentesNaFila,360)
+                await Redis.setter(`${empresa}:agentesNaFila:${idFila}`,agentesNaFila,360)
 
                 resolve(agentesNaFila) 
             })
@@ -1152,7 +1159,7 @@ class Discador{
             //console.log('{[(!)]} - agentesDisponiveis','Empresa nao recebida')
             return false
         }
-        const redis_agentesDisponiveis = await Redis.getter(`${empresa}_agentesDisponiveis_${idFila}`)
+        const redis_agentesDisponiveis = await Redis.getter(`${empresa}:agentesDisponiveis:${idFila}`)
         if(redis_agentesDisponiveis!==null){
             return redis_agentesDisponiveis
         }
@@ -1181,7 +1188,7 @@ class Discador{
                 
                 const agentesDisponiveis = a[0].total
                 
-                await Redis.setter(`${empresa}_agentesDisponiveis_${idFila}`,agentesDisponiveis,360)
+                await Redis.setter(`${empresa}:agentesDisponiveis:${idFila}`,agentesDisponiveis,360)
 
                 resolve(agentesDisponiveis) 
             })
@@ -1215,7 +1222,7 @@ class Discador{
             //console.log('{[(!)]} - qtdChamadasSimultaneas','Empresa nao recebida')
             return false
         }
-        const redis_qtdChamadasSimultaneas = await Redis.getter(`${empresa}_qtdChamadasSimultaneas_${idCampanha}`)
+        const redis_qtdChamadasSimultaneas = await Redis.getter(`${empresa}:qtdChamadasSimultaneas:${idCampanha}`)
         if(redis_qtdChamadasSimultaneas!==null){
             return redis_qtdChamadasSimultaneas
         }
@@ -1233,7 +1240,7 @@ class Discador{
                     if(err) console.error(err)
                     }) 
                 const chamadasSimultaneas = q[0].total
-                await Redis.getter(`${empresa}_qtdChamadasSimultaneas_${idCampanha}`,chamadasSimultaneas,60)
+                await Redis.getter(`${empresa}:qtdChamadasSimultaneas:${idCampanha}`,chamadasSimultaneas,10)
                 resolve(chamadasSimultaneas) 
             })
         })                
@@ -1264,6 +1271,11 @@ class Discador{
 
                 if(tipoDiscador!="power"){
                     limit=1
+                }
+
+                /*REGRA PROVISÓRIA DE LIMITAÇÃO*/
+                if(limit>5){
+                    limit=5
                 }
                 //console.log(empresa,"limit",limit)
        
@@ -1389,7 +1401,7 @@ class Discador{
                 const q = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.error(err)
-                    }) 
+                }) 
                 resolve(q) 
             })
         })              
@@ -1411,14 +1423,14 @@ class Discador{
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
-                        SET data=now(), 
-                            estado=1, 
-                            desc_estado='Discando',
-                            selecoes_registro=selecoes_registro+1,
-                            selecoes_numero=selecoes_numero+1
-                        WHERE idMailing=${idMailing} AND idCampanha=${idCampanha} 
-                        AND idRegistro=${idRegistro} AND idNumero=${idNumero}`
-                await this.querySync(conn,sql)  
+                            SET data=now(), 
+                                estado=1, 
+                                desc_estado='Discando',
+                                selecoes_registro=selecoes_registro+1,
+                                selecoes_numero=selecoes_numero+1
+                            WHERE idMailing=${idMailing} AND idCampanha=${idCampanha} 
+                            AND idRegistro=${idRegistro} AND idNumero=${idNumero}`
+                    await this.querySync(conn,sql)  
                 
                 //atualiza como discando 
                 sql = `UPDATE ${empresa}_mailings.${tabela_numeros} 
@@ -1671,10 +1683,10 @@ class Discador{
                 await this.debug('[!]','',empresa)
                 //console.log('')  
                 
-                // console.log('[!]',`Empresa: ${empresa}, Campanha: ${idCampanha} ..................................STOP[!]`)
+                 console.log('[!]',`Empresa: ${empresa}, Campanha: ${idCampanha} ..................................STOP[!]`)
                 
                 
-                // console.log(`[!] ${empresa} Alert:`,msg) 
+                 console.log(`[!] ${empresa} Alert:`,msg) 
                 // console.log('')  
 
                 if(statusCampanha.length==0){
@@ -1775,7 +1787,7 @@ class Discador{
             //console.log('{[(!)]} - registrarHistoricoAtendimento','Empresa nao recebida')
             return false
         }
-        await Redis.delete(`${empresa}_historicoChamadas_${ramal}`)
+        await Redis.delete(`${empresa}:historicoChamadas:${ramal}`)
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -1799,6 +1811,7 @@ class Discador{
             //console.log('{[(!)]} - tabulaChamada','Empresa nao recebida')
             return false
         }
+        await Redis.delete(`${empresa}:retornos`)
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -1811,28 +1824,34 @@ class Discador{
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
                     if(err) console.error(err)
-                    }) 
+                }) 
                 resolve(rows) 
             })
         })                
     }
 
     async checaAgendamento(empresa,data,hora){
+        const redis_agendaRetornos = await Redis.getter(`${empresa}:retornos`)
+        if(redis_agendaRetornos!==null){
+            return redis_agendaRetornos
+        }
+
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT a.id 
-                            FROM ${empresa}_dados.campanhas_agendamentos AS a 
-                            JOIN ${empresa}_dados.user_ramal AS u ON u.ramal=a.ramal 
-                            WHERE u.estado=1 AND a.data_retorno <= '${data}' AND a.hora_retorno<='${hora}' AND a.tratado=0
-                            ORDER BY id ASC
-                            LIMIT 1`
+                               FROM ${empresa}_dados.campanhas_agendamentos AS a 
+                               JOIN ${empresa}_dados.user_ramal AS u ON u.ramal=a.ramal 
+                              WHERE u.estado=1 AND a.data_retorno <= '${data}' AND a.hora_retorno<='${hora}' AND a.tratado=0
+                           ORDER BY id ASC
+                              LIMIT 1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.error(err)
-                    }) 
+                }) 
+                await Redis.setter(`${empresa}:retornos`,rows)
                 resolve(rows) 
             })
         })         
@@ -1917,8 +1936,9 @@ class Discador{
                                 WHERE id=${idAgendamento}`
                         await this.querySync(conn,sql)
                         pool.end((err)=>{
-                        if(err) console.error(err)
+                            if(err) console.error(err)
                         }) 
+                        await Redis.delete(`${empresa}:retornos`)
                         resolve(true)
                         return  
                     
@@ -2083,7 +2103,7 @@ class Discador{
                         WHERE produtivo=1`
                 await this.querySync(conn,sql)  
                 
-                await Redis.delete(`${empresa}_historicoChamadas_${ramal}`)
+                await Redis.delete(`${empresa}:historicoChamadas:${ramal}`)
                 //Grava informações no histórico de chamadas
                 sql = `INSERT INTO ${empresa}_dados.historico_atendimento 
                                     (data,hora,campanha,mailing,id_registro,id_numero,nome_registro,agente,protocolo,uniqueid,tipo,numero_discado,status_tabulacao,obs_tabulacao,contatado,produtivo) 
@@ -2128,7 +2148,7 @@ class Discador{
           for(let i=0;i<filasAgente.length;i++){
               
               //reseta o cache de agentes disponiveis
-              await Redis.delete(`${empresa}_agentesDisponiveis_${filasAgente[i].fila}`)
+              await Redis.delete(`${empresa}:agentesDisponiveis:${filasAgente[i].fila}`)
           }
         
         return new Promise (async (resolve,reject)=>{ 
@@ -2141,7 +2161,7 @@ class Discador{
                 const horaAtual = moment().format("YYYY-MM-DD HH:mm:ss")
                 const estadoAgente={}
                 //Removendo informação anterior do Redis
-                await Redis.delete(`${agente}_estadoRamal`)
+                await Redis.delete(`${agente}:estadoRamal`)
 
                 //zerando cronometro do estado anterior
 
@@ -2204,7 +2224,7 @@ class Discador{
 
                             estadoAgente['estado']=4
                             estadoAgente['hora']=horaAtual                    
-                            await Redis.setter(`${agente}_estadoRamal`,estadoAgente)
+                            await Redis.setter(`${agente}:estadoRamal`,estadoAgente)
 
                             Cronometro.pararOciosidade(empresa,agente)
                             pool.end((err)=>{
@@ -2301,7 +2321,7 @@ class Discador{
 
                             estadoAgente['estado']=2
                             estadoAgente['hora']=horaAtual                    
-                            await Redis.setter(`${agente}_estadoRamal`,estadoAgente)
+                            await Redis.setter(`${agente}:estadoRamal`,estadoAgente)
 
                             Cronometro.pararOciosidade(empresa,agente)
                             Cronometro.entrouEmPausa(empresa,idPausa,agente)
@@ -2332,7 +2352,7 @@ class Discador{
                         
                         estadoAgente['estado']=estadoAnterior
                         estadoAgente['hora']=horaAtual                    
-                        await Redis.setter(`${agente}_estadoRamal`,estadoAgente)
+                        await Redis.setter(`${agente}:estadoRamal`,estadoAgente)
 
                         pool.end((err)=>{
                             if(err) console.error(err)
@@ -2474,7 +2494,7 @@ class Discador{
 
                 estadoAgente['estado']=estado
                 estadoAgente['hora']=horaAtual                    
-                await Redis.setter(`${agente}_estadoRamal`,estadoAgente)
+                await Redis.setter(`${agente}:estadoRamal`,estadoAgente)
 
               
 
@@ -2695,21 +2715,33 @@ class Discador{
             //console.log('{[(!)]} - statusRamal','Empresa nao recebida')
             return false
         }
+        const redis_estadoRamal = await Redis.getter(`${ramal}:estadoRamal`)
+        if(redis_estadoRamal!==null){
+            return redis_estadoRamal
+        }
+
+
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`mysql`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 //console.log(empresa,ramal)
-                const sql = `SELECT estado, TIMESTAMPDIFF (SECOND, datetime_estado, NOW()) as tempo
+                const sql = `SELECT estado, datetime_estado as tempo
                             FROM ${empresa}_dados.user_ramal 
                             WHERE ramal=${ramal}
                             LIMIT 1`        
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.error(err)
-                    }) 
-                resolve(rows) 
+                }) 
+                const horaAtual = moment().format("YYYY-MM-DD HH:mm:ss")
+                const estadoAgente = {}
+                      estadoAgente['estado']=rows[0].estado
+                      estadoAgente['hora']=rows[0].tempo                    
+                await Redis.setter(`${ramal}:estadoRamal`,estadoAgente)
+
+                resolve(estadoAgente) 
             })
         })         
        
@@ -3396,7 +3428,7 @@ class Discador{
 
 
         //Checa se existem chamadas no redis
-        let historico = await Redis.getter(`${empresa}_historicoChamadas_${ramal}`)
+        let historico = await Redis.getter(`${empresa}:historicoChamadas:${ramal}`)
         if(historico!==null){
             console.log(`Retornando historico de chamadas do ramal ${ramal} do redis`)
             return historico
@@ -3430,7 +3462,7 @@ class Discador{
                 pool.end((err)=>{
                     if(err) console.error(err)
                     }) 
-                await Redis.setter(`${empresa}_historicoChamadas_${ramal}`,rows)
+                await Redis.setter(`${empresa}:historicoChamadas:${ramal}`,rows)
                 resolve(rows) 
             })
         })         
@@ -3551,7 +3583,8 @@ class Discador{
                 }            
                 const ramal=h[0].agente
                 //verifica se o agente nao esta em atendimento
-                const estado = await this.statusRamal(empresa,ramal)
+                const estadoRamal = await this.statusRamal(empresa,ramal)
+                const estado = estadoRamal['estado']
                 //console.log('ramal',ramal)
                 //console.log(estado)
                 if(estado==3){

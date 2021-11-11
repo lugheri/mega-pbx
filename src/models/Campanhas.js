@@ -58,7 +58,7 @@ class Campanhas{
     }
 
     async infoCampanha(empresa,idCampanha){
-        const infoCampanha = await Redis.getter(`${empresa}_infoCampanha_${idCampanha}`)
+        const infoCampanha = await Redis.getter(`${empresa}:infoCampanha:${idCampanha}`)
         if(infoCampanha!==null){
             return infoCampanha
         }
@@ -79,7 +79,7 @@ class Campanhas{
                 pool.end((err)=>{
                     if(err) console.log('Campanhas.js 99', err)
                 })
-                await Redis.setter(`${empresa}_infoCampanha_${idCampanha}`,rows)
+                await Redis.setter(`${empresa}:infoCampanha:${idCampanha}`,rows)
                 resolve(rows) 
             })
         })
@@ -134,7 +134,7 @@ class Campanhas{
     //Retorna Campanha
     async dadosCampanha(empresa,idCampanha){
 
-        const redis_dadosCampanha = await Redis.getter(`${empresa}_dadosCampanha_${idCampanha}`)
+        const redis_dadosCampanha = await Redis.getter(`${empresa}:dadosCampanha:${idCampanha}`)
         if(redis_dadosCampanha!==null){
             return redis_dadosCampanha
         }
@@ -148,7 +148,7 @@ class Campanhas{
                 pool.end((err)=>{
                     if(err) console.log('Campanhas.js 154', err)
                 })
-                await Redis.setter(`${empresa}_dadosCampanha_${idCampanha}`,rows,360)
+                await Redis.setter(`${empresa}:dadosCampanha:${idCampanha}`,rows,360)
                 resolve(rows) 
             })
         })          
@@ -170,10 +170,10 @@ class Campanhas{
                 await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)
                 
                 //Limpando cache das campanhas
-                await Redis.delete(`${empresa}_campanhasAtivas`)
-                await Redis.delete(`${empresa}_agendamentoCampanha`)
-                await Redis.delete(`${empresa}_dadosCampanha_${idCampanha}`)
-                await Redis.delete(`${empresa}_infoCampanha_${idCampanha}`)
+                await Redis.delete(`${empresa}:campanhasAtivas`)
+                await Redis.delete(`${empresa}:agendamentoCampanha`)
+                await Redis.delete(`${empresa}:dadosCampanha:${idCampanha}`)
+                await Redis.delete(`${empresa}:infoCampanha:${idCampanha}`)
                
 
                 const rows =  await this.querySync(conn,sql) 
@@ -1279,8 +1279,8 @@ class Campanhas{
     //Agenda campanha
     async agendarCampanha(empresa,idCampanha,dI,dT,hI,hT){ 
 
-        await Redis.delete(`${empresa}_dataCampanha_${idCampanha}`)
-        await Redis.delete(`${empresa}_horarioCampanha_${idCampanha}`)
+        await Redis.delete(`${empresa}:dataCampanha:${idCampanha}`)
+        await Redis.delete(`${empresa}:horarioCampanha:${idCampanha}`)
 
 
         const hoje = moment().format("Y-MM-DD")
