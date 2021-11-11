@@ -39,14 +39,14 @@ class DiscadorController{
                        
             const horaAtual = moment().format("HH:mm")
             if(horaAtual=='23:59'){//Desloga todos usuarios as 23h59
-                //await User.logoffUsersExpire(empresa)
-                await User.logoffUsersExpire('megaconecta')
+                await User.logoffUsersExpire(empresa)
+                //await User.logoffUsersExpire('megaconecta')
             }     
             this.campanhasEmpresa(empresa)
         }
         setTimeout(async ()=>{             
             await this.checkAccounts();
-        },15000)
+        },5000)
     }
 
     async campanhasEmpresa(empresa){

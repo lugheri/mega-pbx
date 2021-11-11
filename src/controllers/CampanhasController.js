@@ -4,6 +4,7 @@ import Pausas from '../models/Pausas';
 import User from '../models/User'
 import Discador from '../models/Discador';
 import Filas from '../models/Filas';
+import Redis from '../Config/Redis'
 
 
 class CampanhasController{
@@ -80,6 +81,12 @@ class CampanhasController{
         if(valores.estado!=1){
             await Discador.clearCallsCampanhas(empresa,idCampanha)
         }
+        const agentesCampanhas = await Campanhas.membrosCampanhas(empresa,idCampanha)
+        for(let i=0; i<agentesCampanhas.length; i++){
+            await Redis.delete(`${empresa}:campanhasAtivasAgente:${agentesCampanhas[i].ramal}`)
+        }
+
+
         await Discador.atualizaStatus(empresa,idCampanha,'...',valores.estado)
         res.json(true)    
     }

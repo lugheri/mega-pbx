@@ -8,6 +8,12 @@ import { json } from 'express';
 
 
 class MailingController{
+    async formataValor(req,res){
+        const valor = req.body.valor;
+        const valorFormatado = Mailing.removeCaracteresEspeciais(valor)
+        res.json(valorFormatado)
+    }
+
     async importarBase(req,res){
         const empresa = await User.getEmpresa(req)
         //Recebendo o arquivo

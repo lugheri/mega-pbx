@@ -318,7 +318,7 @@ class Asterisk{
             "appArgs"        : "",
             "callerid"       : '',//numero,
             "timeout"        : 20, 
-            //"channelId"      : '324234', 
+            "channelId"      : `${idAtendimento}`, 
             "otherChannelId" : ""
           }
           client.channels.originate(options,callback)

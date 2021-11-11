@@ -27,11 +27,10 @@ class Mailing{
 
     removeCaracteresEspeciais(valor){
         if(valor===undefined) return ""
-        const valorFormatado =  valor.replace(" ", "_")
-                                     .replace("/", "_")
+        const valorFormatado =  valor.replace("/", "_")
                                      .replace(".", "_")
                                      .normalize("NFD")
-                                     .replace(/[^a-zA-Z0-9]/g, "");
+                                     .replace(/[^a-zA-Z ]/g,"");
         return valorFormatado
     }
 
@@ -122,7 +121,7 @@ class Mailing{
                 const idKey = 1
                 const transferRate=1
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 111', err)
+                    if(err) console.error('Mailings 111', err)
                 })
                 if(tipoImportacao=='horizontal'){
                     console.log('horizontal')
@@ -157,7 +156,9 @@ class Mailing{
                         let n = i+1
                         campos_tabela.push("`campo_"+n+"`")
                     }else{
-                        campos_tabela.push("`"+this.removeCaracteresEspeciais(campos_arquivo[i])+"`")
+                        const campoFormatado = this.removeCaracteresEspeciais(campos_arquivo[i])
+                        
+                        campos_tabela.push(`${campoFormatado}`)
                     }
                 } 
 
@@ -198,12 +199,13 @@ class Mailing{
                    
                     //Separando valores
                     for(let v=0; v<linha_arquivo.length;v++){
-                        let valor = linha_arquivo[v]    
+                        let valor = this.removeCaracteresEspeciais(linha_arquivo[v])
                         //verifica se o valor eh objeto de
                         if(typeof linha_arquivo[0] === 'object'){
-                            valor = Object.values(linha_arquivo[0])
+                            valor = this.removeCaracteresEspeciais(Object.values(linha_arquivo[0]))
                         }
 
+                       
                         //Insere o valor formatado de cada coluna na query    
                         sqlData+="'"+valor.toString().replace(/'/gi,'')+"',"
                     }
@@ -224,11 +226,11 @@ class Mailing{
 
                 //Executa a query de insersão de dados   
                 
-                console.log('insert',sqlData)
+                //console.log('insert',sqlData)
                 await this.querySync(conn,sqlData)                
                
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 225', err)
+                    if(err) console.error('Mailings 225', err)
                 })
                 resolve(true)
                 return        
@@ -299,7 +301,7 @@ class Mailing{
                                         FROM ${empresa}_dados.mailing_tipo_campo 
                                        WHERE idMailing=${idBase} 
                                          AND tipo='ddd'`
-                                         console.log('col_sql_ddds',col_sql_ddds)
+                                         
                 const col_ddd = await this.querySync(conn,col_sql_ddds)
 
                
@@ -337,13 +339,13 @@ class Mailing{
                 
                
                 //Inicia a query
-                let sqlNumbers=`INSERT INTO ${empresa}_mailings.${numTab}
+                let sqlNumbers=`INSERT INTO ${tabelaNumeros}
                                         (id_mailing,id_registro,ddd,numero,uf,tipo,valido,duplicado,erro,tentativas,status_tabulacao,contatado,produtivo)
                                     VALUES `; 
 
                 //Id do registro
                 let indice = idKey
-
+                console.log('Indice Inicial',indice)
                 //Iniciando o loop dos dados a serem inseridos de acordo com o transferRate
                 for(let i=0; i<rate; i++){
                     //Cria o indice do registro de acordo com o id da base, um inicializador (1000000) + o indice do idKey(1+)
@@ -363,10 +365,10 @@ class Mailing{
                    
                     //Separando valores
                     for(let v=0; v<linha_arquivo.length;v++){
-                        let valor = linha_arquivo[v]    
+                        let valor = this.removeCaracteresEspeciais(linha_arquivo[v])    
                         //verifica se o valor eh objeto de
                         if(typeof linha_arquivo[0] === 'object'){
-                            valor = Object.values(linha_arquivo[0])
+                            valor = this.removeCaracteresEspeciais(Object.values(linha_arquivo[0]))
                         }
 
                         //Insere o valor formatado de cada coluna na query    
@@ -430,6 +432,7 @@ class Mailing{
                     //Removendo campos importados do arquivo carregado 
                     jsonFile.shift()  
                 } 
+                console.log('Indice final',indice)
                 
                 //Executa a query de insersão de dados    
                 //console.log('sqlData',sqlData)
@@ -455,7 +458,7 @@ class Mailing{
                 if(jsonFile.length>0){
                     //continua a importação dos dados
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 219', err)
+                        if(err) console.error('Mailings 219', err)
                         console.log('Continuando importacao ...')
                     }) 
                     await this.importarMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,indice,rate)
@@ -469,7 +472,7 @@ class Mailing{
                        WHERE id='${idBase}'`
                     await this.querySync(conn,sql)       
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 225', err)
+                        if(err) console.error('Mailings 225', err)
                         console.log('encerrou importacao dos dados')
                     })
                     //console.log('resolvendo promise importacao dos dados')
@@ -593,14 +596,14 @@ class Mailing{
                 if(jsonFile.length>0){
                     //continua a importação dos dados
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 219', err)
+                        if(err) console.error('Mailings 219', err)
                         console.log('Continuando importacao ...')
                     }) 
                     await this.importandoDadosMailing(empresa,idBase,jsonFile,header,dataTab,numTab,indice,rate)
                     return true
                 }else{     
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 225', err)
+                        if(err) console.error('Mailings 225', err)
                         console.log('encerrou importacao dos dados')
                     })
                     console.log('resolvendo promise importacao dos dados')
@@ -623,7 +626,7 @@ class Mailing{
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:addInfoMailing","message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log('Mailings 132', err)
+                   if(err) console.error('Mailings 132', err)
                 }) 
                 resolve(rows)   
             })
@@ -642,7 +645,7 @@ class Mailing{
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:infoMailing","message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                   if(err) console.log('Mailings 150', err)
+                   if(err) console.error('Mailings 150', err)
                 }) 
                 resolve(rows)   
             })
@@ -652,13 +655,13 @@ class Mailing{
     async resumoDadosBase(empresa,tabela_dados){
         return new Promise (async (resolve,reject)=>{ 
             const sql = `SELECT * FROM ${empresa}_mailings.${tabela_dados} LIMIT 10`
-            console.log('sql',sql)
+            //console.log('sql',sql)
             const pool =  await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:resumoDadosBase","message":err.message,"stack":err.stack}); 
                 const rows =  await this.querySync(conn,sql)   
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 167', err)
+                    if(err) console.error('Mailings 167', err)
                 }) 
                 resolve(rows)    
             }) 
@@ -677,7 +680,7 @@ class Mailing{
                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:infoMailingAtivo","message":err.message,"stack":err.stack});
                const rows =  await this.querySync(conn,sql)                  
                pool.end((err)=>{
-                  if(err) console.log('Mailings 167', err)
+                  if(err) console.error('Mailings 167', err)
                }) 
                resolve(rows)   
            }) 
@@ -695,7 +698,7 @@ class Mailing{
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:tabelaMailing","message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                if(err) console.log('Mailings 184', err)
+                if(err) console.error('Mailings 184', err)
                 }) 
                 resolve(rows)   
             })
@@ -799,7 +802,7 @@ class Mailing{
               
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 285', err)
+                    if(err) console.error('Mailings 285', err)
                 }) 
                 resolve(rows)   
             })
@@ -953,7 +956,7 @@ class Mailing{
                 if(jsonFile.length>0){
                     //console.log('Continuando separacao')
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 624', err)                        
+                        if(err) console.error('Mailings 624', err)                        
                         console.log('Continuando importacao dos numeros')
                     })   
                     await this.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idReg,rate)    
@@ -971,7 +974,7 @@ class Mailing{
                     //console.log("sql final",sql)
                     await this.querySync(conn,sql) 
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 634', err)
+                        if(err) console.error('Mailings 634', err)
                         resolve(true)
                         console.log('encerrou importacao dos numeros')
                     })          
@@ -1111,7 +1114,7 @@ class Mailing{
                 if(jsonFile.length>0){
                     //continua a importação dos dados
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 434', err)
+                        if(err) console.error('Mailings 434', err)
                         console.log('Continuando importacao ...')
                     }) 
                     await this.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,indice,rate)
@@ -1129,7 +1132,7 @@ class Mailing{
                         await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate,verificarCPF)  
                     })
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 434', err)
+                        if(err) console.error('Mailings 434', err)
 
                         console.log('encerrou importacao dos dados')
                     }) 
@@ -1316,7 +1319,7 @@ class Mailing{
                 if(jsonFile.length>0){
                     //console.log('Continuando separacao')
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 624', err)                        
+                        if(err) console.error('Mailings 624', err)                        
                         console.log('Continuando importacao dos numeros')
                     })   
                     await this.separaNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idReg,rate,verificarCPF)    
@@ -1334,7 +1337,7 @@ class Mailing{
                     //console.log("sql final",sql)
                     await this.querySync(conn,sql) 
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 634', err)
+                        if(err) console.error('Mailings 634', err)
                         resolve(true)
                         console.log('encerrou importacao dos numeros')
                     })          
@@ -1372,7 +1375,7 @@ class Mailing{
                             LIMIT ${rate}`
                 const row = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 675', err)
+                    if(err) console.error('Mailings 675', err)
                 })
                 resolve(row)
             })
@@ -1389,7 +1392,7 @@ class Mailing{
                             WHERE id_key_base=${idReg}`
                 const row = await this.querySync(conn,sql)    
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 691', err)
+                    if(err) console.error('Mailings 691', err)
                 })
                 resolve(row)
             })
@@ -1431,7 +1434,7 @@ class Mailing{
                             LIMIT 1`
                 const check = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 731', err)
+                    if(err) console.error('Mailings 731', err)
                 })
                 if(check.length==0){
                     resolve(false)
@@ -1454,7 +1457,7 @@ class Mailing{
                             LIMIT 1`
                 const idCPF = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 753', err)
+                    if(err) console.error('Mailings 753', err)
                 })
                 if(idCPF.length==0){
                     resolve(false)
@@ -1531,7 +1534,7 @@ class Mailing{
                                 
                     const r = await this.querySync(conn,sql)
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 829', err)
+                        if(err) console.error('Mailings 829', err)
                     })
                     resolve(r[0].invalidos)
                     
@@ -1661,7 +1664,7 @@ class Mailing{
                                 WHERE valido=1`
                     const rows =  await this.querySync(conn,sql);
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 958', err)
+                        if(err) console.error('Mailings 958', err)
                     })
                     resolve(rows) 
                 })
@@ -1677,7 +1680,7 @@ class Mailing{
                             FROM ${tabela} WHERE valido=1`
                 const rows =  await this.querySync(conn,sql);
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 973', err)
+                    if(err) console.error('Mailings 973', err)
                 })
                 resolve(rows) 
             })
@@ -1696,13 +1699,13 @@ class Mailing{
                     const sql = `UPDATE ${tabela} SET duplicado=1 WHERE id=${rpt[0].id}`     
                     await this.querySync(conn,sql)
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 991', err)
+                        if(err) console.error('Mailings 991', err)
                     })
                     resolve(1) 
                 }            
               
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 997', err)
+                    if(err) console.error('Mailings 997', err)
                 })
                 resolve(0) 
             })
@@ -1720,7 +1723,7 @@ class Mailing{
                 const r = await this.querySync(conn,sql)
                 
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 1014', err)
+                    if(err) console.error('Mailings 1014', err)
                 })
                 resolve(r[0].numeros) 
             })
@@ -1737,7 +1740,7 @@ class Mailing{
                             WHERE id='${idBase}'`
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 1030', err)
+                    if(err) console.error('Mailings 1030', err)
                 })
                 resolve(r[0].totalReg)  
             })
@@ -1768,7 +1771,7 @@ class Mailing{
                                 WHERE status=1 ORDER BY id DESC`
                     const rows =  await this.querySync(conn,sql);
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 1060', err)
+                        if(err) console.error('Mailings 1060', err)
                     })
                     resolve(rows)  
             })
@@ -1794,7 +1797,7 @@ class Mailing{
                             LIMIT ${pag},${qtd}`
                     const retorno =  await this.querySync(conn,sql)
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 1085', err)
+                        if(err) console.error('Mailings 1085', err)
                     })
                     resolve(retorno)
             })
@@ -1819,7 +1822,7 @@ class Mailing{
                     res.attachment(`mailing_${r[0].nome}.csv`)
                     res.status(200).send(csv);
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 1109', err)
+                        if(err) console.error('Mailings 1109', err)
                     })
                     resolve(true)
                 })
@@ -1859,7 +1862,7 @@ class Mailing{
                     WHERE idMailing='${idMailing}'` //Removendo configurações da tela do agente
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 1148', err)
+                    if(err) console.error('Mailings 1148', err)
                 })
                 resolve(true)
             })
@@ -1877,7 +1880,7 @@ class Mailing{
                             WHERE id=${idMailing}`
                 const rows = await this.querySync(conn,sql) 
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 1165', err)
+                    if(err) console.error('Mailings 1165', err)
                 })
                 resolve(rows)
             })
@@ -1893,7 +1896,7 @@ class Mailing{
                 const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
                 if(infoMailing.length==0){
                     pool.end((err)=>{
-                        if(err) console.log('Mailings 1188', err)
+                        if(err) console.error('Mailings 1188', err)
                     }) 
                     
                     resolve(false)
@@ -1959,7 +1962,7 @@ class Mailing{
                     ufs[`${r[i].uf}`]['name']=`${filter.estado}`
                 }
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 1241', err)
+                    if(err) console.error('Mailings 1241', err)
                 }) 
                 
                 resolve(ufs)
@@ -1990,7 +1993,7 @@ class Mailing{
                         WHERE produtivo != 1`
                 await this.querySync(conn,sql)     
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 1271', err)
+                    if(err) console.error('Mailings 1271', err)
                 }) 
                 resolve(true)
             })
@@ -2008,7 +2011,7 @@ class Mailing{
                       WHERE uf='${uf}' GROUP BY ddd ORDER BY ddd ASC`
                       const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                   if(err) console.log('Mailings 1288', err)
+                   if(err) console.error('Mailings 1288', err)
                 }) 
                 resolve(rows)
             })
@@ -2027,7 +2030,7 @@ class Mailing{
                             ORDER BY uf ASC`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 1306', err)
+                    if(err) console.error('Mailings 1306', err)
                 }) 
                 resolve(rows)
             })
@@ -2045,7 +2048,7 @@ class Mailing{
                             WHERE valido=1`
                 const reg = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 1323', err)
+                    if(err) console.error('Mailings 1323', err)
                 })
                 resolve(reg[0].total)
             })
@@ -2062,7 +2065,7 @@ class Mailing{
                             WHERE contatado='S'`
                 const reg = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 1339', err)
+                    if(err) console.error('Mailings 1339', err)
                 })
             resolve(reg[0].total)
             })
@@ -2079,7 +2082,7 @@ class Mailing{
                               WHERE selecionado>0 AND contatado<>'S'`
                 const reg = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Mailings 1355', err)
+                    if(err) console.error('Mailings 1355', err)
                 })
                 
                 resolve(reg[0].total)

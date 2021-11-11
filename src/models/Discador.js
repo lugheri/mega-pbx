@@ -687,7 +687,7 @@ class Discador{
 
 
                 await this.debug(' . PASSO 1.2','Removendo chamadas presas',empresa)
-                const limitTime = 30 //tempo limite para aguardar atendimento (em segundos)
+                const limitTime = 25 //tempo limite para aguardar atendimento (em segundos)
                 let sql = `SELECT id,id_campanha,id_mailing,id_registro,id_numero,numero 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                             WHERE tipo_discador='power'                      
@@ -1240,7 +1240,7 @@ class Discador{
                     if(err) console.error(err)
                     }) 
                 const chamadasSimultaneas = q[0].total
-                await Redis.getter(`${empresa}:qtdChamadasSimultaneas:${idCampanha}`,chamadasSimultaneas,10)
+                await Redis.getter(`${empresa}:qtdChamadasSimultaneas:${idCampanha}`,chamadasSimultaneas,20)
                 resolve(chamadasSimultaneas) 
             })
         })                
@@ -1683,10 +1683,8 @@ class Discador{
                 await this.debug('[!]','',empresa)
                 //console.log('')  
                 
-                 console.log('[!]',`Empresa: ${empresa}, Campanha: ${idCampanha} ..................................STOP[!]`)
-                
-                
-                 console.log(`[!] ${empresa} Alert:`,msg) 
+                 //console.log('[!]',`Empresa: ${empresa}, Campanha: ${idCampanha} ..................................STOP[!]`)
+                 //console.log(`[!] ${empresa} Alert:`,msg) 
                 // console.log('')  
 
                 if(statusCampanha.length==0){
@@ -1724,7 +1722,7 @@ class Discador{
                 const sql =`SELECT * 
                             FROM ${empresa}_dados.campanhas_status 
                             WHERE idCampanha = ${idCampanha}`
-                            console.log(sql)
+                          //console.log(sql)
                 const rows = await this.querySync(conn,sql)  
                 pool.end((err)=>{
                     if(err) console.error(err)
@@ -2670,7 +2668,7 @@ class Discador{
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
                             WHERE numero='${numero}'`
-                            console.log(sql)
+                            //console.log(sql)
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
                     if(err) console.error(err)
@@ -2793,7 +2791,7 @@ class Discador{
                             JOIN ${empresa}_dados.campanhas_filas AS cf ON m.id_campanha = cf.idCampanha
                             JOIN ${empresa}_dados.agentes_filas AS a ON a.fila=cf.idFila
                             WHERE a.ramal=${ramal} AND na_fila=1`    
-                            console.log(sql)                  
+                            //console.log(sql)                  
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.error(err)
@@ -3009,11 +3007,12 @@ class Discador{
                 sql = `SELECT ${campo} as nome
                         FROM ${empresa}_mailings.${tabelaDados}
                         WHERE id_key_base=${idRegistro}`
-                        console.log(sql)
+                        //console.log(sql)
                 const nome = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.error(err)
                     }) 
+                   
                 resolve(nome[0].nome) 
             })
         })         
