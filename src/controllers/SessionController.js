@@ -63,6 +63,10 @@ class SessionController{
         const now = moment(new Date())
         const empresa = payload['empresa']
         const ramal = payload['userId']
+        
+        await Redis.getter(`${empresa}_authRamal_${ramal}`,moment(new Date()),7200)
+
+
         if(lastAuth===null){
             await Redis.getter(`${empresa}_authRamal_${ramal}`,moment(new Date()),7200)
         }else{
