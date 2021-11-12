@@ -1,5 +1,6 @@
 import Filas from '../models/Filas'
 import User from '../models/User'
+import Redis from '../Config/Redis'
 
 class FilasController{
     async dadosFila(req,res){
@@ -67,6 +68,7 @@ class FilasController{
             return false;          
         }     
         await Redis.delete(`${empresa}:agentesNaFila:${idFila}`)
+        
         res.json(false)   
     }
 
@@ -79,12 +81,14 @@ class FilasController{
             const agentesForaFila = await Filas.membrosForaFila(empresa,idFila)
             for(let i=0; i<agentesForaFila.length; i++){
                 await Filas.addMembroFila(empresa,agentesForaFila[i].ramal,idFila)
+                await Redis.delete(`${empresa}:campanhasAtivasAgente:${agentesNaFila[i].ramal}`)
             }
         }
         if(destino=="F"){
             const agentesNaFila = await Filas.membrosNaFila(empresa,idFila) 
             for(let i=0; i<agentesNaFila.length; i++){
                 await Filas.removeMembroFila(empresa,agentesNaFila[i].ramal,idFila)
+                await Redis.delete(`${empresa}:campanhasAtivasAgente:${agentesNaFila[i].ramal}`)
                 
             }   
         }

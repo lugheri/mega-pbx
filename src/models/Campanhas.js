@@ -174,6 +174,7 @@ class Campanhas{
                 await Redis.delete(`${empresa}:agendamentoCampanha`)
                 await Redis.delete(`${empresa}:dadosCampanha:${idCampanha}`)
                 await Redis.delete(`${empresa}:infoCampanha:${idCampanha}`)
+                
                
 
                 const rows =  await this.querySync(conn,sql) 
@@ -183,6 +184,27 @@ class Campanhas{
                 resolve(rows) 
             })
         })       
+    }
+
+    async membrosCampanhas(empresa,idCampanha){
+        const sql = `SELECT a.ramal 
+                       FROM ${empresa}_dados.agentes_filas a
+                       JOIN ${empresa}_dados.campanhas_filas AS c 
+                       ON c.idFila=a.fila
+                    WHERE c.idCampanha=${idCampanha}`
+
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                //Fila da campanha 
+                const agentes=await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Campanhas.js 165', err)
+                })
+                resolve(agentes);
+            })
+        })
     }
 
     //Atualiza os status dos agentes da campanha de acordo com o status da mesma
@@ -222,6 +244,7 @@ class Campanhas{
                                     SET paused=0 
                                     WHERE membername='${agente}'`
                             await this.querySync(connAst,sql)  
+                            await Redis.delete(`${empresa}:campanhasAtivasAgente:${agente}`)
                         }
                     }else{
                         //Pausa os agentes no asterisk
@@ -641,7 +664,7 @@ class Campanhas{
                 }
                 //Inserindo coluna da campanha na tabela de numeros
                 sql = `ALTER TABLE ${empresa}_mailings.${tabelaNumeros} 
-                      ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT '1' AFTER produtivo`
+                      ADD COLUMN campanha_${idCampanha} INT NULL DEFAULT '1' AFTER produtivo`
                 await this.querySync(conn,sql)
                 //Atualiza os registros como disponíveis (1)
                 //sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`

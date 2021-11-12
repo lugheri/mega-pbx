@@ -56,6 +56,7 @@ module.exports = (routes) => {
     routes.delete('/removerMailingCampanha/:idCampanha',CampanhasController.removeMailingCampanha)//Remove Mailing Campanha
     routes.post('/filtrarDiscagem',CampanhasController.filtrarDiscagem)//Remove Mailing Campanha
     routes.get('/filtrosDiscagem/:idCampanha/:uf',CampanhasController.filtrosDiscagem)//Remove Mailing Campanha
+    
 
     //Configuracao da tela do agente
     routes.get('/listarCamposConfigurados/:idCampanha', CampanhasController.listarCamposConfigurados)//Listar campos configurados
@@ -128,6 +129,8 @@ module.exports = (routes) => {
     routes.get('/totalRegUF/:idMailing',MailingController.totalRegUF)//Resumo por ddd
     routes.get('/saudeMailing/:idMailing',MailingController.saudeMailing)//Saude do mailing
 
+    routes.post('/formataValor',MailingController.formataValor)//Rota para testes de funcao
+    
     //BlackList
     routes.post('/novaLista',BlacklistController.novaLista)
     routes.get('/listarBlacklists',BlacklistController.listarBlacklists)  

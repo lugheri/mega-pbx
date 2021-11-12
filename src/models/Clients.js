@@ -1385,7 +1385,7 @@ class Clients{
     }
 
     async getTrunk(empresa){
-      const redis_trunks = await Redis.getter(`${empresa}_trunks`)
+      const redis_trunks = await Redis.getter(`${empresa}:trunks`)
       if(redis_trunks!==null){
         return redis_trunks
       }
@@ -1408,7 +1408,7 @@ class Clients{
             pool.end((err)=>{
               if(err) console.log('Clientes.js 1300', err)
             })
-            await Redis.setter(`${empresa}_trunks`,trunks,120)
+            await Redis.setter(`${empresa}:trunks`,trunks,120)
             resolve(trunks)
           })
       })

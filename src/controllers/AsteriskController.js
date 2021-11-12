@@ -69,6 +69,8 @@ class AsteriskController{
         if(action=='machine'){//Quando cai na caixa postal
             const r = await Asterisk.machine(dados)
             console.log('agi:machine',`Empresa: ${dados.empresa},numero:${dados.numero},status:${dados.status}, saida: ${r}`)
+
+            
             res.json(r);
         }
         if(action=='set_queue'){//Quando reconhece a voz humana

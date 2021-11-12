@@ -1,5 +1,6 @@
 import connect from '../Config/dbConnection';
 import Clients from './Clients'
+import Redis from '../Config/Redis'
 
 //import util from 'util'
 
@@ -111,6 +112,10 @@ class Report{
     } 
     
     async usuarioCampanha(empresa,idAgente,idCampanha){
+        const redis_usuarioCampanha = await Redis.getter(`${empresa}:reports_usuarioCampanha:${idAgente}:Campanha:${idCampanha}`)
+        if(redis_usuarioCampanha!==null){
+            return redis_usuarioCampanha
+        }
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -125,12 +130,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_usuarioCampanha:${idAgente}:Campanha:${idCampanha}`,u.length,15)
                 resolve(u.length)
             })
         })      
     }
 
     async infoAgente(empresa,agente){
+        const redis_infoAgente = await Redis.getter(`${empresa}:reports_infoAgente:${agente}`)
+        if(redis_infoAgente!==null){
+            return redis_infoAgente
+        }
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -147,6 +157,7 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:redis_infoAgente:${agente}`,user,15)
                 resolve(user)
             })
         })      
@@ -180,7 +191,11 @@ class Report{
         })      
     }
 
-    async infoEstadoAgente(empresa,ramal){        
+    async infoEstadoAgente(empresa,ramal){ 
+        const redis_infoEstadoAgente = await Redis.getter(`${empresa}:reports_infoEstadoAgente:${ramal}`)
+        if(redis_infoEstadoAgente!==null){
+            return redis_infoEstadoAgente
+        }       
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -194,6 +209,7 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_infoEstadoAgente:${ramal}`,e[0].estado,5)
                 resolve(e[0].estado)
             })
         })      
@@ -228,6 +244,10 @@ class Report{
     }  
 
     async tempoEstadoAgente(empresa,ramal){
+        const redis_tempoEstadoAgente = await Redis.getter(`${empresa}:reports_tempoEstadoAgente:${ramal}`)
+        if(redis_tempoEstadoAgente!==null){
+            return redis_tempoEstadoAgente
+        }     
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -247,12 +267,18 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_tempoEstadoAgente:${ramal}`,tempoEstado,5)
                 resolve(tempoEstado)
             })
         })      
     }
 
     async chamadasSimultaneas(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero){
+        const redis_chamadasSimultaneas = await Redis.getter(`${empresa}:reports_chamadasSimultaneas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}`)
+        if(redis_chamadasSimultaneas!==null){
+            return redis_chamadasSimultaneas
+        }    
+
         let filter=""
         if((dataI!=false)||(dataI!="")){filter+=` AND c.data>='${dataI} 00:00:00'`;}else{filter+=` AND c.data>='${hoje} 00:00:00'`;}
         if((dataF!=false)||(dataF!="")){filter+=` AND c.data<='${dataF} 23:59:59'`;}else{filter+=` AND c.data<='${hoje} 23:59:59'`;}
@@ -273,7 +299,7 @@ class Report{
                                     c.tipo_ligacao,c.id_campanha,c.numero, c.na_fila,c.falando,c.desligada,c.tabulando,c.tabulado
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas AS c
                         LEFT JOIN ${empresa}_dados.users AS u ON c.ramal=u.id
-                            WHERE tipo_ligacao='discador' `
+                            WHERE tipo_ligacao='discador' ${filter}`
                 //console.log('chamadasSimultaneas',sql)
                 const c = await this.querySync(conn,sql)     
                  
@@ -281,12 +307,18 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_chamadasSimultaneas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}`,c,2)
                 resolve(c)
             })
         })      
     }
 
     async chamadasRealizadas(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros){
+        const redis_chamadasRealizadas = await Redis.getter(`${empresa}:reports_chamadasRealizadas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`)
+        if(redis_chamadasRealizadas!==null){
+            return redis_chamadasRealizadas
+        }    
+
         let filter=""
         if((dataI!=false)||(dataI!="")){filter+=` AND h.data>='${dataI}'`;}else{filter+=` AND h.data>='${hoje}'`;}
         if((dataF!=false)||(dataF!="")){filter+=` AND h.data<='${dataF}'`;}else{filter+=` AND h.data<='${hoje}'`;}
@@ -331,12 +363,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_chamadasRealizadas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`,rows,15)
                 resolve(rows)
             })
         })           
     }
 
     async statusTabulacaoChamada(empresa,idAgente){
+        const redis_statusTabulacaoChamada = await Redis.getter(`${empresa}:reports_statusTabulacaoChamada:${idAgente}`)
+        if(redis_statusTabulacaoChamada!==null){
+            return redis_statusTabulacaoChamada
+        }   
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -351,12 +388,18 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_statusTabulacaoChamada:${idAgente}`,t.length,15)
+                
                 resolve(t.length)
             })
         })      
     }
 
     async statusAtendimentoChamada(empresa,idAgente){
+        const redis_statusAtendimentoChamada = await Redis.getter(`${empresa}:reports_statusAtendimentoChamada:${idAgente}`)
+        if(redis_statusAtendimentoChamada!==null){
+            return redis_statusAtendimentoChamada
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -371,12 +414,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_statusAtendimentoChamada:${idAgente}`,f.length,5)
                 resolve(f.length)
             })
         })      
     }
 
     async timeCall(empresa,uniqueid){
+        const redis_timeCall = await Redis.getter(`${empresa}:reports_timeCall:${uniqueid}`)
+        if(redis_timeCall!==null){
+            return redis_timeCall
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -408,12 +456,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_timeCall:${uniqueid}`,d[0].tempo,5)
                 resolve(d[0].tempo)
             })
         })     
     }
 
     async totalChamadasRecebidas(empresa,idAgente,de,ate){
+        const redis_totalChamadasRecebidas = await Redis.getter(`${empresa}:reports_totalChamadasRecebidas:${idAgente}:${de}:${ate}`)
+        if(redis_totalChamadasRecebidas!==null){
+            return redis_totalChamadasRecebidas
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -426,12 +479,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.getter(`${empresa}:reports_totalChamadasRecebidas:${idAgente}:${de}:${ate}`,t[0].tempo,15)
                 resolve(t[0].tempo)
             })
         })
     }
 
     async totalChamadasRealizadas(empresa,idAgente,de,ate){
+        const redis_totalChamadasRealizadas = await Redis.getter(`${empresa}:reports_totalChamadasRealizadas:${idAgente}:${de}:${ate}`)
+        if(redis_totalChamadasRealizadas!==null){
+            return redis_totalChamadasRealizadas
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -444,12 +502,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.getter(`${empresa}:reports_totalChamadasRealizadas:${idAgente}:${de}:${ate}`,t[0].tempo,15)
                 resolve(t[0].tempo)
             })
         })      
     }   
 
     async totalChamadasManuais(empresa,idAgente,de,ate){
+        const redis_totalChamadasManuais = await Redis.getter(`${empresa}:reports_totalChamadasManuais:${idAgente}:${de}:${ate}`)
+        if(redis_totalChamadasManuais!==null){
+            return redis_totalChamadasManuais
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -462,12 +525,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.getter(`${empresa}:reports_totalChamadasManuais:${idAgente}:${de}:${ate}`,t[0].tempo,15)
                 resolve(t[0].tempo)
             })
         })
     }   
 
     async chamadasAtendidas(empresa,ramal,campanha,dataI,dataF,hoje){
+        const redis_chamadasAtendidas = await Redis.getter(`${empresa}:reports_chamadasAtendidas:${ramal}:${campanha}:${dataI}:${dataF}:${hoje}`)
+        if(redis_chamadasAtendidas!==null){
+            return redis_chamadasAtendidas
+        } 
         let filter=""
         if((dataI!=false)||(dataI!="")){filter+=` AND data>='${dataI}'`;}else{filter+=` AND data>='${hoje}'`;}
         if((dataF!=false)||(dataF!="")){filter+=` AND data<='${dataF}'`;}else{filter+=` AND data<='${hoje}'`;}
@@ -488,6 +556,7 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_chamadasAtendidas:${ramal}:${campanha}:${dataI}:${dataF}:${hoje}`,ca[0].total,15)
                 resolve(ca[0].total)
             })
         })
@@ -495,6 +564,10 @@ class Report{
 
     //Contagem dos tempos médios
     async tempoMedioAgente(empresa,agente,tempoMedido,idCampanha,dataI,dataF,hoje){
+        const redis_tempoMedioAgente = await Redis.getter(`${empresa}:reports_tempoMedioAgente:${agente}:${tempoMedido}:${idCampanha}:${dataI}:${dataF}:${hoje}`)
+        if(redis_tempoMedioAgente!==null){
+            return redis_tempoMedioAgente
+        } 
         let filter=""
         if((dataI!=false)||(dataI!="")){filter+=` AND entrada>='${dataI} 00:00:00'`;}else{filter+=` AND entrada>='${hoje} 00:00:00'`;}
         if((dataF!=false)||(dataF!="")){filter+=` AND saida<='${dataF} 23:59:59'`;}else{filter+=` AND saida<='${hoje} 23:59:59'`;}
@@ -521,6 +594,7 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_tempoMedioAgente:${agente}:${tempoMedido}:${idCampanha}:${dataI}:${dataF}:${hoje}`,tm[0].tempoMedio,15)
                 resolve(Math.floor(tm[0].tempoMedio))
             })
         })      
@@ -528,6 +602,10 @@ class Report{
 
 
     async chamadasProdutividade(empresa,statusProdutividade,idAgente,idCampanha,dataI,dataF,hoje){
+        const redis_chamadasProdutividade = await Redis.getter(`${empresa}:reports_chamadasProdutividade:${statusProdutividade}:${idAgente}:${idCampanha}:${dataI}:${dataF}:${hoje}`)
+        if(redis_chamadasProdutividade!==null){
+            return redis_chamadasProdutividade
+        } 
         let filter="";
         if((dataI!=false)||(dataI!="")){filter+=` AND data>='${dataI}'`;}else{filter+=` AND data>='${hoje}'`;}
         if((dataF!=false)||(dataF!="")){filter+=` AND data<='${dataF}'`;}else{filter+=` AND data<='${hoje}'`;}
@@ -553,12 +631,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_chamadasProdutividade:${statusProdutividade}:${idAgente}:${idCampanha}:${dataI}:${dataF}:${hoje}`,p[0].produtivas,15)
                 resolve(p[0].produtivas)
             })
         })                
     }
 
     async chamadasAtendidasCampanha(empresa,campanha){
+        const redis_chamadasAtendidasCampanha = await Redis.getter(`${empresa}:reports_chamadasAtendidasCampanha:${campanha}`)
+        if(redis_chamadasAtendidasCampanha!==null){
+            return redis_chamadasAtendidasCampanha
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -571,12 +654,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_chamadasAtendidasCampanha:${campanha}`,a[0].atendidas,15)
                 resolve(a[0].atendidas)
             })
         })
     }
 
     async chamadasProdutivaCampanha(empresa,campanha){
+        const redis_chamadasProdutivaCampanha = await Redis.getter(`${empresa}:reports_chamadasProdutivaCampanha:${campanha}`)
+        if(redis_chamadasProdutivaCampanha!==null){
+            return redis_chamadasProdutivaCampanha
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -589,12 +677,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_chamadasProdutivaCampanha:${campanha}`,a[0].produtivas,15)
                 resolve(a[0].produtivas)
             })
         })
     }
 
     async chamadasEmAtendimentoCampanha(empresa,campanha){
+        const redis_chamadasEmAtendimentoCampanha = await Redis.getter(`${empresa}:reports_chamadasEmAtendimentoCampanha:${campanha}`)
+        if(redis_chamadasEmAtendimentoCampanha!==null){
+            return redis_chamadasEmAtendimentoCampanha
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -607,12 +700,17 @@ class Report{
                         
                         if(err) console.log('Reports ...', err)
                     })
+                    await Redis.setter(`${empresa}:reports_chamadasEmAtendimentoCampanha:${campanha}`,a[0].atendidas,15)
                     resolve(a[0].atendidas)
                 })
             })
     }
 
     async chamadasNaoAtendidasCampanha(empresa,campanha){
+        const redis_chamadasNaoAtendidasCampanha = await Redis.getter(`${empresa}:reports_chamadasNaoAtendidasCampanha:${campanha}`)
+        if(redis_chamadasNaoAtendidasCampanha!==null){
+            return redis_chamadasNaoAtendidasCampanha
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -625,12 +723,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_chamadasNaoAtendidasCampanha:${campanha}`,na[0].nao_atendidas,15)
                 resolve(na[0].nao_atendidas)
             })
         })
     }
 
     async chamadasContatadasCampanha(empresa,idCampanha){
+        const redis_chamadasContatadasCampanha = await Redis.getter(`${empresa}:reports_chamadasContatadasCampanha:${idCampanha}`)
+        if(redis_chamadasContatadasCampanha!==null){
+            return redis_chamadasContatadasCampanha
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -643,6 +746,7 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_chamadasContatadasCampanha:${idCampanha}`,c[0].contatados,15)
                 resolve(c[0].contatados)
             })
         })
@@ -689,6 +793,10 @@ class Report{
 
 
     async TempoMedioDeAtendimentoCampanha(empresa,idCampanha){
+        const redis_TempoMedioDeAtendimentoCampanha = await Redis.getter(`${empresa}:reports_TempoMedioDeAtendimentoCampanha:${idCampanha}`)
+        if(redis_TempoMedioDeAtendimentoCampanha!==null){
+            return redis_TempoMedioDeAtendimentoCampanha
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -701,12 +809,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_TempoMedioDeAtendimentoCampanha:${idCampanha}`,tm[0].tempoMedio,10)
                 resolve(tm[0].tempoMedio)
             })
         })
     }
 
     async mailingsProdutivosPorCampanha(empresa,idCampanha,idMailing,status){
+        const redis_mailingsProdutivosPorCampanha = await Redis.getter(`${empresa}:reports_mailingsProdutivosPorCampanha:${idCampanha}:${idMailing}:${status}`)
+        if(redis_mailingsProdutivosPorCampanha!==null){
+            return redis_mailingsProdutivosPorCampanha
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -726,12 +839,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_mailingsProdutivosPorCampanha:${idCampanha}:${idMailing}:${status}`,total_mailing[0].total,30)
                 resolve(total_mailing[0].total)
             })
         })
     }   
 
     async totalChamadasDia(empresa,idCampanha,hoje){
+        const redis_totalChamadasDia = await Redis.getter(`${empresa}:reports_redis_totalChamadasDia:${idCampanha}:${hoje}`)
+        if(redis_totalChamadasDia!==null){
+            return redis_totalChamadasDia
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -744,12 +862,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_redis_totalChamadasDia:${idCampanha}:${hoje}`,c[0].chamadas,15)
                 resolve(c[0].chamadas)
             })
         })
     }
 
     async totalChamadas_UltimosDias(empresa,idCampanha,hoje){
+        const redis_totalChamadas_UltimosDias = await Redis.getter(`${empresa}:reports_totalChamadas_UltimosDias:${idCampanha}:${hoje}`)
+        if(redis_totalChamadas_UltimosDias!==null){
+            return redis_totalChamadas_UltimosDias
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -763,6 +886,7 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_totalChamadas_UltimosDias:${idCampanha}:${hoje}`,rows,120)
                 resolve(rows)
             })
         })
@@ -770,6 +894,10 @@ class Report{
 
 
     async totalChamadasCompletadasDia(empresa,idCampanha,hoje){
+        const redis_totalChamadasCompletadasDia = await Redis.getter(`${empresa}:reports_totalChamadasCompletadasDia:${idCampanha}:${hoje}`)
+        if(redis_totalChamadasCompletadasDia!==null){
+            return redis_totalChamadasCompletadasDia
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -782,11 +910,16 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_totalChamadasCompletadasDia:${idCampanha}:${hoje}`,c[0].chamadas,15)
                 resolve(c[0].chamadas)
             })
         })
     }
     async ChamadasCompletadas_UltimosDias(empresa,idCampanha,hoje){
+        const redis_ChamadasCompletadas_UltimosDias = await Redis.getter(`${empresa}:reports_ChamadasCompletadas_UltimosDias:${idCampanha}:${hoje}`)
+        if(redis_ChamadasCompletadas_UltimosDias!==null){
+            return redis_ChamadasCompletadas_UltimosDias
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -800,6 +933,7 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_ChamadasCompletadas_UltimosDias:${idCampanha}:${hoje}`,rows,120)
                 resolve(rows)
             })
         })
@@ -807,6 +941,10 @@ class Report{
 
     
     async totalTabulacoesVendaDia(empresa,idCampanha,hoje){
+        const redis_totalTabulacoesVendaDia = await Redis.getter(`${empresa}:reports_totalTabulacoesVendaDia:${idCampanha}:${hoje}`)
+        if(redis_totalTabulacoesVendaDia!==null){
+            return redis_totalTabulacoesVendaDia
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -820,11 +958,16 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_totalTabulacoesVendaDia:${idCampanha}:${hoje}`,c[0].chamadas,15)
                 resolve(c[0].chamadas)
             })
         })
     }
     async totalChamadasVendas_UltimosDias(empresa,idCampanha,hoje){
+        const redis_totalChamadasVendas_UltimosDias = await Redis.getter(`${empresa}:reports_totalChamadasVendas_UltimosDias:${idCampanha}:${hoje}`)
+        if(redis_totalChamadasVendas_UltimosDias!==null){
+            return redis_totalChamadasVendas_UltimosDias
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -839,12 +982,17 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_totalChamadasVendas_UltimosDias:${idCampanha}:${hoje}`,rows,120)
                 resolve(rows)
             })
         })
     }
 
     async totalChamadasAbandonadasDia(empresa,idCampanha,hoje){
+        const redis_totalChamadasAbandonadasDia = await Redis.getter(`${empresa}:reports_totalChamadasAbandonadasDia:${idCampanha}:${hoje}`)
+        if(redis_totalChamadasAbandonadasDia!==null){
+            return redis_totalChamadasAbandonadasDia
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -857,11 +1005,16 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_totalChamadasAbandonadasDia:${idCampanha}:${hoje}`,a[0].abandonadas,15)
                 resolve(a[0].abandonadas)
             })
         })
     }
     async totalChamadasAbandonadas_UltimosDias(empresa,idCampanha,hoje){
+        const redis_totalChamadasAbandonadas_UltimosDias = await Redis.getter(`${empresa}:reports_totalChamadasAbandonadas_UltimosDias:${idCampanha}:${hoje}`)
+        if(redis_totalChamadasAbandonadas_UltimosDias!==null){
+            return redis_totalChamadasAbandonadas_UltimosDias
+        } 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
@@ -875,6 +1028,7 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
+                await Redis.setter(`${empresa}:reports_totalChamadasAbandonadas_UltimosDias:${idCampanha}:${hoje}`,rows,120)
                 resolve(rows)
             })
         })
