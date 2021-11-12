@@ -9,6 +9,7 @@ import moment from 'moment';
 import Campanhas from './Campanhas';
 import Discador from './Discador';
 import Clients from './Clients';
+import Redis from '../Config/Redis'
 
 class Asterisk{
     async querySync(conn,sql){         
@@ -265,12 +266,70 @@ class Asterisk{
         })        
     }   
 
+    async serverAri(empresa){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                
+                const sql=`SELECT * 
+                             FROM ${empresa}_dados.asterisk_ari 
+                            WHERE active=1`; 
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.error('Asterisk.js 279',err)
+                })
+                resolve(rows) 
+            })
+        }) 
+    }
+
+    async chamadasSimultaneas(empresa,idCampanha){
+        const asterisk_server = await this.serverAri(empresa)
+        const server = asterisk_server[0].server
+        const user =  asterisk_server[0].user
+        const pass =  asterisk_server[0].pass
+        await Redis.delete(`${empresa}:Asterisk_chamadasSimultaneasCampanha:${idCampanha}:atendidas`)
+        await Redis.delete(`${empresa}:Asterisk_chamadasSimultaneasCampanha:${idCampanha}:chamando`)
+
+        return new Promise (async (resolve,reject)=>{ 
+            ari.connect(server, user, pass, async (err,client)=>{
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                //client.channels.get() 
+                client.channels.list(async (e,calls)=>{
+                    if(e) console.error(e) 
+                    const atendidas = []
+                    const chamando = []
+                    for(let c=0;c<calls.length; c++){
+                        const chamada={}      
+                                 
+                        chamada['id']=calls[c].id
+                        chamada['state']=calls[c].state
+                        chamada['context']=calls[c].dialplan['context']
+                        chamada['priority']=calls[c].dialplan['priority']
+                        
+                        if((chamada['state']=='Up')&&(chamada['priority']==1)){
+                            atendidas.push(chamada)
+                        }else{
+                            chamando.push(chamada)
+                        }                        
+                    }
+                    await Redis.setter(`${empresa}:Asterisk_chamadasSimultaneas:${idCampanha}:chamando`,chamando,20)
+                    await Redis.setter(`${empresa}:Asterisk_chamadasSimultaneas:${idCampanha}:atendidas`,atendidas,20)
+                    resolve(calls)
+                })
+            })
+        })
+    }
            
 
     //######################DISCAR######################
-    discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,callback){
+    async discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,idCampanha,callback){
         //console.log(`recebendo ligacao ${numero}`)
         //console.log(`ramal ${ramal}`)
+        const accountId = await Clients.accountId(empresa)
+
+     
         ari.connect(server, user, pass, async (err,client)=>{
           if(err) throw err         
 
@@ -283,8 +342,7 @@ class Asterisk{
           const prefix = trunk[0].tech_prefix         
           const tronco = trunk[0].trunk
           const type_dial = trunk[0].type_dial
-          //console.log(`trunk ${tronco}`)
-
+        
 
           if(modo=='discador'){
             context = 'dialer'
@@ -318,9 +376,10 @@ class Asterisk{
             "appArgs"        : "",
             "callerid"       : '',//numero,
             "timeout"        : 20, 
-            "channelId"      : `${idAtendimento}`, 
-            "otherChannelId" : ""
+            "channelId"      : `${accountId}.${idCampanha}.${idAtendimento}`,
+            /*"otherChannelId" : ""*/
           }
+          
           client.channels.originate(options,callback)
           //client.channel
         })  

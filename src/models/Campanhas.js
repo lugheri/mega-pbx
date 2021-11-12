@@ -664,7 +664,7 @@ class Campanhas{
                 }
                 //Inserindo coluna da campanha na tabela de numeros
                 sql = `ALTER TABLE ${empresa}_mailings.${tabelaNumeros} 
-                      ADD COLUMN campanha_${idCampanha} TINYINT NULL DEFAULT '1' AFTER produtivo`
+                      ADD COLUMN campanha_${idCampanha} INT NULL DEFAULT '1' AFTER produtivo`
                 await this.querySync(conn,sql)
                 //Atualiza os registros como disponíveis (1)
                 //sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`

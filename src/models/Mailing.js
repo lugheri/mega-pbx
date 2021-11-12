@@ -30,7 +30,7 @@ class Mailing{
         const valorFormatado =  valor.replace("/", "_")
                                      .replace(".", "_")
                                      .normalize("NFD")
-                                     .replace(/[^a-zA-Z ]/g,"");
+                                     .replace(/[^a-zA-Z0-9 ]/g,"");
         return valorFormatado
     }
 

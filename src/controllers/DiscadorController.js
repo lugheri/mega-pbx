@@ -1,4 +1,5 @@
 import Discador from '../models/Discador'
+import Asterisk from '../models/Asterisk'
 import Campanhas from '../models/Campanhas'
 import Report from '../models/Report'
 import Pausas from '../models/Pausas'
@@ -52,7 +53,10 @@ class DiscadorController{
     async campanhasEmpresa(empresa){
         const hoje = moment().format("YYYY-MM-DD")
         const hora = moment().format("HH:mm:ss")
-
+        console.log('DISCADOR ====>',empresa)
+        console.log('chamadas simultaneas')
+     
+        
         /****
          * PENDENTE DE OTIMIZACAO DO REDIS
          * ----------------------> */await Discador.registrarChamadasSimultaneas(empresa)/* Atualiza contagem de chamadas simultaneas
@@ -151,7 +155,15 @@ class DiscadorController{
         } 
         
         const limiteDiscagem = agentesDisponiveis * agressividade
+        
+       /*
+        await Asterisk.chamadasSimultaneas(empresa)
+        const chamando = await Redis.getter(`${empresa}:Asterisk_chamadasSimultaneas:chamando`)
+        const qtdChamadasSimultaneas=chamando.length*/
+
         const qtdChamadasSimultaneas = await Discador.qtdChamadasSimultaneas(empresa,idCampanha)//Conta chamadas simultaneas e agressividade e compara com os agentes disponiveis
+
+
         let limitRegistros = 0
 
         if(limiteDiscagem<qtdChamadasSimultaneas){
@@ -294,7 +306,7 @@ class DiscadorController{
             }
             
             if(estadosCampanha==1){
-                const dataCall=await Discador.discar(empresa,0,numero,nomeFila,idAtendimento,saudacao,aguarde)                
+                const dataCall=await Discador.discar(empresa,0,numero,nomeFila,idAtendimento,saudacao,aguarde,idCampanha)                
             }                  
         }
     }    

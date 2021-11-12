@@ -307,7 +307,7 @@ class Report{
                     
                     if(err) console.log('Reports ...', err)
                 })
-                await Redis.setter(`${empresa}:reports_chamadasSimultaneas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}`,c,5)
+                await Redis.setter(`${empresa}:reports_chamadasSimultaneas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}`,c,2)
                 resolve(c)
             })
         })      

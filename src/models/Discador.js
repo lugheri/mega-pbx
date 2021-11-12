@@ -1,5 +1,6 @@
 import connect from '../Config/dbConnection';
 import Asterisk from './Asterisk';
+
 import Campanhas from './Campanhas';
 import Mailing from './Mailing';
 import Cronometro from './Cronometro';
@@ -1235,6 +1236,8 @@ class Discador{
                             FROM ${empresa}_dados.campanhas_chamadas_simultaneas
                             WHERE id_campanha=${idCampanha} AND (atendido=0 OR falando=0)`
                 const q = await this.querySync(conn,sql)  
+
+
                 
                 pool.end((err)=>{
                     if(err) console.error(err)
@@ -1735,7 +1738,7 @@ class Discador{
 
     
     /*DISCAR*/
-    async discar(empresa,ramal,numero,fila,idAtendimento,saudacao,aguarde){
+    async discar(empresa,ramal,numero,fila,idAtendimento,saudacao,aguarde,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - discar','Empresa nao recebida')
             return false
@@ -1760,14 +1763,33 @@ class Discador{
                     let fila=0
                 }
                         
-                Asterisk.discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,async (e,call)=>{
+                Asterisk.discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,idCampanha,async (e,call)=>{
                     if(e) throw e 
+                    let chamadasSimultaneasCampanha = await Redis.getter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}`)
+                    if(chamadasSimultaneasCampanha===null){
+                        chamadasSimultaneasCampanha = []
+                    }
 
-                    await this.debug('Data Call',call,empresa)  
+                    const novaChamada={}
+                          novaChamada['id'] = call['id']
+                          novaChamada['tipo'] = 'Discador'
+                          novaChamada['ramal'] = ramal
+                          novaChamada['numero'] = numero
+                          novaChamada['status'] = 'Chamando ...'
+                          novaChamada['horario'] = moment().format("HH:mm:ss")
+
+                    
+                    
+                    /*const sql=`UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
+                                  SET uniqueid='${uniqueid}'
+                                WHERE id=${idAtendimento}`; 
+
+
+                    await this.querySync(conn,sql)  
                     pool.end((err)=>{
-                    if(err) console.error(err)
+                        if(err) console.error(err)
                     }) 
-                    resolve(true)
+                    resolve(true)*/
                 })                 
             })
         })                  
@@ -3009,6 +3031,10 @@ class Discador{
                         WHERE id_key_base=${idRegistro}`
                         //console.log(sql)
                 const nome = await this.querySync(conn,sql)
+                if(nome.length==0){
+                    resolve('sem nome')
+                    return false
+                }
                 pool.end((err)=>{
                     if(err) console.error(err)
                     }) 

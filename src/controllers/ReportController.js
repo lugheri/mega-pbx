@@ -328,7 +328,7 @@ class ReportController{
             res.json({})
             return false
         }
-        const hoje = moment().format("Y-MM-DD")
+        const hoje = moment().format("YYYY-MM-DD")
         const monitoramentoCampanha = {}
               monitoramentoCampanha["nomeDaCampanha"]=infoCampanha[0].nome
               monitoramentoCampanha["CampanhaRodando"]=infoCampanha[0].estado
