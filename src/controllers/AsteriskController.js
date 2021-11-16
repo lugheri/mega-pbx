@@ -236,6 +236,7 @@ class AsteriskController{
                 return false    
             }
             const fila = chamada[0].na_fila
+            const idCampanha=chamada[0].id_campanha
             console.log('tipo_discador',chamada[0].tipo_discador)
             if(chamada[0].tipo_discador=='manual'){
                 await Discador.removeChamadaSimultaneas(empresa,idAtendimento,idCampanha)

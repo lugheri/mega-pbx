@@ -22,7 +22,7 @@ class Asterisk{
                 resolve(rows)
             })
         })
-      }    
+    }    
     
     //######################Configuração das filas######################
     

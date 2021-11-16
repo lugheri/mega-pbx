@@ -1828,14 +1828,10 @@ class Mailing{
                     sql = `SELECT * 
                             FROM ${empresa}_mailings.${r[0].tabela_dados}`
                     const data = await this.querySync(conn,sql)
-                    const json2csvParser = new Parser({ delimiter: ';' });
-                    const csv = json2csvParser.parse(data);
-                    res.attachment(`mailing_${r[0].nome}.csv`)
-                    res.status(200).send(csv);
                     pool.end((err)=>{
                         if(err) console.error('Mailings 1109', err)
                     })
-                    resolve(true)
+                    resolve(data)
                 })
             })
     }   

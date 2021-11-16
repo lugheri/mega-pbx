@@ -1223,7 +1223,10 @@ class Discador{
             //console.log('-> -> APP',statusChannel['App'])
             if(statusChannel===false){
                 //Removendo a chamada caso o canal nao exista
+                const idAtendimento = chamadasSimultaneasCampanha[c].idAtendimento
                 chamadasSimultaneasCampanha.splice(c,1)
+                //Remove da chamadas simultaneas
+                await this.removeChamadaSimultanea(empresa,idAtendimento)
             }else{
                 if(statusChannel['state']=='Down'){
                     chamadasSimultaneasCampanha[c].status='Chamando . . .'
@@ -1232,7 +1235,7 @@ class Discador{
                    // console.log('>>>>>>>>>>>>>>>>>>>>>>> STATUS DE UP <<<<<<<<<<<<<<<<<<<')
                     if(statusChannel['App']=='AMD'){
                       //  console.log('>>>>>>>>>>>>>>>>>>>>>>> APP AMD <<<<<<<<<<<<<<<<<<<')
-                        chamadasSimultaneasCampanha[c].status='Validando'
+                        chamadasSimultaneasCampanha[c].status='Analisando'
                     }else if(statusChannel['App']=='Queue'){
                       //  console.log('>>>>>>>>>>>>>>>>>>>>>>> APP QUEUE <<<<<<<<<<<<<<<<<<<')
                         chamadasSimultaneasCampanha[c].status='Na Fila'
@@ -1242,7 +1245,7 @@ class Discador{
                     if((statusChannel['App']=='Queue')||(statusChannel['App']=='AppQueue')){
                         chamadasSimultaneasCampanha[c].status='Na Fila'
                     }else if(statusChannel['App']=='AMD'){
-                        chamadasSimultaneasCampanha[c].status='Validando'
+                        chamadasSimultaneasCampanha[c].status='Analisando'
                     }else{
                         chamadasSimultaneasCampanha[c].status='Tocando'
                     }
@@ -1269,6 +1272,22 @@ class Discador{
 
         return chamadasSimultaneasCampanha.length
        
+    }
+
+    async removeChamadaSimultanea(empresa,idAtendimento){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:qtdChamadasSimultaneas","message":err.message,"stack":err.stack});
+                const sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas
+                            WHERE id=${idAtendimento}`
+                await this.querySync(conn,sql)  
+                pool.end((err)=>{
+                    if(err) console.error(err)
+                    resolve(true)
+                }) 
+            })
+        })
     }
 
 
@@ -1331,10 +1350,10 @@ class Discador{
                     limit=1
                 }
 
-                /*REGRA PROVISÓRIA DE LIMITAÇÃO*/
+                /*REGRA PROVISÓRIA DE LIMITAÇÃO
                 if(limit>5){
                     limit=5
-                }
+                }*/
                 //console.log(empresa,"limit",limit)
        
                 await this.debug(' . . . . . . . . . . . PASSO 2.5 - Verificando se existem registros disponíveis','',empresa)
@@ -1498,7 +1517,7 @@ class Discador{
                 await this.querySync(conn,sql)  
                 pool.end((err)=>{
                     if(err) console.error(err)
-                    }) 
+                }) 
                 resolve(true) 
             })
         })        
@@ -1554,8 +1573,29 @@ class Discador{
                 const protocolo = hoje+'0'+ramal
                 let tipo = 'discador'
                 if(tipoDiscador=="manual"){
-                tipo = 'manual'
-                }        
+                    tipo = 'manual'
+                }    
+                
+                //Iniciando setup do cache 
+                /*Tipo de Cache da ligacao 
+                    Chamadas Simultaneas campanha
+                    Chamadas Simultaneas empresa 
+
+                    Chamadas em fila campanha
+                    Chamadas em fila empresa
+
+                    Chamadas atendidas campanha
+                    Chamadas atendida empresa
+
+
+
+
+                
+                */
+
+
+
+
                 const sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
                                         (data,
                                         ramal,

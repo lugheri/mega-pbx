@@ -81,7 +81,7 @@ class DiscadorController{
                   parametrosDiscador['modo_atendimento']= campanhasAtivas[i].modo_atendimento
                   parametrosDiscador['saudacao']= campanhasAtivas[i].saudacao
                   //Conta chamadas simultaneas e agressividade e compara com os agentes disponiveis
-                  const qtdChamadasSimultaneas=await Discador.totalChamadasSimultaneas(empresa,idCampanha)
+            const qtdChamadasSimultaneas=await Discador.totalChamadasSimultaneas(empresa,idCampanha)
             const agendamento = await Discador.agendamentoCampanha(empresa,idCampanha)//Verifica se a campanha possui horário de agendamento
             if(agendamento.length==0){
                 const msg = "Esta campanha não tem um horário de funcionamento definido!"

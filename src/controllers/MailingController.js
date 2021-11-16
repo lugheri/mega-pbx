@@ -3,6 +3,9 @@ import Mailing from '../models/Mailing';
 import Campanhas from '../models/Campanhas';
 import User from '../models/User';
 import moment from "moment";
+import csv from 'csvtojson';
+import { Parser } from 'json2csv';
+import utf8 from 'utf8';
 import md5 from "md5";
 import { json } from 'express';
 
@@ -195,8 +198,14 @@ class MailingController{
     async exportarMailing(req,res){
         const empresa = await User.getEmpresa(req)
         const idMailing = parseInt(req.params.idMailing)        
-        await Mailing.exportarMailing(empresa,idMailing,res)       
-        //res.json(false)
+        const data = await Mailing.exportarMailing(empresa,idMailing,res) 
+
+        const json2csvParser = new Parser({ delimiter: ';' });
+        const csv = json2csvParser.parse(data);
+        res.setHeader('Content-disposition', 'attachment; filename=data.csv');
+        res.set('Content-Type', 'text/csv');
+        res.status(200).send(csv);
+        
     }
 
     //Status do Mailing
