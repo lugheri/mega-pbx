@@ -284,7 +284,34 @@ class Asterisk{
         }) 
     }
 
-    async chamadasSimultaneas(empresa,idCampanha){
+    async statusChannel(empresa,channel_Id){
+        const asterisk_server = await this.serverAri(empresa)
+        const server = asterisk_server[0].server
+        const user =  asterisk_server[0].user
+        const pass =  asterisk_server[0].pass
+
+        return new Promise (async (resolve,reject)=>{ 
+            ari.connect(server, user, pass, async (err,client)=>{
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                console.log('CHANNEL ID',channel_Id)
+                const options = { "channelId":`${channel_Id}`}
+                client.channels.get(options,(err,infoChannel)=>{
+                    if(err){
+                        resolve(false)
+                        return //console.error(err) 
+                    } 
+
+                    const statusChannel={}
+                          statusChannel['state']=infoChannel['state']
+                          statusChannel['App']=infoChannel['dialplan'].app_name
+                                             
+                    resolve(statusChannel)
+                }) 
+            })
+        })
+    }
+
+    /*async chamadasSimultaneas(empresa,idCampanha){
         const asterisk_server = await this.serverAri(empresa)
         const server = asterisk_server[0].server
         const user =  asterisk_server[0].user
@@ -320,8 +347,7 @@ class Asterisk{
                 })
             })
         })
-    }
-           
+    }*/  
 
     //######################DISCAR######################
     async discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,idCampanha,callback){
@@ -358,7 +384,7 @@ class Asterisk{
           //console.log(`endpoint: ${endpoint}`)
           //console.log(`numero recebido: ${numero}`)
           //console.log(`Servidor: ${server}`)
-
+        console.log(`${accountId}.${idCampanha}.${idAtendimento}`)
           const options = {            
             "endpoint"       : `${endpoint}`,
             "extension"      : `${numero}`,
@@ -376,11 +402,12 @@ class Asterisk{
             "appArgs"        : "",
             "callerid"       : '',//numero,
             "timeout"        : 20, 
-            "channelId"      : `${accountId}.${idCampanha}.${idAtendimento}`,
-            /*"otherChannelId" : ""*/
+            /*"channelId"      : `${accountId}.${idCampanha}.${idAtendimento}`,
+            "otherChannelId" : ""*/
           }
           
           client.channels.originate(options,callback)
+
           //client.channel
         })  
     }

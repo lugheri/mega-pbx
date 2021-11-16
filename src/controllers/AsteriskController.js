@@ -6,6 +6,7 @@ import fs from 'fs';
 import Discador from '../models/Discador';
 import Cronometro from '../models/Cronometro';
 import moment from 'moment';
+import Redis from '../Config/Redis'
 //const asteriskServer = 'http://35.202.102.245:8088'
 //const asteriskServer = 'asterisk'
 //const asteriskServer = 'localhost'
@@ -130,18 +131,17 @@ class AsteriskController{
             const empresa = dados.empresa            
             const uniqueid = dados.uniqueid 
             const numero = dados.numero
-            const tipoChamada = dados.tipoChamada          
-            
-           
+            const tipoChamada = dados.tipoChamada   
             
             let ch = dados.ramal;
             ch = ch.split("-");
             ch = ch[0].split("/")
             const ramal = ch[1]
 
+            console.log('>>>>>>>>>>>>>>>>>>>>>>>ATENDEU CHAMADA',tipoChamada)
+
             if(tipoChamada=="manual"){
-                let idAtendimento = dados.idAtendimento
-               
+                let idAtendimento = dados.idAtendimento               
                 if((idAtendimento==false)||(idAtendimento==0)||(idAtendimento=="")||(idAtendimento==undefined)){
                     const da = await Discador.dadosAtendimento_byNumero(empresa,numero);
                     idAtendimento = da[0].id;
@@ -173,6 +173,29 @@ class AsteriskController{
                 const idMailing = dadosAtendimento[0].id_mailing
                 const idRegistro = dadosAtendimento[0].id_registro 
                 const uniqueid_Reg = dadosAtendimento[0].uniqueid  
+
+                //Adicionando Chamada atendida no redis
+                let chamadasAtendidas = await Redis.getter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}:atendidas`)
+                const novoAtendimento={}
+                      novoAtendimento['id'] = uniqueid_Reg
+                      novoAtendimento['idAtendimento'] = idAtendimento
+                      novoAtendimento['tipo'] = dadosAtendimento[0].tipo_ligacao 
+                      novoAtendimento['ramal'] = ramal
+                      novoAtendimento['numero'] = numero
+                      novoAtendimento['status'] = 'Em Atendimento'
+                      novoAtendimento['horario'] = moment().format("HH:mm:ss")
+
+                chamadasAtendidas.push(novoAtendimento)
+                await Redis.setter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}:atendidas`,chamadasAtendidas)
+
+                //removendo das chamadas simultaneas
+                let chamadasSimultaneasCampanha = await Redis.getter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}`) 
+                for(let c=0;c<chamadasSimultaneasCampanha.length;c++){
+                    if(chamadasSimultaneasCampanha[c].idAtendimento==idAtendimento){
+                        chamadasSimultaneasCampanha.splice(c,1)
+                    }
+                }
+                await Redis.setter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}`,chamadasSimultaneasCampanha)
             
 
                 await Discador.alterarEstadoAgente(empresa,ramal,3,0)
@@ -215,7 +238,7 @@ class AsteriskController{
             const fila = chamada[0].na_fila
             console.log('tipo_discador',chamada[0].tipo_discador)
             if(chamada[0].tipo_discador=='manual'){
-                await Discador.removeChamadaSimultaneas(empresa,idAtendimento)
+                await Discador.removeChamadaSimultaneas(empresa,idAtendimento,idCampanha)
                 await Cronometro.saiuLigacao(empresa,0,numero,chamada[0].ramal)
                 res.json(true);
                 return false 

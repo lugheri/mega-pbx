@@ -356,7 +356,7 @@ class Report{
                 const sql = `SELECT h.agente,u.nome,DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall,h.hora,h.uniqueid,h.campanha,h.tipo,h.numero_discado,h.contatado,h.produtivo,h.status_tabulacao
                             FROM ${empresa}_dados.historico_atendimento AS h
                         LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
-                            WHERE 1=1 ${filter} LIMIT ${pag},${reg}`
+                            WHERE 1=1 ${filter} ORDER BY h.id DESC LIMIT ${pag},${reg} `
                 //console.log('chamadasRealizadas',sql)
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{

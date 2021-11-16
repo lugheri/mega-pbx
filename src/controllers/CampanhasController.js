@@ -14,7 +14,7 @@ class CampanhasController{
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.id);
         const r = await Discador.statusCampanha(empresa,idCampanha)
-        console.log('Status Campanha',r)
+        //console.log('Status Campanha',r)
         res.json(r)
     }
 
@@ -466,14 +466,14 @@ class CampanhasController{
             total=m[0].total
             idMailing=m[0].idMailing
         }
-        console.log('total registros',total)        
+        //console.log('total registros',total)        
         const contatados = await Campanhas.mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,'S')
         const naoContatados = await Campanhas.mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,'N')
         const trabalhados = contatados + naoContatados  
         
-        console.log('total contatados',contatados)  
+        /*console.log('total contatados',contatados)  
         console.log('total naoContatados',naoContatados)  
-        console.log('total trabalhados',trabalhados)  
+        console.log('total trabalhados',trabalhados)  */
         
         
        

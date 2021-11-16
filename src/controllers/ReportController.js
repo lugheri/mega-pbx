@@ -8,6 +8,7 @@ import moment from 'moment';
 import Discador from '../models/Discador';
 import Cronometro from '../models/Cronometro';
 import Tabulacoes from '../models/Tabulacoes'
+import Redis from '../Config/Redis'
 
 class ReportController{  
     async relatorioPausas(req,res){
@@ -235,48 +236,54 @@ class ReportController{
            registros = req.body.totalRegistro
         }
         const hoje = moment().format("Y-MM-DD")
-
-        const detChamadas = []
-
-        const chamadasSimultaneas = await Report.chamadasSimultaneas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero)
-        let status = "Encerrada"
-        for(let i = 0;i<chamadasSimultaneas.length; i++) {            
-            const callSim={}
-                  callSim['ramal']=chamadasSimultaneas[i].ramal 
-                  callSim['agente']=chamadasSimultaneas[i].nome
-                  callSim['data']=chamadasSimultaneas[i].dataCall
-                  callSim['hora']=chamadasSimultaneas[i].horaCall
-                  callSim['duracao']=await Report.converteSeg_tempo(await Report.timeCall(empresa,chamadasSimultaneas[i].uniqueid))
-                  callSim['campanha']=await Campanhas.nomeCampanhas(empresa,chamadasSimultaneas[i].id_campanha)
-                  callSim['tipo']=chamadasSimultaneas[i].tipo_ligacao
-                  callSim['telefone']=chamadasSimultaneas[i].numero
+        const detChamadas=[]
+        if(campanha){
+            registros = 0
+            let chamadasEmAtendimento = await Redis.getter(`${empresa}:chamadasSimultaneasCampanha:${campanha}:atendidas`)
+            if(chamadasEmAtendimento===null){
+                chamadasEmAtendimento=[]
+            }
+            console.log('chamadasEmAtendimento',chamadasEmAtendimento)
+            for(let i = 0;i<chamadasEmAtendimento.length; i++) { 
+                const callSim={}
+                  callSim['ramal']=chamadasEmAtendimento[i].ramal 
+                  callSim['agente']=''
+                  callSim['data']=chamadasEmAtendimento[i].hoje
+                  callSim['hora']=chamadasEmAtendimento[i].horario
+                  callSim['duracao']=await Report.converteSeg_tempo(await Report.timeCall(empresa,chamadasEmAtendimento[i].id))
+                  callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
+                  callSim['tipo']=chamadasEmAtendimento[i].tipo
+                  callSim['telefone']=chamadasEmAtendimento[i].numero
                   callSim['contatado']=""
                   callSim['produtivo']=""
-                  callSim['tabulacao']=""
-                  if(chamadasSimultaneas[i].na_fila==1){
-                      status="Na Fila"
-                  }else if(chamadasSimultaneas[i].falando==1){
-                      status="Em Atendimento"
-                  }else{
-                     if((chamadasSimultaneas[i].desligada==1)||(chamadasSimultaneas[i].tabulando==1)||(chamadasSimultaneas[i].tabulado==1)){
-                        status="Finalizando..."
-                     }else{
-                        status="Chamando..."
-                     }
-                  }
-                  callSim['status']=status
-                  let gravacao = " - "
-                  const linkGrav = await Gravacao.linkByUniqueid(empresa,chamadasSimultaneas[i].uniqueid)
-                  if(linkGrav!=0){ 
-                    const server = await Asterisk.getDomain(empresa)
-                    const pasta = linkGrav[0].date_record
-                    
-                    const arquivo = `${linkGrav[0].callfilename}.wav`
-                    gravacao = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
-                  }
-                  callSim['gravacao']=gravacao
-            detChamadas.push(callSim)
-        }
+                  callSim['tabulacao']=""                 
+                  callSim['status']=chamadasEmAtendimento[i].status
+                  callSim['gravacao']="/"
+                detChamadas.push(callSim)      
+            }
+
+            const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneasCampanha:${campanha}`)
+            for(let i = 0;i<chamadasSimultaneas.length; i++) {  
+                const callSim={}
+                      callSim['ramal']=chamadasSimultaneas[i].ramal 
+                      callSim['agente']=''
+                      callSim['data']=chamadasSimultaneas[i].hoje
+                      callSim['hora']=chamadasSimultaneas[i].horario
+                      callSim['duracao']='00:00:00'
+                      callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
+                      callSim['tipo']=chamadasSimultaneas[i].tipo
+                      callSim['telefone']=chamadasSimultaneas[i].numero
+                      callSim['contatado']=""
+                      callSim['produtivo']=""
+                      callSim['tabulacao']=""                 
+                      callSim['status']=chamadasSimultaneas[i].status
+                      callSim['gravacao']="/"
+                    detChamadas.push(callSim)      
+                }     
+            }
+
+
+        
         const chamadas = await Report.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
 
         for(let i = 0;i<chamadas.length; i++) {
