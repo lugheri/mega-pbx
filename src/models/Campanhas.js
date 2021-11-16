@@ -174,6 +174,8 @@ class Campanhas{
                 await Redis.delete(`${empresa}:agendamentoCampanha`)
                 await Redis.delete(`${empresa}:dadosCampanha:${idCampanha}`)
                 await Redis.delete(`${empresa}:infoCampanha:${idCampanha}`)
+                await Redis.setter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}`,[])
+                await Redis.setter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}:atendidas`,[])
                 
                
 

@@ -25,6 +25,18 @@ class Mailing{
         await csv({delimiter:delimitador}).fromFile(path,'binary').then(callback)
     }
 
+    removeCaracteresEspeciais_title(valor){
+        if(valor===undefined) return ""
+
+        const valorFormatado =  valor.replace(" ", "_")
+                                     .replace("/", "_")
+                                     .replace(".", "_")
+                                     .normalize("NFD")
+                                     .replace(/[^a-zA-Z0-9]/g,""); 
+
+        return valorFormatado
+    }
+
     removeCaracteresEspeciais(valor){
         if(valor===undefined) return ""
         const valorFormatado =  valor.replace("/", "_")
@@ -65,7 +77,7 @@ class Mailing{
                 //Criando a linha de titulos da tabela
                 for(let i=0; i<keys.length; i++){
                     if(header==1){
-                        const title = this.removeCaracteresEspeciais(keys[i])                        
+                        const title = this.removeCaracteresEspeciais_title(keys[i])                     
                         campos+="`"+title+"` VARCHAR(255) NULL DEFAULT NULL COLLATE 'latin1_swedish_ci',"
                     }else{
                         campos+="`campo_"+(i+1)+"` VARCHAR(255) NULL DEFAULT NULL COLLATE 'latin1_swedish_ci',"
@@ -156,7 +168,7 @@ class Mailing{
                         let n = i+1
                         campos_tabela.push("`campo_"+n+"`")
                     }else{
-                        const campoFormatado = this.removeCaracteresEspeciais(campos_arquivo[i])
+                        const campoFormatado = this.removeCaracteresEspeciais_title(campos_arquivo[i])
                         
                         campos_tabela.push(`${campoFormatado}`)
                     }
@@ -267,7 +279,7 @@ class Mailing{
                         let n = i+1
                         campos_tabela.push("`campo_"+n+"`")
                     }else{
-                        campos_tabela.push("`"+this.removeCaracteresEspeciais(campos_arquivo[i])+"`")
+                        campos_tabela.push("`"+this.removeCaracteresEspeciais_title(campos_arquivo[i])+"`")
                     }
                 } 
                
@@ -345,7 +357,7 @@ class Mailing{
 
                 //Id do registro
                 let indice = idKey
-                console.log('Indice Inicial',indice)
+                //console.log('Indice Inicial',indice)
                 //Iniciando o loop dos dados a serem inseridos de acordo com o transferRate
                 for(let i=0; i<rate; i++){
                     //Cria o indice do registro de acordo com o id da base, um inicializador (1000000) + o indice do idKey(1+)
@@ -403,18 +415,17 @@ class Mailing{
                     
                     for(let nc=0; nc<colunaNumeroCompleto.length; nc++){//Numeros
                         //console.log('numero',colunaNumeroCompleto[nc])
+
                         let numeroCompleto = jsonFile[0][colunaNumeroCompleto[nc]]
-                        //console.log('Recebido',colunaNumeroCompleto[nc],numeroCompleto)
-                            // console.log('numeroCompleto',numeroCompleto) 
-                            numeroCompleto = this.removeCaracteresEspeciais_numero(numeroCompleto)
-                           // console.log('tratado',numeroCompleto)
-                            // console.log('numeroCompleto valid',numeroCompleto) 
-                        //console.log('numeroCompleto',numeroCompleto)    
+                        //console.log('Coluna Numero',colunaNumeroCompleto[nc])
+
+                        numeroCompleto = this.removeCaracteresEspeciais_numero(numeroCompleto)                            
                         if(numeroCompleto){
                             let dddC = numeroCompleto.toString().slice(0,2)     
-                            let duplicado = 0 //await this.checaDuplicidade(numeroCompleto,tabelaNumeros)
-                            numeroCompleto= this.removeCaracteresEspeciais_numero(numeroCompleto)
+                            let duplicado = 0 //await this.checaDuplicidade(numeroCompleto,tabelaNumeros)                                                      
                             const infoN = this.validandoNumero(dddC,numeroCompleto)
+                            //console.log('infoN',infoN)
+
                             sqlNumbers+=` (${idBase},${indiceReg},${infoN['ddd']},'${numeroCompleto}','${infoN['uf']}','${infoN['tipo']}',${infoN['valido']},${duplicado},'${infoN['message']}',0,0,0,0),`;
                         }
                     }
@@ -432,7 +443,7 @@ class Mailing{
                     //Removendo campos importados do arquivo carregado 
                     jsonFile.shift()  
                 } 
-                console.log('Indice final',indice)
+                //console.log('Indice final',indice)
                 
                 //Executa a query de insersão de dados    
                 //console.log('sqlData',sqlData)
@@ -509,7 +520,7 @@ class Mailing{
                         let n = i+1
                         campos_tabela.push("`campo_"+n+"`")
                     }else{
-                        campos_tabela.push("`"+this.removeCaracteresEspeciais(campos_arquivo[i])+"`")
+                        campos_tabela.push("`"+this.removeCaracteresEspeciais_title(campos_arquivo[i])+"`")
                     }
                 } 
 
@@ -765,7 +776,7 @@ class Mailing{
         })        
     }
 
-    async configuraTipoCampos(empresa,idBase,header,campos){
+    async configuraTipoCampos(empresa,idBase,header,campos,camposOriginais){
         return new Promise (async (resolve,reject)=>{      
             const pool =  await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{                           
@@ -782,8 +793,8 @@ class Mailing{
 
                 for(let i=0; i<campos.length; i++){
                     
-                    let nomeCampo=this.removeCaracteresEspeciais(campos[i].name)               
-                    let nomeOriginal=campos[i].name//.replace("-", "_").replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
+                    let nomeCampo=this.removeCaracteresEspeciais_title(campos[i].name)               
+                    let nomeOriginal=camposOriginais[i]//.replace("-", "_").replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
                     let apelido = campos[i].apelido
                     if(header==0){
                         nomeCampo=`campo_${i+1}`
@@ -1817,14 +1828,10 @@ class Mailing{
                     sql = `SELECT * 
                             FROM ${empresa}_mailings.${r[0].tabela_dados}`
                     const data = await this.querySync(conn,sql)
-                    const json2csvParser = new Parser({ delimiter: ';' });
-                    const csv = json2csvParser.parse(data);
-                    res.attachment(`mailing_${r[0].nome}.csv`)
-                    res.status(200).send(csv);
                     pool.end((err)=>{
                         if(err) console.error('Mailings 1109', err)
                     })
-                    resolve(true)
+                    resolve(data)
                 })
             })
     }   

@@ -3,6 +3,9 @@ import Mailing from '../models/Mailing';
 import Campanhas from '../models/Campanhas';
 import User from '../models/User';
 import moment from "moment";
+import csv from 'csvtojson';
+import { Parser } from 'json2csv';
+import utf8 from 'utf8';
 import md5 from "md5";
 import { json } from 'express';
 
@@ -64,8 +67,7 @@ class MailingController{
             let data=[]
             for(let d=0; d<10; d++){
                 if(d<=(resumoBase.length-1)){
-                    let value=resumoBase[d][title[i]]
-                                                             
+                    let value=resumoBase[d][title[i]]                                                             
                     data.push(value)
                 }                    
             }
@@ -99,19 +101,25 @@ class MailingController{
         const tabNumbers=infoMailing[0].tabela_numeros
 
        
-        await Mailing.configuraTipoCampos(empresa,idBase,header,tipoCampos)//Configura os tipos de campos
+        
        
         Mailing.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo            
             let idKey = 1
             let transferRate=1
             const fileOriginal=jsonFile
+            const keys = Object.keys(jsonFile[0]) 
+            await Mailing.configuraTipoCampos(empresa,idBase,header,tipoCampos,keys)//Configura os tipos de campos
             if(tipoImportacao=="horizontal"){
                 const infoMailing = await Mailing.infoMailing(empresa,idBase)
                 const dataTab = infoMailing[0].tabela_dados
                 const numTab = infoMailing[0].tabela_numeros
-
-                await Mailing.importarMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,idKey,transferRate)
-
+                console.log('Agendando a Importacao')
+                setTimeout(()=>{
+                    console.log('Iniciando Importacao')
+                    Mailing.importarMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,idKey,transferRate)
+                },5000)
+                console.log('Retornando True')
+                return true
                // await Mailing.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
             }else{
                 await Mailing.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,tabData,tabNumbers,idKey,transferRate)
@@ -190,8 +198,14 @@ class MailingController{
     async exportarMailing(req,res){
         const empresa = await User.getEmpresa(req)
         const idMailing = parseInt(req.params.idMailing)        
-        await Mailing.exportarMailing(empresa,idMailing,res)       
-        //res.json(false)
+        const data = await Mailing.exportarMailing(empresa,idMailing,res) 
+
+        const json2csvParser = new Parser({ delimiter: ';' });
+        const csv = json2csvParser.parse(data);
+        res.setHeader('Content-disposition', 'attachment; filename=data.csv');
+        res.set('Content-Type', 'text/csv');
+        res.status(200).send(csv);
+        
     }
 
     //Status do Mailing
