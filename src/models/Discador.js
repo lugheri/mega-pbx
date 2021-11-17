@@ -589,42 +589,27 @@ class Discador{
             //console.log('{[(!)]} - registrarChamadasSimultaneas','Empresa nao recebida')
             return false
         }       
+        
+        let chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`);
+        if(chamadasSimultaneas===null){
+            chamadasSimultaneas = []
+        }
 
-        await this.debug(' . PASSO 1.1','Registrando chamadas simultaneas',empresa)      
-       
+        console.log('Chamadas Simultaneas',chamadasSimultaneas)
+        console.log('Totao de Chamadas Simultaneas',chamadasSimultaneas.length)       
 
-        const chamadas_simultaneas = await this.chamadasSimultaneas(empresa,'todas') 
-        const chamadas_conectadas = await this.chamadasSimultaneas(empresa,'conectadas')
-        const chamadas_manuais = await this.chamadasSimultaneas(empresa,'manuais')
+        const chamando = chamadasSimultaneas.filter(chamadas => chamadas.event_chamando == 1)
+        const emFila = chamadasSimultaneas.filter(chamadas => chamadas.event_na_fila == 1)
+        const atendidas = chamadasSimultaneas.filter(chamadas => chamadas.event_em_atendimento == 1)
 
-        /*
-
-        return new Promise (async (resolve,reject)=>{ 
-            
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                
-                if(err) return console.error({"errorCode":err.code,"empresa":empresa,"arquivo":"Discador.js:registrarChamadasSimultaneas","message":err.message,"stack":err.stack});
-                
-                //removendo do log chamadas do dia anterior
-                let sql = `DELETE FROM ${empresa}_dados.log_chamadas_simultaneas  
-                                WHERE DATA < DATE_SUB(NOW(), INTERVAL 15 SECOND);`
-                                //console.log(sql)
-                await this.querySync(conn,sql);
-                
-                //Inserindo informacoes de chamadas para o grafico de chamadas simultaneas
-                sql = `INSERT INTO ${empresa}_dados.log_chamadas_simultaneas 
-                                    (data,total,conectadas,manuais) 
-                                VALUE (now(),${chamadas_simultaneas},${chamadas_conectadas},${chamadas_manuais})`
-                                //console.log(sql)
-                await this.querySync(conn,sql);
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                    }) 
-                resolve(true) 
-            })
-        })   */       
+        const totalChamadasSimultaneas = {}
+              totalChamadasSimultaneas['chamadasSimultaneas']=chamando.length+emFila.length
+              totalChamadasSimultaneas['chamadasConectadas']=atendidas.length
+              
+        await Redis.setter(`${empresa}:totalChamadasSimultaneas`,totalChamadasSimultaneas,60)                
     }
+
+    
 
     //Conta as chamadas simultaneas
     async chamadasSimultaneas(empresa,parametro){        
@@ -632,47 +617,23 @@ class Discador{
             //console.log('{[(!)]} - chamadasSimultaneas','Empresa nao recebida')
             return false
         }
-        
-        await Redis.delete(`${empresa}:ChamadaSimultaneas:${parametro}`)
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasSimultaneas","message":err.message,"stack":err.stack});
 
-                let filter=""
-                switch(parametro){
-                    case 'conectadas':
-                        filter=` AND falando=1`
-                    break;
-                    case 'manuais':
-                        filter=`AND tipo_discador='manual'`
-                    break;
-                    case 'todas':
-                        filter=""
-                    break;
-                    default:
-                        filter=``
-                }
-                const sql = `SELECT COUNT(id) as total 
-                               FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
-                              WHERE 1=1
-                              ${filter} LIMIT 1`
-                const r = await this.querySync(conn,sql)
-                const total = r[0].total
-                //console.log('total ', parametro, total)
-                await Redis.setter(`${empresa}:ChamadaSimultaneas:${parametro}`,total,5)
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                })                     
-                resolve(total) 
-            })
-        })     
+        const totalChamadasSimultaneas = await Redis.getter(`${empresa}:totalChamadasSimultaneas`)
+        if(totalChamadasSimultaneas===null){
+            return 0
+        }
+
+        if(parametro=="conectadas"){
+            return totalChamadasSimultaneas['chamadasConectadas']
+        }else{
+            return totalChamadasSimultaneas['chamadasSimultaneas']
+        }   
     }    
 
 
      //Remove Chamadas presas nas chamadas simultaneas
     //Remove apenas as chamadas nao tratadas do power dentro da regra de limite disponivel
-    async clearCalls(empresa){
+    /*async clearCalls(empresa){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - clearCalls','Empresa nao recebida')
             return false
@@ -742,7 +703,7 @@ class Discador{
             })
         })    
                 
-    }
+    }*/
 
     async clearCallsCampanhas(empresa,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
@@ -1212,21 +1173,21 @@ class Discador{
     }
 
     async totalChamadasSimultaneas(empresa,idCampanha){
-        let chamadasSimultaneasCampanha = await Redis.getter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}`) 
-        if(chamadasSimultaneasCampanha===null){
-            chamadasSimultaneasCampanha = []
+        let chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`) 
+        if(chamadasSimultaneas===null){
+            chamadasSimultaneas = []
         }
+
+        const chamadasSimultaneasCampanha = chamadasSimultaneas.filter(chamadas => chamadas.id_campanha == idCampanha)
+        console.log('chamadas Simultaneas Campanha',chamadasSimultaneasCampanha)
         //Percorre anteriores 
         for(let c=0;c<chamadasSimultaneasCampanha.length;c++){
             const statusChannel = await Asterisk.statusChannel(empresa,chamadasSimultaneasCampanha[c].id)
-            //console.log('-> -> STATE',statusChannel['state'])
-            //console.log('-> -> APP',statusChannel['App'])
+            
             if(statusChannel===false){
-                //Removendo a chamada caso o canal nao exista
-                const idAtendimento = chamadasSimultaneasCampanha[c].idAtendimento
+                //Removendo a chamada caso o canal nao exista    
+                await this.removeChamadaSimultanea(empresa,chamadasSimultaneasCampanha[c])            
                 chamadasSimultaneasCampanha.splice(c,1)
-                //Remove da chamadas simultaneas
-                await this.removeChamadaSimultanea(empresa,idAtendimento)
             }else{
                 if(statusChannel['state']=='Down'){
                     chamadasSimultaneasCampanha[c].status='Chamando . . .'
@@ -1247,81 +1208,60 @@ class Discador{
                     }else if(statusChannel['App']=='AMD'){
                         chamadasSimultaneasCampanha[c].status='Analisando'
                     }else{
-                        chamadasSimultaneasCampanha[c].status='Tocando'
+                        chamadasSimultaneasCampanha[c].status='Chamando . .'
                     }
                 }                
             }
         }
-        await Redis.setter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}`,chamadasSimultaneasCampanha)
 
-        //Percorre chamadas em atendimento                  
-        let chamadasSimultaneasCampanhaAtendidas = await Redis.getter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}:atendidas`) 
-        if(chamadasSimultaneasCampanhaAtendidas===null){
-            chamadasSimultaneasCampanhaAtendidas = []
-        }
-        //Percorre anteriores 
-        for(let c=0;c<chamadasSimultaneasCampanhaAtendidas.length;c++){
-            const statusChannel = await Asterisk.statusChannel(empresa,chamadasSimultaneasCampanhaAtendidas[c].id)
-            if(statusChannel===false){
-                //Removendo a chamada caso o canal nao exista
-                chamadasSimultaneasCampanhaAtendidas.splice(c,1)
-            }
-        }
-        await Redis.setter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}:atendidas`,chamadasSimultaneasCampanhaAtendidas)
-
+        const chamadasSimultaneasOutrasCampanha = chamadasSimultaneas.filter(chamadas => chamadas.id_campanha != idCampanha)
+        const chamadasSimultaneas_todasCampanhas = chamadasSimultaneasOutrasCampanha.concat(chamadasSimultaneasCampanha)
+        await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas_todasCampanhas)
 
         return chamadasSimultaneasCampanha.length
        
     }
 
-    async removeChamadaSimultanea(empresa,idAtendimento){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:qtdChamadasSimultaneas","message":err.message,"stack":err.stack});
-                const sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                            WHERE id=${idAtendimento}`
-                await this.querySync(conn,sql)  
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                    resolve(true)
-                }) 
-            })
-        })
+    async removeChamadaSimultanea(empresa,dadosChamada){        
+        const idCampanha = dadosChamada.id_campanha
+        const idMailing  = dadosChamada.id_mailing
+        const idRegistro = dadosChamada.id_registro
+        const id_numero = dadosChamada.id_numero        
+        const infoMailing = await Mailing.infoMailing(empresa,idMailing)
+        const tabela_numeros = infoMailing[0].tabela_numeros
+        const numero = dadosChamada.numero
+        //atualizando campanhas_tabulacoes
+        const contatado='N'
+        const observacoes = 'Não Atendida'
+        const tabulacao = 0
+        const tipo_ligacao='discador'
+        let sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
+                      SET estado=0, 
+                          desc_estado='Disponivel',
+                          contatado='${contatado}', 
+                          observacao='${observacoes}', 
+                          tentativas=tentativas+1,
+                          max_tent_status=4
+                    WHERE idCampanha=${idCampanha} 
+                      AND idMailing=${idMailing} 
+                      AND idRegistro=${idRegistro}
+                      AND (produtivo IS NULL OR produtivo=0)`
+        await this.querySync(conn,sql)
+        //Grava no histórico de atendimento
+        await this.registraHistoricoAtendimento(empresa,0,idCampanha,idMailing,idRegistro,id_numero,0,0,tipo_ligacao,numero,tabulacao,observacoes,contatado)
+        //Marcando numero na tabela de numeros como disponivel
+        sql = `UPDATE ${empresa}_mailings.${tabela_numeros} 
+                  SET discando=0 
+                WHERE id_registro=${idRegistro}`
+        await this.querySync(conn,sql)
+        pool.end((err)=>{
+            if(err) console.error(err)
+        }) 
+        resolve(true) 
     }
 
 
-    //Contanto total de chamadas simultaneas 
-    async qtdChamadasSimultaneas(empresa,idCampanha){
-        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - qtdChamadasSimultaneas','Empresa nao recebida')
-            return false
-        }
-        const redis_qtdChamadasSimultaneas = await Redis.getter(`${empresa}:qtdChamadasSimultaneas:${idCampanha}`)
-        if(redis_qtdChamadasSimultaneas!==null){
-            return redis_qtdChamadasSimultaneas
-        }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:qtdChamadasSimultaneas","message":err.message,"stack":err.stack});
-
-                const sql = `SELECT COUNT(id) AS total 
-                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                            WHERE id_campanha=${idCampanha} AND (atendido=0 OR falando=0)`
-                const q = await this.querySync(conn,sql)  
-
-
-                
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                    }) 
-                const chamadasSimultaneas = q[0].total
-                await Redis.getter(`${empresa}:qtdChamadasSimultaneas:${idCampanha}`,chamadasSimultaneas,20)
-                resolve(chamadasSimultaneas) 
-            })
-        })                
-    }
+    
 
     //Modo novo de filtragem que adiciona os ids dos registros na tabela de tabulacao a medida que forem sendo trabalhados
     async filtrarRegistro(empresa,idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscador,tipoDiscagem,ordemDiscagem,limitRegistros){
@@ -1428,56 +1368,30 @@ class Discador{
                 
     }
 
-    async checaNumeroOcupado(empresa,numero){
-        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - checaNumeroOcupado','Empresa nao recebida')
-            return false
+    async checaNumeroOcupado(empresa,idCampanha,numero){ 
+        let chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`) 
+        if(chamadasSimultaneas===null){
+            chamadasSimultaneas = []
         }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
-                
-                const sql = `SELECT id 
-                                FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                                WHERE numero='${numero}'`
-                const r = await this.querySync(conn,sql)
-                if(r.length==0){
-                    pool.end((err)=>{
-                        if(err) console.error(err)
-                    }) 
-                    resolve(false) 
-                    return 
-                }
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                }) 
-                resolve(true) 
-            })
-        })       
+        const chamadasSimultaneasCampanha = chamadasSimultaneas.filter(chamadas => chamadas.id_campanha == idCampanha)
+        const numero = chamadasSimultaneasCampanha.filter(chamadas => chamadas.numero == numero)
+        if(numero.length>0){
+            return true
+        }
+        return false
     }
 
     async checandoRegistro(empresa,idRegistro){
-        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - checaNumeroOcupado','Empresa nao recebida')
-            return false
+        let chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`) 
+        if(chamadasSimultaneas===null){
+            chamadasSimultaneas = []
         }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
-
-                const sql = `SELECT id 
-                                FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                                WHERE id_registro='${idRegistro}'
-                                LIMIT 1`
-                const q = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                }) 
-                resolve(q) 
-            })
-        })              
+        const chamadasSimultaneasCampanha = chamadasSimultaneas.filter(chamadas => chamadas.id_campanha == idCampanha)
+        const registro = chamadasSimultaneasCampanha.filter(chamadas => chamadas.id_registro == idRegistro)
+        if(registro.length>0){
+            return true
+        }
+        return false            
     }
 
 
@@ -1559,89 +1473,40 @@ class Discador{
     }
 
     //Registra chamada simultanea
-    async registraChamada(empresa,ramal,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila,tratado,atendido){
-        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - registraChamada','Empresa nao recebida')
-            return false
+    async registraChamada(empresa,ramal,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila){
+        let tipo = 'discador'
+        if(tipoDiscador=="manual"){
+            tipo = 'manual'
+        }  
+        let atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`);
+        if(atendimentoAgente===null){
+            atendimentoAgente = {}
         }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
-                const hoje = moment().format("YMMDDHHmmss")
-                const protocolo = hoje+'0'+ramal
-                let tipo = 'discador'
-                if(tipoDiscador=="manual"){
-                    tipo = 'manual'
-                }    
-                
-                //Iniciando setup do cache 
-                /*Tipo de Cache da ligacao 
-                    Chamadas Simultaneas campanha
-                    Chamadas Simultaneas empresa 
+        const hoje = moment().format("YYYY-MM-DD")
+        const hora = moment().format("HH:mm:ss")
+        const datetime = moment().format("YMMDDHHmmss")
+        const protocolo = datetime+'0'+ramal
 
-                    Chamadas em fila campanha
-                    Chamadas em fila empresa
-
-                    Chamadas atendidas campanha
-                    Chamadas atendida empresa
-
-
-
-
-                
-                */
-
-
-
-
-                const sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
-                                        (data,
-                                        ramal,
-                                        protocolo,
-                                        tipo_ligacao,
-                                        tipo_discador,
-                                        retorno,
-                                        modo_atendimento,
-                                        id_campanha,
-                                        id_mailing,
-                                        tabela_dados,
-                                        tabela_numeros,
-                                        id_registro,
-                                        id_numero,
-                                        numero,
-                                        fila,
-                                        tratado,
-                                        atendido,
-                                        na_fila,
-                                        falando) 
-                                VALUES (now(),
-                                        '${ramal}',
-                                        '${protocolo}',
-                                        '${tipo}',
-                                        '${tipoDiscador}',
-                                        0,
-                                        '${modoAtendimento}',
-                                        '${idCampanha}',
-                                        '${idMailing}',
-                                        '${tabela_dados}',
-                                        '${tabela_numeros}',
-                                        ${id_reg},
-                                        ${id_numero},
-                                        '${numero}',
-                                        '${fila}',
-                                        ${tratado},
-                                        ${atendido},
-                                        0,
-                                        0)`
-                const rows = await this.querySync(conn,sql) 
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                    }) 
-                resolve(rows) 
-            })
-        })        
+        const novaChamada = {}
+              novaChamada['data']=hoje
+              novaChamada['hora']=hora
+              novaChamada['ramal']=ramal
+              novaChamada['protocolo']=protocolo
+              novaChamada['tipo_ligacao']=tipo
+              novaChamada['tipo_discador']=tipoDiscador
+              novaChamada['retorno']=0
+              novaChamada['modo_atendimento']=modoAtendimento
+              novaChamada['id_campanha']=idCampanha
+              novaChamada['id_mailing']=idMailing
+              novaChamada['tabela_dados']=tabela_dados
+              novaChamada['tabela_numeros']=tabela_numeros
+              novaChamada['id_registro']=id_reg
+              novaChamada['id_numero']=id_numero
+              novaChamada['numero']=numero
+              novaChamada['fila']=fila
+        atendimentoAgente.push(novaChamada)
+        await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,atendimentoAgente,43200)
     }   
 
     async filtrosDiscagem(empresa,idCampanha,idMailing){
@@ -1822,7 +1687,7 @@ class Discador{
 
     
     /*DISCAR*/
-    async discar(empresa,ramal,numero,fila,idAtendimento,saudacao,aguarde,idCampanha){
+    async discar(empresa,ramal,numero,fila,saudacao,aguarde,idCampanha){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
             //console.log('{[(!)]} - discar','Empresa nao recebida')
             return false
@@ -1845,26 +1710,26 @@ class Discador{
                 if(!fila){
                     let fila=0
                 }                        
-                Asterisk.discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,idCampanha,async (e,call)=>{
+                Asterisk.discar(empresa,fila,saudacao,aguarde,server,user,pass,modo,ramal,numero,idCampanha,async (e,call)=>{
                     if(e) throw e 
-                    let chamadasSimultaneasCampanha = await Redis.getter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}`)
+                    let chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+                    if(chamadasSimultaneas===null){
+                        chamadasSimultaneas=[]
+                    }
                     console.log('UNIQUEID',call['id'])
                     const uniqueid = call['id']
                     const novaChamada={}
                           novaChamada['id'] = uniqueid
-                          novaChamada['idAtendimento'] = idAtendimento
+                          novaChamada['id_campanha'] = idCampanha
                           novaChamada['tipo'] = 'Discador'
+                          novaChamada['tipo_discador'] = 'power'
                           novaChamada['ramal'] = ramal
                           novaChamada['numero'] = numero
                           novaChamada['status'] = 'Chamando ...'
                           novaChamada['horario'] = moment().format("HH:mm:ss")
-                          console.log('dados chamada', novaChamada)
-                          chamadasSimultaneasCampanha.push(novaChamada)
-                    await Redis.setter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}`,chamadasSimultaneasCampanha)
-                    const sql=`UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
-                                  SET uniqueid='${uniqueid}'
-                                WHERE id=${idAtendimento}`; 
-                    await this.querySync(conn,sql)  
+                    console.log('dados chamada', novaChamada)
+                    chamadasSimultaneas.push(novaChamada)
+                    await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas,43200)                   
                     pool.end((err)=>{
                         if(err) console.error(err)
                     }) 
@@ -1963,86 +1828,67 @@ class Discador{
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT *
-                            FROM ${empresa}_dados.campanhas_agendamentos 
+                             FROM ${empresa}_dados.campanhas_agendamentos 
                             WHERE id=${idAgendamento}`
-                         
                 const a = await this.querySync(conn,sql)
+
+                let atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`);
+                if(atendimentoAgente===null){
+                    atendimentoAgente = {}
+                }
                 const ramal=a[0].ramal
                 const protocolo=0
                 const tipo_ligacao='discador'
                 const tipo_discador='preview'
                 const modo_atendimento='auto'
                 const id_campanha=a[0].campanha
-                const id_mailing=a[0].mailing
-               
+                const id_mailing=a[0].mailing                          
                 const infoMailing = await Mailing.infoMailing(empresa,id_mailing)
                 if(infoMailing.length==0){
                     resolve(false)
                     return
-                }
-
+                }            
                 const tabela_dados = infoMailing[0].tabela_dados
                 const tabela_numeros = infoMailing[0].tabela_numeros
-                
                 const id_registro=a[0].id_registro
                 const id_numero=a[0].id_numero
                 const numero=a[0].numero
                 const fila='0'
-                const tratado=1
-                const atendido=0
-                const na_fila=0
-                const falando=1
-                sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
-                                                (data,ramal,protocolo,tipo_ligacao,tipo_discador,retorno,modo_atendimento,
-                                                id_campanha,
-                                                id_mailing,
-                                                tabela_dados,
-                                                tabela_numeros,
-                                                id_registro,
-                                                id_numero,
-                                                numero,
-                                                fila,
-                                                tratado,
-                                                atendido,
-                                                na_fila,
-                                                falando) 
-                                        VALUES (now(),
-                                                '${ramal}',
-                                                '${protocolo}',
-                                                '${tipo_ligacao}',
-                                                '${tipo_discador}',
-                                                1,
-                                                '${modo_atendimento}',
-                                                '${id_campanha}',
-                                                '${id_mailing}',
-                                                '${tabela_dados}',
-                                                '${tabela_numeros}',
-                                                ${id_registro},
-                                                ${id_numero},
-                                                '${numero}',
-                                                ${fila},
-                                                ${tratado},
-                                                ${atendido},
-                                                ${na_fila},
-                                                ${falando})`
-                        //console.log('sql insert',sql)                        
-                        await this.querySync(conn,sql)
+        
+                const novoRetorno = {}
+                      novoRetorno['data']=hoje
+                      novoRetorno['hora']=hora
+                      novoRetorno['ramal']=ramal
+                      novoRetorno['protocolo']=protocolo
+                      novoRetorno['tipo_ligacao']=tipo_ligacao
+                      novoRetorno['tipo_discador']=tipo_discador
+                      novoRetorno['retorno']=1
+                      novoRetorno['modo_atendimento']=modo_atendimento
+                      novoRetorno['id_campanha']=id_campanha
+                      novoRetorno['id_mailing']=id_mailing
+                      novoRetorno['tabela_dados']=tabela_dados
+                      novoRetorno['tabela_numeros']=tabela_numeros
+                      novoRetorno['id_registro']=id_registro
+                      novoRetorno['id_numero']=id_numero
+                      novoRetorno['numero']=numero
+                      novoRetorno['fila']=fila
+                atendimentoAgente.push(novoRetorno)
+                await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,atendimentoAgente,43200)
 
-                        await this.alterarEstadoAgente(empresa,ramal,3,0)
+                await this.alterarEstadoAgente(empresa,ramal,3,0)
 
-                        sql = `UPDATE ${empresa}_dados.campanhas_agendamentos 
-                                SET tratado=1 
-                                WHERE id=${idAgendamento}`
-                        await this.querySync(conn,sql)
-                        pool.end((err)=>{
-                            if(err) console.error(err)
-                        }) 
-                        await Redis.delete(`${empresa}:retornos`)
-                        resolve(true)
-                        return  
-                    
-                 })
-            })         
+                sql = `UPDATE ${empresa}_dados.campanhas_agendamentos 
+                          SET tratado=1 
+                        WHERE id=${idAgendamento}`
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.error(err)
+                }) 
+                await Redis.delete(`${empresa}:retornos`)
+                resolve(true)
+                return  
+            })
+        })         
     }   
                         
     async tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal,idNumero,removeNumero){
@@ -2905,140 +2751,33 @@ class Discador{
 
     //Recupera o tipo de idAtendimento
     async modoAtendimento(empresa,ramal){
-        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - modoAtendimento','Empresa nao recebida')
+        const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+        if(atendimentoAgente===null){
             return false
         }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err){
-                    console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
-                    resolve(false)
-                    return 
-                } 
 
-                
-                const sql = `SELECT m.id, m.modo_atendimento, m.id_campanha 
-                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas AS m  
-                            JOIN ${empresa}_dados.campanhas_filas AS cf ON m.id_campanha = cf.idCampanha
-                            JOIN ${empresa}_dados.agentes_filas AS a ON a.fila=cf.idFila
-                            WHERE a.ramal=${ramal} AND na_fila=1`    
-                            console.log(sql)                  
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                    }) 
-                resolve(rows) 
-            })
-        })         
+        const modo_atendimento = atendimentoAgente['modo_atendimento']
+        return modo_atendimento
     }
        
     //Informações da chamada a ser atendida
-    async infoChamada_byIdAtendimento(empresa,idAtendimento){
-        if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
-            //console.log('{[(!)]} - infoChamada_byIdAtendimento','Empresa nao recebida')
-            return false
-        }
+    async infoChamada_byDialNumber(empresa,idMailing,idCampanha){       
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
-
-                //Separando a campanha que o agente pertence
-                let sql = `SELECT id,
-                                protocolo,
-                                id_registro,
-                                id_numero,
-                                tipo_ligacao,
-                                tipo_discador,
-                                retorno,
-                                modo_atendimento,
-                                id_campanha,
-                                id_mailing,
-                                numero,
-                                tabela_dados,
-                                tabela_numeros
-                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
-                            WHERE id='${idAtendimento}'`
-                            console.log('sql infoChamada_byIdAtendimento',sql)
-                const calldata = await this.querySync(conn,sql)
-                if(calldata.length==0){
-                    pool.end((err)=>{
-                    if(err) console.error(err)
-                    }) 
-                    resolve({"sistemcall":false,"dialcall":false})
-                    return
-                }       
-                
-                
-                const idMailing = calldata[0].id_mailing
-                const tipo_discador = calldata[0].tipo_discador
-                const tipo_ligacao= calldata[0].tipo_ligacao
-                const idReg = calldata[0].id_registro
-                const id_numero = calldata[0].id_numero
-                const tabela_dados = calldata[0].tabela_dados
-                const tabela_numeros = calldata[0].tabela_numeros
-                const modo_atendimento= calldata[0].modo_atendimento
-                const idCampanha = calldata[0].id_campanha
-                const protocolo = calldata[0].protocolo
-                const numero = calldata[0].numero
-
-                const info = {};
-                //Caso a chamada nao possua id de registro
-                if(idReg==0){
-                    pool.end((err)=>{
-                    if(err) console.error(err)
-                    }) 
-                    resolve({"sistemcall":false,"dialcall":false}) 
-                    return 
-                }
-
                 //Seleciona os campos de acordo com a configuração da tela do agente
                 //CAMPOS DE DADOS
-                sql = `SELECT cd.id,cd.campo,cd.apelido
-                        FROM ${empresa}_dados.mailing_tipo_campo AS cd
-                        JOIN ${empresa}_dados.campanhas_campos_tela_agente as cc ON cd.id=cc.idCampo
-                        WHERE cc.idMailing=${idMailing}
-                        AND cc.idCampanha=${idCampanha}
-                        AND (cd.tipo='dados' OR cd.tipo='nome' OR cd.tipo='cpf')
-                    ORDER BY cc.ordem ASC`;
-            
+                let sql = `SELECT cd.id,cd.campo,cd.apelido
+                             FROM ${empresa}_dados.mailing_tipo_campo AS cd
+                             JOIN ${empresa}_dados.campanhas_campos_tela_agente as cc ON cd.id=cc.idCampo
+                            WHERE cc.idMailing=${idMailing}
+                              AND cc.idCampanha=${idCampanha}
+                              AND (cd.tipo='dados' OR cd.tipo='nome' OR cd.tipo='cpf')
+                         ORDER BY cc.ordem ASC`;
                 const campos_dados = await this.querySync(conn,sql)
-                //montando a query de busca dos dados 
-
-                    if((calldata[0].tipo_ligacao=='discador')||(infoChamada[0].tipo_ligacao==='retorno')){
-                        info['sistemcall']=false
-                        info['dialcall']=true
-                    }else if(calldata[0].tipo_ligacao=='interna'){
-                        info['sistemcall']=true
-                        info['dialcall']=false
-                    }else{
-                        info['sistemcall']=false
-                        info['dialcall']=false
-                    }
-                
-                    info['idAtendimento']=idAtendimento
-                    //Integração                    
-                    info['integracao']=await this.integracoes(empresa,idAtendimento,idCampanha)   
-                    
-                    
-                    info['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)
-                    info['tipo_discador']=tipo_discador
-                    if(calldata[0].retorno==1){
-                        info['retorno']=true
-                    }else{
-                        info['retorno']=false
-                    }
-
-                    info['modo_atendimento']=modo_atendimento
-                    info['idMailing']=idMailing              
-                    info['tipo_ligacao']=tipo_ligacao
-                    info['protocolo']=protocolo
-                    info['nome_registro']=await this.campoNomeRegistro(empresa,idMailing,idReg,tabela_dados)
-                    info['campos']={}
-                    info['campos']['idRegistro']=idReg
-            
+                const info = {}
+                //montando a query de busca dos dados
                 for(let i=0; i<campos_dados.length; i++){
                     let apelido=''
                     if(campos_dados[i].apelido === null){
@@ -3048,7 +2787,6 @@ class Discador{
                     }  
                     //console.log('Info Chamada - Valor do Campo',campos_dados[i].campo)
                     let nomeCampo = campos_dados[i].campo.toString().replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "");
-                    
                     sql = `SELECT ${nomeCampo} AS 'valor' 
                             FROM ${empresa}_mailings.${tabela_dados} 
                             WHERE id_key_base='${idReg}'` 
@@ -3069,7 +2807,7 @@ class Discador{
                 }
             
                 info['id_numeros_discado']=id_numero
-                info['numeros_discado']=numero                
+                info['numeros_discado']=numero               
 
                 
                 sql = `SELECT id,nome,descricao 
@@ -3874,7 +3612,7 @@ class Discador{
 
 
     //INTEGRAÇÕES
-    async integracoes(empresa,idAtendimento,idCampanha){
+    async integracoes(empresa,numeroDiscado,idCampanha,ramal){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -3897,7 +3635,7 @@ class Discador{
                         FROM ${empresa}_dados.campanhas_integracoes_disponiveis 
                         WHERE id=${i[0].idIntegracao}` 
                 const info = await this.querySync(conn,sql)
-                let url = await this.trataUrlIntegracao(empresa,idAtendimento,info[0].url)
+                let url = await this.trataUrlIntegracao(empresa,numeroDiscado,ramal,info[0].url)
 
                 const  infoInt={}
                     infoInt['status']=true
@@ -3911,38 +3649,21 @@ class Discador{
         }) 
     }   
 
-    async trataUrlIntegracao(empresa,idAtendimento,url){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+    async trataUrlIntegracao(empresa,numeroDiscado,ramal,url){
+        const dadosAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+        const idMailing = dadosAtendimento['id_mailing']
+        const idRegistro = dadosAtendimento['id_registro']
+        const idCampanha = dadosAtendimento['id_campanha']
+        const tabelaDados = dadosAtendimento['tabela_dados']
 
-                //informacoes do mailing 
-                let sql = `SELECT id_registro,id_numero,ramal,id_campanha,id_mailing,tabela_dados,tabela_numeros,numero
-                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas 
-                            WHERE id=${idAtendimento}`
-                const dadosAtendimento = await this.querySync(conn,sql)
-
-                //Dados do Mailing
-
-                const cpf = await this.campoCpfRegistro(empresa,dadosAtendimento[0].id_mailing,dadosAtendimento[0].id_registro,dadosAtendimento[0].tabela_dados)
-                const ramal = dadosAtendimento[0].ramal
-                const numeroDiscado = dadosAtendimento[0].numero
-                const idCampanha = dadosAtendimento[0].id_campanha
-                const nomeCliente = await this.campoNomeRegistro(empresa,dadosAtendimento[0].id_mailing,dadosAtendimento[0].id_registro,dadosAtendimento[0].tabela_dados)
-
-                const link = url.replace('{CPF}',cpf)
-                                .replace('{RAMAL}',ramal)
-                                .replace('{NUMERO_DISCADO}',numeroDiscado)
-                                .replace('{ID_CAMPANHA}',idCampanha)
-                                .replace('{NOME_CLIENTE}',nomeCliente)
-                                
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                    }) 
-                resolve(link)
-            })
-        }) 
+        const cpf = await this.campoCpfRegistro(empresa,idMailing,idRegistro,tabelaDados)
+        const nomeCliente = await this.campoNomeRegistro(empresa,idMailing,idRegistro,tabelaDados)
+        const link = url.replace('{CPF}',cpf)
+                        .replace('{RAMAL}',ramal)
+                        .replace('{NUMERO_DISCADO}',numeroDiscado)
+                        .replace('{ID_CAMPANHA}',idCampanha)
+                        .replace('{NOME_CLIENTE}',nomeCliente)
+        return(link)
     }
 
 
