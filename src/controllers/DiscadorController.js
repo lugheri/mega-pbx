@@ -15,6 +15,8 @@ class DiscadorController{
         const agente = req.params.agente
         const campanhas = await Discador.campanhasAtivasAgente(empresa,agente)
         const hoje = moment().format("Y-MM-DD")
+
+
         const clicks_chamadasManuais = await Discador.tentativasChamadasManuais(empresa,'clicks',hoje)
         const chamadasManuais = await Discador.tentativasChamadasManuais(empresa,'chamadas',hoje)
 
@@ -25,7 +27,7 @@ class DiscadorController{
         res.json(retorno)
     }
 
-    async checkAccounts(){      
+    async checkAccounts(){ 
         let clientesAtivos=await Redis.getter('empresas')    
         if(!clientesAtivos){
             clientesAtivos=await Clients.clientesAtivos()
@@ -54,6 +56,7 @@ class DiscadorController{
         // Atualiza contagem de chamadas simultaneas
         await Discador.registrarChamadasSimultaneas(empresa)
 
+        //Checando se existem retornos agendados
         const followUps = await Discador.checaAgendamento(empresa,hoje,hora);//Confere retornos agendados
         if(followUps.length >= 1){
             const regAgendado = await Discador.abreRegistroAgendado(empresa,followUps[0].id)//Abre a tela de retorno para o agente          
@@ -61,6 +64,7 @@ class DiscadorController{
                return false 
             }
         }
+
         const campanhasAtivas = await Discador.campanhasAtivas(empresa);//Verifica se existem campanhas ativas
         if(campanhasAtivas.length === 0) return false
         for(let i=0; i<campanhasAtivas.length; i++){
@@ -77,7 +81,7 @@ class DiscadorController{
                   parametrosDiscador['ordem_discagem']= campanhasAtivas[i].ordem_discagem
                   parametrosDiscador['modo_atendimento']= campanhasAtivas[i].modo_atendimento
                   parametrosDiscador['saudacao']= campanhasAtivas[i].saudacao
-                  //Conta chamadas simultaneas e agressividade e compara com os agentes disponiveis
+            //Conta chamadas simultaneas e agressividade e compara com os agentes disponiveis
             const qtdChamadasSimultaneas=await Discador.totalChamadasSimultaneas(empresa,idCampanha)
             const agendamento = await Discador.agendamentoCampanha(empresa,idCampanha)//Verifica se a campanha possui horário de agendamento
             if(agendamento.length==0){
@@ -86,7 +90,6 @@ class DiscadorController{
                 await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
                 return false    
             }
-                
             const dataAgenda = await Discador.agendamentoCampanha_data(empresa,idCampanha)//Verifica se a campanha ativas esta dentro da data de agendamento                                                                      
             if((dataAgenda['inicio']>hoje)||(dataAgenda['termino']<=hoje)){
                 const msg = "Esta campanha esta fora da sua data de agendamento!"
@@ -100,8 +103,8 @@ class DiscadorController{
                 const estado = 2
                 await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
                 return false
-            }            
-            await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador,qtdChamadasSimultaneas)//Iniciando Passo 2   
+            }   
+            await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador,qtdChamadasSimultaneas)  
         } 
     } 
 
@@ -121,7 +124,6 @@ class DiscadorController{
             await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
             return false;
         }
-
         const planoEmpresa = await Clients.planoEmpresa(empresa)
         if(planoEmpresa==0){   
             let msg='Plano/Canais não definidos, consulte suporte!'
@@ -129,7 +131,6 @@ class DiscadorController{
             await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
             return false;
         }
-
         const ilimitado = planoEmpresa.ilimitado
         const maxCanais = planoEmpresa.total_channels
         let agressividade = parametrosDiscador['agressividade']
@@ -141,10 +142,7 @@ class DiscadorController{
             agressividade=1
             tipoDiscagem = "horizontal"
         } 
-
         const limiteDiscagem = agentesDisponiveis * agressividade
-        
-        
         let limitRegistros = 0
         if(limiteDiscagem<qtdChamadasSimultaneas){
             limitRegistros=0
@@ -153,17 +151,14 @@ class DiscadorController{
             await Discador.atualizaStatus(empresa,idCampanha,msg,estado)            
             return false;
         }
-
         limitRegistros=limiteDiscagem-qtdChamadasSimultaneas//Calcula o limite de registros disponiveis para discagem
         let canaisDisponiveis = limitRegistros//Seta os canais disponiveis como o limite de registros
         if(ilimitado==1){
             //Em caso de plano ilimitado, calcula o restante de canais disponiveis
             canaisDisponiveis = maxCanais-qtdChamadasSimultaneas
         }
-
         if(canaisDisponiveis<limitRegistros){//Caso tenham menos canais do que limite seta o limite=canais
             limitRegistros=canaisDisponiveis
-
             if(limitRegistros==0){
                 let msg='Todos os canais de atendimento estão em uso!'
                 let estado = 2
@@ -171,7 +166,6 @@ class DiscadorController{
                 return false;
             }
         }
-        
         //Verifica se existem registros nao trabalhados ou com o nº de tentativas abaixo do limite
         const registros = await Discador.filtrarRegistro(empresa,idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscador,tipoDiscagem,ordemDiscagem,limitRegistros)
         if(registros.length==0){
@@ -186,7 +180,6 @@ class DiscadorController{
             await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
             return false;
         }
-
         for(let i=0; i<registros.length; i++){
             const registro = registros[i]
             const numero = registros[i].numero
@@ -208,7 +201,6 @@ class DiscadorController{
         const idRegistro = registro['id_registro']
         const numero = registro['numero']
         const idNumero = registro['idNumero']
-
         //console.log('ID NUMERO', idNumero)
         const checkReg = await Discador.checandoRegistro(empresa,idRegistro)
         if(checkReg === true) return false;
@@ -219,10 +211,9 @@ class DiscadorController{
             await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
             return false;
         }
-
         await Discador.registraNumero(empresa,idCampanha,idMailing,idRegistro,idNumero,numero,tabela_numeros)
         const tipoDiscador = parametrosDiscador['tipo_discador']
-        const modoAtendimento = parametrosDiscador['modo_atendimento'] 
+        const modoAtendimento = parametrosDiscador['modo_atendimento']
         if((tipoDiscador=="clicktocall")||(tipoDiscador=="preview")){
             //Seleciona agente disponivel a mais tempoPassado           
             const agenteDisponivel = await Discador.agenteDisponivel(empresa,idFila)
@@ -237,7 +228,7 @@ class DiscadorController{
             
             const estado = 5 //Estado do agente quando ele esta aguardando a discagem da tela
             await Discador.alterarEstadoAgente(empresa,agenteDisponivel,estado,0)  
-        }else if(tipoDiscador=="power"){  
+        }else if(tipoDiscador=="power"){
             //Registra chamada simultânea       
             const hora = moment().format("HH")
             let periodo='bom-dia'
@@ -249,7 +240,7 @@ class DiscadorController{
                 periodo='boa-noite'
             }
             let saudacao
-            let aguarde
+            let aguarde 
             if((parametrosDiscador['saudacao']=="masculino")||(parametrosDiscador['saudacao']=="feminino")){
                 saudacao=`${parametrosDiscador['saudacao']}-${periodo}`
                 aguarde=`${parametrosDiscador['saudacao']}-aguarde`
@@ -270,45 +261,23 @@ class DiscadorController{
                 let estado = 2
                 await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
                 return false;
-            }
+            }  
             const ec = await Campanhas.dadosCampanha(empresa,idCampanha)//Verifica se a campanha ainda esta ativa 
             let estadosCampanha = 0
             if(ec.length>0){
                 estadosCampanha = ec[0].estado
-            }
+            }   
             if(estadosCampanha==1){
-                //console.log('==>> D I S C A R = > = >')
+                //console.log('==>> D I S C A R = > = >') 
                 await Discador.discar(empresa,0,numero,nomeFila,saudacao,aguarde,idCampanha)                
             }
         }
     }
 
-    //Test
-    async dialPowerTest(req,res){
-         //await this.debug('dialPowerTest',empresa)
-        const empresa = await User.getEmpresa(req)
-         //await this.debug(empresa,empresa)
-        const fila='teste'
-        const ramal = req.params.ramal
-        const numero = req.params.numero
-        const idAtendimento = 0
-        const saudacao = 'feminino-bom-dia'
-        const aguarde = ""
-         //await this.debug(ramal,empresa)
-         //await this.debug(numero,empresa)
-        const d = await Discador.discar(empresa,ramal,numero,fila,idAtendimento,saudacao,aguarde)
-        res.json(true)
-    }
-                                  
-    
-    /*Importar Audio */  
-
-
-    /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+   /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     * FUNCOES DA TELA DO AGENTE
-    * <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    */
-    //Inicia discador do agente
+    * <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+   //Inicia discador do agente
     async iniciarDiscador(req,res){
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
@@ -318,8 +287,8 @@ class DiscadorController{
         //Verifica estado atual
         if(estadoRamal==1){
             const rt={}
-                  rt['error']=true
-                  rt['message']=`O agente ${ramal} já esta disponível!'`
+                rt['error']=true
+                rt['message']=`O agente ${ramal} já esta disponível!'`
             res.send(rt)
             return false 
         }
@@ -329,6 +298,7 @@ class DiscadorController{
         //await Cronometro.iniciaDiscador(empresa,ramal)
         res.json(true);
     }
+
     //Retorna o estado atual do agente
     async statusRamal(req,res){
         const empresa = await User.getEmpresa(req)
@@ -358,7 +328,6 @@ class DiscadorController{
         await Discador.alterarEstadoAgente(empresa,ramal,estado,pausa)
         res.json(true);
     }
-
     //Parando o Discador do agente
     async pararDiscador(req,res){
         const empresa = await User.getEmpresa(req)
@@ -442,9 +411,9 @@ class DiscadorController{
         info['config'] = {}
         info['config']['origem']="discador"
         info['config']['modo_atendimento']=modo_atendimento
-        res.json(info)
-              
+        res.json(info)              
     }
+
     //Atende chamada, e muda o estado do agente para falando
     async atenderChamada(req,res){
         const empresa = await User.getEmpresa(req)
@@ -455,19 +424,90 @@ class DiscadorController{
         const estadoAgente = await Discador.infoEstadoAgente(empresa,ramal)
         if(estadoAgente!=3){
             await Discador.alterarEstadoAgente(empresa,ramal,estado,pausa)
+            res.json(true)
         }
-        //Verifica se ramal ja esta atribuido
-        const dados = await Discador.atendeChamada(empresa,ramal)
-        res.json(dados); 
+        /*//Verifica se ramal ja esta atribuido
+          const dados = await Discador.atendeChamada(empresa,ramal)
+          res.json(dados); */
+        res.json(false)      
     }
 
     async dadosChamadaAtendida(req,res){
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
-        const dados = await Discador.dadosChamadaAtendida(empresa,ramal)
-        res.json(dados); 
+        //console.log(ramal)
+        const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+        if(atendimentoAgente===null){
+            const mode={}
+                  mode['sistemcall']=false
+                  mode['dialcall']=false
+                  mode['config'] = {}
+                  mode['config']['origem']="interna"
+                  mode['config']['modo_atendimento']="manual"
+            res.json(mode)
+            return false;
+        }
+
+        const modo_atendimento = atendimentoAgente['modo_atendimento']
+        const numero = atendimentoAgente['numero']
+
+        const idMailing = atendimentoAgente['id_mailing']
+        const tipo_discador = atendimentoAgente['tipo_discador']
+        const tipo_ligacao= atendimentoAgente['tipo_ligacao']
+        const retorno = atendimentoAgente['retorno']
+        const idReg = atendimentoAgente['id_registro']
+        const id_numero = atendimentoAgente['id_numero']
+        const tabela_dados = atendimentoAgente['tabela_dados']
+        const tabela_numeros = atendimentoAgente['tabela_numeros']
+        const idCampanha = atendimentoAgente['id_campanha']
+        const protocolo = atendimentoAgente['protocolo']
+        
+        //Caso a chamada nao possua id de registro
+        if(idReg==0){           
+            res.json({"sistemcall":false,"dialcall":false})             
+        }
+
+        const info = {};
+        if((tipo_ligacao=='discador')||(tipo_ligacao==='retorno')){
+            info['sistemcall']=false
+            info['dialcall']=true
+        }else if(tipo_ligacao=='interna'){
+            info['sistemcall']=true
+            info['dialcall']=false
+        }else{
+            info['sistemcall']=false
+            info['dialcall']=false
+        }
+
+        //Integração                    
+        info['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal)
+        info['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)
+        info['tipo_discador']=tipo_discador
+        if(retorno==1){
+            info['retorno']=true
+        }else{
+            info['retorno']=false
+        }
+        info['modo_atendimento']=modo_atendimento
+        info['idMailing']=idMailing              
+        info['tipo_ligacao']=tipo_ligacao
+        info['protocolo']=protocolo
+        info['nome_registro']=await Discador.campoNomeRegistro(empresa,idMailing,idReg,tabela_dados)
+        info['campos']={}
+        info['campos']['idRegistro']=idReg
+
+
+        //Dados do atendimento        
+        const infoChamada = await Discador.infoChamada_byDialNumber(empresa,numero)
+           
+        info['dados']=infoChamada
+        info['config'] = {}
+        info['config']['origem']="discador"
+        info['config']['modo_atendimento']=modo_atendimento
+        res.json(info) 
     }
 
+    
     //Historico do id do registro
     async historicoRegistro(req,res){
         const empresa = await User.getEmpresa(req)
@@ -476,16 +516,12 @@ class DiscadorController{
             res.json([])
             return false
         }
-
         const idMailing = req.params.idMailing
         if(idMailing==0){
             res.json([])
             return 
         }
-
-
-        const idReg = req.params.idRegistro
-        
+        const idReg = req.params.idRegistro        
         const historico = await Discador.historicoRegistro(empresa,idMailing,idReg)
         res.json(historico)
     }
@@ -498,6 +534,7 @@ class DiscadorController{
         const historico = await Discador.historicoRegistroChamadaManual(empresa,numero,agente)
         res.json(historico)
     }
+
     //Historico do agente
     async historicoChamadas(req,res){
         const empresa = await User.getEmpresa(req)
@@ -528,11 +565,11 @@ class DiscadorController{
         }
         res.json(historicoRegistro)
     }
+
     async nomeContatoHistoico_byNumber(req,res){
         const empresa = await User.getEmpresa(req)
         const numero = req.params.numero
-        const nome = await Discador.nomeContatoHistoico_byNumber(empresa,numero)
-        
+        const nome = await Discador.nomeContatoHistoico_byNumber(empresa,numero)        
         res.json(nome)
     }
 
@@ -549,18 +586,22 @@ class DiscadorController{
     async statusTabulacaoChamada(req,res){
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
-        const dadosAtendimento = await Discador.infoChamada(empresa,ramal)
-        if(dadosAtendimento.length==0){
+        const dadosAtendimento = await Redis.getter(`${empresa}:dadosAtendimento:${ramal}`)
+        const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+        if(dadosAtendimento===null){
             const error={}
-              error['message']=`Nenhuma chamada em atendimento para o ramal ${ramal}`
-              error['error']=true
+                  error['message']=`Nenhuma chamada em atendimento para o ramal ${ramal}`
+                  error['error']=true
             res.json(error)
             return false
         }
-        const idCampanha = dadosAtendimento[0].id_campanha
-        const idAtendimento = dadosAtendimento[0].id
-
-        const nome = await Discador.campoNomeRegistro(empresa,dadosAtendimento[0].id_mailing,dadosAtendimento[0].id_registro,dadosAtendimento[0].tabela_dados);
+        const idCampanha = dadosAtendimento['id_campanha']
+        const idAtendimento = 0
+        const idMailing = dadosAtendimento['id_mailing']
+        const idRegistro = dadosAtendimento['id_registro']
+        const tabelaDados = dadosAtendimento['tabela_dados']
+        const numero = dadosAtendimento['numero']
+        const nome = await Discador.campoNomeRegistro(empresa,idMailing,idRegistro,tabelaDados);
         
         const tabulacoesCampanha = await Discador.tabulacoesCampanha(empresa,nome,idCampanha)
         if(tabulacoesCampanha===false){
@@ -570,9 +611,13 @@ class DiscadorController{
             res.json(error)
             return false
         }
-
         //Atualiza registro como tabulando e retorna id da campanha
-        await Discador.preparaRegistroParaTabulacao(empresa,idAtendimento)
+        for(let cs=0;cs<chamadasSimultaneas.length;cs++){
+            if((chamadasSimultaneas[cs].id_campanha==idCampanha)&&(chamadasSimultaneas[cs].numero==numero)){
+                chamadasSimultaneas[cs].event_tabulando=1
+            }
+        }
+        await Redis.getter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)
                         
         //Pega os status de tabulacao da campanha
         res.json(tabulacoesCampanha)
@@ -582,7 +627,6 @@ class DiscadorController{
     //Tabulando a chamada
     async tabularChamada(req,res){
         const empresa = await User.getEmpresa(req)
-        const idAtendimento = req.body.idAtendimento
         const ramal = req.body.ramal
         const status_tabulacao = req.body.status_tabulacao
         const observacao = req.body.obs_tabulacao
@@ -591,13 +635,11 @@ class DiscadorController{
         const removeNumero = req.body.removeNumero
         let produtivo
         if(req.body.tipo_tabulacao=='produtivo'){
-            produtivo=1      
-                  
+            produtivo=1
         }else{
             produtivo=0
-        } 
-        //await this.debug('__________________TABULANDO CHAMADA_______________________')      ,empresa 
-        const r = await Discador.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal,id_numero,removeNumero)
+        }         
+        const r = await Discador.tabulaChamada(empresa,contatado,status_tabulacao,observacao,produtivo,ramal,id_numero,removeNumero)
         res.json(r); 
     }
 
@@ -607,7 +649,6 @@ class DiscadorController{
         const r =  await Discador.voltaRegistro(empresa,idHistorico)
         res.json(r)
     }
-    
 
     //Desligando a Chamada
     async desligarChamada(req,res){
@@ -627,10 +668,8 @@ class DiscadorController{
             return false
         };
         
-
-        
         //Inicia verificacao se a chamada ja esta tabulada
-        if(dadosChamadaDesligada[0].tabulado==1){
+        if(dadosChamadaDesligada['event_tabulada']==1){
             //Remove chamada simultanea 
             await Discador.clearCallsAgent(empresa,ramal);
             //Atualiza estado do agente para disponivel
@@ -642,16 +681,16 @@ class DiscadorController{
         }
 
         //Verificando se a campanha possui tabulacao configurada
-        nome = await Discador.campoNomeRegistro(empresa,dadosChamadaDesligada[0].id_mailing,dadosChamadaDesligada[0].id_registro,dadosChamadaDesligada[0].tabela_dados);
+        nome = await Discador.campoNomeRegistro(empresa,dadosChamadaDesligada['id_mailing'],dadosChamadaDesligada['id_registro'],dadosChamadaDesligada['tabela_dados']);
         
-        const tabulacoesCampanha = await Discador.tabulacoesCampanha(empresa,nome,dadosChamadaDesligada[0].id_campanha)
+        const tabulacoesCampanha = await Discador.tabulacoesCampanha(empresa,nome,dadosChamadaDesligada['id_campanha'])
         if(tabulacoesCampanha==false){
             //Registra uma tabulacao padrão
             const contatado = 'S'
             const produtivo = 0
             const status_tabulacao=0
             const observacao = ''
-            const r = await Discador.tabulaChamada(empresa,dadosChamadaDesligada[0].id,contatado,status_tabulacao,observacao,produtivo,ramal)
+            const r = await Discador.tabulaChamada(empresa,contatado,status_tabulacao,observacao,produtivo,ramal)
             //Remove chamada simultanea 
             await Discador.clearCallsAgent(empresa,ramal);
             //Atualiza estado do agente para disponivel
@@ -663,16 +702,16 @@ class DiscadorController{
         }
 
         //Lista os status de tabulacao
-        const idAtendimento = dadosChamadaDesligada[0].id
-        const idCampanha = dadosChamadaDesligada[0].id_campanha
-        const idMailing = dadosChamadaDesligada[0].id_mailing
-        const idRegistro = dadosChamadaDesligada[0].id_registro
-        const numeroDiscado  = dadosChamadaDesligada[0].numero
+        const idCampanha = dadosChamadaDesligada['id_campanha']
+        const idMailing = dadosChamadaDesligada['id_mailing']
+        const idRegistro = dadosChamadaDesligada['id_registro']
+        const numeroDiscado  = dadosChamadaDesligada['numero']
         //Atualiza registro como tabulando e retorna id da campanha
         await Discador.preparaRegistroParaTabulacao(empresa,idAtendimento)
                     
         //Inicia a contagem da tabulacao 
-        await Cronometro.iniciaTabulacao(empresa,idCampanha,idMailing,idRegistro,numeroDiscado,ramal)
+        dadosChamadaDesligada['event_tabulada']==1
+        await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,dadosChamadaDesligada,43200)
 
         //Retorna os status de tabulacao da campanha
         res.json(tabulacoesCampanha)
@@ -681,24 +720,19 @@ class DiscadorController{
     async linkGravacao(req,res){
         const hash = req.params.hash
         //const data = Buffer.from(hash).toString('base64')
-
         const data = Buffer.from(hash, 'base64').toString('ascii').split(':');
-
         const idEmpresa=data[0]
         const idRec=data[1]
-
         const empresa = await Gravacoes.prefixEmpresa(idEmpresa)
         if(empresa==false){
             res.json({"error":true,"message":"Gravação não encontrada!"})
             return false;
         }
-
         const gravacoes = await Gravacoes.linkRec(empresa,idRec);
         if(gravacoes.length==0){
             res.json({"error":true,"message":"Gravação não encontrada!"})
             return false;
         }
-
         const gravacao={}
               gravacao["data"]=gravacoes[0].data
               let duracao = gravacoes[0].duracao
@@ -708,7 +742,6 @@ class DiscadorController{
               if(horas<=9){horas="0"+horas}
               if(minutos<=9){minutos="0"+minutos}
               if(segundos<=9){segundos="0"+segundos}
-
               gravacao["duracao"]=`${horas}:${minutos}:${segundos}`
               gravacao["protocolo"]=gravacoes[0].protocolo
               gravacao["ramal"]=gravacoes[0].ramal
@@ -718,13 +751,9 @@ class DiscadorController{
               gravacao["nome_registro"]=gravacoes[0].nome_registro
               gravacao["statusTabulacao"]=gravacoes[0].tabulacao
               gravacao["tipoTabulacao"]=gravacoes[0].tipo
-
               gravacao["link"]=`https://asterisk-dev.megaconecta.tec.br/api/gravacoes/${empresa}/${gravacoes[0].date_record}/${gravacoes[0].callfilename}.wav`
         res.json(gravacao)
     }
-
-
-   
 
     //######################PAUSAS DO AGENTE ######################
     //PausasListas
@@ -735,7 +764,6 @@ class DiscadorController{
         const r = await Pausas.listarPausas(empresa,listaPausa)
         res.send(r)
     }
-
     //Pausa o agente com o status selecionado
     async pausarAgente(req,res){
         const empresa = await User.getEmpresa(req)
@@ -748,10 +776,8 @@ class DiscadorController{
         const tempo = infoPausa[0].tempo
             
         await Discador.alterarEstadoAgente(empresa,ramal,2,idPausa)       
-        res.send(true)
-        
+        res.send(true)        
     }
-
     //Exibe o estado e as informacoes da pausa do agente
     async statusPausaAgente(req,res){
         const empresa = await User.getEmpresa(req)
@@ -806,8 +832,7 @@ class DiscadorController{
         statusPausa['tempoRestante']=tempoRestante
         statusPausa['porcentagem']=percentual.toFixed(1)
 
-        res.send(statusPausa)
-       
+        res.send(statusPausa)       
     }
 
     //Tira o agente da pausa
@@ -826,11 +851,6 @@ class DiscadorController{
         await Discador.alterarEstadoAgente(empresa,ramal,1,0)
         res.send(true)
     }
-
-
-       
-    
-//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD//////OLD
 
     //DISCADOR DO AGENTE
     //ESTADO DO AGENTE
@@ -851,30 +871,41 @@ class DiscadorController{
             produtivo=0
         } 
 
-
-
-        const atendimento = await Discador.dadosAtendimento(empresa,idAtendimento)
-        if(atendimento.length==0){
+        const dadosAtendimento = await Redis.getter(`${empresa}:dadosAtendimento:${ramal}`)
+        if((dadosAtendimento===null)&&(dadosAtendimento.length==0)){
             res.json(false);
             return false
         }
-        const id_numero = atendimento[0].id_numero
-        const id_registro = atendimento[0].id_registro
-       
-        const removeNumero = 0
 
-        const campanha = atendimento[0].id_campanha
-        const mailing= atendimento[0].id_mailing
+        const id_numero = dadosAtendimento['id_numero']
+        const id_registro = dadosAtendimento['id_registro']
+        const removeNumero = 0
+        const campanha = dadosAtendimento['id_campanha']
+        const mailing= dadosAtendimento['id_mailing']
 
         
         await Discador.agendandoRetorno(empresa,ramal,campanha,mailing,id_numero,id_registro,numero,data,hora)
-        
-        
-        const r = await Discador.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacao,produtivo,ramal,id_numero,removeNumero)
+        const r = await Discador.tabulaChamada(empresa,contatado,status_tabulacao,observacao,produtivo,ramal,id_numero,removeNumero)
         
         res.json(r);
+    }      
+
+    //Test
+    async dialPowerTest(req,res){
+         //await this.debug('dialPowerTest',empresa)
+        const empresa = await User.getEmpresa(req)
+         //await this.debug(empresa,empresa)
+        const fila='teste'
+        const ramal = req.params.ramal
+        const numero = req.params.numero
+        const idAtendimento = 0
+        const saudacao = 'feminino-bom-dia'
+        const aguarde = ""
+         //await this.debug(ramal,empresa)
+         //await this.debug(numero,empresa)
+        const d = await Discador.discar(empresa,ramal,numero,fila,idAtendimento,saudacao,aguarde)
+        res.json(true)
     }
-    
     
 }
 

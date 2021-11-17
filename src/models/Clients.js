@@ -1379,6 +1379,7 @@ class Clients{
             pool.end((err)=>{
               if(err) console.log('Clientes.js 1277', err)
             })
+            console.log('CLIENTES',rows)
             resolve(rows)
           })
       })

@@ -19,8 +19,8 @@ class AsteriskController{
         const data = req.body.date
         const hora = req.body.time
         let ch = req.body.channel;
-                ch = ch.split("-");
-                ch = ch[0].split("/")
+            ch = ch.split("-");
+            ch = ch[0].split("/")
         let user_ramal = ch[1]   
         
         if((user_ramal==undefined)||(user_ramal=="undefined")||(user_ramal===false)){
@@ -41,39 +41,50 @@ class AsteriskController{
         console.log('Iniciando AGI',req.body)
         const action = req.params.action
         const dados = req.body
-        if(action=='voz'){
-            const empresa = dados.empresa
-            const numero = dados.numero
-            const voz = await Discador.saudadacao(empresa,numero)
-
-            const hora = moment().format("HH")
-            let periodo='bom-dia'
-            if(hora<=12){
-                periodo='bom-dia'
-            }else if(hora<=18){
-                periodo='boa-tarde'
-            }else{  
-                periodo='boa-noite'
-            }
-            const saudacao=`${voz}-${periodo}`
-
-
-            console.log('agi:voz',`Empresa: ${empresa},numero: ${numero}, saida: ${saudacao}`)
-            res.json(saudacao)   
-        }
-        if(action=='get_trunk'){
-            const empresa = dados.empresa
-            const register=[]
-            const trunk = await Clients.getTrunk(empresa)
-            res.json(trunk[0])   
-        }
         if(action=='machine'){//Quando cai na caixa postal
             const r = await Asterisk.machine(dados)
             console.log('agi:machine',`Empresa: ${dados.empresa},numero:${dados.numero},status:${dados.status}, saida: ${r}`)
-
-            
             res.json(r);
         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//REFATORAÇÃO REDIS
+
+
+    
+    
+    
+       
+        
+       
+       
+        
         if(action=='set_queue'){//Quando reconhece a voz humana
            // console.log('Setando Queue',`Empresa: ${empresa},numero: ${numero}, saida: ${dadosAtendimento}`)
             const empresa = dados.empresa

@@ -22,7 +22,125 @@ class Asterisk{
                 resolve(rows)
             })
         })
-    }    
+    }  
+    
+    async getDomain(empresa){//Ip/dominio do servidor onde o asterisk esta instalado
+        const domainWebRTC = await Redis.getter(`${empresa}:domainWebRTC`)
+        if(domainWebRTC!==null){
+            return domainWebRTC
+        }
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                const sql = `SELECT ip 
+                               FROM ${empresa}_dados.servidor_webrtc 
+                              WHERE status=1`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Asterisk.js 202',err)
+                })
+                await Redis.setter(`${empresa}:domainWebRTC`,rows,360)
+                resolve(rows) 
+            })
+        })        
+    }
+
+    async servidorWebRTC(empresa){//Ip da maquina onde o asterisk esta instalado
+        const servidorWebRTC = await Redis.getter(`${empresa}:servidorWebRTC`)
+        if(servidorWebRTC!==null){
+            return servidorWebRTC
+        }
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                const sql = `SELECT * 
+                               FROM ${empresa}_dados.servidor_webrtc 
+                              WHERE status=1`
+                const rows = this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.log('Asterisk.js 218',err)
+                })
+                await Redis.setter(`${empresa}:servidorWebRTC`,rows,360)
+                resolve(rows) 
+            })
+        })        
+    }
+
+    ariConnect(server,user,pass,callback){
+        ari.connect(server, user, pass, callback)
+    } 
+
+    //######################Configuração do Asterisk######################
+    async setRecord(empresa,data,hora,ramal,uniqueid,numero,callfilename){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                
+                const sql = `INSERT INTO ${empresa}_dados.records
+                                        (date,date_record,time_record,ramal,uniqueid,numero,callfilename)
+                                VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}','${numero}','${callfilename}')`
+                await this.querySync(conn,sql)
+                const rows = await this.servidorWebRTC(empresa)     
+                pool.end((err)=>{
+                    if(err) console.log('Asterisk.js 157',err)
+                })
+                resolve(rows) 
+            })
+        })           
+    }
+
+    
+    //######################Funções de suporte ao AGI do Asterisk######################
+    //Trata a ligação em caso de Máquina ou Não Atendida    
+    async machine(dados){       
+        //Dados recebidos pelo AGI do asterisk
+        const empresa = dados.empresa
+        const idAtendimento = dados.idAtendimento
+        const observacoes = dados.status
+
+        //Verificando se o numero ja consta em alguma chamada simultanea
+        const dadosAtendimento 
+        const chamada = await Discador.dadosAtendimento(empresa,idAtendimento)
+        
+        if(chamada.length!=0){     
+            const id_numero=chamada[0].id_numero
+            const ramal=chamada[0].ramal
+            //Status de tabulacao referente ao nao atendido
+            const contatado = 'N'
+            const produtivo = 0
+            const removeNumero=0
+            //Tabula registro
+            const status_tabulacao = 0
+            await Discador.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacoes,produtivo,ramal,id_numero,removeNumero)
+            //Removendo ligacao do historico de chamadas_simultaneas
+            await Discador.clearCallbyId(empresa,idAtendimento)
+            return true
+        }
+        return false
+    }
+
+
+
+
+
+   //REFATORAÇÃO REDIS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     //######################Configuração das filas######################
     
@@ -108,121 +226,13 @@ class Asterisk{
     }*/
 
 
-    //######################Configuração do Asterisk######################
-    async setRecord(empresa,data,hora,ramal,uniqueid,numero,callfilename){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                await this.setUniqueid(empresa,ramal,uniqueid)
-                const sql = `INSERT INTO ${empresa}_dados.records
-                                        (date,date_record,time_record,ramal,uniqueid,numero,callfilename)
-                                VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}','${numero}','${callfilename}')`
-                await this.querySync(conn,sql)
-                const rows = await this.servidorWebRTC(empresa)     
-                pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 157',err)
-                })
-                resolve(rows) 
-            })
-        })           
-    }
+    
 
-    async setUniqueid(empresa,ramal,uniqueid){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                let sql = `SELECT uniqueid 
-                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                            WHERE ramal='${ramal}' LIMIT 1`
-                const check = await this.querySync(conn,sql)
-                if(check.length==1){
-                    if(check[0].uniqueid == null){
-                        let sql = `UPDATE ${empresa}_dados.campanhas_chamadas_simultaneas 
-                                    SET uniqueid='${uniqueid}' 
-                                    WHERE ramal='${ramal}'`
-                        await this.querySync(conn,sql)
-                        pool.end((err)=>{
-                            if(err) console.log('Asterisk.js 179',err)
-                        })
-                        resolve(true)
-                        return true
-                    }
-                }
-                pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 186',err)
-                })
-                resolve(false) 
-            })
-        })              
-    }
+    
 
-    async getDomain(empresa){//Ip/dominio do servidor onde o asterisk esta instalado
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT ip 
-                            FROM ${empresa}_dados.servidor_webrtc 
-                            WHERE status=1`
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 202',err)
-                })
-                resolve(rows) 
-            })
-        })        
-    }
+    
 
-    async servidorWebRTC(empresa){//Ip da maquina onde o asterisk esta instalado
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT * 
-                            FROM ${empresa}_dados.servidor_webrtc 
-                            WHERE status=1`
-                const rows = this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 218',err)
-                })
-                resolve(rows) 
-            })
-        })        
-    }
-
-    ariConnect(server,user,pass,callback){
-        ari.connect(server, user, pass, callback)
-    } 
-
-    //######################Funções de suporte ao AGI do Asterisk######################
-    //Trata a ligação em caso de Máquina ou Não Atendida    
-    async machine(dados){       
-        //Dados recebidos pelo AGI do asterisk
-        const empresa = dados.empresa
-        const idAtendimento = dados.idAtendimento
-        const observacoes = dados.status
-
-        //Verificando se o numero ja consta em alguma chamada simultanea
-        const chamada = await Discador.dadosAtendimento(empresa,idAtendimento)
-        
-        if(chamada.length!=0){     
-            const id_numero=chamada[0].id_numero
-            const ramal=chamada[0].ramal
-            //Status de tabulacao referente ao nao atendido
-            const contatado = 'N'
-            const produtivo = 0
-            const removeNumero=0
-            //Tabula registro
-            const status_tabulacao = 0
-            await Discador.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacoes,produtivo,ramal,id_numero,removeNumero)
-            //Removendo ligacao do historico de chamadas_simultaneas
-            await Discador.clearCallbyId(empresa,idAtendimento)
-            return true
-        }
-        return false
-    }
+    
 
     //Atendente atendeu chamada da fila
     async answer(empresa,uniqueid,idAtendimento,ramal){
@@ -384,7 +394,7 @@ class Asterisk{
           //console.log(`endpoint: ${endpoint}`)
           //console.log(`numero recebido: ${numero}`)
           //console.log(`Servidor: ${server}`)
-        console.log(`${accountId}.${idCampanha}.${idAtendimento}`)
+        console.log(`${accountId}.${idCampanha}`)
           const options = {            
             "endpoint"       : `${endpoint}`,
             "extension"      : `${numero}`,

@@ -16,7 +16,102 @@ class User{
                 resolve(rows)
             })
         })
-      }         
+    }
+    
+    async getEmpresa(req){
+        const authHeader = req.headers.authorization;
+        const payload = jwt.verify(authHeader, process.env.APP_SECRET);
+        const empresa = payload.empresa
+        return empresa
+    }
+
+    async getAccountId(req){
+        const authHeader = req.headers.authorization;
+        const payload = jwt.verify(authHeader, process.env.APP_SECRET);
+        const accountId = payload.idAccount
+        return accountId
+    }
+
+    async logoffUsersExpire(empresa){
+        return new Promise (async (resolve,reject)=>{ 
+            let sql = `SELECT id FROM ${empresa}_dados.users WHERE logado>0 AND status=1`
+             //Executando query
+             const pool = await connect.pool(empresa,'dados')
+             pool.getConnection(async (err,conn)=>{                           
+                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                const us =  await this.querySync(conn,sql) 
+                for(let i=0; i<us.length; i++){
+                    const agente = us[i].id
+                    await this.registraLogin(empresa,agente,'logout')
+                }
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                    }) 
+                resolve(true) 
+            })
+        })  
+    }
+
+    async registraLogin(empresa,usuarioId,acao){
+        await Redis.delete(`${usuarioId}:estadoRamal`)
+        return new Promise (async (resolve,reject)=>{        
+            let sql
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                if(acao=='login'){
+                    //checa a ultima acao do agente 
+                    sql = `SELECT acao FROM ${empresa}_dados.registro_logins WHERE user_id=${usuarioId} ORDER BY id DESC LIMIT 1`
+                    //Executando query
+                    const a =  await this.querySync(conn,sql)
+                    if(a.length>0){               
+                        //Caso a ultima acao tambem tenha sido um login, insere a informacao de logout antes do px login
+                        if(a[0].acao=='login'){
+                            sql = `INSERT INTO ${empresa}_dados.registro_logins 
+                                               (data,hora,user_id,acao) 
+                                        VALUES (NOW(),NOW(),${usuarioId},'logout')`
+                            await this.querySync(conn,sql)
+                        }
+                    } 
+                    //Atualiza em todas as filas estado como 1
+                    sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=4, idpausa=0 WHERE ramal=${usuarioId}`
+                    await this.querySync(conn,sql) 
+                                        
+                    sql = `UPDATE ${empresa}_dados.users SET logado=1, ultimo_acesso=NOW() WHERE id=${usuarioId}`
+                    await this.querySync(conn,sql) 
+                       
+                    sql = `UPDATE ${empresa}_dados.user_ramal SET estado=4, datetime_estado=NOW() WHERE userId=${usuarioId}`
+                    await this.querySync(conn,sql) 
+                }else{                
+                    //Atualiza em todas as filas estado como 0
+                    sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0, idpausa=0 WHERE ramal=${usuarioId}`
+                    await this.querySync(conn,sql) 
+
+                    //Remove qualquer chamada presa do agente
+                    await Redis.delete(`${empresa}:atendimentoAgente:${usuarioId}`)
+
+                    sql = `UPDATE ${empresa}_dados.users SET logado=0 WHERE id=${usuarioId}` 
+                    await this.querySync(conn,sql) 
+
+                    sql = `UPDATE ${empresa}_dados.user_ramal SET estado=0, datetime_estado=NOW() WHERE userId=${usuarioId}`
+                    await this.querySync(conn,sql) 
+                } 
+                sql = `INSERT INTO ${empresa}_dados.registro_logins 
+                                        (data,hora,user_id,acao) 
+                                VALUES (NOW(),NOW(),${usuarioId},'${acao}')`
+                await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                }) 
+                resolve(true) 
+            })
+        })  
+    }
+    
+    
+
+
+    //Revisão/Otimização >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
    
 
     async findEmpresa(usuario){
@@ -92,84 +187,9 @@ class User{
         })
     }
 
-    async logoffUsersExpire(empresa){
-        return new Promise (async (resolve,reject)=>{ 
-            let sql = `SELECT id FROM ${empresa}_dados.users WHERE logado>0 AND status=1`
-             //Executando query
-             const pool = await connect.pool(empresa,'dados')
-             pool.getConnection(async (err,conn)=>{                           
-                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const us =  await this.querySync(conn,sql) 
-                for(let i=0; i<us.length; i++){
-                    const agente = us[i].id
-                    await this.registraLogin(empresa,agente,'logout')
-                }    
-                
-                pool.end((err)=>{
-                    if(err) console.log(err)
-                    }) 
-                resolve(true) 
-            })
-        })  
-    }
+    
 
-    async registraLogin(empresa,usuarioId,acao){
-        await Redis.delete(`${usuarioId}:estadoRamal`)
-        return new Promise (async (resolve,reject)=>{        
-            let sql
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                if(acao=='login'){
-                    //checa a ultima acao do agente 
-                    sql = `SELECT acao FROM ${empresa}_dados.registro_logins WHERE user_id=${usuarioId} ORDER BY id DESC LIMIT 1`
-                    
-                    //Executando query
-                    const a =  await this.querySync(conn,sql)
-                    if(a.length>0){               
-                        //Caso a ultima acao tambem tenha sido um login, insere a informacao de logout antes do px login
-                        if(a[0].acao=='login'){
-                            sql = `INSERT INTO ${empresa}_dados.registro_logins 
-                                               (data,hora,user_id,acao) 
-                                        VALUES (NOW(),NOW(),${usuarioId},'logout')`
-                            await this.querySync(conn,sql)
-                        }
-                    } 
-                    //Atualiza em todas as filas estado como 1
-                    sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=4, idpausa=0 WHERE ramal=${usuarioId}`
-                    await this.querySync(conn,sql) 
-                                        
-                    sql = `UPDATE ${empresa}_dados.users SET logado=1, ultimo_acesso=NOW() WHERE id=${usuarioId}`
-                    await this.querySync(conn,sql) 
-                       
-                    sql = `UPDATE ${empresa}_dados.user_ramal SET estado=4, datetime_estado=NOW() WHERE userId=${usuarioId}`
-                    await this.querySync(conn,sql) 
-                }else{                
-                    //Atualiza em todas as filas estado como 0
-                    sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0, idpausa=0 WHERE ramal=${usuarioId}`
-                    await this.querySync(conn,sql) 
-
-                    //Remove qualquer chamada presa do agente
-                    sql = `DELETE FROM ${empresa}_dados.campanhas_chamadas_simultaneas WHERE ramal='${usuarioId}'`
-                    await this.querySync(conn,sql)  
-                    
-                    sql = `UPDATE ${empresa}_dados.users SET logado=0 WHERE id=${usuarioId}` 
-                    await this.querySync(conn,sql) 
-
-                    sql = `UPDATE ${empresa}_dados.user_ramal SET estado=0, datetime_estado=NOW() WHERE userId=${usuarioId}`
-                    await this.querySync(conn,sql) 
-                } 
-                sql = `INSERT INTO ${empresa}_dados.registro_logins 
-                                        (data,hora,user_id,acao) 
-                                VALUES (NOW(),NOW(),${usuarioId},'${acao}')`
-                await this.querySync(conn,sql) 
-                pool.end((err)=>{
-                    if(err) console.log(err)
-                    }) 
-                resolve(true) 
-            })
-        })  
-    }
+    
 
     async setToken(empresa,agente,token){  
         return new Promise (async (resolve,reject)=>{ 
@@ -209,19 +229,7 @@ class User{
         })
     }
 
-    async getEmpresa(req){
-        const authHeader = req.headers.authorization;
-        const payload = jwt.verify(authHeader, process.env.APP_SECRET);
-        const empresa = payload.empresa
-        return empresa
-    }
-
-    async getAccountId(req){
-        const authHeader = req.headers.authorization;
-        const payload = jwt.verify(authHeader, process.env.APP_SECRET);
-        const accountId = payload.idAccount
-        return accountId
-    }
+    
 
     
 
