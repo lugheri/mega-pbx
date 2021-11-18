@@ -13,39 +13,33 @@ import Redis from '../Config/Redis'
 import http from 'http';
 
 class AsteriskController{
-    //Funcoes automaticas dialplan do asterisk
-    async setRecord(req,res){
-        const empresa = req.body.empresa
-        const data = req.body.date
-        const hora = req.body.time
-        let ch = req.body.channel;
-            ch = ch.split("-");
-            ch = ch[0].split("/")
-        let user_ramal = ch[1]   
-        
-        if((user_ramal==undefined)||(user_ramal=="undefined")||(user_ramal===false)){
-            let rm = req.body.ramal;
-                rm = rm.split("-");
-                rm = rm[0].split("/")
-                user_ramal = rm[1]
-        }
-        
-        const uniqueid = req.body.uniqueid  
-        const numero = req.body.numero   
-        const callfilename = req.body.callfilename  
-        const server = await Asterisk.setRecord(empresa,data,hora,user_ramal,uniqueid,numero,callfilename)
-        res.json(server[0].ip) 
-    }
-
     async agi(req,res){
         console.log('Iniciando AGI',req.body)
         const action = req.params.action
         const dados = req.body
         if(action=='machine'){//Quando cai na caixa postal
             const r = await Asterisk.machine(dados)
-            console.log('agi:machine',`Empresa: ${dados.empresa},numero:${dados.numero},status:${dados.status}, saida: ${r}`)
+            //console.log('agi:machine',`Empresa: ${dados.empresa},numero:${dados.numero},status:${dados.status}, saida: ${r}`)
             res.json(r);
         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+        
 
 
 
@@ -298,6 +292,60 @@ class AsteriskController{
            
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    //Funcoes automaticas dialplan do asterisk
+    async setRecord(req,res){
+        const empresa = req.body.empresa
+        const data = req.body.date
+        const hora = req.body.time
+        let ch = req.body.channel;
+            ch = ch.split("-");
+            ch = ch[0].split("/")
+        let user_ramal = ch[1]   
+        
+        if((user_ramal==undefined)||(user_ramal=="undefined")||(user_ramal===false)){
+            let rm = req.body.ramal;
+                rm = rm.split("-");
+                rm = rm[0].split("/")
+                user_ramal = rm[1]
+        }
+        
+        const uniqueid = req.body.uniqueid  
+        const numero = req.body.numero   
+        const callfilename = req.body.callfilename  
+        const server = await Asterisk.setRecord(empresa,data,hora,user_ramal,uniqueid,numero,callfilename)
+        res.json(server[0].ip) 
+    }
+
+   
 
    
 

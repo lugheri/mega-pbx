@@ -17,7 +17,70 @@ class CampanhasController{
         //console.log('Status Campanha',r)
         res.json(r)
     }
-
+    //GRAFICO CAMPANHA
+    //Status da evolucao do mailing na campanha
+    async statusEvolucaoCampanha(req,res){
+        const empresa = await User.getEmpresa(req)
+        let perc_trabalhados = 0
+        let perc_contatados = 0
+        let perc_naoContatados = 0
+        let total=0
+        let idMailing=0
+        const idCampanha = parseInt(req.params.idCampanha)
+        //Calcula a evolução da campanha com base no mailing ativo no momento
+        const m = await Campanhas.totalMailingsCampanha(empresa,idCampanha)
+        if(m.length>0){
+            total=m[0].total
+            idMailing=m[0].idMailing
+        }
+        //console.log('total registros',total)        
+        const contatados = await Campanhas.mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,'S')
+        const naoContatados = await Campanhas.mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,'N')
+        const trabalhados = contatados + naoContatados 
+        /*console.log('total contatados',contatados)  
+        console.log('total naoContatados',naoContatados)  
+        console.log('total trabalhados',trabalhados)  */ 
+       
+        if(total!=0){
+            perc_trabalhados=Math.round((trabalhados / total)*100)
+            perc_contatados=Math.round((contatados / total)*100)
+            perc_naoContatados=Math.round((naoContatados / total)*100)                   
+        }       
+        const retorno={}
+              retorno['trabalhado']=parseFloat(perc_trabalhados)
+              retorno['contatados']=parseFloat(perc_contatados)
+              retorno['nao_contatados']=parseFloat(perc_naoContatados)
+        res.json(retorno)
+    }
+    async historicoMailingsCampanha(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idCampanha = parseInt(req.params.idCampanha)
+        const mailings = []
+        const ma = await Campanhas.mailingsAnteriores(empresa,idCampanha)
+        for(let i=0;i<ma.length;i++){
+            const idMailing = ma[i].idMailing
+            const info = await Mailing.infoMailingAtivo(empresa,idMailing)
+            const produtivos = await Campanhas.mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,1)
+            const improdutivos = await Campanhas.mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,0)
+            const data =  await Campanhas.dataUltimoRegMailingNaCampanha(empresa,idCampanha,idMailing)
+            let total = improdutivos+produtivos
+            let nome = "Informações Removidas"
+            if(info.length>0){               
+                total=info[0].totalNumeros-info[0].numerosInvalidos
+                nome=info[0].nome
+            }
+            const trabalhados = produtivos+improdutivos
+            const infoMailing = {}
+                  infoMailing["id"]=idMailing
+                  infoMailing["nome"]=nome
+                  infoMailing["data"]=data
+                  infoMailing["nao_trabalhados"]=total-trabalhados
+                  infoMailing["produtivos"]=produtivos
+                  infoMailing["improdutivos"]=improdutivos
+                  mailings.push(infoMailing)
+        }
+        res.json(mailings)
+    }
     //######################Operacoes básicas das campanhas (CRUD)
     //Criar Campanhas
     async criarCampanha(req,res){
@@ -26,45 +89,19 @@ class CampanhasController{
         const nome = req.body.nome
         const descricao = req.body.descricao  
         const result = await Campanhas.criarCampanha(empresa,tipo,nome,descricao) 
-        res.json(result)
-            /*
-            const idCampanha = result['insertId']
-
-            //Criando fila da campanha
-            const name = `campanha_${idCampanha}`
-            const musiconhold = "default"
-            const strategy = "ringall"
-            const timeout = "15"
-            const retry = "5"
-            const autopause = "no"
-            const maxlen = "0"
-            const monitorType = "mixmonitor"
-            const monitorFormat = "wav"
-            Asterisk.criarFila(name,musiconhold,strategy,timeout,retry,autopause,maxlen,monitorType,monitorFormat,(e,r)=>{
-                if(e) throw e;
-
-                Campanhas.addFila(idCampanha,name,(e,r)=>{
-                    if(e) throw e;
-
-                    res.json(result)
-                })    
-                
-            })*/    
+        res.json(result)                
     }
-
     //Listar Campanhas
     async listarCampanhas(req,res){
         const empresa = await User.getEmpresa(req)
         const campanhas = await Campanhas.listarCampanhas(empresa)
         res.json(campanhas)                    
     }
-
     async listarCampanhasAtivas(req,res){
         const empresa = await User.getEmpresa(req)
         const campanhasAtivas = await Campanhas.listarCampanhasAtivas(empresa)
         res.json(campanhasAtivas)   
     }
-
     //Dados da campanha
     async dadosCampanha(req,res){
         const empresa = await User.getEmpresa(req)
@@ -72,8 +109,8 @@ class CampanhasController{
         const dadosCampanha = await Campanhas.dadosCampanha(empresa,idCampanha)
         res.json(dadosCampanha)    
     }
-    //Atualizar campanha
-    async atualizaCampanha(req,res){
+     //Atualizar campanha
+     async atualizaCampanha(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.idCampanha);
         const valores = req.body
@@ -85,13 +122,10 @@ class CampanhasController{
         for(let i=0; i<agentesCampanhas.length; i++){
             await Redis.delete(`${empresa}:campanhasAtivasAgente:${agentesCampanhas[i].ramal}`)
         }
-
-
         await Discador.atualizaStatus(empresa,idCampanha,'...',valores.estado)
         res.json(true)    
     }
-
-    //######################CONFIGURAÇÃO DE CAMPANHA ATIVA################################
+     //######################CONFIGURAÇÃO DE CAMPANHA ATIVA################################
     //TABULAÇÕES
     //Lista de Tabulaçoes da campanha
     //Add lista na campanha
@@ -102,8 +136,8 @@ class CampanhasController{
         const r = await Campanhas.addListaTabulacaoCampanha(empresa,idCampanha,idListaTabulacao)
         res.json(true);
     }
-    //Exibe as listas de tabulacao da Campanha
-    async listasTabulacaoCampanha(req,res){
+     //Exibe as listas de tabulacao da Campanha
+     async listasTabulacaoCampanha(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = req.params.idCampanha;
         const r = await Campanhas.listasTabulacaoCampanha(empresa,idCampanha)
@@ -116,7 +150,6 @@ class CampanhasController{
         const r = await Campanhas.removerListaTabulacaoCampanha(empresa,idListaNaCampanha)
         res.json(true);
     }
-
     async setMaxTimeStatusTab(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = req.body.idCampanha
@@ -124,23 +157,19 @@ class CampanhasController{
         await Campanhas.setMaxTimeStatusTab(empresa,idCampanha,time)
         res.json(true);
     }
-
     async getMaxTimeStatusTab(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = req.params.idCampanha
         const time = await Campanhas.getMaxTimeStatusTab(empresa,idCampanha)
         res.json(time);
     }
-
-
     //INTEGRAÇÕES
     async criarIntegracao(req,res){
         const empresa = await User.getEmpresa(req)
         const dados = req.body
         await Campanhas.criarIntegracao(empresa,dados)
         res.json(true);
-    }    
-    
+    }        
     async listarIntegracoes(req,res){
         const empresa = await User.getEmpresa(req)
         const dados = req.body
@@ -186,7 +215,6 @@ class CampanhasController{
         await Campanhas.removerIntegracaoCampanha(empresa,idCampanha,idIntegracao)
         res.json(true);
     }
-
     //DISCADOR
     //Configurar discador da campanha
     async configDiscadorCampanha(req,res){
@@ -198,20 +226,16 @@ class CampanhasController{
         const tipoDiscagem = req.body.tipoDiscagem
         const modo_atendimento = req.body.modo_atendimento
         const saudacao = req.body.saudacao
-
         const conf = await Campanhas.configDiscadorCampanha(empresa,idCampanha,tipoDiscador,agressividade,ordemDiscagem,tipoDiscagem,modo_atendimento,saudacao)
-        res.json(conf);
-        
+        res.json(conf);        
     }
     //Ver configuracoes do Discador
     async verConfigDiscadorCampanha(req,res){
         const empresa = await User.getEmpresa(req)
-        const idCampanha = parseInt(req.params.idCampanha);
-        
+        const idCampanha = parseInt(req.params.idCampanha);        
         const conf = await Campanhas.verConfigDiscadorCampanha(empresa,idCampanha)
         res.json(conf);
     }
-
     //FILAS
     //Lista as filas disponiveis
     async listarFilasDisponiveis(req,res){
@@ -265,19 +289,15 @@ class CampanhasController{
         }
         res.json(true)               
     }
-    
-
     //MAILING
     //Add mailing na campanha
     async addMailingCampanha(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = req.body.idCampanha
         const idMailing = req.body.idMailing
-
         const r = await Campanhas.addMailingCampanha(empresa,idCampanha,idMailing)
         res.json(r)
-    }        
-
+    }
     //Lista mailing da campanha
     async listarMailingCampanha(req,res){
         const empresa = await User.getEmpresa(req)
@@ -292,7 +312,6 @@ class CampanhasController{
         const r = await Campanhas.removeMailingCampanha(empresa,idCampanha)
         res.json(r)
     }
-
     //Filtra os registros do mailing
     async filtrarDiscagem(req,res){
         const empresa = await User.getEmpresa(req)
@@ -306,15 +325,13 @@ class CampanhasController{
         const empresa = await User.getEmpresa(req)
         const idCampanha = req.params.idCampanha
         const UF = req.params.uf
-
         const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
         if(infoMailing.length==0){
             res.json(false) 
             return false
         }
         const idMailing = infoMailing[0].id
-        const tabelaNumero=infoMailing[0].tabela_numeros
-        
+        const tabelaNumero=infoMailing[0].tabela_numeros        
         //Total de Registros do uf
         const filters = {}
               filters['totalNumeros']=await Campanhas.totalNumeros(empresa,tabelaNumero,UF)
@@ -330,7 +347,6 @@ class CampanhasController{
                       ddd['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'ddd',listDDDs[i].ddd,UF)
                 filters['DDD'].push(ddd)               
             }
-
             //Verificando filtros pelo Tipo de Número
             filters['TIPO']=[]
             const celular = {}
@@ -369,7 +385,6 @@ class CampanhasController{
         }
         res.json(filters) 
     }
-
     //MAILING=>CONFIGURAR TELA DO AGENTE
     //Listar campos disponiveis que foram configurados no mailing  
     async listarCamposConfigurados(req,res){
@@ -434,97 +449,6 @@ class CampanhasController{
         await Campanhas.delCampoTelaAgente(empresa,idCampanha,idCampo)
         res.send(true)
     }
-
-    //BLACKLIST
-    //Bloqueio por DDDs
-
-
-    //Bloqueio por Tipo (Celular ou Fixo)
-
-
-    //Add Numeros
-
-
-    //Add Lista
-
-
-    //GRAFICO CAMPANHA
-    //Status da evolucao do mailing na campanha
-    async statusEvolucaoCampanha(req,res){
-        const empresa = await User.getEmpresa(req)
-        let perc_trabalhados = 0
-        let perc_contatados = 0
-        let perc_naoContatados = 0
-        let total=0
-        let idMailing=0
-
-        const idCampanha = parseInt(req.params.idCampanha)
-
-        //Calcula a evolução da campanha com base no mailing ativo no momento
-        const m = await Campanhas.totalMailingsCampanha(empresa,idCampanha)
-        if(m.length>0){
-            total=m[0].total
-            idMailing=m[0].idMailing
-        }
-        //console.log('total registros',total)        
-        const contatados = await Campanhas.mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,'S')
-        const naoContatados = await Campanhas.mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,'N')
-        const trabalhados = contatados + naoContatados  
-        
-        /*console.log('total contatados',contatados)  
-        console.log('total naoContatados',naoContatados)  
-        console.log('total trabalhados',trabalhados)  */
-        
-        
-       
-        if(total!=0){
-            perc_trabalhados=Math.round((trabalhados / total)*100)
-            perc_contatados=Math.round((contatados / total)*100)
-            perc_naoContatados=Math.round((naoContatados / total)*100)                   
-        }       
-        const retorno={}
-              retorno['trabalhado']=parseFloat(perc_trabalhados)
-              retorno['contatados']=parseFloat(perc_contatados)
-              retorno['nao_contatados']=parseFloat(perc_naoContatados)
-        res.json(retorno)
-    }
-
-    async historicoMailingsCampanha(req,res){
-        const empresa = await User.getEmpresa(req)
-        const idCampanha = parseInt(req.params.idCampanha)
-
-        const mailings = []
-        const ma = await Campanhas.mailingsAnteriores(empresa,idCampanha)
-
-        for(let i=0;i<ma.length;i++){
-            const idMailing = ma[i].idMailing
-            const info = await Mailing.infoMailingAtivo(empresa,idMailing)            
-           
-            const produtivos = await Campanhas.mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,1)
-            const improdutivos = await Campanhas.mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,0)
-
-            const data =  await Campanhas.dataUltimoRegMailingNaCampanha(empresa,idCampanha,idMailing)
-
-            let total = improdutivos+produtivos
-            let nome = "Informações Removidas"
-            if(info.length>0){               
-                total=info[0].totalNumeros-info[0].numerosInvalidos
-                nome=info[0].nome
-            }
-            const trabalhados = produtivos+improdutivos
-            const infoMailing = {}
-                  infoMailing["id"]=idMailing
-                  infoMailing["nome"]=nome
-                  infoMailing["data"]=data
-                  infoMailing["nao_trabalhados"]=total-trabalhados
-                  infoMailing["produtivos"]=produtivos
-                  infoMailing["improdutivos"]=improdutivos
-
-                  mailings.push(infoMailing)
-        }
-        res.json(mailings)
-    }
-
     //AGENDAMENTO
     //Agenda campanha
     async agendarCampanha(req,res){
@@ -545,8 +469,6 @@ class CampanhasController{
         const r = await Campanhas.verAgendaCampanha(empresa,idCampanha)
         res.json(r)
     }
-
-
     //#########  P A U S A S          ############
     //######################PAUSAS ######################
     //Criar lista de pausas
@@ -556,7 +478,6 @@ class CampanhasController{
         const r = await Pausas.novaLista(empresa,dados)
         res.json(r)
     }
-
     //Editar lista de pausas
     async editarListaPausa(req,res){
         const empresa = await User.getEmpresa(req)
@@ -565,7 +486,6 @@ class CampanhasController{
         const r = await Pausas.editarListaPausa(empresa,idLista,valores)
         res.json(r)
     }
-
     //Ver dados da lista de pausas
     async dadosListaPausa(req,res){
         const empresa = await User.getEmpresa(req)
@@ -573,14 +493,12 @@ class CampanhasController{
         const r = await Pausas.dadosListaPausa(empresa,idLista)
         res.json(r)
     }
-
     //Ver todas as listas de pausas
     async listasPausa(req,res){
         const empresa = await User.getEmpresa(req)
         const r = await Pausas.listasPausa(empresa)
         res.json(r)
     }
-
     //Criar nova pausa
     async criarPausa(req,res){
         const empresa = await User.getEmpresa(req)
@@ -588,7 +506,6 @@ class CampanhasController{
         const result = await Pausas.criarPausa(empresa,dados)
         res.json(result)
     }
-
     //Editar pausa
     async editarPausa(req,res){
         const empresa = await User.getEmpresa(req)
@@ -597,14 +514,12 @@ class CampanhasController{
         const result = await Pausas.editarPausa(empresa,id,valores)
         res.json(result)        
     }
-
     async removerPausa(req,res){
         const empresa = await User.getEmpresa(req)
         const id = parseInt(req.params.id);
         const result = await Pausas.removerPausa(empresa,id)
         res.json(result)       
     }
-
     //ver pausa
     async dadosPausa(req,res){
         const empresa = await User.getEmpresa(req)
@@ -612,16 +527,13 @@ class CampanhasController{
         const result =  await Pausas.dadosPausa(empresa,id)
         res.json(result)        
     }
-
     //ver todas pausas de uma lista
     async listarPausas(req,res){
         const empresa = await User.getEmpresa(req)
         const idLista = 1
         const result = await Pausas.listarPausas(empresa,idLista)
-        res.json(result)
-        
+        res.json(result)        
     } 
-
     //#########  F I L A S            ############
     async criarFila(req,res){
         const empresa = await User.getEmpresa(req)
@@ -639,6 +551,8 @@ class CampanhasController{
         const announce_holdtime='no'
         const announce_position='no'
         const autofill='no'
+        const eventmemberstatus='yes'
+        const eventwhencalled='yes'
         const autopause='no'
         const autopausebusy='no'
         const autopausedelay=0
@@ -670,26 +584,22 @@ class CampanhasController{
             rt['message']=`Já existe uma fila criada com o nome '${nomeFila}'`
             res.send(rt)
             return false            
-        }
-        
+        }        
         const nomeFila = f
-        const asterisk = await Filas.criarFila(empresa,nomeFila,musiconhold,monitorType,monitorFormat,announce_frequency,announce_holdtime,announce_position,autofill,autopause,autopausebusy,autopausedelay,autopauseunavail,joinempty,leavewhenempty,maxlen,memberdelay,penaltymemberslimit,periodic_announce_frequency,queue_callswaiting,queue_thereare,queue_youarenext,reportholdtime,retry,ringinuse,servicelevel,strategy,timeout,timeoutpriority,timeoutrestart,weight,wrapuptime)
+        const asterisk = await Filas.criarFila(empresa,nomeFila,musiconhold,monitorType,monitorFormat,announce_frequency,announce_holdtime,announce_position,autofill,eventmemberstatus,eventwhencalled,autopause,autopausebusy,autopausedelay,autopauseunavail,joinempty,leavewhenempty,maxlen,memberdelay,penaltymemberslimit,periodic_announce_frequency,queue_callswaiting,queue_thereare,queue_youarenext,reportholdtime,retry,ringinuse,servicelevel,strategy,timeout,timeoutpriority,timeoutrestart,weight,wrapuptime)
         res.send(asterisk)
     }
-
     async listarFilas(req,res){
         const empresa = await User.getEmpresa(req)
         const filas = await Campanhas.listarFilas(empresa)
         res.json(filas)
     }
-
     async dadosFila(req,res){
         const empresa = await User.getEmpresa(req)
         const idFila = req.params.idFila
         const dadosFila = await Campanhas.dadosFila(empresa,idFila)
         res.json(dadosFila)
     }
-
     async configuracoesFila(req,res){
         const empresa = await User.getEmpresa(req)
         const idFila = req.params.idFila        
@@ -698,7 +608,6 @@ class CampanhasController{
         const configFila=await Filas.dadosFila(empresa,nomeFila)
         res.json(configFila)
     }
-
     async editarFila(req,res){
         const empresa = await User.getEmpresa(req)
         const idFila = req.params.idFila
@@ -709,7 +618,6 @@ class CampanhasController{
         await Filas.editarNomeFila(empresa,nomeFilaAtual,dados.name)
         res.json(true)
     }
-
     async configurarFila(req,res){
         const empresa = await User.getEmpresa(req)
         const idFila = req.params.idFila
@@ -719,7 +627,6 @@ class CampanhasController{
         await Filas.editarFila(empresa,nomeFila,configs)
         res.json(true)
     }
-
     async removerFila(req,res){
         const empresa = await User.getEmpresa(req)
         const idFila = req.params.idFila
@@ -727,12 +634,8 @@ class CampanhasController{
         await Campanhas.removerFila(empresa,idFila)
         await Filas.removerFila(empresa,nomeFila)
         res.send(true)
-    }
-    
-    
-    //#########  B A S E S            ############
-
-
+    }    
+    //#########  R E V I S A O   O K ############
 }
 
 export default new CampanhasController();

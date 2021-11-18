@@ -1,62 +1,60 @@
 import User from '../models/User'
 import Campanhas from '../models/Campanhas'
-import Discador from '../models/Discador'
 import User from '../models/User'
-import connect from '../Config/dbConnection'
 import Dashboard from '../models/Dashboard'
 
 class DashboardController{
     async nomeEmpresa(req,res){
         const empresa = await User.getEmpresa(req)
-
         const nomeEmpresa= await User.nomeEmpresa(empresa)
         res.json(nomeEmpresa)
     }
-
     async painel(req,res){
         const empresa = await User.getEmpresa(req)
         console.log('painel',empresa)
         const panelData= await Dashboard.painel(empresa)
         res.json(panelData)
     }
-
     async realTimeCalls(req,res){
         const empresa = await User.getEmpresa(req)
-
         const realTimeData= await Dashboard.realTimeCalls(empresa)
         res.json(realTimeData)
     }
-
     async realTimeCallsCampain(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.idCampanha)
-
         const realTimeDataCampain= await Dashboard.realTimeCallsCampain(empresa,idCampanha)
         res.json(realTimeDataCampain)
     }
-    
     async usersRealTime(req,res){
-        const empresa = await User.getEmpresa(req)
+        const empresa = await User.getEmpresa(req)   
         const totalLogados = await User.totalAgentesLogados(empresa)
         res.json(totalLogados)
     }
+
+
+
+
+
+
+
     
+    /*
     async logadosPorDia(req,res){
         const empresa = await User.getEmpresa(req)
         const limit = parseInt(req.params.limit)
         const logados = await User.logadosPorDia(empresa,limit)
         res.json(logados)
     }
-
     //Funcoes de informacoes dos agentes
     async usersByStatus(req,res){
         const empresa = await User.getEmpresa(req)
         //Agentes em ligacao
-        const falando = await Campanhas.agentesFalando(empresa,req)
-        const agentes_falando = parseInt(falando.length)
-        
+        const falando = await Campanhas.agentesFalando(empresa,req)  
+        const agentes_falando = parseInt(falando.length)      
         //Agentes em pausa
         const emPausa = await Campanhas.agentesEmPausa(empresa)
+        console.log('Em Pausa', emPausa)
         const agentes_emPausa = parseInt(emPausa.length)
 
         //Agentes Disponíveis
@@ -72,7 +70,6 @@ class DashboardController{
               retorno['disponiveis']=agentes_disponiveis
         res.json(retorno)
     }
-
     async listUsersByStatus(req,res){
         const empresa = await User.getEmpresa(req)
         const status = req.params.status
@@ -118,6 +115,7 @@ class DashboardController{
         }
         res.json(agentes)        
     }
+    
     
     //Funcoes de informacoes das Campanhas
     async campainsRealTime(req,res){
@@ -199,26 +197,9 @@ class DashboardController{
               retorno['contatados']=perc_contatados
               retorno['nao_contatados']=perc_naoContatados
         res.json(retorno)
-    }
+    }*/
 
-    //chamadasSimultaneas
-    async chamadasSimultaneas(req,res){
-        const empresa = await User.getEmpresa(req)
-        const limit = parseInt(req.params.limit)
-        const chamadas_simultaneas = await Discador.log_chamadasSimultaneas(empresa,limit,'total')
-        //Total de chamadas simultaneas
-        const chamadas_conectadas = await Discador.log_chamadasSimultaneas(empresa,limit,'conectadas')
-        const retorno = {}
-              retorno['chamadas_simultaneas']=[]
-              for (let i = 0; i < chamadas_simultaneas.length; i++) {
-                   retorno['chamadas_simultaneas'].push(chamadas_simultaneas[i].chamadas);
-              }                                        
-              retorno['conectados']=[]
-              for (let i = 0; i < chamadas_conectadas.length; i++) {
-                   retorno['conectados'].push(chamadas_conectadas[i].chamadas);
-              }                        
-        res.json(retorno)
-   }
+   
 
     fraseologia(req,res){
         const all = req.params.all

@@ -18,7 +18,33 @@ class Mailing{
                 resolve(rows)
             })
         })
-      }    
+    }
+    async infoMailingAtivo(empresa,idMailing){
+        return new Promise (async (resolve,reject)=>{ 
+            const sql = `SELECT * 
+                        FROM ${empresa}_dados.mailings 
+                        WHERE id=${idMailing} AND pronto=1`
+           //Executando query
+           const pool =  await connect.pool(empresa,'dados')
+           pool.getConnection(async (err,conn)=>{                           
+               if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:infoMailingAtivo","message":err.message,"stack":err.stack});
+               const rows =  await this.querySync(conn,sql)                  
+               pool.end((err)=>{
+                  if(err) console.error('Mailings 167', err)
+               }) 
+               resolve(rows)   
+           }) 
+        })
+    }
+    
+    
+
+
+
+
+
+
+/*-----------------------------------------------------------------------------------------------------------------------------------------------------------*/    
 
     //Abre o csv do mailing a ser importado
     async abreCsv(path,delimitador,callback){
@@ -680,23 +706,7 @@ class Mailing{
 
     }
 
-    async infoMailingAtivo(empresa,idMailing){
-        return new Promise (async (resolve,reject)=>{ 
-            const sql = `SELECT * 
-                        FROM ${empresa}_dados.mailings 
-                        WHERE id=${idMailing} AND pronto=1`
-           //Executando query
-           const pool =  await connect.pool(empresa,'dados')
-           pool.getConnection(async (err,conn)=>{                           
-               if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:infoMailingAtivo","message":err.message,"stack":err.stack});
-               const rows =  await this.querySync(conn,sql)                  
-               pool.end((err)=>{
-                  if(err) console.error('Mailings 167', err)
-               }) 
-               resolve(rows)   
-           }) 
-        })
-    }
+    
 
     async tabelaMailing(empresa,idMailing){
         return new Promise (async (resolve,reject)=>{

@@ -1526,7 +1526,7 @@ class Clients{
     }
 
     async editarCliente(idCliente,nome,fidelidade,licenses,channels_by_user,total_channels,trunk,tech_prefix,type_dial,idServer,asterisk_server,asterisk_domain){
-     
+      
       return new Promise (async (resolve,reject)=>{ 
         const pool = await connect.pool(0,'crm')  
           pool.getConnection(async (err,conn)=>{ 

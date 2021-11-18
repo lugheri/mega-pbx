@@ -19,7 +19,7 @@ class Filas{
 
     //CRUD FILAS
     //Criar nova filas
-    async criarFila(empresa,nomeFila,musiconhold,monitorType,monitorFormat,announce_frequency,announce_holdtime,announce_position,autofill,autopause,autopausebusy,autopausedelay,autopauseunavail,joinempty,leavewhenempty,maxlen,memberdelay,penaltymemberslimit,periodic_announce_frequency,queue_callswaiting,queue_thereare,queue_youarenext,reportholdtime,retry,ringinuse,servicelevel,strategy,timeout,timeoutpriority,timeoutrestart,weight,wrapuptime){
+    async criarFila(empresa,nomeFila,musiconhold,monitorType,monitorFormat,announce_frequency,announce_holdtime,announce_position,autofill,eventmemberstatus,eventwhencalled,autopause,autopausebusy,autopausedelay,autopauseunavail,joinempty,leavewhenempty,maxlen,memberdelay,penaltymemberslimit,periodic_announce_frequency,queue_callswaiting,queue_thereare,queue_youarenext,reportholdtime,retry,ringinuse,servicelevel,strategy,timeout,timeoutpriority,timeoutrestart,weight,wrapuptime){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'asterisk')
             pool.getConnection(async (err,conn)=>{   
@@ -38,6 +38,8 @@ class Filas{
                                         announce_holdtime,
                                         announce_position,
                                         autofill,
+                                        eventmemberstatus,
+                                        eventwhencalled,
                                         autopausebusy,
                                         autopausedelay,
                                         autopauseunavail,
@@ -69,6 +71,8 @@ class Filas{
                                         '${announce_holdtime}',
                                         '${announce_position}',
                                         '${autofill}',
+                                        '${eventmemberstatus}',
+                                        '${eventwhencalled}',
                                         '${autopausebusy}',
                                         '${autopausedelay}',
                                         '${autopauseunavail}',

@@ -17,20 +17,47 @@ class User{
             })
         })
     }
-    
     async getEmpresa(req){
         const authHeader = req.headers.authorization;
         const payload = jwt.verify(authHeader, process.env.APP_SECRET);
         const empresa = payload.empresa
         return empresa
     }
-
     async getAccountId(req){
         const authHeader = req.headers.authorization;
         const payload = jwt.verify(authHeader, process.env.APP_SECRET);
         const accountId = payload.idAccount
         return accountId
     }
+    async nomeEmpresa(empresa){
+        const nomeEmpresa = await Redis.getter(`${empresa}:nomeEmpresa`)
+        if(nomeEmpresa!==null){
+            return nomeEmpresa
+        }
+        return new Promise (async (resolve,reject)=>{ 
+            const sql = `SELECT name FROM clients.accounts WHERE prefix='${empresa}'`                          
+            //Executando query
+            const pool = await connect.pool(empresa,'crm')
+            pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                const rows =  await this.querySync(conn,sql)                  
+                pool.end((err)=>{
+                    if(err) console.log(err)
+                })
+                await Redis.setter(`${empresa}:nomeEmpresa`,empresa,120) 
+                resolve(rows[0].name)   
+            })  
+        })        
+    }
+
+
+
+
+
+
+
+    
+    
 
     async logoffUsersExpire(empresa){
         return new Promise (async (resolve,reject)=>{ 
@@ -264,41 +291,14 @@ class User{
         })
     }
 
-    async nomeEmpresa(empresa){
-        return new Promise (async (resolve,reject)=>{ 
-            const sql = `SELECT name FROM clients.accounts WHERE prefix='${empresa}'`
-                          
-            //Executando query
-            const pool = await connect.pool(empresa,'crm')
-            pool.getConnection(async (err,conn)=>{                           
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const rows =  await this.querySync(conn,sql)                  
-                pool.end((err)=>{
-                    if(err) console.log(err)
-                    }) 
-                resolve(rows[0].name)   
-            })  
-        })
-        
-    }
+    
 
-    async totalAgentesLogados(empresa){        
-        return new Promise (async (resolve,reject)=>{ 
-            const sql = `SELECT COUNT(id) AS total 
-                       FROM ${empresa}_dados.users 
-                      WHERE status=1 AND logado=1`
-                          
-            //Executando query
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{                           
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const rows =  await this.querySync(conn,sql)                  
-               pool.end((err)=>{
-                    if(err) console.log(err)
-                    }) 
-                resolve(rows)   
-            })  
-        })
+    async totalAgentesLogados(empresa){ 
+        const  totalAgentesLogados = await Redis.getter(`${empresa}:agentesLogados`) 
+        if(totalAgentesLogados===null){
+            return 0
+        }    
+        return totalAgentesLogados
     }
 
     async logadosPorDia(empresa,limit){        

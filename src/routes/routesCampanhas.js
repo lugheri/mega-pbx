@@ -128,7 +128,6 @@ module.exports = (routes) => {
     routes.get('/dddsUfMailing/:idMailing/:uf',MailingController.dddsUfMailing)//DDDs por uf do mailing
     routes.get('/totalRegUF/:idMailing',MailingController.totalRegUF)//Resumo por ddd
     routes.get('/saudeMailing/:idMailing',MailingController.saudeMailing)//Saude do mailing
-
     routes.post('/formataValor',MailingController.formataValor)//Rota para testes de funcao
     
     //BlackList
@@ -153,8 +152,7 @@ module.exports = (routes) => {
         return res.json({ test:"Upload"})
     });
 
-     //TESTES    
-    routes.post('/addFila/:idCampanha/:nomeFila',CampanhasController.addFilaCampanha)//atribui campanha
+    
 }
 
 

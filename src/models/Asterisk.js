@@ -1,5 +1,4 @@
 'use strict';
-
 import connect from '../Config/dbConnection';
 import ari from 'ari-client';
 import util from 'util';
@@ -22,7 +21,7 @@ class Asterisk{
                 resolve(rows)
             })
         })
-    }  
+    }
     
     async getDomain(empresa){//Ip/dominio do servidor onde o asterisk esta instalado
         const domainWebRTC = await Redis.getter(`${empresa}:domainWebRTC`)
@@ -72,7 +71,100 @@ class Asterisk{
         ari.connect(server, user, pass, callback)
     } 
 
+    //######################Funções de suporte ao AGI do Asterisk######################
+    //Trata a ligação em caso de Máquina ou Não Atendida    
+    async machine(dados){       
+        //Dados recebidos pelo AGI do asterisk
+        const empresa = dados.empresa
+        const idAtendimento = dados.idAtendimento
+        const observacoes = dados.status
+        //Verificando se o numero ja consta em alguma chamada simultanea
+        const chamadasEmAtendimento = await Redis.getter(`${empresa}:chamadasEmAtendimento`)
+        if((chamadasEmAtendimento===null)||(chamadasEmAtendimento==[])){
+            return false
+        }
+        const dadosAtendimento = chamadasEmAtendimento.filter(atendimento => atendimento.idAtendimento == idAtendimento)        
+        if(dadosAtendimento.length!=0){     
+            const id_numero=chamadasEmAtendimento['id_numero']
+            const ramal=chamadasEmAtendimento['ramal']
+            //Status de tabulacao referente ao nao atendido
+            const contatado = 'N'
+            const produtivo = 0
+            const removeNumero=0
+            //Tabula registro
+            const status_tabulacao = 0
+            
+
+
+
+
+
+            await Discador.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacoes,produtivo,ramal,id_numero,removeNumero)
+            //Removendo ligacao do historico de chamadas_simultaneas
+            await Discador.clearCallbyId(empresa,idAtendimento)
+            return true
+        }
+        return false
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     //######################Configuração do Asterisk######################
+
+
+
+
+
+
+
+
+//REFATORAÇÃO REDIS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     async setRecord(empresa,data,hora,ramal,uniqueid,numero,callfilename){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
@@ -93,40 +185,13 @@ class Asterisk{
     }
 
     
-    //######################Funções de suporte ao AGI do Asterisk######################
-    //Trata a ligação em caso de Máquina ou Não Atendida    
-    async machine(dados){       
-        //Dados recebidos pelo AGI do asterisk
-        const empresa = dados.empresa
-        const idAtendimento = dados.idAtendimento
-        const observacoes = dados.status
-
-        //Verificando se o numero ja consta em alguma chamada simultanea
-        const dadosAtendimento 
-        const chamada = await Discador.dadosAtendimento(empresa,idAtendimento)
-        
-        if(chamada.length!=0){     
-            const id_numero=chamada[0].id_numero
-            const ramal=chamada[0].ramal
-            //Status de tabulacao referente ao nao atendido
-            const contatado = 'N'
-            const produtivo = 0
-            const removeNumero=0
-            //Tabula registro
-            const status_tabulacao = 0
-            await Discador.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacoes,produtivo,ramal,id_numero,removeNumero)
-            //Removendo ligacao do historico de chamadas_simultaneas
-            await Discador.clearCallbyId(empresa,idAtendimento)
-            return true
-        }
-        return false
-    }
+    
 
 
 
 
 
-   //REFATORAÇÃO REDIS
+   
 
 
 
@@ -359,42 +424,26 @@ class Asterisk{
         })
     }*/  
 
-    //######################DISCAR######################
+    //######################DISCAR######################                 
     async discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,idCampanha,callback){
-        //console.log(`recebendo ligacao ${numero}`)
-        //console.log(`ramal ${ramal}`)
         const accountId = await Clients.accountId(empresa)
-
-     
         ari.connect(server, user, pass, async (err,client)=>{
           if(err) throw err         
 
           //Extension
           let context
           let endpoint
-
           const trunk = await Clients.getTrunk(empresa)
-
           const prefix = trunk[0].tech_prefix         
           const tronco = trunk[0].trunk
           const type_dial = trunk[0].type_dial
-        
-
           if(modo=='discador'){
             context = 'dialer'
-            //endpoint = `PJSIP/megatrunk/sip:0${numero}@35.199.66.23:5060`
-            
             endpoint = `PJSIP/${prefix}${type_dial}${numero}@${tronco}`
-            //console.log(endpoint)
           }else{
             context = 'external'
             endpoint = `PJSIP/${tronco}/` 
           }
-          //console.log(`context: ${context}`)
-          //console.log(`endpoint: ${endpoint}`)
-          //console.log(`numero recebido: ${numero}`)
-          //console.log(`Servidor: ${server}`)
-        console.log(`${accountId}.${idCampanha}`)
           const options = {            
             "endpoint"       : `${endpoint}`,
             "extension"      : `${numero}`,
@@ -414,376 +463,10 @@ class Asterisk{
             "timeout"        : 20, 
             /*"channelId"      : `${accountId}.${idCampanha}.${idAtendimento}`,
             "otherChannelId" : ""*/
-          }
-          
+          }          
           client.channels.originate(options,callback)
-
-          //client.channel
         })  
     }
-
-   
-  
-
-    
-    
-    
-    //######################Funções do atendente######################
-    
-    
-    
-
-    
-
-    
-
-    
-
-   
-
-    
-               
-    
-
-
-   
-
-
-    ///////////////////////Funcoes de tabulacao automatica - AGI
-    
-
-
-  
-
-
-
-   
-
-    
-
-    
-
-    
-
-
-
-
-    
-
-     ///////////////////////////////////TESTES/////////////////////////////////////////////////////
-     /*agi_test(dados,callback){
-        const sql = `INSERT INTO discador (data,obs_tabulacao,status) VALUES (now(),'${dados.obs}','${dados.status}')`
-        connect.banco.query(sql,callback);
-    }
-    
-    testLigacao(numero,ramal,callback){
-        const sql = `SELECT * FROM asterisk_ari WHERE active=1`; 
-        connect.banco.query(sql,(e,res)=>{
-            if(e) throw e
-            
-            console.log(`${res[0].server}, ${res[0].user}, ${res[0].pass}, ${ramal}, ${numero}`)
-            const modo='discador'
-            this.ligarTeste(res[0].server,res[0].user,res[0].pass,modo,ramal,numero,callback)
-        }) 
-    }
-
-    
-    
-
-    testPlayback(){
-
-        //Pesquisando dados do servidor no banco
-        const sql = `SELECT * FROM asterisk_ari WHERE active=1`;
-        connect.banco.query(sql,(e,r)=>{
-            if(e) throw e
-
-            //Abrindo conexao ARI
-            let timers = {}
-            ari.connect(r[0].server, r[0].user, r[0].pass, (err,client)=>{
-                if(err) console.log(err)
-
-                client.on('StasisStart',(event,channel)=>{
-                    let playback = client.Playback();
-                    channel.play({media:'sound:hello-world'},playback,(e,newPlayback)=>{
-                        if(e) throw e
-
-                        playback.on('PlaybackFinished',(event,completePlayback)=>{
-                            console.log('Audio reproduzido')
-                            
-                            channel.hangup((e)=>{
-                                if(e) throw e
-
-                            })
-
-                        })
-                    })
-                    channel.play({media:'sound:hello-world'},playback,(e,newPlayback)=>{
-                        if(e) throw e
-
-                        playback.on('PlaybackFinished',(event,completePlayback)=>{
-                            console.log('Audio reproduzido')
-                            
-                            channel.hangup((e)=>{
-                                if(e) throw e
-
-                            })
-
-                        })
-                    })
-                })
-
-                client.on('StasisEnd',()=>{
-                    console.log('Aplicativo encerrado');
-                })
-
-                client.start('channel-state')
-
-                
-            })
-        })
-
-    }
-
-    uraTest(){
-         //Pesquisando dados do servidor no banco
-         const sql = `SELECT * FROM asterisk_ari WHERE active=1`;
-         connect.banco.query(sql,(e,r)=>{
-             if(e) throw e
- 
-             //Abrindo conexao ARI
-             let timers = {}
-             ari.connect(r[0].server, r[0].user, r[0].pass, (err,client)=>{
-                if(err) console.log(err)
-
-                const menu = {
-                    //Opções validas do menu
-                    options: [1,2],
-                    sounds: ['sound:press-1','sound:or','sound:press-2']
-                }
-
-                let timers = {}
-
-                client.on('StasisStart',(event,channel)=>{
-                    console.log(`Canal entrou ${channel.name} na ura de teste`)
-
-                    channel.on('ChannelDtmfReceived', dtmfReceived)
-                    
-                    channel.answer((e)=>{
-                        if (e) throw e
-
-                        playIntroMenu(channel)
-                    })
-                })
-
-                client.on('StasisEnd',(event,channel)=>{
-                    console.log(`Canal ${channel.name} deixou a ura`)
-                    channel.removeListener('ChannelDtmfReceived',dtmfReceived)
-                    cancelTimeout(channel);
-                })
-
-                function dtmfReceived(event,channel){
-                    cancelTimeout(channel)
-                    let digit = parseInt(event.digit)
-
-                    console.log(`Canal ${channel.name} digitou ${digit}`)
-
-                    let valid = ~menu.option.indexOf(digit)
-                    if(valid){
-                        handleDtmf(channel,digit)
-                    }else{
-                        console.log(`Canal ${channel.name} escolheu uma opção inválida`)
-                    }
-
-                    channel.play({media:'sound:option-is-invalid'},(e,playback)=>{
-                        if(e) throw e
-
-                        playIntroMenu(channel)
-                    })
-                }
-
-                function playIntroMenu(channel){
-                    let state = {
-                        currentSound: menu.sounds[0],
-                        currentPlayback: undefined,
-                        done: false
-                    }
-
-                    channel.on('ChannelDtmfReceived',cancelMenu)
-                    channel.on('StasisEnd',cancelMenu)
-                    queueUpSound();
-
-                   
-                }
-
-                function cancelMenu(){
-                    state.done = true
-                    if(state.currentPlayback){
-                        state.currentPlayback.stop((e)=>{
-                            if(e) throw e
-                        })
-                    }
-
-                    channel.removeListener('ChannelDtmfReceived',cancelMenu)
-                    channel.removeListener('StasisEnd', cancelMenu)
-                }
-                
-                function queueUpSound(){
-                    if(!state.done){
-                        if(!state.currentSound){
-                            let timer = setTimeout(stillThere,10*1000)
-                            timers[channel.id]=timer
-                        }else{
-                            let playback = client.Playback()
-                            state.currentPlayback = playback
-
-                            channel.play({media: state.currentSound},playback,(e)=>{
-                                if(e) throw e
-                            })
-
-                            playback.once('PlaybackFinished',(event,channel)=>{
-                                queueUpSound();
-                            })
-
-                            let nextSoundIndex = menu.sounds.indexOf(state,currentSound)+1
-                            state.currentSound = menu.sounds[nextSoundIndex]
-                        }
-                    }
-                }
-
-                function stillThere(){
-                    console.log(`Canal ${channel.name} parado aguardando...`)
-                    
-                    channel.play({media: 'sound:are-you-still-there'},(e)=>{
-                        if(e) throw e
-
-                        playIntroMenu(channel);
-                    })
-                }
-
-                function cancelTimeout(channel){
-                    let timer = timers[channel.id]
-
-                    if(timer){
-                        clearTimeout(timer)
-                        delete timers[channel.id]
-                    }
-                }
-
-                function handleDtmf(channel,digit){
-                    let parts = ['sound:you-entered',util.format('digits:%s',digit)]
-                    let done = 0
-
-                    let playback = client.Playback()
-                    channel.play({media: 'sound:you-entered'}, playback,(e)=>{
-                        if(e) throw e
-
-                        channel.play({media: util.format('digits:%s',digit)}, (e)=>{
-                            if(e) throw e
-
-                            playIntroMenu(channel)
-                        })
-                    })
-                }
-
-                client.start('channel-state')
-
-            })
-        })
-    }
-
-    async listarRamais(){
-        const sql = `SELECT * FROM ps_auths`
-        return await this.querySync(conn,sql)
-    }
-
-    /*
-
-    // handler for StasisStart event
-    stasisStart_test(event, channel) {
-       
-        let playback = client.Playback();
-        channel.play({media: 'tone:ring;tonezone=fr'},playback,(err,newPlayback)=>{
-            if (err) throw err;
-
-            setTimeout(()=>{answer}, 8000);
-        })
-
-        function answer() {
-            console.log(util.format('Answering channel %s', channel.name));
-            playback.stop((err) =>{
-              if (err) throw err;
-            });
-            channel.answer((err) =>{
-              if (err) throw err;
-            });
-            // hang up the channel in 1 seconds
-            setTimeout(()=>{hangup}, 1000);
-        }
-       
-        // callback that will hangup the channel
-        function hangup() {
-            console.log(util.format('Hanging up channel %s', channel.name));
-            channel.hangup((err)=>{
-              if (err) throw err;
-            });
-        }
-
-    }
-   
-
-    
-
-    stasisEnd_test(event, channel) {
-        console.log(util.format(
-            'Channel %s just left our application', channel.name));
-    }
-
-    channelStateChange(event, channel) {
-        console.log(util.format('Channel %s is now: %s', channel.name, channel.state));
-      }
-
-    stasisStart(event, channel) {
-        console.log(util.format(
-            'Channel %s has entered the application', channel.name));
-        // use keys on event since channel will also contain channel operations
-        Object.keys(event.channel).forEach(function(key) {
-          console.log(util.format('%s: %s', key, JSON.stringify(channel[key])));
-        });
-      }
-      
-      // handler for StasisEnd event
-      stasisEnd(event, channel) {
-        console.log(util.format(
-            'Channel %s has left the application', channel.name));
-      }
-
-    //Ramais
-    criarRamal(dados,callback){
-        //criar aor
-        const sql = `INSERT INTO ps_aors (id,max_contacts,remove_existing) VALUES ('${dados.aor}','1','yes')`
-        connect.asterisk.query(sql,(err,r)=>{
-            if(err) throw err
-
-             //criar auth
-            const sql = `INSERT INTO ps_auths (id,auth_type,password,username) VALUES ('${dados.auth}','userpass','${dados.pass}','${dados.user}')`
-            connect.asterisk.query(sql,(err,r)=>{
-                if(err) throw err
-
-                //criar endpoint
-                const sql = `INSERT INTO ps_endpoints (id,transport,aors,auth,context,disallow,allow) VALUES ('${dados.aor}','${dados.transport}','${dados.aor}','${dados.auth}','${dados.context}','${dados.disallow}','${dados.allow}')`
-                connect.asterisk.query(sql,callback)
-            })
-        })        
-    }
-
-    listarRamais(callback){
-        const sql = `SELECT * FROM ps_auths`
-        connect.asterisk.query(sql,callback)
-    }
-
-    */
-
-
 }
 
 export default new Asterisk();

@@ -17,7 +17,57 @@ class Report{
                 resolve(rows)
             })
         })
-      }      
+    }    
+    async diaAtual(){
+        const dia = moment().format("DD")
+        const m =  moment().format("M")-1
+        const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']                
+        return `${dia} de ${meses[m]}`
+    }  
+      
+    async statusTabulacaoChamada(empresa,idAgente){
+        const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${idAgente}`)
+        if((atendimentoAgente===null)||(atendimentoAgente==[])){
+            return 0
+        }          
+        const chamadasEmTabulacao = atendimentoAgente.filter(chamadas => chamadas.event_tabulando == 1)
+        const chamadasDesligadas = atendimentoAgente.filter(chamadas => chamadas.event_desligada == 1)
+        const total = chamadasEmTabulacao.length + chamadasDesligadas.length
+        
+        return total
+    }
+    async statusAtendimentoChamada(empresa,idAgente){
+        const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${idAgente}`)
+        if((atendimentoAgente===null)||(atendimentoAgente==[])){
+            return 0
+        }   
+        const atendimento = atendimentoAgente.filter(chamadas => chamadas.event_falando == 1)
+        return atendimento.length
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /*---------------------------------------------------------------------------------------------------------------------------------------------------*/  
 
     //Funcoes auxiliares 
    //FILTROS
@@ -369,56 +419,9 @@ class Report{
         })           
     }
 
-    async statusTabulacaoChamada(empresa,idAgente){
-        const redis_statusTabulacaoChamada = await Redis.getter(`${empresa}:reports_statusTabulacaoChamada:${idAgente}`)
-        if(redis_statusTabulacaoChamada!==null){
-            return redis_statusTabulacaoChamada
-        }   
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{   
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT id 
-                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                            WHERE ramal='${idAgente}' AND tabulando=1 AND desligada=1
-                            LIMIT 1`
-                const t = await this.querySync(conn,sql)    
-                
-                pool.end((err)=>{
-                    
-                    if(err) console.log('Reports ...', err)
-                })
-                await Redis.setter(`${empresa}:reports_statusTabulacaoChamada:${idAgente}`,t.length,15)
-                
-                resolve(t.length)
-            })
-        })      
-    }
+    
 
-    async statusAtendimentoChamada(empresa,idAgente){
-        const redis_statusAtendimentoChamada = await Redis.getter(`${empresa}:reports_statusAtendimentoChamada:${idAgente}`)
-        if(redis_statusAtendimentoChamada!==null){
-            return redis_statusAtendimentoChamada
-        } 
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{   
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT id 
-                            FROM ${empresa}_dados.campanhas_chamadas_simultaneas
-                            WHERE ramal='${idAgente}' AND falando=1
-                            LIMIT 1`
-                const f = await this.querySync(conn,sql) 
-               
-                pool.end((err)=>{
-                    
-                    if(err) console.log('Reports ...', err)
-                })
-                await Redis.setter(`${empresa}:reports_statusAtendimentoChamada:${idAgente}`,f.length,5)
-                resolve(f.length)
-            })
-        })      
-    }
+    
 
     async timeCall(empresa,uniqueid){
         const redis_timeCall = await Redis.getter(`${empresa}:reports_timeCall:${uniqueid}`)
