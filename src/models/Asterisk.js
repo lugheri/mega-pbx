@@ -100,7 +100,7 @@ class Asterisk{
             const status_tabulacao = 0
 
             await Discador.autoTabulacao(empresa,idCampanha,idMailing,idRegistro,id_numero,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros)
-
+            dadosAtendimento.splice(dadosAtendimento.findIndex(atendimento => atendimento.idAtendimento == idAtendimento),1)
             return true
         }
         return false
