@@ -79,29 +79,28 @@ class Asterisk{
         const idAtendimento = dados.idAtendimento
         const observacoes = dados.status
         //Verificando se o numero ja consta em alguma chamada simultanea
-        const chamadasEmAtendimento = await Redis.getter(`${empresa}:chamadasEmAtendimento`)
-        if((chamadasEmAtendimento===null)||(chamadasEmAtendimento==[])){
+        const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+        if((chamadasSimultaneas===null)||(chamadasSimultaneas==[])){
             return false
         }
-        const dadosAtendimento = chamadasEmAtendimento.filter(atendimento => atendimento.idAtendimento == idAtendimento)        
+        const dadosAtendimento = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
+        console.log('Dados do Atendimento',dadosAtendimento)      
         if(dadosAtendimento.length!=0){     
-            const id_numero=chamadasEmAtendimento['id_numero']
-            const ramal=chamadasEmAtendimento['ramal']
+            const id_numero=dadosAtendimento[0].id_numero
+            console.log('id_numero',dadosAtendimento[0].id_numero)     
+            const idCampanha = dadosAtendimento[0].id_campanha
+            const idMailing = dadosAtendimento[0].id_mailing
+            const idRegistro = dadosAtendimento[0].id_registro
+            const tabela_numeros = dadosAtendimento[0].tabela_numeros
+            const tipo_ligacao = dadosAtendimento[0].tipo
+            const numero = dadosAtendimento[0].numero
             //Status de tabulacao referente ao nao atendido
             const contatado = 'N'
             const produtivo = 0
-            const removeNumero=0
-            //Tabula registro
             const status_tabulacao = 0
-            
 
+            await Discador.autoTabulacao(empresa,idCampanha,idMailing,idRegistro,id_numero,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros)
 
-
-
-
-            await Discador.tabulaChamada(empresa,idAtendimento,contatado,status_tabulacao,observacoes,produtivo,ramal,id_numero,removeNumero)
-            //Removendo ligacao do historico de chamadas_simultaneas
-            await Discador.clearCallbyId(empresa,idAtendimento)
             return true
         }
         return false
@@ -368,7 +367,7 @@ class Asterisk{
         return new Promise (async (resolve,reject)=>{ 
             ari.connect(server, user, pass, async (err,client)=>{
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                console.log('CHANNEL ID',channel_Id)
+                //console.log('CHANNEL ID',channel_Id)
                 const options = { "channelId":`${channel_Id}`}
                 client.channels.get(options,(err,infoChannel)=>{
                     if(err){

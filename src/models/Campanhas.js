@@ -190,6 +190,7 @@ class Campanhas{
                 await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)                
                 //Limpando cache das campanhas
                 await Redis.delete(`${empresa}:campanhasAtivas`)   
+                await Redis.delete(`${empresa}:campanhasAtivas_comInformacoes`)
                 await Redis.delete(`${empresa}:mailingsCampanhasAtivas`)
                 await Redis.delete(`${empresa}:dadosCampanha:${idCampanha}`)                
 

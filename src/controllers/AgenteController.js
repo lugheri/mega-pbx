@@ -3,8 +3,9 @@ import User from '../models/User'
 import Report from '../models/Report'
 import Campanhas from '../models/Campanhas'
 import Pausas from '../models/Pausas'
-
 import Discador from '../models/Discador'
+import Redis from '../Config/Redis'
+import moment from 'moment'
 
 class AgenteController{
     //Inicia discador do agente
@@ -277,7 +278,7 @@ class AgenteController{
                 registro['dadosAtendimento']['tabulacao']=historico[i].tabulacao
                 registro['dadosAtendimento']['observacoes']=historico[i].obs_tabulacao                
                 
-                const agente = await Discador.infoAgente(empresa,ramal)
+                const agente = await Agente.infoAgente(empresa,ramal)
                 registro['informacoesAtendente']={}
                 registro['informacoesAtendente'] = agente[0]
 
