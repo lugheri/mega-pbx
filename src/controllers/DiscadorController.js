@@ -1,5 +1,5 @@
 import Discador from '../models/Discador'
-import Asterisk from '../models/Asterisk'
+import Agente from '../models/Agente'
 import Campanhas from '../models/Campanhas'
 
 
@@ -14,9 +14,7 @@ class DiscadorController{
         const agente = req.params.agente
         const campanhas = await Discador.campanhasAtivasAgente(empresa,agente)
         const hoje = moment().format("YYYY-MM-DD")
-
         const chamadasManuais = await Discador.tentativasChamadasManuais(empresa,hoje)
-
         const retorno={}
               retorno["campanhasAtivas"]=campanhas
               retorno["clicksChamadasManuais"]=chamadasManuais['cliques']
@@ -28,8 +26,7 @@ class DiscadorController{
         if(!clientesAtivos){
             clientesAtivos=await Clients.clientesAtivos()
             await Redis.setter('empresas',clientesAtivos,600)
-        }        
-       
+        }       
         const clientes = clientesAtivos;  
         for(let i=0;i<clientes.length;++i){
             const empresa = clientes[i].prefix 
@@ -42,18 +39,17 @@ class DiscadorController{
         }
         setTimeout(async ()=>{             
             await this.checkAccounts();
-        },5000)
+        },25000)
     }
 
     async campanhasEmpresa(empresa){
         const hoje = moment().format("YYYY-MM-DD")
         const hora = moment().format("HH:mm:ss")
-       
         // Atualiza contagem de chamadas simultaneas
         //await Discador.registrarChamadasSimultaneas(empresa)
-
         //Checando se existem retornos agendados
         const followUps = await Discador.checaAgendamento(empresa,hoje,hora);//Confere retornos agendados
+        //console.log('\n','FollowAp',followUps,'\n')
         if(followUps.length >= 1){
             const regAgendado = await Discador.abreRegistroAgendado(empresa,followUps[0].id)//Abre a tela de retorno para o agente          
             if(regAgendado!==false){
@@ -61,7 +57,11 @@ class DiscadorController{
             }
         }
         const campanhasAtivas = await Discador.campanhasAtivas(empresa);//Verifica se existem campanhas ativas
-        if(campanhasAtivas.length === 0) return false
+        console.log('\n','campanhasAtivas',campanhasAtivas,'\n')
+        if(campanhasAtivas.length === 0){
+            console.log(`\n ❗  ${empresa} Nenhuma Campanha ativa . . . . . . . . . . . . \n`) 
+            return false
+        } 
         for(let i=0; i<campanhasAtivas.length; i++){
             const idCampanha = campanhasAtivas[i].id
             const idFila = campanhasAtivas[i].idFila
@@ -80,7 +80,7 @@ class DiscadorController{
                   
             //Conta chamadas simultaneas e agressividade e compara com os agentes disponiveis
             const qtdChamadasSimultaneas=await Discador.totalChamadasSimultaneas(empresa,idCampanha)
-            console.log('✅check------------------------------------------','qtdChamadasSimultaneas',qtdChamadasSimultaneas)
+                       
             const agendamento = await Discador.agendamentoCampanha(empresa,idCampanha)//Verifica se a campanha possui horário de agendamento
             if(agendamento.length==0){
                 const msg = "Esta campanha não tem um horário de funcionamento definido!"
@@ -133,7 +133,8 @@ class DiscadorController{
         let agressividade = parametrosDiscador['agressividade']
         let tipoDiscagem = parametrosDiscador['tipo_discagem']
         let tipoDiscador = parametrosDiscador['tipo_discador']
-        let ordemDiscagem = parametrosDiscador['ordem_discagem']
+        let ordemDiscagem = parametrosDiscador['ordem_discagem']      
+
         if((parametrosDiscador['tipo_discador']=="clicktocall")||(parametrosDiscador['tipo_discador']=="preview")){         
             //Caso o discador seja clicktocall ou preview a agressividade eh sempre 1   
             agressividade=1
@@ -165,6 +166,13 @@ class DiscadorController{
         }
         //Verifica se existem registros nao trabalhados ou com o nº de tentativas abaixo do limite
         const registros = await Discador.filtrarRegistro(empresa,idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscador,tipoDiscagem,ordemDiscagem,limitRegistros)
+        
+        /*console.log('\n','qtdChamadasSimultaneas',qtdChamadasSimultaneas)
+        console.log('agressividade',agressividade)
+        console.log('agentesDisponiveis',agentesDisponiveis)
+        console.log('limiteDiscagem',limiteDiscagem)
+        console.log('canaisDisponiveis',canaisDisponiveis)
+        console.log('limitRegistros',limitRegistros,'\n')*/
         if(registros.length==0){
             if(limitRegistros==0){
                 let msg='Limite de chamadas simultâneas atingido, aumente a agressividade ou aguarde os agentes ficarem disponíveis'
@@ -180,13 +188,9 @@ class DiscadorController{
         for(let i=0; i<registros.length; i++){
             const registro = registros[i]
             const numero = registros[i].numero
-            const ocupado = await Discador.checaNumeroOcupado(empresa,numero)//Verifica se o numero selecionado ja nao esta em atendimento
-            if(ocupado === true){  
-                let msg='O numero selecionado esta em atendimento'
-                let estado = 2
-                await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
-                return false;
-            }
+            console.log('Checando Numero',numero)
+         
+            
             let msg='Campanha discando'
             let estado = 1
             await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
@@ -199,8 +203,16 @@ class DiscadorController{
         const idNumero = registro['idNumero']
         const idAtendimento = moment().format("YMMDDHHmmss")
         //console.log('ID NUMERO', idNumero)
-        const checkReg = await Discador.checandoRegistro(empresa,idRegistro)
+        const checkReg = await Discador.checandoRegistro(empresa,idRegistro,idCampanha)
         if(checkReg === true) return false;
+
+        const checkNum = await Discador.checaNumeroOcupado(empresa,numero)//Verifica se o numero selecionado ja nao esta em atendimento
+        if(checkNum === true){  
+            let msg='O numero selecionado esta em atendimento'
+            let estado = 2
+            await Discador.atualizaStatus(empresa,idCampanha,msg,estado)
+            return false;
+        }
 
         if(limiteDiscagem<qtdChamadasSimultaneas){
             let msg='Limite de chamadas simultâneas atingido, aumente a agressividade ou aguarde os agentes ficarem disponíveis!'
@@ -211,6 +223,7 @@ class DiscadorController{
         await Discador.registraNumero(empresa,idCampanha,idMailing,idRegistro,idNumero,numero,tabela_numeros)
         const tipoDiscador = parametrosDiscador['tipo_discador']
         const modoAtendimento = parametrosDiscador['modo_atendimento']
+
         if((tipoDiscador=="clicktocall")||(tipoDiscador=="preview")){
             //Seleciona agente disponivel a mais tempoPassado           
             const agenteDisponivel = await Discador.agenteDisponivel(empresa,idFila)
@@ -224,7 +237,8 @@ class DiscadorController{
             await Discador.registraChamada(empresa,idAtendimento,agenteDisponivel,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numeroDiscado,nomeFila)
             
             const estado = 5 //Estado do agente quando ele esta aguardando a discagem da tela
-            await Discador.alterarEstadoAgente(empresa,agenteDisponivel,estado,0)  
+            await Agente.alterarEstadoAgente(empresa,agenteDisponivel,estado,0)  
+
         }else if(tipoDiscador=="power"){
             //Registra chamada simultânea       
             const hora = moment().format("HH")
@@ -296,19 +310,20 @@ class DiscadorController{
 
 
     
-   
-
     
 
    
 
-        
+   
        
+
         
 
-   
+        
 
-   
+    
+
+    
 
     async linkGravacao(req,res){
         const hash = req.params.hash

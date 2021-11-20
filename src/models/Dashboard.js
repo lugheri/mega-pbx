@@ -194,7 +194,6 @@ class Dashboard{
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
         if(chamadasSimultaneas !== null){
             const chamadasSimultaneasCampanha = chamadasSimultaneas.filter(chamadas => chamadas.id_campanha == idCampanha)
-
             const chamando = chamadasSimultaneasCampanha.filter(chamadas => chamadas.event_chamando == 1)
             const na_fila = chamadasSimultaneasCampanha.filter(chamadas => chamadas.event_na_fila == 1)
             const conectadas = chamadasSimultaneasCampanha.filter(chamadas => chamadas.event_em_atendimento == 1)

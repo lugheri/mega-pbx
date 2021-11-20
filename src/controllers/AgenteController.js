@@ -3,10 +3,9 @@ import User from '../models/User'
 import Report from '../models/Report'
 import Campanhas from '../models/Campanhas'
 import Pausas from '../models/Pausas'
+import Discador from '../models/Discador'
 import Redis from '../Config/Redis'
 import moment from 'moment'
-
-import Discador from '../models/Discador'
 
 class AgenteController{
     //Inicia discador do agente
