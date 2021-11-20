@@ -1,3 +1,4 @@
+import connect from '../Config/dbConnection'
 import Redis from '../config/Redis'
 import Filas from './Filas'
 import Cronometro from './Cronometro';
@@ -7,6 +8,18 @@ import moment from 'moment'
 
 
 class Agente{
+    async querySync(conn,sql){         
+        return new Promise((resolve,reject)=>{            
+            conn.query(sql, (err,rows)=>{
+                if(err){ 
+                    console.error({"errorCode":err.code,"message":err.message,"stack":err.stack, "sql":sql}) 
+                    resolve(false);
+                }
+                resolve(rows)
+            })
+        })
+      }    
+
     //Retorna o estado atual do agente
     async statusRamal(empresa,ramal){
         const redis_estadoRamal = await Redis.getter(`${ramal}:estadoRamal`)

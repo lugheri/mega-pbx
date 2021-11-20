@@ -187,7 +187,7 @@ class Campanhas{
                                     estado=${valores.estado},
                                     status=${valores.status} 
                             WHERE id=${idCampanha}`
-                await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)                
+                await this.atualizaMembrosFilaCampanha(empresa,valores.estado,idCampanha)
                 //Limpando cache das campanhas
                 await Redis.delete(`${empresa}:campanhasAtivas`)   
                 await Redis.delete(`${empresa}:mailingsCampanhasAtivas`)

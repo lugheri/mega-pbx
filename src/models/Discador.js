@@ -19,6 +19,34 @@ class Discador{
             })
         })
     } 
+    async campanhasAtivasAgente(empresa,agente){
+        const campanhasAtivasAgente = await Redis.getter(`${empresa}:campanhasAtivasAgente:${agente}`)
+        if(campanhasAtivasAgente!==null){
+            return campanhasAtivasAgente
+        }      
+
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
+            pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+
+                const sql = `SELECT COUNT(c.id) AS campanhasAtivas
+                               FROM ${empresa}_dados.campanhas AS c
+                               JOIN ${empresa}_dados.campanhas_filas AS cf ON c.id=cf.idCampanha
+                               JOIN ${empresa}_dados.filas AS f ON cf.idFila=f.id
+                               JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=f.id
+                              WHERE c.estado=1 AND c.status=1 AND af.ramal=${agente}`
+                const c = await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.error(err)
+                }) 
+                const campanhasAtivasAgente=c[0].campanhasAtivas
+                await Redis.setter(`${empresa}:campanhasAtivasAgente:${agente}`,campanhasAtivasAgente,3600)
+                resolve(campanhasAtivasAgente) 
+            })
+        })              
+    }
+
     //INFORMACOES DO AGENTE
     async agentesLogados(empresa){
         const agentesLogados = await Redis.getter(`${empresa}:agentesLogados`)
@@ -369,7 +397,7 @@ class Discador{
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
         if(chamadasSimultaneas===null){
             return false
-        }
+        }        
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -399,17 +427,19 @@ class Discador{
                 pool.end((err)=>{
                    if(err) console.error(err)
                 }) 
+                resolve(true)
                 await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)
             })
         })        
     }
-    async atualizaStatus(empresa,idCampanha,msg,estado){
+    async atualizaStatus(empresa,idCampanha,msg,estado){      
+        console.log(`\n[❗]${msg}...................`,`📣${idCampanha}\n`)
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
                 //verificando se a campanha ja possui status
-                let sql = `SELECT * FROM ${empresa}_dados.campanhas_status WHERE idCampanha='${idCampanha}`
+                let sql = `SELECT * FROM ${empresa}_dados.campanhas_status WHERE idCampanha='${idCampanha}'`
                 const statusCampanha_db = await this.querySync(conn,sql)                 
                 if(statusCampanha_db.length==0){
                     //Caso nao, insere o status
@@ -513,33 +543,7 @@ class Discador{
 
 
 
-    async campanhasAtivasAgente(empresa,agente){
-        const campanhasAtivasAgente = await Redis.getter(`${empresa}:campanhasAtivasAgente:${agente}`)
-        if(campanhasAtivasAgente!==null){
-            return campanhasAtivasAgente
-        }      
-
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
-
-                const sql = `SELECT COUNT(c.id) AS campanhasAtivas
-                               FROM ${empresa}_dados.campanhas AS c
-                               JOIN ${empresa}_dados.campanhas_filas AS cf ON c.id=cf.idCampanha
-                               JOIN ${empresa}_dados.filas AS f ON cf.idFila=f.id
-                               JOIN ${empresa}_dados.agentes_filas AS af ON af.fila=f.id
-                              WHERE c.estado=1 AND c.status=1 AND af.ramal=${agente}`
-                const c = await this.querySync(conn,sql);
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                }) 
-                const campanhasAtivasAgente=c[0].campanhasAtivas
-                await Redis.setter(`${empresa}:campanhasAtivasAgente:${agente}`,campanhasAtivasAgente,3600)
-                resolve(campanhasAtivasAgente) 
-            })
-        })              
-    }
+    
 
     async tentativasChamadasManuais(empresa,data){
         const tentativasChamadasManuais = await Redis.getter(`${empresa}:tentativasChamadasManuais`)
@@ -580,7 +584,7 @@ class Discador{
    
 
 
-    //Registrando chamadas simultaneas atuais no log 
+    /*//Registrando chamadas simultaneas atuais no log 
     async registrarChamadasSimultaneas(empresa){
         let chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`);
         if(chamadasSimultaneas===null){
@@ -596,7 +600,7 @@ class Discador{
               totalChamadasSimultaneas['chamadasConectadas']=atendidas.length
               
         await Redis.setter(`${empresa}:totalChamadasSimultaneas`,totalChamadasSimultaneas,60)
-    }
+    }*/
 
     async checaAgendamento(empresa,data,hora){
         const agendaRetornos = await Redis.getter(`${empresa}:agendaRetornos`)
@@ -734,6 +738,7 @@ class Discador{
         if(chamadasSimultaneas===null){
             chamadasSimultaneas = []
         }
+        console.log('💾REDIS------------------------------------------------','chamadasSimultaneas',chamadasSimultaneas)
 
         const chamadasSimultaneasCampanha = chamadasSimultaneas.filter(chamadas => chamadas.id_campanha == idCampanha)
         console.log('chamadas Simultaneas Campanha',chamadasSimultaneasCampanha)

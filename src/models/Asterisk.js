@@ -47,6 +47,7 @@ class Asterisk{
 
     async servidorWebRTC(empresa){//Ip da maquina onde o asterisk esta instalado
         const servidorWebRTC = await Redis.getter(`${empresa}:servidorWebRTC`)
+       
         if(servidorWebRTC!==null){
             return servidorWebRTC
         }
