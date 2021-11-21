@@ -27,7 +27,7 @@ class Report{
       
     async statusTabulacaoChamada(empresa,idAgente){
         const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${idAgente}`)
-        if((atendimentoAgente===null)||(atendimentoAgente==[])){
+        if((atendimentoAgente===null)||(atendimentoAgente.length==0)){
             return 0
         }          
         const chamadasEmTabulacao = atendimentoAgente.filter(chamadas => chamadas.event_tabulando == 1)
@@ -38,7 +38,7 @@ class Report{
     }
     async statusAtendimentoChamada(empresa,idAgente){
         const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${idAgente}`)
-        if((atendimentoAgente===null)||(atendimentoAgente==[])){
+        if((atendimentoAgente===null)||(atendimentoAgente.length==0)){
             return 0
         }   
         const atendimento = atendimentoAgente.filter(chamadas => chamadas.event_falando == 1)

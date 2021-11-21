@@ -743,7 +743,7 @@ class Agente{
     //Desliga Chamada
     async desligaChamada(empresa,ramal){
         const atendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-        if((atendimento===null)||(atendimento==[])){
+        if((atendimento===null)||(atendimento.length==0)){
             return false
         }
         atendimento['event_desligada']=1

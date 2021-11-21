@@ -7,6 +7,7 @@ import Tabulacoes from '../models/Tabulacoes';
 import moment from 'moment';
 import Campanhas from './Campanhas';
 import Discador from './Discador';
+import Cronometro from './Cronometro';
 import Clients from './Clients';
 import Redis from '../Config/Redis'
 
@@ -81,31 +82,134 @@ class Asterisk{
         const observacoes = dados.status
         //Verificando se o numero ja consta em alguma chamada simultanea
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
-        if((chamadasSimultaneas===null)||(chamadasSimultaneas==[])){
+        if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
             return false
         }
-        const dadosAtendimento = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
-        console.log('Dados do Atendimento',dadosAtendimento)      
-        if(dadosAtendimento.length!=0){     
-            const id_numero=dadosAtendimento[0].id_numero
-            console.log('id_numero',dadosAtendimento[0].id_numero)     
-            const idCampanha = dadosAtendimento[0].id_campanha
-            const idMailing = dadosAtendimento[0].id_mailing
-            const idRegistro = dadosAtendimento[0].id_registro
-            const tabela_numeros = dadosAtendimento[0].tabela_numeros
-            const tipo_ligacao = dadosAtendimento[0].tipo
-            const numero = dadosAtendimento[0].numero
+        const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
+        console.log('Dados do Atendimento',dadosChamada)      
+        if(dadosChamada.length!=0){     
+            const id_numero=dadosChamada[0].id_numero
+            console.log('id_numero',dadosChamada[0].id_numero)     
+            const idCampanha = dadosChamada[0].id_campanha
+            const idMailing = dadosChamada[0].id_mailing
+            const idRegistro = dadosChamada[0].id_registro
+            const tabela_numeros = dadosChamada[0].tabela_numeros
+            const tipo_ligacao = dadosChamada[0].tipo
+            const numero = dadosChamada[0].numero
             //Status de tabulacao referente ao nao atendido
             const contatado = 'N'
             const produtivo = 0
             const status_tabulacao = 0
-
-            await Discador.autoTabulacao(empresa,idCampanha,idMailing,idRegistro,id_numero,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros)
+            await Discador.autoTabulacao(empresa,0,idCampanha,idMailing,idRegistro,id_numero,0,0,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros)
             chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.idAtendimento == idAtendimento),1)
             await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)
             return true
         }
         return false
+    }
+    //Atualiza registros em uma fila de espera
+    async setaRegistroNaFila(dados){   
+        const empresa = dados.empresa
+        const idAtendimento = dados.idAtendimento
+        const observacoes = dados.status
+        //Verificando se o numero ja consta em alguma chamada simultanea
+        const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+        console.log("\n","Dados das chamadas",chamadasSimultaneas)
+        if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
+            return false
+        }
+        console.log("\n","INICIAR SEPARAÇÃO DE REGISTRO")
+        const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
+        console.log("\n","Dados do Atendimento",dadosChamada)
+        console.log("\n","Atualizando registro na fila")
+        dadosChamada[0].event_na_fila = 1
+        console.log("\n","Registro Atualizado",dadosChamada)
+        const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
+        const concatenarAtendimentos=outrosAtendimentos.concat(dadosChamada)
+        console.log("\n","Todos atendimentos",concatenarAtendimentos)
+        await Redis.setter(`${empresa}:chamadasSimultaneas`,concatenarAtendimentos)
+        const info = {}
+              info['id_campanha']=dadosChamada[0].id_campanha
+              info['id_mailing']=dadosChamada[0].id_mailing
+              info['id_registro']=dadosChamada[0].id_registro
+        return info
+    }
+    //Desliga chamada 
+    async desligaChamada(dados){
+        const empresa = dados.empresa
+        const idAtendimento = dados.idAtendimento
+        const numero = dados.numero
+        const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+        if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
+            return false
+        }        
+        let dadosChamada=[]
+        if(idAtendimento==0){
+            dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)
+        }else{
+            dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)
+        }
+        if(dadosChamada[0].tipo_discador=='manual'){
+            await Cronometro.saiuLigacao(empresa,0,numero,dadosChamada[0].ramal)
+            return true
+        }
+
+        if(dadosChamada[0].event_na_fila==1){
+            const idRegistro=dadosChamada[0].id_registro
+            const uniqueid=dadosChamada[0].uniqueid
+            const idNumero=dadosChamada[0].id_numero
+            const idCampanha=dadosChamada[0].id_campanha
+            const tipo_ligacao=dadosChamada[0].tipo_ligacao
+            const idMailing=dadosChamada[0].id_mailing
+            const ramal=dadosChamada[0].ramal
+            const protocolo=dadosChamada[0].protocolo
+            const tabulacao = 0
+            const contatado = 'N'
+            const produtivo = 0
+            const tabela_numeros = dadosChamada[0].tabela_numeros
+            let observacoes = motivo
+            if(abandonada==true){
+                observacoes="ABANDONADA";
+            }
+            const removeNumero =0
+            //retira da fila e registra como abandonou fila
+            await Cronometro.saiuDaFila(empresa,numero)
+            //Registra histórico de chamada
+            await Discador.autoTabulacao(empresa,protocolo,idCampanha,idMailing,idRegistro,idNumero,ramal,uniqueid,numero,tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros)
+            //remove chamada simultanea
+            if(idAtendimento==0){
+                chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.numero == numero),1)
+            }else{
+                chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.idAtendimento == idAtendimento),1)
+            }
+            await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)   
+            return true         
+        }else{
+            const chamadasEmAtendimento = await Redis.getter(`${empresa}:chamadasEmAtendimento`)
+            if((chamadasEmAtendimento===null)||(chamadasEmAtendimento.length==0)){
+                return false
+            }   
+            let dadosAtendimento=[]
+            let outrosAtendimentos=[]
+            if(idAtendimento==0){
+                dadosAtendimento = chamadasEmAtendimento.filter(atendimento => atendimento.numero == numero)
+            }else{
+                dadosAtendimento = chamadasEmAtendimento.filter(atendimento => atendimento.idAtendimento == idAtendimento)
+            }
+            console.log("\n","Dados do Atendimento",dadosAtendimento)
+            console.log("\n","Atualizando registro como desligado")
+            dadosAtendimento[0].event_desligada = 1
+            console.log("\n","Registro Atualizado",dadosAtendimento)
+            if(idAtendimento==0){
+                outrosAtendimentos = chamadasEmAtendimento.filter(atendimento => atendimento.numero != numero)
+            }else{
+                outrosAtendimentos = chamadasEmAtendimento.filter(atendimento => atendimento.idAtendimento != idAtendimento)
+            }
+            const concatenarAtendimentos=outrosAtendimentos.concat(dadosAtendimento)
+            console.log("\n","Todos atendimentos",concatenarAtendimentos)
+            await Redis.setter(`${empresa}:chamadasEmAtendimento`,concatenarAtendimentos)
+            return true
+        } 
     }
 
 

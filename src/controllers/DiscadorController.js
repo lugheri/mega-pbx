@@ -201,7 +201,8 @@ class DiscadorController{
         const idRegistro = registro['id_registro']
         const numero = registro['numero']
         const idNumero = registro['idNumero']
-        const idAtendimento = moment().format("YMMDDHHmmss")
+        const date =  moment().format("YMMDDHHmmss")
+        const idAtendimento = `${idCampanha}${date}${idNumero}`
         //console.log('ID NUMERO', idNumero)
         const checkReg = await Discador.checandoRegistro(empresa,idRegistro,idCampanha)
         if(checkReg === true) return false;
