@@ -5,7 +5,6 @@ import Campanhas from '../models/Campanhas'
 
 import User from '../models/User'
 import Clients from '../models/Clients';
-import Cronometro from '../models/Cronometro'
 import moment from 'moment';
 import Redis from '../Config/Redis';
 
@@ -22,7 +21,6 @@ class DiscadorController{
               retorno["ligacoesManuais"]=chamadasManuais['chamadas']
         res.json(retorno)
     }
-
     async checkAccounts(){ 
         let clientesAtivos=await Redis.getter('empresas')    
         if(!clientesAtivos){
@@ -78,6 +76,8 @@ class DiscadorController{
                   parametrosDiscador['ordem_discagem']= campanhasAtivas[i].ordem_discagem
                   parametrosDiscador['modo_atendimento']= campanhasAtivas[i].modo_atendimento
                   parametrosDiscador['saudacao']= campanhasAtivas[i].saudacao
+                 
+                  
             //Conta chamadas simultaneas e agressividade e compara com os agentes disponiveis
             const qtdChamadasSimultaneas=await Discador.totalChamadasSimultaneas(empresa,idCampanha)
                        
@@ -105,7 +105,6 @@ class DiscadorController{
             await this.iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador,qtdChamadasSimultaneas)  
         } 
     } 
-
     async iniciaPreparacaoDiscador(empresa,idCampanha,idFila,nomeFila,tabela_dados,tabela_numeros,idMailing,parametrosDiscador,qtdChamadasSimultaneas){
         const agentes = await Discador.agentesNaFila(empresa,idFila)//Verifica se existem agentes na fila
         if(agentes==0){
@@ -198,12 +197,12 @@ class DiscadorController{
             this.prepararDiscagem(empresa,idCampanha,parametrosDiscador,idMailing,tabela_dados,tabela_numeros,registro,idFila,nomeFila,qtdChamadasSimultaneas,limiteDiscagem)
         }
     }
-
     async prepararDiscagem(empresa,idCampanha,parametrosDiscador,idMailing,tabela_dados,tabela_numeros,registro,idFila,nomeFila,qtdChamadasSimultaneas,limiteDiscagem){
         const idRegistro = registro['id_registro']
         const numero = registro['numero']
         const idNumero = registro['idNumero']
-        const idAtendimento = moment().format("YMMDDHHmmss")
+        const date =  moment().format("YMMDDHHmmss")
+        const idAtendimento = `${idCampanha}${date}${idNumero}`
         //console.log('ID NUMERO', idNumero)
         const checkReg = await Discador.checandoRegistro(empresa,idRegistro,idCampanha)
         if(checkReg === true) return false;

@@ -113,12 +113,12 @@ class CampanhasController{
      async atualizaCampanha(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.idCampanha);
-        const valores = req.body
+        const valores = req.body       
         await Campanhas.atualizaCampanha(empresa,idCampanha,valores)
-        if(valores.estado!=1){
+        if(valores.estado!=1){           
             await Discador.clearCallsCampanhas(empresa,idCampanha)
         }
-        const agentesCampanhas = await Campanhas.membrosCampanhas(empresa,idCampanha)
+        const agentesCampanhas = await Campanhas.membrosCampanhas(empresa,idCampanha)        
         for(let i=0; i<agentesCampanhas.length; i++){
             await Redis.delete(`${empresa}:campanhasAtivasAgente:${agentesCampanhas[i].ramal}`)
         }

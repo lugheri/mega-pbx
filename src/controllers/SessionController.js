@@ -8,9 +8,12 @@ import Redis from '../Config/Redis'
 import moment from 'moment'
 
 class SessionController{
-    async store(req,res){          
+    async store(req,res){      
+       
         const {usuario,senha} = req.body;
         const e = await User.findEmpresa(usuario);
+
+            
         
         if(!e[0]){
             res.json({userNotFound:'Empresa não encontrada!'})

@@ -2,7 +2,7 @@ import connect from '../Config/dbConnection'
 import Clients from './Clients'
 import User from '../models/User'
 import Asterisk from '../models/Asterisk'
-import Discador from '../models/Discador'
+import Agente from '../models/Agente'
 
 class Filas{
     async querySync(conn,sql){         
@@ -310,7 +310,7 @@ class Filas{
                     resolve(false)
                     return false
                 }
-                const estado = await Discador.statusRamal(empresa,ramal)
+                const estado = await Agente.statusRamal(empresa,ramal)
                 let sql = `INSERT INTO ${empresa}_dados.agentes_filas 
                                     (ramal,fila,estado,ordem) 
                             VALUES (${ramal},${idFila},${estado['estado']},0)`
