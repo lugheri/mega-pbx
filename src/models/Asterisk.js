@@ -83,6 +83,7 @@ class Asterisk{
         if((chamadasSimultaneas===null)||(chamadasSimultaneas==[])){
             return false
         }
+        console.log('chamadasSimultaneas antes',chamadasSimultaneas)
         const dadosAtendimento = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
         console.log('Dados do Atendimento',dadosAtendimento)      
         if(dadosAtendimento.length!=0){     
@@ -101,6 +102,7 @@ class Asterisk{
 
             await Discador.autoTabulacao(empresa,idCampanha,idMailing,idRegistro,id_numero,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros)
             chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.idAtendimento == idAtendimento),1)
+            console.log('chamadasSimultaneas apos',chamadasSimultaneas)
             await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)
             return true
         }
