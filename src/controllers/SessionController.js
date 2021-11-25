@@ -63,26 +63,11 @@ class SessionController{
     async validate(req,res){
         const authHeader = req.headers.authorization;
         let payload = jwt.verify(authHeader, process.env.APP_SECRET);
-        let lastAuth = await Redis.getter(`${payload['empresa']}:authRamal:${payload['userId']}`)
         const now = moment(new Date())
         const empresa = payload['empresa']
         const ramal = payload['userId']
-        
-        await Redis.getter(`${empresa}_authRamal_${ramal}`,moment(new Date()),7200)
+        await Redis.setter(`${ramal}:logado`,true,90)
 
-
-        if(lastAuth===null){
-            await Redis.getter(`${empresa}:authRamal:${ramal}`,moment(new Date()),7200)
-        }else{
-            const acao='logout'
-            const duration = moment.duration(now.diff(lastAuth))
-            const seconds = duration.asSeconds()
-            if(seconds>120){
-                await User.setToken(empresa,ramal,'')
-                await User.registraLogin(empresa,ramal,acao)
-                payload=false
-            }            
-        }
         res.json(payload)
     }
 

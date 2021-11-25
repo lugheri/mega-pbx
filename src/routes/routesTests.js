@@ -8,5 +8,7 @@ module.exports = (routes) => {
     routes.get('/dialPowerTest/:ramal/:numero', TestController.dialPowerTest)
 
     //Chaves Redis
-    routes.post('/getRedisKeys',TestController.getRedisKeys)
+    routes.post('/getAllRedisKeys',TestController.getAllRedisKeys)
+    routes.delete('/delAllRedisKeys',TestController.delAllRedisKeys)
+    routes.get('/chamadasSimultaneas/:empresa/:ramal',TestController.chamadasSimultaneas)
 }

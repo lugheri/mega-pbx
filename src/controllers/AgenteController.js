@@ -48,7 +48,6 @@ class AgenteController{
             status['tempo']=tempo             
         res.json(status);
     }
-
     async statusDeChamadaManual(req,res){
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
@@ -64,6 +63,7 @@ class AgenteController{
         const ramal = req.params.ramal
         const estado = 4//Estado do Agente: 1=Disponível;2=Em Pausa;3=Falando;4=Indisponível;
         const pausa = 0//Caso o estado do agente seja igual a 2 informa o cod da pausa 
+        await Redis.delete(`${empresa}:atendimentoAgente:${ramal}`)
         await Agente.alterarEstadoAgente(empresa,ramal,estado,pausa)        
         res.json(true);               
     }
@@ -73,8 +73,10 @@ class AgenteController{
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
         //console.log(ramal)
-        const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-        if(atendimentoAgente===null){
+        const dadosChamada = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+
+        console.log('> > > > > > > > > > > > > > > > > > > > dados chamada',dadosChamada)
+        if((dadosChamada===null)||(dadosChamada.length==0)){
             const mode={}
                 mode['sistemcall']=false
                 mode['dialcall']=false
@@ -83,60 +85,68 @@ class AgenteController{
                 mode['config']['modo_atendimento']="manual"
             res.json(mode)
             return false;
-        }
-
-        const modo_atendimento = atendimentoAgente['modo_atendimento']
-        const numero = atendimentoAgente['numero']
-        const idMailing = atendimentoAgente['id_mailing']
-        const tipo_discador = atendimentoAgente['tipo_discador']
-        const tipo_ligacao= atendimentoAgente['tipo_ligacao']
-        const retorno = atendimentoAgente['retorno']
-        const idReg = atendimentoAgente['id_registro']
-        const id_numero = atendimentoAgente['id_numero']
-        const tabela_dados = atendimentoAgente['tabela_dados']
-        const tabela_numeros = atendimentoAgente['tabela_numeros']
-        const idCampanha = atendimentoAgente['id_campanha']
-        const protocolo = atendimentoAgente['protocolo']
-    
-        //Caso a chamada nao possua id de registro
-        if(idReg==0){           
-            res.json({"sistemcall":false,"dialcall":false})             
-        }
-
-        const info = {};
-        if((tipo_ligacao=='discador')||(tipo_ligacao==='retorno')){
-            info['sistemcall']=false
-            info['dialcall']=true
-        }else if(tipo_ligacao=='interna'){
-            info['sistemcall']=true
-            info['dialcall']=false
         }else{
-            info['sistemcall']=false
-            info['dialcall']=false
+           
+            const modo_atendimento = 'auto'// atendimentoAgente['modo_atendimento']
+            const numero = dadosChamada[0].numero
+            const idMailing = dadosChamada[0].id_mailing
+            const tipo_discador = dadosChamada[0].tipo_discador
+            const tipo= dadosChamada[0].tipo
+            const idReg = dadosChamada[0].id_registro
+            const id_numero = dadosChamada[0].id_numero
+            const tabela_dados = dadosChamada[0].tabela_dados
+            const tabela_numeros = dadosChamada[0].tabela_numeros
+            const idCampanha = dadosChamada[0].id_campanha
+            const protocolo = dadosChamada[0].idAtendimento            
+            let sistemcall=false
+            let dialcall=false
+            //Caso a chamada nao possua id de registro
+            if(idReg==0){           
+                res.json({"sistemcall":sistemcall,"dialcall":dialcall})             
+            }
+            if(tipo=='Discador'){
+                sistemcall=false
+                dialcall=true
+            }else if(tipo=='interna'){
+                sistemcall=true
+                dialcall=false
+            }else{
+                sistemcall=false
+                dialcall=false
+            }
+
+            const info = {};
+            info['sistemcall']=sistemcall
+            info['dialcall']=dialcall
+
+            info['dados']={}
+            info['dados']['sistemcall']=sistemcall
+            info['dados']['dialcall']=dialcall
+            info['dados']['idAtendimento']=protocolo
+            info['dados']['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal)
+            info['dados']['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)
+            info['dados']['tipo_discador']=tipo_discador
+            info['dados']['retorno']=false
+            info['dados']['modo_atendimento']=modo_atendimento
+            info['dados']['idMailing']=idMailing              
+            info['dados']['tipo_ligacao']=tipo
+            info['dados']['protocolo']=protocolo
+            const nomeCliente = await Discador.campoNomeRegistro(empresa,idMailing,idReg,tabela_dados)
+            info['dados']['nome_registro']=nomeCliente
+            info['dados']['campos']={}
+            info['dados']['campos']['idRegistro']=idReg
+            info['dados']['campos']['Nome']=nomeCliente
+            const numeros = await Discador.infoChamada_byDialNumber(empresa,idCampanha,idReg,id_numero,tabela_numeros,numero)
+            info['dados']['numeros'] = numeros['numeros']
+            info['dados']['id_numeros_discado'] = numeros['id_numeros_discado']
+            info['dados']['numeros_discado'] = numeros['numeros_discado']
+            info['dados']['dadosCampanha'] = numeros['dadosCampanha']
+            info['config'] = {}
+            info['config']['origem']="discador"
+            info['config']['modo_atendimento']=modo_atendimento
+
+            res.json(info)              
         }
-        //Integração                    
-        info['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal)
-        info['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)
-        info['tipo_discador']=tipo_discador
-        if(retorno==1){
-            info['retorno']=true
-        }else{
-            info['retorno']=false
-        }
-        info['modo_atendimento']=modo_atendimento
-        info['idMailing']=idMailing              
-        info['tipo_ligacao']=tipo_ligacao
-        info['protocolo']=protocolo
-        info['nome_registro']=await Discador.campoNomeRegistro(empresa,idMailing,idReg,tabela_dados)
-        info['campos']={}
-        info['campos']['idRegistro']=idReg
-        //Dados do atendimento        
-        const infoChamada = await Discador.infoChamada_byDialNumber(empresa,numero)       
-        info['dados']=infoChamada
-        info['config'] = {}
-        info['config']['origem']="discador"
-        info['config']['modo_atendimento']=modo_atendimento
-        res.json(info)              
     }
 
     //Atende chamada, e muda o estado do agente para falando
@@ -149,18 +159,15 @@ class AgenteController{
         const estadoAgente = await Agente.infoEstadoAgente(empresa,ramal)
         if(estadoAgente!=3){
             await Agente.alterarEstadoAgente(empresa,ramal,estado,pausa)
-            res.json(true)
         }
-        /*//Verifica se ramal ja esta atribuido
-        const dados = await Discador.atendeChamada(empresa,ramal)
-        res.json(dados); */
-        res.json(false)      
+        res.json(true)      
     }
 
     async dadosChamadaAtendida(req,res){
+        console.log('Dados Chamada')
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
-        //console.log(ramal)
+        console.log('Chave',`${empresa}:atendimentoAgente:${ramal}`)
         const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
         if(atendimentoAgente===null){
             const mode={}
@@ -169,13 +176,14 @@ class AgenteController{
                 mode['config'] = {}
                 mode['config']['origem']="interna"
                 mode['config']['modo_atendimento']="manual"
+
+                console.log('Sem Dados',mode)
             res.json(mode)
             return false;
         }
-
         const modo_atendimento = atendimentoAgente['modo_atendimento']
         const numero = atendimentoAgente['numero']
-
+        const idAtendimento = atendimentoAgente['idAtendimento']
         const idMailing = atendimentoAgente['id_mailing']
         const tipo_discador = atendimentoAgente['tipo_discador']
         const tipo_ligacao= atendimentoAgente['tipo_ligacao']
@@ -186,9 +194,10 @@ class AgenteController{
         const tabela_numeros = atendimentoAgente['tabela_numeros']
         const idCampanha = atendimentoAgente['id_campanha']
         const protocolo = atendimentoAgente['protocolo']
-    
+
         //Caso a chamada nao possua id de registro
         if(idReg==0){           
+            console.log('Sem id')
             res.json({"sistemcall":false,"dialcall":false})             
         }
 
@@ -203,10 +212,9 @@ class AgenteController{
             info['sistemcall']=false
             info['dialcall']=false
         }
-
-        //Integração                    
+        //Integração  
         info['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal)
-        info['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)
+        info['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)  
         info['tipo_discador']=tipo_discador
         if(retorno==1){
             info['retorno']=true
@@ -214,21 +222,25 @@ class AgenteController{
             info['retorno']=false
         }
         info['modo_atendimento']=modo_atendimento
-        info['idMailing']=idMailing              
+        info['idMailing']=idMailing  
         info['tipo_ligacao']=tipo_ligacao
         info['protocolo']=protocolo
-        info['nome_registro']=await Discador.campoNomeRegistro(empresa,idMailing,idReg,tabela_dados)
+        const nomeCliente = await Discador.campoNomeRegistro(empresa,idMailing,idReg,tabela_dados)
+        info['nome_registro']=nomeCliente
         info['campos']={}
         info['campos']['idRegistro']=idReg
+        info['campos']['Nome']=nomeCliente
 
-
-        //Dados do atendimento        
-        const infoChamada = await Discador.infoChamada_byDialNumber(empresa,numero)
-        
-        info['dados']=infoChamada
+        const numeros = await Discador.infoChamada_byDialNumber(empresa,idCampanha,idReg,id_numero,tabela_numeros,numero)
+        info['numeros'] = numeros['numeros']
+        info['id_numeros_discado'] = numeros['id_numeros_discado']
+        info['numeros_discado'] = numeros['numeros_discado']
+        info['dadosCampanha'] = numeros['dadosCampanha']
         info['config'] = {}
         info['config']['origem']="discador"
         info['config']['modo_atendimento']=modo_atendimento
+
+        console.log('Info',info)
         res.json(info) 
     }
 
@@ -310,8 +322,9 @@ class AgenteController{
     async statusTabulacaoChamada(req,res){
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
-        const dadosAtendimento = await Redis.getter(`${empresa}:dadosAtendimento:${ramal}`)
-        const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+        const dadosAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)     
+
+        console.log('dados Atendimento',`${empresa}:atendimentoAgente:${ramal}`,dadosAtendimento)
         if(dadosAtendimento===null){
             const error={}
                 error['message']=`Nenhuma chamada em atendimento para o ramal ${ramal}`
@@ -320,7 +333,6 @@ class AgenteController{
             return false
         }
         const idCampanha = dadosAtendimento['id_campanha']
-        const idAtendimento = 0
         const idMailing = dadosAtendimento['id_mailing']
         const idRegistro = dadosAtendimento['id_registro']
         const tabelaDados = dadosAtendimento['tabela_dados']
@@ -335,13 +347,9 @@ class AgenteController{
             res.json(error)
             return false
         }
-        //Atualiza registro como tabulando e retorna id da campanha
-        for(let cs=0;cs<chamadasSimultaneas.length;cs++){
-            if((chamadasSimultaneas[cs].id_campanha==idCampanha)&&(chamadasSimultaneas[cs].numero==numero)){
-                chamadasSimultaneas[cs].event_tabulando=1
-            }
-        }
-        await Redis.getter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)
+
+        dadosAtendimento['event_tabulando']=1
+        await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,dadosAtendimento)
                         
         //Pega os status de tabulacao da campanha
         res.json(tabulacoesCampanha)
@@ -414,7 +422,7 @@ class AgenteController{
             const produtivo = 0
             const status_tabulacao=0
             const observacao = ''
-            const r = await Discador.tabulaChamada(empresa,contatado,status_tabulacao,observacao,produtivo,ramal)
+            const r = await Discador.tabulaChamada(empresa,contatado,status_tabulacao,observacao,produtivo,ramal,dadosChamadaDesligada['id_numero'],0)
             //Remove chamada simultanea 
             await Agente.clearCallsAgent(empresa,ramal);
             //Atualiza estado do agente para disponivel
@@ -553,8 +561,8 @@ class AgenteController{
             produtivo=0
         } 
 
-        const dadosAtendimento = await Redis.getter(`${empresa}:dadosAtendimento:${ramal}`)
-        if((dadosAtendimento===null)&&(dadosAtendimento.length==0)){
+        const dadosAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+        if((dadosAtendimento===null)&&(dadosAtendimento=={})){
             res.json(false);
             return false
         }

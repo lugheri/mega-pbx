@@ -2,7 +2,7 @@ import connect from '../Config/dbConnection';
 import Clients from './Clients'
 import jwt from 'jsonwebtoken';
 import md5 from 'md5';
-import Discador from './Discador';
+import Agente from './Agente';
 import Redis from '../Config/Redis';
 
 class User{
@@ -44,7 +44,7 @@ class User{
                 pool.end((err)=>{
                     if(err) console.log(err)
                 })
-                await Redis.setter(`${empresa}:nomeEmpresa`,empresa,120) 
+                await Redis.setter(`${empresa}:nomeEmpresa`,rows[0].name,7200) 
                 resolve(rows[0].name)   
             })  
         })        
@@ -80,13 +80,15 @@ class User{
     }
 
     async registraLogin(empresa,usuarioId,acao){
-        await Redis.delete(`${usuarioId}:estadoRamal`)
+        await Redis.delete(`${usuarioId}:estadoRamal`)        
+        await Redis.delete(`${empresa}:listarAgentesLogados`)
         return new Promise (async (resolve,reject)=>{        
             let sql
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 if(acao=='login'){
+                    await Redis.setter(`${usuarioId}:logado`,true,90)
                     //checa a ultima acao do agente 
                     sql = `SELECT acao FROM ${empresa}_dados.registro_logins WHERE user_id=${usuarioId} ORDER BY id DESC LIMIT 1`
                     //Executando query
@@ -109,7 +111,9 @@ class User{
                        
                     sql = `UPDATE ${empresa}_dados.user_ramal SET estado=4, datetime_estado=NOW() WHERE userId=${usuarioId}`
                     await this.querySync(conn,sql) 
-                }else{                
+                    
+                }else{     
+                    await Redis.delete(`${usuarioId}:logado`)           
                     //Atualiza em todas as filas estado como 0
                     sql = `UPDATE ${empresa}_dados.agentes_filas SET estado=0, idpausa=0 WHERE ramal=${usuarioId}`
                     await this.querySync(conn,sql) 
@@ -268,7 +272,7 @@ class User{
         const payload = jwt.verify(authHeader, process.env.APP_SECRET);
         const ramal = payload.userId
         const empresa = payload.empresa
-        const estadoRamal = await Discador.statusRamal(empresa,ramal)        
+        const estadoRamal = await Agente.statusRamal(empresa,ramal)        
         if(estadoRamal.lenght==0){
             if(estadoRamal['estado']==undefined){
                 return 0

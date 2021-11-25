@@ -10,6 +10,7 @@ import Discador from './Discador';
 import Cronometro from './Cronometro';
 import Clients from './Clients';
 import Redis from '../Config/Redis'
+import Agente from '../models/Agente';
 
 class Asterisk{
     async querySync(conn,sql){         
@@ -48,7 +49,7 @@ class Asterisk{
 
     async servidorWebRTC(empresa){//Ip da maquina onde o asterisk esta instalado
         const servidorWebRTC = await Redis.getter(`${empresa}:servidorWebRTC`)
-       
+        
         if(servidorWebRTC!==null){
             return servidorWebRTC
         }
@@ -56,14 +57,17 @@ class Asterisk{
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+
                 const sql = `SELECT * 
                                FROM ${empresa}_dados.servidor_webrtc 
                               WHERE status=1`
-                const rows = this.querySync(conn,sql)
+                const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.log('Asterisk.js 218',err)
                 })
                 await Redis.setter(`${empresa}:servidorWebRTC`,rows,360)
+
+                const newServer = await Redis.getter(`${empresa}:servidorWebRTC`)
                 resolve(rows) 
             })
         })        
@@ -110,6 +114,7 @@ class Asterisk{
     }
     //Atualiza registros em uma fila de espera
     async setaRegistroNaFila(dados){   
+        console.log("\n","}}}}}}}}}}}}}}}}}}}}}} SET REGISTRO NA FILA - - - - - - - - - - - - -")
         const empresa = dados.empresa
         const idAtendimento = dados.idAtendimento
         const observacoes = dados.status
@@ -117,12 +122,14 @@ class Asterisk{
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
         console.log("\n","Dados das chamadas",chamadasSimultaneas)
         if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
+            console.log("\n","[[[[[[[[[[[[[[[[Nao existem chamadas simultaneas]]]]]]]]]]]]]]]]]]")
             return false
         }
         console.log("\n","INICIAR SEPARAÇÃO DE REGISTRO")
         const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
         console.log("\n","Dados do Atendimento",dadosChamada)
         console.log("\n","Atualizando registro na fila")
+        dadosChamada[0].event_chamando = 0
         dadosChamada[0].event_na_fila = 1
         console.log("\n","Registro Atualizado",dadosChamada)
         const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
@@ -143,7 +150,8 @@ class Asterisk{
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
         if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
             return false
-        }        
+        }     
+      
         let dadosChamada=[]
         if(idAtendimento==0){
             dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)
@@ -151,7 +159,16 @@ class Asterisk{
             dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)
         }
         if(dadosChamada[0].tipo_discador=='manual'){
-            await Cronometro.saiuLigacao(empresa,0,numero,dadosChamada[0].ramal)
+            const ramal =dadosChamada[0].ramal
+            const estadoAnterior = dadosChamada[0].estadoAnterior
+            let idPausa=0
+            if(estadoAnterior==2){
+                idPausa=dadosChamada[0].idPausa
+            }
+            chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.numero == numero),1)
+            await Agente.alterarEstadoAgente(empresa,ramal,estadoAnterior,idPausa)
+            await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)
+            await Cronometro.saiuLigacao(empresa,0,numero,ramal)
             return true
         }
 
@@ -168,8 +185,8 @@ class Asterisk{
             const contatado = 'N'
             const produtivo = 0
             const tabela_numeros = dadosChamada[0].tabela_numeros
-            let observacoes = motivo
-            if(abandonada==true){
+            let observacoes = dados.motivo
+            if(dados.abandonada==true){
                 observacoes="ABANDONADA";
             }
             const removeNumero =0
@@ -200,6 +217,7 @@ class Asterisk{
             console.log("\n","Dados do Atendimento",dadosAtendimento)
             console.log("\n","Atualizando registro como desligado")
             dadosAtendimento[0].event_desligada = 1
+            dadosAtendimento[0].event_falando = 0
             console.log("\n","Registro Atualizado",dadosAtendimento)
             if(idAtendimento==0){
                 outrosAtendimentos = chamadasEmAtendimento.filter(atendimento => atendimento.numero != numero)
@@ -211,6 +229,25 @@ class Asterisk{
             await Redis.setter(`${empresa}:chamadasEmAtendimento`,concatenarAtendimentos)
             return true
         } 
+    }
+
+    async setRecord(empresa,data,hora,ramal,uniqueid,numero,callfilename){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                
+                const sql = `INSERT INTO ${empresa}_dados.records
+                                        (date,date_record,time_record,ramal,uniqueid,numero,callfilename)
+                                VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}','${numero}','${callfilename}')`
+                await this.querySync(conn,sql)
+                const rows = await this.servidorWebRTC(empresa)     
+                pool.end((err)=>{
+                    if(err) console.log('Asterisk.js 157',err)
+                })
+                resolve(rows) 
+            })
+        })           
     }
 
 
@@ -271,24 +308,7 @@ class Asterisk{
 
 
 
-    async setRecord(empresa,data,hora,ramal,uniqueid,numero,callfilename){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                
-                const sql = `INSERT INTO ${empresa}_dados.records
-                                        (date,date_record,time_record,ramal,uniqueid,numero,callfilename)
-                                VALUES (now(),'${data}','${hora}','${ramal}','${uniqueid}','${numero}','${callfilename}')`
-                await this.querySync(conn,sql)
-                const rows = await this.servidorWebRTC(empresa)     
-                pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 157',err)
-                })
-                resolve(rows) 
-            })
-        })           
-    }
+   
 
     
     

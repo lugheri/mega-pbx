@@ -1,5 +1,6 @@
 import connect from '../Config/dbConnection'
 import Discador from '../models/Discador'
+import Agente from '../models/Agente'
 import Campanhas from '../models/Campanhas'
 import Report from '../models/Report'
 import moment from 'moment'
@@ -142,18 +143,34 @@ class Dashboard{
                 }
                 const agente={}
                       agente["nomeAgente"]=agentes[i].nome
-                let estadoAgente=agentes[i].estado
-                if(estadoAgente==3){
-                    const tabulando = await Report.statusTabulacaoChamada(empresa,idAgente)
-                        if(tabulando==1){
-                            estadoAgente=3.5
-                        }
-                    }else if(estadoAgente==6){
+                      let estadoAgente=agentes[i].estado
+              
+                        const tabulando = await Report.statusTabulacaoChamada(empresa,idAgente)
                         const falando = await Report.statusAtendimentoChamada(empresa,idAgente)
-                        if(falando==1){
-                            estadoAgente=7
+                        console.log('estadoAgente',idAgente,estadoAgente)
+                        console.log('tabulando',idAgente,tabulando)
+                        console.log('falando',idAgente,falando)
+                        if(estadoAgente==3){                   
+                            if(tabulando==1){
+                                estadoAgente=3.5
+                            }
+                            if(falando==0){
+                                await Agente.alterarEstadoAgente(empresa,idAgente,1,0)
+                            }
+                        }else if(estadoAgente==6){   
+                            const falando = await Report.statusAtendimentoChamadaManual(empresa,idAgente)                
+                            if(falando==1){
+                                estadoAgente=7
+                            }
+                        }else if(estadoAgente==5){
+                            if(tabulando==1){
+                                estadoAgente=3.5
+                            }
+                            if(falando==1){
+                                estadoAgente=3
+                            }
                         }
-                    }
+                        console.log('estadoAgente Final',estadoAgente)
                     agente["statusAgente"]=estadoAgente
                     agente["produtivos"]={}
                     agente["produtivos"]["porcentagem"]=perc_produtivas

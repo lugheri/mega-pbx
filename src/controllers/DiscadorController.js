@@ -43,6 +43,7 @@ class DiscadorController{
     }
 
     async campanhasEmpresa(empresa){
+        await Discador.ChamadasSimultaneasManuais(empresa)
         const hoje = moment().format("YYYY-MM-DD")
         const hora = moment().format("HH:mm:ss")
         // Atualiza contagem de chamadas simultaneas
@@ -80,6 +81,7 @@ class DiscadorController{
                   
             //Conta chamadas simultaneas e agressividade e compara com os agentes disponiveis
             const qtdChamadasSimultaneas=await Discador.totalChamadasSimultaneas(empresa,idCampanha)
+            
                        
             const agendamento = await Discador.agendamentoCampanha(empresa,idCampanha)//Verifica se a campanha possui horário de agendamento
             if(agendamento.length==0){
@@ -235,7 +237,7 @@ class DiscadorController{
                 return false;
             }
             const numeroDiscado = numero             
-            await Discador.registraChamada(empresa,idAtendimento,agenteDisponivel,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numeroDiscado,nomeFila)
+            await Discador.registraChamada(empresa,agenteDisponivel,idAtendimento,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numeroDiscado,nomeFila)
             
             const estado = 5 //Estado do agente quando ele esta aguardando a discagem da tela
             await Agente.alterarEstadoAgente(empresa,agenteDisponivel,estado,0)  
@@ -281,7 +283,7 @@ class DiscadorController{
             }   
             if(estadosCampanha==1){
                 //console.log('==>> D I S C A R = > = >') 
-                await Discador.discar(empresa,0,idAtendimento,numero,nomeFila,saudacao,aguarde,idCampanha,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero)          
+                await Discador.discar(empresa,0,idAtendimento,numero,nomeFila,modoAtendimento,saudacao,aguarde,idCampanha,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero)          
             }
         }
     }

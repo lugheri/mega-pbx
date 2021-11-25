@@ -8,8 +8,12 @@ module.exports = (routes) => {
     routes.post('/detalhamentoChamadas',ReportController.detalhamentoChamadas)
     //Monitoramento de Agentes
     routes.post('/monitoramentoAgente',ReportController.monitoramentoAgente)
+     //Assertividade Mailing
+     routes.post('/detalhamentoTabulacoes',ReportController.detalhamentoTabulacoes)
     //Monitoramento de Campanhas
     routes.get('/monitoramentoCampanha/:idCampanha',ReportController.monitoramentoCampanhas)
+   
+
     //Atualiza Agressividade
     routes.patch('/atualizaAgressividade/:idCampanha',ReportController.atualizaAgressividade)
     //LoginXLogout
@@ -28,7 +32,7 @@ module.exports = (routes) => {
 
 
     //Relatórios personalizados
-       //Criar Relatorio
+    //Criar Relatorio
     routes.post('/criarRelatorio', ReportController.criarRelatorio)
     //listar Relatorios
     routes.get('/listarRelatorios', ReportController.listarRelatorios)

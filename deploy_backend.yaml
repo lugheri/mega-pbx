@@ -35,57 +35,57 @@ roleRef:
 ---
 #Backend
 
-#Backend Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: api-svc
-  namespace: megadev-v1
-  labels: 
-    tier: backend
-spec: 
-  selector:
-    app: central-v1
-    tier: backend
-  ports:
-  - protocol: TCP
-    port: 3000
-  type: ClusterIP
----
+##Backend Service
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  name: api-svc
+#  namespace: megadev-v1
+#  labels: 
+#    tier: backend
+#spec: 
+#  selector:
+#    app: central-v1
+#    tier: backend
+#  ports:
+#  - protocol: TCP
+#    port: 3000
+#  type: ClusterIP
+#---
 #Deploy do Backend
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: api-deploy
-  namespace: megadev-v1
-  labels:
-    tier: backend
-spec:
-  selector:
-    matchLabels:
-      app: central-v1
-      tier: backend
-  template:
-    metadata:
-      labels:
-        app: central-v1
-        tier: backend
-    spec:
-      containers:
-      - name: api
-        image: megaconecta/api-central:v0.0.249
-        env:
-          - name: client
-            value: id:1001
-          - name: db_asterisk
-            value: asterisk
-          - name: db_mailings
-            value: mailings
-          - name: db_dados
-            value: mega_conecta
-          - name: TZ
-            value: America/Sao_Paulo
----
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  name: api-deploy
+#  namespace: megadev-v1
+#  labels:
+#    tier: backend
+#spec:
+#  selector:
+#    matchLabels:
+#      app: central-v1
+#      tier: backend
+#  template:
+#    metadata:
+#      labels:
+#        app: central-v1
+#        tier: backend
+#    spec:
+#      containers:
+#      - name: api
+#        image: megaconecta/api-central:v0.0.249
+#        env:
+#          - name: client
+#            value: id:1001
+#          - name: db_asterisk
+#            value: asterisk
+#          - name: db_mailings
+#            value: mailings
+#          - name: db_dados
+#            value: mega_conecta
+#          - name: TZ
+#            value: America/Sao_Paulo
+#---
 #Mysql
 #Mysql service
 kind: Service

@@ -13,7 +13,7 @@ class Agente{
         return new Promise((resolve,reject)=>{            
             conn.execute(sql, (err,rows)=>{
                 if(err){ 
-                    console.error({"errorCode":err.code,"arquivo":"Discador.js:querySync","message":err.message,"stack":err.stack, "sql":sql}) 
+                    console.error({"errorCode":err.code,"arquivo":"Agente.js:querySync","message":err.message,"stack":err.stack, "sql":sql}) 
                     resolve(false);
                 }
                 resolve(rows)
@@ -23,6 +23,7 @@ class Agente{
     //Retorna o estado atual do agente
     async statusRamal(empresa,ramal){
         const redis_estadoRamal = await Redis.getter(`${ramal}:estadoRamal`)
+       
         if(redis_estadoRamal!==null){
             return redis_estadoRamal
         }
@@ -30,7 +31,7 @@ class Agente{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`mysql`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
                 //console.log(empresa,ramal)
                 const sql = `SELECT estado, datetime_estado as tempo
                                FROM ${empresa}_dados.user_ramal 
@@ -44,13 +45,12 @@ class Agente{
                 const estadoAgente = {}
                       estadoAgente['estado']=rows[0].estado
                       estadoAgente['hora']=rows[0].tempo                    
-                await Redis.setter(`${ramal}:estadoRamal`,estadoAgente)
+                await Redis.setter(`${ramal}:estadoRamal`,estadoAgente,60)
 
                 resolve(estadoAgente) 
             })
         }) 
     }
-
     //Muda o status do agente
     async alterarEstadoAgente(empresa,agente,estado,pausa){
         //Removendo caches do redis
@@ -65,6 +65,10 @@ class Agente{
         await Redis.delete(`${empresa}:agentesFalando`)
         await Redis.delete(`${empresa}:agentesEmPausa`)
         await Redis.delete(`${empresa}:agentesDisponiveis`)
+        await Redis.delete(`${empresa}:listarAgentesLogados`)
+        if(estado>0){
+            await Redis.setter(`${agente}:logado`,true,90)
+        }
         //Lista as filas do agente 
         const filasAgente = await Filas.filasAgente(empresa,agente)
         for(let i=0;i<filasAgente.length;i++){
@@ -75,7 +79,7 @@ class Agente{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
 
                 //Recuperando estado anterior do agente
                 const estadoAnterior = await this.infoEstadoAgente(empresa,agente)
@@ -126,7 +130,7 @@ class Agente{
                                     WHERE membername=${agente}`
                             await this.querySync(connAst,sql) 
                             poolAsterisk.end((err)=>{
-                                if(err) console.log('Discador.js 1998', err)
+                                if(err) console.log('Agente.js 1998', err)
                             })
                         })
                         //Atualizando o novo estado do agente como        
@@ -160,7 +164,7 @@ class Agente{
                                     WHERE membername=${agente}`
                             await this.querySync(connAst,sql) 
                             poolAsterisk.end((err)=>{
-                                if(err) console.log('Discador.js 2028', err )
+                                if(err) console.log('Agente.js 2028', err )
                             }) 
                         })
                         Cronometro.iniciaOciosidade(empresa,agente)
@@ -185,7 +189,7 @@ class Agente{
                                         WHERE membername=${agente}`
                                 await this.querySync(connAst,sql) 
                                 poolAsterisk.end((err)=>{
-                                    if(err) console.log('Discador.js 2053', err )
+                                    if(err) console.log('Agente.js 2053', err )
                                 }) 
                             })
                             Cronometro.iniciaOciosidade(empresa,agente)
@@ -206,7 +210,7 @@ class Agente{
                                         WHERE membername='${agente}'`    
                                 await this.querySync(connAst,sql) 
                                 poolAsterisk.end((err)=>{
-                                    if(err) console.log('Discador.js ...', err )
+                                    if(err) console.log('Agente.js ...', err )
                                 }) 
                             })  
                             let agora = moment().format("HH:mm:ss")
@@ -297,7 +301,7 @@ class Agente{
                                 WHERE membername='${agente}'`    
                         await this.querySync(connAst,sql) 
                         poolAsterisk.end((err)=>{
-                            if(err) console.log('Discador.js ...', err )
+                            if(err) console.log('Agente.js ...', err )
                         }) 
                     })  
 
@@ -328,7 +332,7 @@ class Agente{
                             WHERE membername=${agente}`
                             await this.querySync(connAst,sql) 
                         poolAsterisk.end((err)=>{
-                           if(err) console.log('Discador.js ...', err )
+                           if(err) console.log('Agente.js ...', err )
                         }) 
                     })   
                     Cronometro.pararOciosidade(empresa,agente)
@@ -343,7 +347,7 @@ class Agente{
                                 WHERE membername=${agente}`
                         await this.querySync(connAst,sql) 
                         poolAsterisk.end((err)=>{
-                            if(err) console.log('Discador.js ...', err )
+                            if(err) console.log('Agente.js ...', err )
                         }) 
                     })     
                     if(estadoAnterior==3){
@@ -371,7 +375,7 @@ class Agente{
                                 WHERE membername=${agente}`
                         await this.querySync(connAst,sql) 
                         poolAsterisk.end((err)=>{
-                            if(err) console.log('Discador.js ...', err )
+                            if(err) console.log('Agente.js ...', err )
                         }) 
                     })     
                 }
@@ -385,7 +389,7 @@ class Agente{
                                 WHERE membername=${agente}`
                         await this.querySync(connAst,sql) 
                         poolAsterisk.end((err)=>{
-                            if(err) console.log('Discador.js ...', err )
+                            if(err) console.log('Agente.js ...', err )
                         }) 
                     })                    
                 }               
@@ -412,7 +416,6 @@ class Agente{
             })
         }) 
     }
-
     async infoEstadoAgente(empresa,ramal){
         const estadoAgente = await Redis.getter(`${ramal}:estadoRamal`)
         if(estadoAgente!==null){
@@ -422,7 +425,7 @@ class Agente{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
                 const sql = `SELECT estado 
                                FROM ${empresa}_dados.user_ramal 
                               WHERE ramal='${ramal}'`
@@ -441,7 +444,6 @@ class Agente{
             })
         })         
     }
-
     //Dados do Agente
     async infoAgente(empresa,ramal){
         const infoAgente = await Redis.getter(`${ramal}:infoAgente`)
@@ -451,7 +453,7 @@ class Agente{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
                 const sql = `SELECT id as ramal, nome 
                                FROM ${empresa}_dados.users 
                               WHERE id=${ramal}`
@@ -465,6 +467,54 @@ class Agente{
             })
         })              
     }
+    //Desliga Chamada
+    async desligaChamada(empresa,ramal){
+        const atendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+        if((atendimento===null)||(atendimento.length==0)){
+            return false
+        }
+        atendimento['event_desligada']=1
+        await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,atendimento,43200)
+        //Para cronometro do atendimento
+        await Cronometro.saiuLigacao(empresa,atendimento['id_campanha'],atendimento['numero'],ramal)
+        return(atendimento) 
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+    
+
+    
+
+    
+
+    
 
     //Retorna o histórico de atendimento do registro
     async historicoRegistro(empresa,idMailing,idReg){
@@ -475,7 +525,7 @@ class Agente{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
                 //Caso o mailing seja 0 sera considerado como um historico de chamada manual
                 let sql
                 let fNumeros=''
@@ -552,13 +602,13 @@ class Agente{
 
     async historicoRegistroChamadaManual(empresa,numero,agente){
         const historicoRegistroChamadaManual = await Redis.getter(`${empresa}:historicoRegistroChamadaManual:${numero}:agente:${agente}`)
-        if(historicoRegistroChamadaManual===null){
+        if(historicoRegistroChamadaManual!==null){
             return historicoRegistroChamadaManual
         }
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{     
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT nome_registro,numero_discado,agente,                    
                             DATE_FORMAT (data,'%d/%m/%Y') AS dia,
@@ -599,7 +649,7 @@ class Agente{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT h.id,
                                     nome_registro,
@@ -633,7 +683,7 @@ class Agente{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
                 let sql = `SELECT id 
                              FROM ${empresa}_dados.historico_atendimento 
                             WHERE numero_discado LIKE '%${numero}'
@@ -671,7 +721,7 @@ class Agente{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
 
                 let sql = `SELECT *
                             FROM ${empresa}_dados.historico_atendimento
@@ -740,18 +790,7 @@ class Agente{
         }) 
     }
 
-    //Desliga Chamada
-    async desligaChamada(empresa,ramal){
-        const atendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-        if((atendimento===null)||(atendimento.length==0)){
-            return false
-        }
-        atendimento['event_desligada']=1
-        await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,atendimento,43200)
-        //Para cronometro do atendimento
-        await Cronometro.saiuLigacao(empresa,atendimento['id_campanha'],atendimento['numero'],ramal)
-        resolve(atendimento) 
-    }
+    
 
     async clearCallsAgent(empresa,ramal){
         const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
@@ -761,12 +800,12 @@ class Agente{
         const idNumero = atendimentoAgente['id_numero']
         const tabelaNumeros = atendimentoAgente['tabela_numeros']
         const idMailing = atendimentoAgente['id_mailing']
-
+        await Redis.delete(`${empresa}:atendimentoAgente:${ramal}`)
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:clearCallsAgent","message":err.message,"stack":err.stack});
-
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:clearCallsAgent","message":err.message,"stack":err.stack});
+                let sql
                 //Setando registro como disponivel na tabela de tabulacoes
                 sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
                         SET estado=0, desc_estado='Disponivel'
@@ -792,7 +831,7 @@ class Agente{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
 
                 const sql = `SELECT * 
                             FROM ${empresa}_dados.agentes_pausados
@@ -811,7 +850,7 @@ class Agente{
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});        
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});        
                 const sql = `INSERT INTO ${empresa}_dados.campanhas_agendamentos
                                         (data,ramal,campanha,mailing,id_numero,id_registro,numero,data_retorno,hora_retorno,tratado)
                                 VALUES (NOW(),${ramal},${campanha},${mailing},${id_numero},${id_registro},${numero},'${data}','${hora}:00',0)`

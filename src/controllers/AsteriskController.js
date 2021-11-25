@@ -4,6 +4,7 @@ import User from '../models/User';
 import util from 'util';
 import fs from 'fs';
 import Discador from '../models/Discador';
+import Agente from '../models/Agente';
 import Cronometro from '../models/Cronometro';
 import moment from 'moment';
 import Redis from '../Config/Redis'
@@ -14,24 +15,22 @@ import http from 'http';
 
 class AsteriskController{
     async agi(req,res){
-        console.log('Iniciando AGI',req.body)
+        console.log('Iniciando AGI',req.body,'Action',req.params.action)
         const action = req.params.action
-        const dados = req.body
-        
+        const dados = req.body        
         if(action=='get_trunk'){
             const empresa = dados.empresa
             const register=[]
             const trunk = await Clients.getTrunk(empresa)
             res.json(trunk[0])   
         }
-
         if(action=='machine'){//Quando cai na caixa postal
             const r = await Asterisk.machine(dados)
             //console.log('agi:machine',`Empresa: ${dados.empresa},numero:${dados.numero},status:${dados.status}, saida: ${r}`)
             res.json(r);
         }
-
         if(action=='set_queue'){//Quando reconhece a voz humana
+            const empresa = dados.empresa
             const dadosAtendimento = await Asterisk.setaRegistroNaFila(dados)
              if(dadosAtendimento===false){
                  res.json(false) 
@@ -45,14 +44,18 @@ class AsteriskController{
              await Cronometro.entrouNaFila(empresa,idCampanha,idMailing,idRegistro,numero) 
              //console.log('agi:set_queue',`Empresa: ${empresa},numero: ${numero}, saida: ${dadosAtendimento}`)
              res.json(true)            
-        }
-        
+        }        
         if(action=='desligou'){//Quando abandona fila 
             const r = await Asterisk.desligaChamada(dados)
             res.json(r);
         }
-
-        if(action=='setCall'){
+        if(action=='set_call'){
+            console.log('SET CALL')
+            let ch = dados.ramal;
+                ch = ch.split("-");
+                ch = ch[0].split("/")
+            const ramal = ch[1]
+            const empresa = dados.empresa
             let chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
             if(chamadasSimultaneas===null){
                 chamadasSimultaneas=[]
@@ -60,29 +63,42 @@ class AsteriskController{
             const novaChamada={}
                   novaChamada['idAtendimento'] = dados.uniqueid
                   novaChamada['uniqueid'] =  dados.uniqueid
-                  novaChamada['ramal'] = dados.ramal
+                  novaChamada['ramal'] = ramal
                   novaChamada['numero'] = dados.numero
                   novaChamada['status'] = 'Chamando ...'
                   novaChamada['horario'] = moment().format("HH:mm:ss")
-                  novaChamada['tipo_discador'] = dados.tipoChamada
+                  novaChamada['tipo_discador'] = dados.tipoDiscador
 
-            if(dados.tipoChamada=="manual"){                
+            if(dados.tipoDiscador=="manual"){                
                 novaChamada['id_campanha'] =  0
                 novaChamada['id_mailing'] =  0
                 novaChamada['tabela_dados'] = ''
                 novaChamada['tabela_numeros'] = ''
                 novaChamada['id_registro'] = 0
                 novaChamada['id_numero'] = 0
-                novaChamada['tipo'] = 'manual'                
+                novaChamada['tipo'] = 'manual'  
+                const statusRamal = await Agente.statusRamal(empresa,ramal)
+                if(statusRamal['estado']==2){
+                    const pausas = await Agente.infoPausaAgente(empresa,ramal)
+                    novaChamada['idPausa']=pausas[0].idPausa
+                }
+                novaChamada['estadoAnterior']=statusRamal['estado']
+                await Agente.alterarEstadoAgente(empresa,ramal,6,0)              
             }else{
-                const chamadasEmAtendimento = await Redis.getter(`${empresa}:chamadasEmAtendimento`)
-                dadosAtendimento = chamadasEmAtendimento.filter(atendimento => atendimento.idAtendimento == dados.idAtendimento)
-                novaChamada['id_campanha'] =  dadosAtendimento[0].id_campanha
-                novaChamada['id_mailing'] =  dadosAtendimento[0].id_mailing
-                novaChamada['tabela_dados'] = dadosAtendimento[0].tabela_dados
-                novaChamada['tabela_numeros'] = dadosAtendimento[0].tabela_numeros
-                novaChamada['id_registro'] = dadosAtendimento[0].id_registro
-                novaChamada['id_numero'] = dadosAtendimento[0].id_numero
+                const dadosAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+                if(dadosAtendimento==null){
+                    await Agente.alterarEstadoAgente(empresa,ramal,1,0) 
+                    res.json(true);
+                    return false
+                }
+                //const chamadasEmAtendimento = await Redis.getter(`${empresa}:chamadasEmAtendimento`)
+                //const dadosAtendimento = chamadasEmAtendimento.filter(atendimento => atendimento.numero == dados.numero)
+                novaChamada['id_campanha'] =  dadosAtendimento['id_campanha']
+                novaChamada['id_mailing'] =  dadosAtendimento['id_mailing']
+                novaChamada['tabela_dados'] = dadosAtendimento['tabela_dados']
+                novaChamada['tabela_numeros'] = dadosAtendimento['tabela_numeros']
+                novaChamada['id_registro'] = dadosAtendimento['id_registro']
+                novaChamada['id_numero'] = dadosAtendimento['id_numero']
                 novaChamada['tipo'] = 'Discador'
             }
             novaChamada['event_chamando']=1
@@ -91,149 +107,118 @@ class AsteriskController{
 
             chamadasSimultaneas.push(novaChamada)
             await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas,43200)
+            res.json(true);
+
         }
 
-
-
-
-
-
-
-
-
-        
         if(action=='answer'){//Quando ligacao eh atendida pelo agente
             const empresa = dados.empresa            
             const uniqueid = dados.uniqueid 
             const idAtendimento = dados.idAtendimento
             const numero = dados.numero
-            const tipoChamada = dados.tipoChamada           
+            const tipoChamada = dados.tipoChamada       
+            
+            console.log('\n \n','>>>>>>tipoChamada<<<<<<<<<',tipoChamada,'\n \n')
             let ch = dados.ramal;
                 ch = ch.split("-");
                 ch = ch[0].split("/")
             const ramal = ch[1]
             console.log('>>>>>>>>>>>>>>>>>>>>>>>ATENDEU CHAMADA',tipoChamada)
-          /*DISCADORES POSSIVEIS
-            manual
-            click-to-call
-            preview
-            POWER*/
+            const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+            if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
+                return false
+            }
+
             if(tipoChamada=="manual"){
+                console.log("\n","INICIAR SEPARAÇÃO DE REGISTRO")
+                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
+                console.log("\n","Dados do Atendimento",dadosChamada)
+                console.log("\n","Atualizando registro na fila")
+                dadosChamada[0].event_chamando=0
+                dadosChamada[0].event_em_atendimento = 1
+                console.log("\n","Registro Atualizado",dadosChamada)
+                const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
+                const concatenarAtendimentos=outrosAtendimentos.concat(dadosChamada)
+                console.log("\n","Todos atendimentos",concatenarAtendimentos)
+                await Redis.setter(`${empresa}:chamadasSimultaneas`,concatenarAtendimentos)
+                
+                const idCampanha = 0
+                const tipoDiscador = 'manual'
+                const idMailing = 0
+                const id_reg = 0
+                const id_numero = 0    
+                const protocolo=0
+                const tabulacao=0
+                const observacoes=""
+                const contatado=0                
+                
+           
+                await Discador.registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_reg,id_numero,ramal,uniqueid,tipoDiscador,numero,tabulacao,observacoes,contatado)
+                await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             
             }else if(tipoChamada=="POWER"){
+                console.log('\n \n','>>>>>>ATENDIMENTO POWER<<<<<<<<<','\n \n')
+                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
+                dadosChamada[0].event_em_atendimento = 1
+                const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
+                const concatenarAtendimentos=outrosAtendimentos.concat(dadosChamada)
+                await Redis.setter(`${empresa}:chamadasSimultaneas`,concatenarAtendimentos)
 
-            }else{
-
-            }            
-           
-            if(tipoChamada=="manual"){
-                let idAtendimento = dados.idAtendimento               
-                if((idAtendimento==false)||(idAtendimento==0)||(idAtendimento=="")||(idAtendimento==undefined)){
-                    const da = await Discador.dadosAtendimento_byNumero(empresa,numero);
-                    idAtendimento = da[0].id;
-                }
-                const r = await Asterisk.manualAnswer(empresa,uniqueid,idAtendimento,ramal)    
-                //await Discador.alterarEstadoAgente(empresa,ramal,7,0)
-                await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
-            }else{   
-                let idAtendimento
-                if(tipoChamada=="POWER"){
-                    idAtendimento = dados.idAtendimento
-                    if(idAtendimento==undefined){
-                        const da = await Discador.dadosAtendimento_byNumero(empresa,numero);
-                        idAtendimento = da[0].id;
-                    }
-                }else{                
-                    const da = await Discador.dadosAtendimento_byNumero(empresa,numero);
-                    idAtendimento = da[0].id;
-                }         
-                
-                const r = await Asterisk.answer(empresa,uniqueid,idAtendimento,ramal)
+                const idCampanha = dadosChamada[0].id_campanha
+                const idMailing = dadosChamada[0].id_mailing
+                const idRegistro = dadosChamada[0].id_registro
+                const modoAtendimento = dadosChamada[0].modoAtendimento
+                const tipoDiscador="power"
+                const tabela_dados = dadosChamada[0].tabela_dados
+                const tabela_numeros = dadosChamada[0].tabela_numeros
+                const idNumero = dadosChamada[0].id_numero
+                const nomeFila = dadosChamada[0].nomeFila
+                await Discador.registraChamada(empresa,ramal,idAtendimento,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila)
                 await Cronometro.saiuDaFila(empresa,numero)
-                const dadosAtendimento = await Discador.dadosAtendimento(empresa,idAtendimento)
-                if(dadosAtendimento.length==0){
-                    res.json(false);
-                    return false
-                }
-                const idCampanha = dadosAtendimento[0].id_campanha
-                const idMailing = dadosAtendimento[0].id_mailing
-                const idRegistro = dadosAtendimento[0].id_registro 
-                const uniqueid_Reg = dadosAtendimento[0].uniqueid  
+                await Agente.alterarEstadoAgente(empresa,ramal,3,0) 
+                await Cronometro.iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,tipoChamada,numero,ramal,uniqueid)
 
-                //Adicionando Chamada atendida no redis
-                let chamadasAtendidas = await Redis.getter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}:atendidas`)
-                const novoAtendimento={}
-                      novoAtendimento['id'] = uniqueid_Reg
-                      novoAtendimento['idAtendimento'] = idAtendimento
-                      novoAtendimento['tipo'] = dadosAtendimento[0].tipo_ligacao 
-                      novoAtendimento['ramal'] = ramal
-                      novoAtendimento['numero'] = numero
-                      novoAtendimento['status'] = 'Em Atendimento'
-                      novoAtendimento['horario'] = moment().format("HH:mm:ss")
+            }else{  /*DISCADORES POSSIVEIS: click-to-call, preview*/
+                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)  
+                dadosChamada[0].event_chamando = 0
+                dadosChamada[0].event_em_atendimento = 1
+                const outrasChamadas = chamadasSimultaneas.filter(atendimento => atendimento.numero != numero)
+                const concatenarChamadas=outrasChamadas.concat(dadosChamada)
+                await Redis.setter(`${empresa}:chamadasSimultaneas`,concatenarChamadas)
 
-                chamadasAtendidas.push(novoAtendimento)
-                await Redis.setter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}:atendidas`,chamadasAtendidas)
-
-                //removendo das chamadas simultaneas
-                let chamadasSimultaneasCampanha = await Redis.getter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}`) 
-                for(let c=0;c<chamadasSimultaneasCampanha.length;c++){
-                    if(chamadasSimultaneasCampanha[c].idAtendimento==idAtendimento){
-                        chamadasSimultaneasCampanha.splice(c,1)
-                    }
-                }
-                await Redis.setter(`${empresa}:chamadasSimultaneasCampanha:${idCampanha}`,chamadasSimultaneasCampanha)
-            
-
-                await Discador.alterarEstadoAgente(empresa,ramal,3,0)
-                await Discador.atendeChamada(empresa,ramal)
-                //atualizando ramal na chamada simultanea
-                
-                //iniciou chamada
-                await Cronometro.iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,tipoChamada,numero,ramal,uniqueid_Reg)
-                
-            }
+                const dadosAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+                dadosAtendimento['uniqueid'] =  dadosChamada[0].uniqueid 
+                dadosAtendimento['event_falando'] = 1
+                await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,dadosAtendimento) 
+            }   
             res.json(true);
-        } 
+        }
+    }
+    async setRecord(req,res){
+        const empresa = req.body.empresa
+        const data = req.body.date
+        const hora = req.body.time
+        let ch = req.body.channel;
+            ch = ch.split("-");
+            ch = ch[0].split("/")
+        let user_ramal = ch[1]   
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
+        console.log(req.body)
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        if((user_ramal==undefined)||(user_ramal=="undefined")||(user_ramal===false)){
+            let rm = req.body.ramal;
+                rm = rm.split("-");
+                rm = rm[0].split("/")
+                user_ramal = rm[1]
+        }
+        
+        const uniqueid = req.body.uniqueid  
+        const numero = req.body.numero   
+        const callfilename = req.body.callfilename  
+        const server = await Asterisk.setRecord(empresa,data,hora,user_ramal,uniqueid,numero,callfilename)
+       
+        res.json(server[0].ip) 
+    }
 
 
 
@@ -252,45 +237,8 @@ class AsteriskController{
        
         
        
-        if(action=='handcall'){//Quando ligacao eh manual, preview ou click-to-call
-            const empresa = dados.empresa            
-            const uniqueid = dados.uniqueid 
-            const numero = dados.numero
-            let ch = dados.ramal;
-            ch = ch.split("-");
-            ch = ch[0].split("/")
-            const ramal = ch[1]
-            const tipoDiscador = dados.tipoDiscador
-            const estadoAgente = dados.estadoAgente
-
-            const idCampanha = 0
-            const modoAtendimento = 'manual'
-            const idMailing = 0
-            const tabela_dados = 0
-            const tabela_numeros = 0
-            const id_reg = 0
-            const id_numero = 0
-            const fila = 0
-            const tratado = 1
-            const atendido = 0
-
-            const protocolo=0
-            const tabulacao=0
-            const observacoes=""
-            const contatado=0
-            
-            const r = await Discador.registraChamada(empresa,ramal,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila,tratado,atendido)
-            await Discador.alterarEstadoAgente(empresa,ramal,6,0)
-            await Discador.registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_reg,id_numero,ramal,uniqueid,tipoDiscador,numero,tabulacao,observacoes,contatado)
-                                
-            res.json(r['insertId'])
-        }
-        
-       
         
         
-    }
-
 
 
 
@@ -320,28 +268,7 @@ class AsteriskController{
 
 
     //Funcoes automaticas dialplan do asterisk
-    async setRecord(req,res){
-        const empresa = req.body.empresa
-        const data = req.body.date
-        const hora = req.body.time
-        let ch = req.body.channel;
-            ch = ch.split("-");
-            ch = ch[0].split("/")
-        let user_ramal = ch[1]   
-        
-        if((user_ramal==undefined)||(user_ramal=="undefined")||(user_ramal===false)){
-            let rm = req.body.ramal;
-                rm = rm.split("-");
-                rm = rm[0].split("/")
-                user_ramal = rm[1]
-        }
-        
-        const uniqueid = req.body.uniqueid  
-        const numero = req.body.numero   
-        const callfilename = req.body.callfilename  
-        const server = await Asterisk.setRecord(empresa,data,hora,user_ramal,uniqueid,numero,callfilename)
-        res.json(server[0].ip) 
-    }
+   
 
    
 

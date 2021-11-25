@@ -1319,6 +1319,14 @@ class Campanhas{
             })
         })
     }
+
+    async checklistaTabulacaoCampanha(empresa,idCampanha){
+        const lista = await this.listasTabulacaoCampanha(empresa,idCampanha)
+        if(lista.length==0){
+            return false
+        }
+        return lista[0].idListaTabulacao
+    }
     
 
 
@@ -1556,13 +1564,7 @@ async totalCampanhasAtivas(empresa){
 
     
 
-    async checklistaTabulacaoCampanha(empresa,idCampanha){
-        const lista = await this.listasTabulacaoCampanha(empresa,idCampanha)
-        if(lista.length==0){
-            return false
-        }
-        return lista[0].idListaTabulacao
-    }
+    
 
      
 

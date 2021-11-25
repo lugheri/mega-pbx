@@ -4,6 +4,8 @@ module.exports = (routes) =>{
     //iniciarDiscador
     routes.get('/iniciarDiscador/:ramal',AgenteController.iniciarDiscador)
     //Status do ramal
+    //routes.get('/statusRamal/:ramal',AgenteController.statusRamal)
+    //Status do ramal
     routes.get('/statusRamal/:ramal',AgenteController.statusRamal)
     //Status de chamada manual
     routes.get('/statusDeChamadaManual/:ramal',AgenteController.statusDeChamadaManual)

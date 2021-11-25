@@ -30,9 +30,10 @@ class Report{
         if((atendimentoAgente===null)||(atendimentoAgente.length==0)){
             return 0
         }          
-        const chamadasEmTabulacao = atendimentoAgente.filter(chamadas => chamadas.event_tabulando == 1)
-        const chamadasDesligadas = atendimentoAgente.filter(chamadas => chamadas.event_desligada == 1)
-        const total = chamadasEmTabulacao.length + chamadasDesligadas.length
+        
+        const chamadasEmTabulacao = atendimentoAgente.event_tabulando
+        const chamadasDesligadas = atendimentoAgente.event_desligada
+        const total = chamadasEmTabulacao+chamadasDesligadas
         
         return total
     }
@@ -41,8 +42,18 @@ class Report{
         if((atendimentoAgente===null)||(atendimentoAgente.length==0)){
             return 0
         }   
-        const atendimento = atendimentoAgente.filter(chamadas => chamadas.event_falando == 1)
-        return atendimento.length
+        const atendimento = atendimentoAgente.event_falando
+        return atendimento
+    }
+    async statusAtendimentoChamadaManual(empresa,idAgente){
+        const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+        if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
+            return false
+        }
+        const chamadasAgente = chamadasSimultaneas.filter(chamadas => chamadas.ramal == idAgente)
+        const emAtendimento = chamadasAgente.filter(chamadas => chamadas.event_em_atendimento == 1) 
+
+        return emAtendimento.length
     }
 
 
@@ -363,6 +374,52 @@ class Report{
         })      
     }
 
+    async sinteticosTabulacoes(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao){
+        let filter=""
+        if((dataI!=false)||(dataI!="")){filter+=` AND h.data>='${dataI}'`;}else{filter+=` AND h.data>='${hoje}'`;}
+        if((dataF!=false)||(dataF!="")){filter+=` AND h.data<='${dataF}'`;}else{filter+=` AND h.data<='${hoje}'`;}
+        if((ramal!=false)||(ramal!="")){filter+=` AND h.agente=${ramal}`;}
+        if((equipe!=false)||(equipe!="")){filter+=` AND u.equipe=${equipe}`;}
+        if((campanha!=false)||(campanha!="")){filter+=` AND h.campanha=${campanha}`;}
+        if((mailing!=false)||(mailing!="")){filter+=` AND h.mailing=${mailing}`;}
+        if((numero!=false)||(numero!="")){filter+=` AND h.numero_discado LIKE '%${numero}%'`;}
+        if((tipo!=false)||(tipo!="")){filter+=` AND h.tipo = '${tipo}'`;}
+        if((contatados!=false)||(contatados!="")){
+            if(contatados==1){
+                filter+=` AND h.contatado='S'`
+            }else{
+                filter+=` AND h.contatado<>'S'`
+            }
+        }
+        if((produtivo!=false)||(produtivo!="")){
+            if(produtivo==1){
+                filter+=` AND h.produtivo=1`
+            }else{
+                filter+=` AND h.contatado<>1`
+            }
+        }
+        if((tipo!=false)||(tipo!="")){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
+
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+        
+                const sql = `SELECT h.status_tabulacao, count(h.id) as total
+                               FROM ${empresa}_dados.historico_atendimento AS h
+                               LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
+                              WHERE 1=1 ${filter} 
+                              GROUP BY status_tabulacao`
+                console.log('chamadasRealizadas',sql)
+                const rows = await this.querySync(conn,sql)   
+                pool.end((err)=>{                    
+                    if(err) console.log('Reports ...', err)
+                })
+                resolve(rows)
+            })
+        })    
+    }
+
     async chamadasRealizadas(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros){
         const redis_chamadasRealizadas = await Redis.getter(`${empresa}:reports_chamadasRealizadas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`)
         if(redis_chamadasRealizadas!==null){
@@ -403,7 +460,7 @@ class Report{
             pool.getConnection(async (err,conn)=>{   
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
         
-                const sql = `SELECT h.agente,u.nome,DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall,h.hora,h.uniqueid,h.campanha,h.tipo,h.numero_discado,h.contatado,h.produtivo,h.status_tabulacao
+                const sql = `SELECT h.agente,u.nome,DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall,h.hora,h.uniqueid,h.campanha,h.tipo,h.nome_registro,h.numero_discado,h.contatado,h.produtivo,h.status_tabulacao,h.obs_tabulacao
                             FROM ${empresa}_dados.historico_atendimento AS h
                         LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
                             WHERE 1=1 ${filter} ORDER BY h.id DESC LIMIT ${pag},${reg} `
@@ -419,10 +476,61 @@ class Report{
         })           
     }
 
-    
+    async detalhamentoTabulacoes(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros){
+        let filter=""
+        if((dataI!=false)||(dataI!="")){filter+=` AND h.data>='${dataI}'`;}else{filter+=` AND h.data>='${hoje}'`;}
+        if((dataF!=false)||(dataF!="")){filter+=` AND h.data<='${dataF}'`;}else{filter+=` AND h.data<='${hoje}'`;}
+        if((ramal!=false)||(ramal!="")){filter+=` AND h.agente=${ramal}`;}
+        if((equipe!=false)||(equipe!="")){filter+=` AND u.equipe=${equipe}`;}
+        if((campanha!=false)||(campanha!="")){filter+=` AND h.campanha=${campanha}`;}
+        if((mailing!=false)||(mailing!="")){filter+=` AND h.mailing=${mailing}`;}
+        if((numero!=false)||(numero!="")){filter+=` AND h.numero_discado LIKE '%${numero}%'`;}
+        if((tipo!=false)||(tipo!="")){filter+=` AND h.tipo = '${tipo}'`;}
+        if((contatados!=false)||(contatados!="")){
+            if(contatados==1){
+                filter+=` AND h.contatado='S'`
+            }else{
+                filter+=` AND h.contatado<>'S'`
+            }
+        }
+        if((produtivo!=false)||(produtivo!="")){
+            if(produtivo==1){
+                filter+=` AND h.produtivo=1`
+            }else{
+                filter+=` AND h.contatado<>1`
+            }
+        }
+        if((tipo!=false)||(tipo!="")){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
+        //Paginacao   
+        let reg=registros
+        let pag=(pagina-1)*reg
 
-    
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+        
+                const sql = `SELECT h.agente,u.nome,DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall,h.hora,h.uniqueid,h.campanha,h.tipo,h.numero_discado,h.contatado,h.produtivo,h.status_tabulacao
+                            FROM ${empresa}_dados.historico_atendimento AS h
+                        LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
+                            WHERE 1=1 ${filter} ORDER BY h.id DESC LIMIT ${pag},${reg} `
+                //console.log('chamadasRealizadas',sql)
+                const rows = await this.querySync(conn,sql)   
+                pool.end((err)=>{
+                    
+                    if(err) console.log('Reports ...', err)
+                })
+                await Redis.setter(`${empresa}:reports_chamadasRealizadas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`,rows,15)
+                resolve(rows)
+            })
+        })     
 
+
+
+
+    }
+    
+    
     async timeCall(empresa,uniqueid){
         const redis_timeCall = await Redis.getter(`${empresa}:reports_timeCall:${uniqueid}`)
         if(redis_timeCall!==null){

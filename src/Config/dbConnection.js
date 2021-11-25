@@ -26,6 +26,7 @@ const connect = ()=>{};
                 });
                 console.log("Conectou no REDIS!");
                 global.connection_redis = client;
+                
             return client
         }
       }

@@ -1,5 +1,6 @@
 import User from '../models/User';
 import Clients from '../models/Clients';
+import Redis from '../Config/Redis'
 
 class UserController{
    
@@ -62,6 +63,41 @@ class UserController{
 
         const r = await User.editUser(empresa,userId,userData)
         res.json(r)
+    }
+
+    async checkUsers(){
+        console.log('\n',"CHECANDO USUARIOS")
+        let clientesAtivos=await Redis.getter('empresas')    
+        if(!clientesAtivos){
+            clientesAtivos=await Clients.clientesAtivos()
+            await Redis.setter('empresas',clientesAtivos,600)
+        }       
+        const clientes = clientesAtivos;  
+        for(let i=0;i<clientes.length;++i){            
+            const empresa = clientes[i].prefix
+            console.log('\n',"Empresa:",empresa)
+            await this.usuariosEmpresa(empresa)
+        }
+        setTimeout(async ()=>{             
+            await this.checkUsers();
+        },65000)
+    }
+
+    async usuariosEmpresa(empresa){
+        const status=1
+        const usuarios = await User.listUsers(empresa,status)
+        for(let u=0;u<usuarios.length; u++){
+
+            const idUser = usuarios[u].id
+            console.log('\n',"Usuario:",idUser,usuarios[u].nome)
+            const userStatus = await Redis.getter(`${idUser}:logado`)
+            console.log('Status do ',usuarios[u].nome,userStatus)
+            if(userStatus!==true){
+                console.log('\n',"Deslogando Usuario:",idUser,usuarios[u].nome)
+                await User.registraLogin(empresa,idUser,'logout')
+                await Redis.delete(`${idUser}:logado`)
+            }
+        }
     }
 
     
