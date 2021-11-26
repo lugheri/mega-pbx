@@ -66,7 +66,7 @@ class UserController{
     }
 
     async checkUsers(){
-        console.log('\n',"CHECANDO USUARIOS")
+        //console.log('\n',"CHECANDO USUARIOS")
         let clientesAtivos=await Redis.getter('empresas')    
         if(!clientesAtivos){
             clientesAtivos=await Clients.clientesAtivos()
@@ -75,7 +75,7 @@ class UserController{
         const clientes = clientesAtivos;  
         for(let i=0;i<clientes.length;++i){            
             const empresa = clientes[i].prefix
-            console.log('\n',"Empresa:",empresa)
+            //console.log('\n',"Empresa:",empresa)
             await this.usuariosEmpresa(empresa)
         }
         setTimeout(async ()=>{             
@@ -89,11 +89,11 @@ class UserController{
         for(let u=0;u<usuarios.length; u++){
 
             const idUser = usuarios[u].id
-            console.log('\n',"Usuario:",idUser,usuarios[u].nome)
+            //console.log('\n',"Usuario:",idUser,usuarios[u].nome)
             const userStatus = await Redis.getter(`${idUser}:logado`)
-            console.log('Status do ',usuarios[u].nome,userStatus)
+           // console.log('Status do ',usuarios[u].nome,userStatus)
             if(userStatus!==true){
-                console.log('\n',"Deslogando Usuario:",idUser,usuarios[u].nome)
+               // console.log('\n',"Deslogando Usuario:",idUser,usuarios[u].nome)
                 await User.registraLogin(empresa,idUser,'logout')
                 await Redis.delete(`${idUser}:logado`)
             }

@@ -90,10 +90,10 @@ class Asterisk{
             return false
         }
         const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
-        console.log('Dados do Atendimento',dadosChamada)      
+        //console.log('Dados do Atendimento',dadosChamada)      
         if(dadosChamada.length!=0){     
             const id_numero=dadosChamada[0].id_numero
-            console.log('id_numero',dadosChamada[0].id_numero)     
+            //console.log('id_numero',dadosChamada[0].id_numero)     
             const idCampanha = dadosChamada[0].id_campanha
             const idMailing = dadosChamada[0].id_mailing
             const idRegistro = dadosChamada[0].id_registro
@@ -106,7 +106,7 @@ class Asterisk{
             const status_tabulacao = 0
             await Discador.autoTabulacao(empresa,0,idCampanha,idMailing,idRegistro,id_numero,0,0,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros)
             chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.idAtendimento == idAtendimento),1)
-            console.log('chamadasSimultaneas apos',chamadasSimultaneas)
+            //console.log('chamadasSimultaneas apos',chamadasSimultaneas)
             await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)
             return true
         }
@@ -114,27 +114,27 @@ class Asterisk{
     }
     //Atualiza registros em uma fila de espera
     async setaRegistroNaFila(dados){   
-        console.log("\n","}}}}}}}}}}}}}}}}}}}}}} SET REGISTRO NA FILA - - - - - - - - - - - - -")
+        //console.log("\n","}}}}}}}}}}}}}}}}}}}}}} SET REGISTRO NA FILA - - - - - - - - - - - - -")
         const empresa = dados.empresa
         const idAtendimento = dados.idAtendimento
         const observacoes = dados.status
         //Verificando se o numero ja consta em alguma chamada simultanea
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
-        console.log("\n","Dados das chamadas",chamadasSimultaneas)
+        //console.log("\n","Dados das chamadas",chamadasSimultaneas)
         if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
-            console.log("\n","[[[[[[[[[[[[[[[[Nao existem chamadas simultaneas]]]]]]]]]]]]]]]]]]")
+            //console.log("\n","[[[[[[[[[[[[[[[[Nao existem chamadas simultaneas]]]]]]]]]]]]]]]]]]")
             return false
         }
-        console.log("\n","INICIAR SEPARAÇÃO DE REGISTRO")
+        //console.log("\n","INICIAR SEPARAÇÃO DE REGISTRO")
         const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
-        console.log("\n","Dados do Atendimento",dadosChamada)
-        console.log("\n","Atualizando registro na fila")
+        //console.log("\n","Dados do Atendimento",dadosChamada)
+        //console.log("\n","Atualizando registro na fila")
         dadosChamada[0].event_chamando = 0
         dadosChamada[0].event_na_fila = 1
-        console.log("\n","Registro Atualizado",dadosChamada)
+        //console.log("\n","Registro Atualizado",dadosChamada)
         const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
         const concatenarAtendimentos=outrosAtendimentos.concat(dadosChamada)
-        console.log("\n","Todos atendimentos",concatenarAtendimentos)
+        //console.log("\n","Todos atendimentos",concatenarAtendimentos)
         await Redis.setter(`${empresa}:chamadasSimultaneas`,concatenarAtendimentos)
         const info = {}
               info['id_campanha']=dadosChamada[0].id_campanha
@@ -214,18 +214,18 @@ class Asterisk{
             }else{
                 dadosAtendimento = chamadasEmAtendimento.filter(atendimento => atendimento.idAtendimento == idAtendimento)
             }
-            console.log("\n","Dados do Atendimento",dadosAtendimento)
-            console.log("\n","Atualizando registro como desligado")
+            //console.log("\n","Dados do Atendimento",dadosAtendimento)
+            //console.log("\n","Atualizando registro como desligado")
             dadosAtendimento[0].event_desligada = 1
             dadosAtendimento[0].event_falando = 0
-            console.log("\n","Registro Atualizado",dadosAtendimento)
+            //console.log("\n","Registro Atualizado",dadosAtendimento)
             if(idAtendimento==0){
                 outrosAtendimentos = chamadasEmAtendimento.filter(atendimento => atendimento.numero != numero)
             }else{
                 outrosAtendimentos = chamadasEmAtendimento.filter(atendimento => atendimento.idAtendimento != idAtendimento)
             }
             const concatenarAtendimentos=outrosAtendimentos.concat(dadosAtendimento)
-            console.log("\n","Todos atendimentos",concatenarAtendimentos)
+            //console.log("\n","Todos atendimentos",concatenarAtendimentos)
             await Redis.setter(`${empresa}:chamadasEmAtendimento`,concatenarAtendimentos)
             return true
         } 

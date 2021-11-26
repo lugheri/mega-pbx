@@ -58,9 +58,9 @@ class DiscadorController{
             }
         }
         const campanhasAtivas = await Discador.campanhasAtivas(empresa);//Verifica se existem campanhas ativas
-        console.log('\n','campanhasAtivas',campanhasAtivas,'\n')
+        //console.log('\n','campanhasAtivas',campanhasAtivas,'\n')
         if(campanhasAtivas.length === 0){
-            console.log(`\n ❗  ${empresa} Nenhuma Campanha ativa . . . . . . . . . . . . \n`) 
+            //console.log(`\n ❗  ${empresa} Nenhuma Campanha ativa . . . . . . . . . . . . \n`) 
             return false
         } 
         for(let i=0; i<campanhasAtivas.length; i++){
@@ -169,12 +169,12 @@ class DiscadorController{
         //Verifica se existem registros nao trabalhados ou com o nº de tentativas abaixo do limite
         const registros = await Discador.filtrarRegistro(empresa,idCampanha,tabela_dados,tabela_numeros,idMailing,tipoDiscador,tipoDiscagem,ordemDiscagem,limitRegistros)
         
-        /*console.log('\n','qtdChamadasSimultaneas',qtdChamadasSimultaneas)
-        console.log('agressividade',agressividade)
-        console.log('agentesDisponiveis',agentesDisponiveis)
-        console.log('limiteDiscagem',limiteDiscagem)
-        console.log('canaisDisponiveis',canaisDisponiveis)
-        console.log('limitRegistros',limitRegistros,'\n')*/
+        /*//console.log('\n','qtdChamadasSimultaneas',qtdChamadasSimultaneas)
+        //console.log('agressividade',agressividade)
+        //console.log('agentesDisponiveis',agentesDisponiveis)
+        //console.log('limiteDiscagem',limiteDiscagem)
+        //console.log('canaisDisponiveis',canaisDisponiveis)
+        //console.log('limitRegistros',limitRegistros,'\n')*/
         if(registros.length==0){
             if(limitRegistros==0){
                 let msg='Limite de chamadas simultâneas atingido, aumente a agressividade ou aguarde os agentes ficarem disponíveis'
@@ -190,7 +190,7 @@ class DiscadorController{
         for(let i=0; i<registros.length; i++){
             const registro = registros[i]
             const numero = registros[i].numero
-            console.log('Checando Numero',numero)
+            //console.log('Checando Numero',numero)
          
             
             let msg='Campanha discando'

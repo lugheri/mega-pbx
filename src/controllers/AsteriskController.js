@@ -15,7 +15,7 @@ import http from 'http';
 
 class AsteriskController{
     async agi(req,res){
-        console.log('Iniciando AGI',req.body,'Action',req.params.action)
+        //console.log('Iniciando AGI',req.body,'Action',req.params.action)
         const action = req.params.action
         const dados = req.body        
         if(action=='get_trunk'){
@@ -50,7 +50,7 @@ class AsteriskController{
             res.json(r);
         }
         if(action=='set_call'){
-            console.log('SET CALL')
+            //console.log('SET CALL')
             let ch = dados.ramal;
                 ch = ch.split("-");
                 ch = ch[0].split("/")
@@ -106,7 +106,11 @@ class AsteriskController{
             novaChamada['event_em_atendimento']=0
 
             chamadasSimultaneas.push(novaChamada)
+
+            //console.log('\n','##########################################################','Chamada Simultanea',novaChamada,'##########################################################','\n')
             await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas,43200)
+            const chave =  await Redis.getter(`${empresa}:chamadasSimultaneas`)
+            //console.log('Chamada Simultanea',`${empresa}:chamadasSimultaneas`,chave)
             res.json(true);
 
         }
@@ -118,28 +122,28 @@ class AsteriskController{
             const numero = dados.numero
             const tipoChamada = dados.tipoChamada       
             
-            console.log('\n \n','>>>>>>tipoChamada<<<<<<<<<',tipoChamada,'\n \n')
+            //console.log('\n \n','>>>>>>tipoChamada<<<<<<<<<',tipoChamada,'\n \n')
             let ch = dados.ramal;
                 ch = ch.split("-");
                 ch = ch[0].split("/")
             const ramal = ch[1]
-            console.log('>>>>>>>>>>>>>>>>>>>>>>>ATENDEU CHAMADA',tipoChamada)
+            //console.log('>>>>>>>>>>>>>>>>>>>>>>>ATENDEU CHAMADA',tipoChamada)
             const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
             if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
                 return false
             }
 
             if(tipoChamada=="manual"){
-                console.log("\n","INICIAR SEPARAÇÃO DE REGISTRO")
+                //console.log("\n","INICIAR SEPARAÇÃO DE REGISTRO")
                 const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
-                console.log("\n","Dados do Atendimento",dadosChamada)
-                console.log("\n","Atualizando registro na fila")
+                //console.log("\n","Dados do Atendimento",dadosChamada)
+                //console.log("\n","Atualizando registro na fila")
                 dadosChamada[0].event_chamando=0
                 dadosChamada[0].event_em_atendimento = 1
-                console.log("\n","Registro Atualizado",dadosChamada)
+                //console.log("\n","Registro Atualizado",dadosChamada)
                 const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
                 const concatenarAtendimentos=outrosAtendimentos.concat(dadosChamada)
-                console.log("\n","Todos atendimentos",concatenarAtendimentos)
+                //console.log("\n","Todos atendimentos",concatenarAtendimentos)
                 await Redis.setter(`${empresa}:chamadasSimultaneas`,concatenarAtendimentos)
                 
                 const idCampanha = 0
@@ -157,7 +161,7 @@ class AsteriskController{
                 await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             
             }else if(tipoChamada=="POWER"){
-                console.log('\n \n','>>>>>>ATENDIMENTO POWER<<<<<<<<<','\n \n')
+                //console.log('\n \n','>>>>>>ATENDIMENTO POWER<<<<<<<<<','\n \n')
                 const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
                 dadosChamada[0].event_em_atendimento = 1
                 const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
@@ -203,7 +207,7 @@ class AsteriskController{
             ch = ch[0].split("/")
         let user_ramal = ch[1]   
 
-        console.log(req.body)
+        //console.log(req.body)
         
         if((user_ramal==undefined)||(user_ramal=="undefined")||(user_ramal===false)){
             let rm = req.body.ramal;
@@ -279,7 +283,7 @@ class AsteriskController{
     
     channelDump(req,res){
         Asterisk.channelDump((e,r)=>{
-        console.log('channel dump')
+        //console.log('channel dump')
         })
     } 
    
@@ -361,16 +365,16 @@ class AsteriskController{
           };
           
           var req = http.request(options, function(res) {
-            console.log('STATUS: ' + res.statusCode);
-            console.log('HEADERS: ' + JSON.stringify(res.headers));
+            //console.log('STATUS: ' + res.statusCode);
+            //console.log('HEADERS: ' + JSON.stringify(res.headers));
             res.setEncoding('utf8');
             res.on('data', function (chunk) {
-              console.log('BODY: ' + chunk);
+              //console.log('BODY: ' + chunk);
             });
           });
           
           req.on('error', function(e) {
-            console.log('problem with request: ' + e.message);
+            //console.log('problem with request: ' + e.message);
           });
           
           // write data to request body
@@ -391,7 +395,7 @@ class AsteriskController{
 
         fs.writeFile(file, data, (erro)=>{
             if(erro) throw erro;        
-            console.log("Arquivo salvo");
+            //console.log("Arquivo salvo");
         });
     }   
 }
