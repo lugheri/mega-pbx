@@ -67,8 +67,8 @@ class Dashboard{
                 let mensagemCampanha="!"
                 const statusCampanha=await Discador.statusCampanha(empresa,campanhasAtivas[i].id)
                 if(statusCampanha!==false){
-                    statusDaCampanha=statusCampanha['estado']
-                    mensagemCampanha=statusCampanha['mensagem']
+                    statusDaCampanha=statusCampanha[0].estado
+                    mensagemCampanha=statusCampanha[0].mensagem
                 }
                 const idMailing = await Campanhas.listarMailingCampanha(empresa,campanhasAtivas[i].id) 
                 const totalRegistros=await Campanhas.totalRegistrosCampanha(empresa,campanhasAtivas[i].id)
@@ -82,6 +82,8 @@ class Dashboard{
                 }
                 campanha["nomeCampanha"]=campanhasAtivas[i].nome
                 campanha["idCampanha"]=campanhasAtivas[i].id
+                //console.log('status campanha',statusCampanha)
+                //console.log('mensagem campanha',mensagemCampanha)
                 campanha["statusCampanha"]=statusDaCampanha
                 campanha["descricaoStatusCampanha"]=mensagemCampanha
                 campanha["descricaoCampanha"]=campanhasAtivas[i].descricao
@@ -147,9 +149,9 @@ class Dashboard{
               
                         const tabulando = await Report.statusTabulacaoChamada(empresa,idAgente)
                         const falando = await Report.statusAtendimentoChamada(empresa,idAgente)
-                        console.log('estadoAgente',idAgente,estadoAgente)
-                        console.log('tabulando',idAgente,tabulando)
-                        console.log('falando',idAgente,falando)
+                        //console.log('estadoAgente',idAgente,estadoAgente)
+                        //console.log('tabulando',idAgente,tabulando)
+                        //console.log('falando',idAgente,falando)
                         if(estadoAgente==3){                   
                             if(tabulando==1){
                                 estadoAgente=3.5
@@ -170,7 +172,7 @@ class Dashboard{
                                 estadoAgente=3
                             }
                         }
-                        console.log('estadoAgente Final',estadoAgente)
+                        //console.log('estadoAgente Final',estadoAgente)
                     agente["statusAgente"]=estadoAgente
                     agente["produtivos"]={}
                     agente["produtivos"]["porcentagem"]=perc_produtivas

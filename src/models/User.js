@@ -152,6 +152,7 @@ class User{
         const empresa = u[1]      
        
         const dadosEmpresa = await Redis.getter(`${empresa}:findEmpresa`)
+    
 
         if(dadosEmpresa!==null){
             return dadosEmpresa

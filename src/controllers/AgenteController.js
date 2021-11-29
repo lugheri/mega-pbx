@@ -123,7 +123,9 @@ class AgenteController{
             info['dados']['sistemcall']=sistemcall
             info['dados']['dialcall']=dialcall
             info['dados']['idAtendimento']=protocolo
-            info['dados']['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal)
+            
+                    
+            info['dados']['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal,idMailing,idReg,tabela_dados)
             info['dados']['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)
             info['dados']['tipo_discador']=tipo_discador
             info['dados']['retorno']=false
@@ -213,7 +215,7 @@ class AgenteController{
             info['dialcall']=false
         }
         //Integração  
-        info['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal)
+        info['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal,idMailing,idReg,tabela_dados)
         info['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)  
         info['tipo_discador']=tipo_discador
         if(retorno==1){
@@ -230,6 +232,19 @@ class AgenteController{
         info['campos']={}
         info['campos']['idRegistro']=idReg
         info['campos']['Nome']=nomeCliente
+        const camposMailing = await Discador.camposMailing(empresa,idMailing,idCampanha)
+        for(let i=0; i<camposMailing.length; i++){
+            let apelido=''
+            if(camposMailing[i].apelido === null){
+                apelido=camposMailing[i].campo
+            }else{
+                apelido=camposMailing[i].apelido
+            }  
+            //console.log('Info Chamada - Valor do Campo',campos_dados[i].campo)
+            let nomeCampo = camposMailing[i].campo;
+            const apelidoCampo = await Discador.apelidoCampo(empresa,nomeCampo,tabela_dados,idReg)
+            info['campos'][apelido]=apelidoCampo
+        }      
 
         const numeros = await Discador.infoChamada_byDialNumber(empresa,idCampanha,idReg,id_numero,tabela_numeros,numero)
         info['numeros'] = numeros['numeros']
@@ -484,10 +499,10 @@ class AgenteController{
 
         const idPausa = infoPausa[0].idPausa
         const dadosPausa = await Pausas.dadosPausa(empresa,idPausa)
-        const inicio = infoPausa[0].inicio
-        const hoje = moment().format("Y-MM-DD")
-        const agora = moment().format("HH:mm:ss")
-        const termino = infoPausa[0].termino
+        const inicio = moment(infoPausa[0].inicio, "HH:mm:ss").format("HH:mm:ss") 
+        const hoje = moment().format("YYYY-MM-DD")
+        const agora = moment().format("HH:mm:ss") 
+        const termino = moment(infoPausa[0].termino, "HH:mm:ss").format("HH:mm:ss")
         const nome = infoPausa[0].nome
         const descricao = infoPausa[0].descricao
         const tempo = dadosPausa[0].tempo
@@ -496,7 +511,7 @@ class AgenteController{
         let startTime = moment(`${hoje}T${inicio}`).format();
         let endTime = moment(`${hoje}T${agora}`).format();
         let duration = moment.duration(moment(endTime).diff(startTime));
-
+        
         let horasPass = duration.hours(); //hours instead of asHours
         let minPass = duration.minutes(); //minutes instead of asMinutes
         let segPass = duration.seconds(); //minutes instead of asMinutes
@@ -504,7 +519,7 @@ class AgenteController{
         const tempoPassado = horasPass+':'+minPass+':'+segPass
         const minutosTotais = (horasPass*60)+minPass+(segPass/60)
         const percentual = (minutosTotais/tempo)*100
-
+     
         //Tempo restante
         let startTime_res = moment(`${hoje}T${agora}`).format();
         let endTime_res = moment(`${hoje}T${termino}`).format();
@@ -515,6 +530,8 @@ class AgenteController{
         let segRes = duration_res.seconds(); //minutes instead of asMinutes
 
         const tempoRestante = horasRes+':'+minRes+':'+segRes
+
+        //console.log('Tempo Restante',tempoRestante,horasRes,minRes,segRes)
 
         statusPausa['idPausa']=idPausa
         statusPausa['nome']=nome
@@ -560,19 +577,16 @@ class AgenteController{
         }else{
             produtivo=0
         } 
-
         const dadosAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
         if((dadosAtendimento===null)&&(dadosAtendimento=={})){
             res.json(false);
             return false
         }
-
         const id_numero = dadosAtendimento['id_numero']
         const id_registro = dadosAtendimento['id_registro']
         const removeNumero = 0
         const campanha = dadosAtendimento['id_campanha']
         const mailing= dadosAtendimento['id_mailing']
-
         
         await Agente.agendandoRetorno(empresa,ramal,campanha,mailing,id_numero,id_registro,numero,data,hora)
         const r = await Discador.tabulaChamada(empresa,contatado,status_tabulacao,observacao,produtivo,ramal,id_numero,removeNumero)

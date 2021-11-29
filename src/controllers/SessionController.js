@@ -61,11 +61,15 @@ class SessionController{
     }
 
     async validate(req,res){
+       
         const authHeader = req.headers.authorization;
+        
         let payload = jwt.verify(authHeader, process.env.APP_SECRET);
+       
         const now = moment(new Date())
         const empresa = payload['empresa']
         const ramal = payload['userId']
+       
         await Redis.setter(`${ramal}:logado`,true,90)
 
         res.json(payload)

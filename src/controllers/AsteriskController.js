@@ -2,6 +2,7 @@ import Asterisk from '../models/Asterisk';
 import Clients from '../models/Clients';
 import User from '../models/User';
 import util from 'util';
+import logs from '../Config/logs';
 import fs from 'fs';
 import Discador from '../models/Discador';
 import Agente from '../models/Agente';
@@ -60,6 +61,9 @@ class AsteriskController{
             if(chamadasSimultaneas===null){
                 chamadasSimultaneas=[]
             }
+            if(empresa=='supremapromotora'){
+                logs.saveLog(`Setando a chamada: Tipo Discador: ${chamadasSimultaneas[0].tipo_discador} idAtendimento:${chamadasSimultaneas[0].idAtendimento} Uniqueid:${chamadasSimultaneas[0].uniqueid}`)
+            }
             const novaChamada={}
                   novaChamada['idAtendimento'] = dados.uniqueid
                   novaChamada['uniqueid'] =  dados.uniqueid
@@ -86,7 +90,7 @@ class AsteriskController{
                 await Agente.alterarEstadoAgente(empresa,ramal,6,0)              
             }else{
                 const dadosAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-                if(dadosAtendimento==null){
+                if((dadosAtendimento===null)||(dadosAtendimento==[])){
                     await Agente.alterarEstadoAgente(empresa,ramal,1,0) 
                     res.json(true);
                     return false
@@ -118,7 +122,7 @@ class AsteriskController{
         if(action=='answer'){//Quando ligacao eh atendida pelo agente
             const empresa = dados.empresa            
             const uniqueid = dados.uniqueid 
-            const idAtendimento = dados.idAtendimento
+            const idAtendimento = dados.uniqueid
             const numero = dados.numero
             const tipoChamada = dados.tipoChamada       
             
@@ -131,6 +135,10 @@ class AsteriskController{
             const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
             if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
                 return false
+            }
+
+            if(empresa=='supremapromotora'){
+                logs.saveLog(`Atendendo a chamada:Tipo Discador: ${chamadasSimultaneas[0].tipo_discador} idAtendimento: ${idAtendimento} nas chamadas simultaneas: ${chamadasSimultaneas[0].idAtendimento} Uniqueid:${chamadasSimultaneas[0].uniqueid}`)
             }
 
             if(tipoChamada=="manual"){
@@ -161,8 +169,25 @@ class AsteriskController{
                 await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             
             }else if(tipoChamada=="POWER"){
-                //console.log('\n \n','>>>>>>ATENDIMENTO POWER<<<<<<<<<','\n \n')
-                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
+                
+
+                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento) 
+               
+
+                if(empresa=='supremapromotora'){
+                    if(dadosChamada.length==0){
+                        logs.saveLog(`Chamada Tipo Discador: POWER idAtendimento:  ${idAtendimento} ja foi removida`)
+                    }else{
+                        for(let i=0;i<dadosChamada.length;i++){
+                            logs.saveLog(`Atendendo a chamada:Tipo Discador: POWER idAtendimento: ${idAtendimento}  dadosChamada:${dadosChamada[i].idAtendimento}`)
+                        }
+                    }
+                }
+               
+                if((dadosChamada===null)||(dadosChamada==[])){
+                    res.json(true)
+                    return false
+                }
                 dadosChamada[0].event_em_atendimento = 1
                 const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
                 const concatenarAtendimentos=outrosAtendimentos.concat(dadosChamada)

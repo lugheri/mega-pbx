@@ -11,6 +11,7 @@ import Cronometro from './Cronometro';
 import Clients from './Clients';
 import Redis from '../Config/Redis'
 import Agente from '../models/Agente';
+import logs from '../Config/logs';
 
 class Asterisk{
     async querySync(conn,sql){         
@@ -39,7 +40,7 @@ class Asterisk{
                               WHERE status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 202',err)
+                    if(err) console.error('Asterisk.js 202',err)
                 })
                 await Redis.setter(`${empresa}:domainWebRTC`,rows,360)
                 resolve(rows) 
@@ -63,7 +64,7 @@ class Asterisk{
                               WHERE status=1`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 218',err)
+                    if(err) console.error('Asterisk.js 218',err)
                 })
                 await Redis.setter(`${empresa}:servidorWebRTC`,rows,360)
 
@@ -82,7 +83,7 @@ class Asterisk{
     async machine(dados){       
         //Dados recebidos pelo AGI do asterisk
         const empresa = dados.empresa
-        const idAtendimento = dados.idAtendimento
+        const idAtendimento = dados.uniqueid
         const observacoes = dados.status
         //Verificando se o numero ja consta em alguma chamada simultanea
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
@@ -121,13 +122,22 @@ class Asterisk{
         //Verificando se o numero ja consta em alguma chamada simultanea
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
         //console.log("\n","Dados das chamadas",chamadasSimultaneas)
-        if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
+        if((chamadasSimultaneas===null)||(chamadasSimultaneas==[])){
             //console.log("\n","[[[[[[[[[[[[[[[[Nao existem chamadas simultaneas]]]]]]]]]]]]]]]]]]")
             return false
         }
         //console.log("\n","INICIAR SEPARAÇÃO DE REGISTRO")
-        const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
+        const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento) 
+        if((dadosChamada===null)||(dadosChamada.length==0)||(dadosChamada==[])){
+            //console.log("\n","[[[[[[[[[[[[[[[[Nao existem chamadas simultaneas]]]]]]]]]]]]]]]]]]")
+            return false
+        } 
+
+        if(empresa=='supremapromotora'){
+            logs.saveLog(`Setando atendimento na fila: Tipo Discador: ${dadosChamada[0].tipo_discador} idAtendimento: ${dadosChamada[0].idAtendimento} Uniqueid:${dadosChamada[0].uniqueid}`)
+        }
         //console.log("\n","Dados do Atendimento",dadosChamada)
+        //console.log("\n","Dados do Atendimento",dadosChamada[0].event_chamando)
         //console.log("\n","Atualizando registro na fila")
         dadosChamada[0].event_chamando = 0
         dadosChamada[0].event_na_fila = 1
@@ -151,6 +161,7 @@ class Asterisk{
         if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
             return false
         }     
+        
       
         let dadosChamada=[]
         if(idAtendimento==0){
@@ -158,6 +169,13 @@ class Asterisk{
         }else{
             dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)
         }
+        if(empresa=='supremapromotora'){
+            logs.saveLog(`Desligando a chamada: Tipo Discador: ${dadosChamada[0].tipo_discador}  ${dadosChamada[0].idAtendimento} Uniqueid:${dadosChamada[0].uniqueid}`)
+        }
+        if((dadosChamada===null)||(dadosChamada.length==0)){
+            return false
+        }     
+
         if(dadosChamada[0].tipo_discador=='manual'){
             const ramal =dadosChamada[0].ramal
             const estadoAnterior = dadosChamada[0].estadoAnterior
@@ -203,7 +221,9 @@ class Asterisk{
             await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)   
             return true         
         }else{
-            const chamadasEmAtendimento = await Redis.getter(`${empresa}:chamadasEmAtendimento`)
+            //console.log('DESLIGANDO A CHAMADA')
+            const ramal=dadosChamada[0].ramal
+            const chamadasEmAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
             if((chamadasEmAtendimento===null)||(chamadasEmAtendimento.length==0)){
                 return false
             }   
@@ -243,7 +263,7 @@ class Asterisk{
                 await this.querySync(conn,sql)
                 const rows = await this.servidorWebRTC(empresa)     
                 pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 157',err)
+                    if(err) console.error('Asterisk.js 157',err)
                 })
                 resolve(rows) 
             })
@@ -344,7 +364,7 @@ class Asterisk{
                 const check = await this.checkAgenteFila(empresa,queue_name,membername)
                 if(check){
                     pool.end((err)=>{
-                        if(err) console.log('Asterisk.js 75',err)
+                        if(err) console.error('Asterisk.js 75',err)
                     })
                     resolve(false) 
                     return false;
@@ -355,7 +375,7 @@ class Asterisk{
                                 VALUES ('${queue_name}','${queue_interface}','${membername}','${state_interface}','${penalty}',0)`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 83',err)
+                    if(err) console.error('Asterisk.js 83',err)
                 })
                 resolve(true) 
             })
@@ -372,7 +392,7 @@ class Asterisk{
                             WHERE queue_name = ${nomeFila}`
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 102',err)
+                    if(err) console.error('Asterisk.js 102',err)
                 })
                 resolve(rows) 
             })
@@ -388,7 +408,7 @@ class Asterisk{
                             WHERE queue_name='${nomeFila}' AND membername='${membro}'`
                 await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 117',err)
+                    if(err) console.error('Asterisk.js 117',err)
                 })
                 resolve(true) 
             })
@@ -404,7 +424,7 @@ class Asterisk{
                             WHERE queue_name='${queue_name}' AND membername='${membername}'`
                 const r = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 132',err)
+                    if(err) console.error('Asterisk.js 132',err)
                 })
                 resolve(r.length) 
             })
@@ -440,7 +460,7 @@ class Asterisk{
                            
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 270',err)
+                    if(err) console.error('Asterisk.js 270',err)
                 })
                 resolve(rows) 
             })
@@ -460,7 +480,7 @@ class Asterisk{
                             WHERE id='${idAtendimento}'`// AND na_fila=1`  
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    if(err) console.log('Asterisk.js 289',err)
+                    if(err) console.error('Asterisk.js 289',err)
                 })
                 resolve(rows) 
             })

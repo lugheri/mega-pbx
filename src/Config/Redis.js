@@ -11,15 +11,18 @@ class Redis{
     }
 
     async setter(collection,data,expires){   
+       
         let expire_time = expires
         if((expires=="")||(expires===undefined)){
             expire_time = 7200
         }
+       
        const client = await connection.redisConn()   
        await client.del(collection)
        await client.set(collection, JSON.stringify(data));
+     
        if(expires) await client.expire(collection,expire_time)
-        //console.log('💾 Setter > > > > >',`🔑${collection}`,`📁${data}`,`⌛${expire_time}`)
+       //console.log('💾 Setter > > > > >',`🔑${collection}`,`📁${data}`,`⌛${expire_time}`)
         
         return true
     }

@@ -176,7 +176,8 @@ class ReportController{
                     if(falando==0){
                         await Agente.alterarEstadoAgente(empresa,idAgente,1,0)
                     }
-                }else if(estadoAgente==6){                   
+                }else if(estadoAgente==6){  
+                    const falando = await Report.statusAtendimentoChamadaManual(empresa,idAgente)                           
                     if(falando==1){
                         estadoAgente=7
                     }
@@ -188,7 +189,7 @@ class ReportController{
                         estadoAgente=3
                     }
                 }
-                  agente["estado"]=estadoAgente
+                 agente["estado"]=estadoAgente
                   agente["cod_estado"]=codEstado
                   agente["equipe"]=equipe
                   agente["nome"]=nome
@@ -320,69 +321,69 @@ class ReportController{
         if(campanha){
             registros = 0 //Qtd Limit de registros
             const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
-            
-            const chamadasSimultaneasCampanha = chamadasSimultaneas.filter(chamada => chamada.id_campanha == campanha)
-            const chamadasEmAtendimento = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_em_atendimento == 1) 
-            const chamadasNaFila = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_na_fila == 1) 
-            const chamadasAguardando = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_chamando == 1) 
-            
-            for(let i = 0;i<chamadasEmAtendimento.length; i++) { 
-                const callSim={}
-                  callSim['ramal']=chamadasEmAtendimento[i].ramal 
-                  callSim['agente']=''
-                  callSim['data']=hoje
-                  callSim['hora']=chamadasEmAtendimento[i].horario
-                  callSim['duracao']=await Report.converteSeg_tempo(await Report.timeCall(empresa,chamadasEmAtendimento[i].id))
-                  callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
-                  callSim['tipo']=chamadasEmAtendimento[i].tipo
-                  callSim['telefone']=chamadasEmAtendimento[i].numero
-                  callSim['contatado']=""
-                  callSim['produtivo']=""
-                  callSim['tabulacao']=""                 
-                  callSim['status']=chamadasEmAtendimento[i].status
-                  callSim['gravacao']="/"
-                detChamadas.push(callSim)      
-            }
-
-            for(let i = 0;i<chamadasNaFila.length; i++) {  
-                const callSim={}
-                      callSim['ramal']=chamadasNaFila[i].ramal 
-                      callSim['agente']=''
-                      callSim['data']=hoje
-                      callSim['hora']=chamadasNaFila[i].horario
-                      callSim['duracao']='00:00:00'
-                      callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
-                      callSim['tipo']=chamadasNaFila[i].tipo
-                      callSim['telefone']=chamadasNaFila[i].numero
-                      callSim['contatado']=""
-                      callSim['produtivo']=""
-                      callSim['tabulacao']=""                 
-                      callSim['status']=chamadasNaFila[i].status
-                      callSim['gravacao']="/"
+            if((chamadasSimultaneas!==null)||(chamadasSimultaneas!=[])){
+                
+                const chamadasSimultaneasCampanha = chamadasSimultaneas.filter(chamada => chamada.id_campanha == campanha)
+                const chamadasEmAtendimento = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_em_atendimento == 1) 
+                const chamadasNaFila = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_na_fila == 1) 
+                const chamadasAguardando = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_chamando == 1) 
+                
+                for(let i = 0;i<chamadasEmAtendimento.length; i++) { 
+                    const callSim={}
+                    callSim['ramal']=chamadasEmAtendimento[i].ramal 
+                    callSim['agente']=''
+                    callSim['data']=hoje
+                    callSim['hora']=chamadasEmAtendimento[i].horario
+                    callSim['duracao']=await Report.converteSeg_tempo(await Report.timeCall(empresa,chamadasEmAtendimento[i].id))
+                    callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
+                    callSim['tipo']=chamadasEmAtendimento[i].tipo
+                    callSim['telefone']=chamadasEmAtendimento[i].numero
+                    callSim['contatado']=""
+                    callSim['produtivo']=""
+                    callSim['tabulacao']=""                 
+                    callSim['status']=chamadasEmAtendimento[i].status
+                    callSim['gravacao']="/"
                     detChamadas.push(callSim)      
-            }     
-            
+                }
 
-            for(let i = 0;i<chamadasAguardando.length; i++) {  
-                const callSim={}
-                      callSim['ramal']=chamadasAguardando[i].ramal 
-                      callSim['agente']=''
-                      callSim['data']=hoje
-                      callSim['hora']=chamadasAguardando[i].horario
-                      callSim['duracao']='00:00:00'
-                      callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
-                      callSim['tipo']=chamadasAguardando[i].tipo
-                      callSim['telefone']=chamadasAguardando[i].numero
-                      callSim['contatado']=""
-                      callSim['produtivo']=""
-                      callSim['tabulacao']=""                 
-                      callSim['status']=chamadasAguardando[i].status
-                      callSim['gravacao']="/"
-                    detChamadas.push(callSim)                     
+                for(let i = 0;i<chamadasNaFila.length; i++) {  
+                    const callSim={}
+                        callSim['ramal']=chamadasNaFila[i].ramal 
+                        callSim['agente']=''
+                        callSim['data']=hoje
+                        callSim['hora']=chamadasNaFila[i].horario
+                        callSim['duracao']='00:00:00'
+                        callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
+                        callSim['tipo']=chamadasNaFila[i].tipo
+                        callSim['telefone']=chamadasNaFila[i].numero
+                        callSim['contatado']=""
+                        callSim['produtivo']=""
+                        callSim['tabulacao']=""                 
+                        callSim['status']=chamadasNaFila[i].status
+                        callSim['gravacao']="/"
+                        detChamadas.push(callSim)      
+                }     
+                
+
+                for(let i = 0;i<chamadasAguardando.length; i++) {  
+                    const callSim={}
+                        callSim['ramal']=chamadasAguardando[i].ramal 
+                        callSim['agente']=''
+                        callSim['data']=hoje
+                        callSim['hora']=chamadasAguardando[i].horario
+                        callSim['duracao']='00:00:00'
+                        callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
+                        callSim['tipo']=chamadasAguardando[i].tipo
+                        callSim['telefone']=chamadasAguardando[i].numero
+                        callSim['contatado']=""
+                        callSim['produtivo']=""
+                        callSim['tabulacao']=""                 
+                        callSim['status']=chamadasAguardando[i].status
+                        callSim['gravacao']="/"
+                        detChamadas.push(callSim)                     
+                }
             }
         }
-
-
       
         const chamadas = await Report.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
 

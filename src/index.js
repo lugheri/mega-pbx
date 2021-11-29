@@ -1,13 +1,19 @@
 import customExpress from './Config/customExpress';
 import http from 'http';
 import sockets from './Config/sockets'
+import logs from './Config/logs'
 
 import DiscadorController from './controllers/DiscadorController';
 import UserController from './controllers/UserController';
 
 const app = customExpress();
+app.use(logs.logErrors);
+app.use(logs.clientErrorHandler);
+app.use(logs.errorHandler);
 const httpServer = sockets(app)
 //const httpServer = http.createServer(app);
+
+
 
 //Iniciando Discador
 DiscadorController.checkAccounts()

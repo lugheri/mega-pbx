@@ -155,7 +155,7 @@ class Cronometro{
                 const sql = `UPDATE ${empresa}_dados.tempo_ligacao 
                                 SET saida=NOW(), 
                                     tempo_total=TIMESTAMPDIFF (SECOND, entrada, NOW())
-                            WHERE idCampanha=${idCampanha} AND numero=${numero} AND idAgente=${ramal} AND saida is null`
+                            WHERE idCampanha=${idCampanha} AND numero='${numero}' AND idAgente=${ramal} AND saida is null`
                const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
                     if(err) console.log('Cronometro.js 150', err)

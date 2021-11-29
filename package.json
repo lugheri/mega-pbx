@@ -12,6 +12,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sentry/node": "^6.15.0",
+    "@sentry/tracing": "^6.15.0",
     "ami-io": "^1.2.1",
     "ari-client": "^2.2.0",
     "asterisk-ami": "^0.1.0",

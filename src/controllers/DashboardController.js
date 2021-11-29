@@ -11,7 +11,7 @@ class DashboardController{
     }
     async painel(req,res){
         const empresa = await User.getEmpresa(req)
-        console.log('painel',empresa)
+        //console.log('painel',empresa)
         const panelData= await Dashboard.painel(empresa)
         res.json(panelData)
     }
@@ -54,7 +54,7 @@ class DashboardController{
         const agentes_falando = parseInt(falando.length)      
         //Agentes em pausa
         const emPausa = await Campanhas.agentesEmPausa(empresa)
-        console.log('Em Pausa', emPausa)
+        //console.log('Em Pausa', emPausa)
         const agentes_emPausa = parseInt(emPausa.length)
 
         //Agentes Disponíveis
