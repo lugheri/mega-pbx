@@ -5,7 +5,7 @@ class Api{
         const h1 = hash1.split(":")
         const dec2 = new Buffer.from(h1[1], 'base64');
         const hash2 = dec2.toString('ascii');
-        const r = hash2.split(";")
+        const r = hash2.split(":")
         const empresa = r[1]
         return empresa
     }

@@ -7,9 +7,12 @@ import DiscadorController from './controllers/DiscadorController';
 import UserController from './controllers/UserController';
 
 const app = customExpress();
-app.use(logs.logErrors);
-app.use(logs.clientErrorHandler);
-app.use(logs.errorHandler);
+app.use(function(err, req, res, next) {
+    logs.getErrors(err.stack)
+    next(err);
+});
+
+
 const httpServer = sockets(app)
 //const httpServer = http.createServer(app);
 

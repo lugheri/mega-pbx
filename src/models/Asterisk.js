@@ -117,7 +117,7 @@ class Asterisk{
     async setaRegistroNaFila(dados){   
         //console.log("\n","}}}}}}}}}}}}}}}}}}}}}} SET REGISTRO NA FILA - - - - - - - - - - - - -")
         const empresa = dados.empresa
-        const idAtendimento = dados.idAtendimento
+        const idAtendimento = dados.uniqueid
         const observacoes = dados.status
         //Verificando se o numero ja consta em alguma chamada simultanea
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
@@ -155,7 +155,7 @@ class Asterisk{
     //Desliga chamada 
     async desligaChamada(dados){
         const empresa = dados.empresa
-        const idAtendimento = dados.idAtendimento
+        const idAtendimento = dados.uniqueid
         const numero = dados.numero
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
         if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){

@@ -131,6 +131,8 @@ class AsteriskController{
                 ch = ch.split("-");
                 ch = ch[0].split("/")
             const ramal = ch[1]
+
+            console.log('ramal',ramal)
             //console.log('>>>>>>>>>>>>>>>>>>>>>>>ATENDEU CHAMADA',tipoChamada)
             const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
             if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
@@ -162,17 +164,13 @@ class AsteriskController{
                 const protocolo=0
                 const tabulacao=0
                 const observacoes=""
-                const contatado=0                
-                
+                const contatado=0                   
            
                 await Discador.registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_reg,id_numero,ramal,uniqueid,tipoDiscador,numero,tabulacao,observacoes,contatado)
                 await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             
-            }else if(tipoChamada=="POWER"){
-                
-
-                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento) 
-               
+            }else if(tipoChamada=="POWER"){  
+                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)                
 
                 if(empresa=='supremapromotora'){
                     if(dadosChamada.length==0){
@@ -184,10 +182,14 @@ class AsteriskController{
                     }
                 }
                
-                if((dadosChamada===null)||(dadosChamada==[])){
+                if(dadosChamada.length==0){
                     res.json(true)
                     return false
                 }
+                console.log('dados Chamada Asterisk',dadosChamada)
+                console.log('ramal',ramal)
+                dadosChamada[0].ramal = ramal
+                dadosChamada[0].event_chamando = 0
                 dadosChamada[0].event_em_atendimento = 1
                 const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
                 const concatenarAtendimentos=outrosAtendimentos.concat(dadosChamada)
@@ -204,8 +206,9 @@ class AsteriskController{
                 const nomeFila = dadosChamada[0].nomeFila
                 await Discador.registraChamada(empresa,ramal,idAtendimento,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila)
                 await Cronometro.saiuDaFila(empresa,numero)
-                await Agente.alterarEstadoAgente(empresa,ramal,3,0) 
                 await Cronometro.iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,tipoChamada,numero,ramal,uniqueid)
+
+                
 
             }else{  /*DISCADORES POSSIVEIS: click-to-call, preview*/
                 const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)  

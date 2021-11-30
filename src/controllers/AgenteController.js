@@ -4,6 +4,7 @@ import Report from '../models/Report'
 import Campanhas from '../models/Campanhas'
 import Pausas from '../models/Pausas'
 import Discador from '../models/Discador'
+import Cronometro from '../models/Cronometro'
 import Redis from '../Config/Redis'
 import moment from 'moment'
 
@@ -156,7 +157,8 @@ class AgenteController{
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
         const estado = 3 //Estado do agente de falando
-        const pausa = 0//Status da pausa de ocupado
+        const pausa = 0//Status da pausa de ocupado       
+              
         //atualiza para falando
         const estadoAgente = await Agente.infoEstadoAgente(empresa,ramal)
         if(estadoAgente!=3){

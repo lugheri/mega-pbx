@@ -519,7 +519,7 @@ class Agente{
     //Retorna o histórico de atendimento do registro
     async historicoRegistro(empresa,idMailing,idReg){
         const historicoRegistro = await Redis.getter(`${empresa}:historicoRegistro:${idReg}:idMailing:${idMailing}`)
-        if(historicoRegistro===null){
+        if(historicoRegistro!==null){
             return historicoRegistro
         }
         return new Promise (async (resolve,reject)=>{ 
@@ -578,7 +578,9 @@ class Agente{
                         registro['dadosAtendimento']['contatado']=dados[i].contatado
                         registro['dadosAtendimento']['produtivo']=dados[i].produtivo
                         registro['dadosAtendimento']['tabulacao']=dados[i].tabulacao
-                        registro['dadosAtendimento']['observacoes']=dados[i].obs_tabulacao                
+                        registro['dadosAtendimento']['observacoes']=dados[i].obs_tabulacao      
+                        
+                        console.log('dados do agente',dados[i].agente)
                             
                     const agente = await this.infoAgente(empresa,dados[i].agente)
                             

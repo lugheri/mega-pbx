@@ -37,6 +37,18 @@ class logs{
         logger.end()
         return true
     }
+
+    getErrors(value){
+        const hoje = moment().format("YYYY-MM-DD")
+        const hora = moment().format("HH:mm:ss")
+
+        const logger = fs.createWriteStream('log_errors.txt', {
+            flags: 'a' // 'a' means appending (old data will be preserved)
+        })
+        logger.write(`${hoje} ${hora} - ${value} \n`)
+        logger.end()
+        return true
+    }
 }
 
 export default new logs()

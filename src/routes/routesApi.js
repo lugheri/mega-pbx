@@ -7,9 +7,4 @@ module.exports = (routes) => {
     //Mailings
     //configuracoes
     routes.post('/api/importarMailing',multer(multerDataFiles).single('file'), ApiController.importarMailing)
-   
-    
-
-
-    
 }
