@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import routesApi from './routesApi'
 import routesAuth from './routesAuth';
 import routesClients from './routesClients';
 import routesDashboard from './routesDashboard';
@@ -14,6 +15,7 @@ import routesTests from './routesTests';
 
 const routes = Router();
 
+routesApi(routes)
 routesAuth(routes)
 routesClients(routes)
 routesDashboard(routes)
