@@ -74,5 +74,30 @@ class TestController{
       keys.push(chamadasEmAtendimento)
       res.json(keys)
   }
+
+  async simularChamadasSimultaneas(req, res) {
+      const empresa = req.body.empresa
+      const ramal= req.body.ramal
+      const idAtendimento = req.body.idAtendimento
+      const idCampanha = req.body.idCampanha
+      const modoAtendimento = req.body.modoAtendimento
+      const tipoDiscador = req.body.tipoDiscador
+      const idMailing = req.body.idMailing
+      const tabela_dados = req.body.tabela_dados
+      const tabela_numeros = req.body.tabela_numeros
+      const id_reg = req.body.id_reg
+      const id_numero = req.body.id_numero
+      const numero = req.body.numero
+      const fila = req.body.fila
+      const falando = req.body.falando
+
+
+
+
+
+      await Discador.registraChamada(empresa,ramal,idAtendimento,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila,falando)
+        
+        res.json(true)
+  }
 }
 export default new TestController()

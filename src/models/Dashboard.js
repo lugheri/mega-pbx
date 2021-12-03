@@ -146,22 +146,27 @@ class Dashboard{
                 const agente={}
                       agente["nomeAgente"]=agentes[i].nome
                       let estadoAgente=agentes[i].estado
-              
-                        const tabulando = await Report.statusTabulacaoChamada(empresa,idAgente)
-                        const falando = await Report.statusAtendimentoChamada(empresa,idAgente)
-                        //console.log('estadoAgente',idAgente,estadoAgente)
-                        //console.log('tabulando',idAgente,tabulando)
-                        //console.log('falando',idAgente,falando)
-                        if(estadoAgente==3){                   
-                            if(tabulando==1){
-                                estadoAgente=3.5
-                            }
-                            if(falando==0){
-                                await Agente.alterarEstadoAgente(empresa,idAgente,1,0)
-                            }
-                        }else if(estadoAgente==6){   
-                            const falando = await Report.statusAtendimentoChamadaManual(empresa,idAgente)                
-                            if(falando==1){
+                      let falando=0
+                      let desligada=0
+                      let tabulando=0
+                      let tabulada=0
+                      const status = await Report.statusTabulacaoAgente(empresa,idAgente)
+                      if(status!=0){
+                         falando=status.event_falando
+                         desligada=status.event_desligada
+                         tabulando=status.event_tabulando
+                         tabulada=status.event_tabulada
+                      }
+                      if(estadoAgente==3){                   
+                        if(tabulando==1){
+                            estadoAgente=3.5
+                        }
+                        if((falando==0)&&(desligada==1)&&(tabulada==1)){
+                            await Agente.alterarEstadoAgente(empresa,idAgente,1,0)
+                        }
+                      }else if(estadoAgente==6){   
+                            const falandoManual = await Report.statusAtendimentoChamadaManual(empresa,idAgente)                
+                            if(falandoManual==1){
                                 estadoAgente=7
                             }
                         }else if(estadoAgente==5){

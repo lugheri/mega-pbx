@@ -64,7 +64,7 @@ class AgenteController{
         const ramal = req.params.ramal
         const estado = 4//Estado do Agente: 1=Disponível;2=Em Pausa;3=Falando;4=Indisponível;
         const pausa = 0//Caso o estado do agente seja igual a 2 informa o cod da pausa 
-        await Redis.delete(`${empresa}:atendimentoAgente:${ramal}`)
+        
         await Agente.alterarEstadoAgente(empresa,ramal,estado,pausa)        
         res.json(true);               
     }
@@ -74,21 +74,36 @@ class AgenteController{
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
         //console.log(ramal)
-        const dadosChamada = await Redis.getter(`${empresa}:chamadasSimultaneas`)
-
-        console.log('> > > > > > > > > > > > > > > > > > > > dados chamada',dadosChamada)
-        if((dadosChamada===null)||(dadosChamada.length==0)){
+        const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+        console.log('> > > > > > > > > > > > > > > > > > > > chamadasSimultaneas',chamadasSimultaneas)
+        if((chamadasSimultaneas==null)||(chamadasSimultaneas.length==0)){
             const mode={}
                 mode['sistemcall']=false
                 mode['dialcall']=false
                 mode['config'] = {}
                 mode['config']['origem']="interna"
                 mode['config']['modo_atendimento']="manual"
+                mode['info']="sem chamadas Simultaneas"
+            res.json(mode)
+            return false;
+        }
+
+        const dadosChamada = chamadasSimultaneas.filter(chamadas => chamadas.event_na_fila == 1)
+
+        console.log('> > > > > > > > > > > > > > > > > > > > dados chamada',dadosChamada)
+        if((dadosChamada==null)||(dadosChamada.length==0)){
+            const mode={}
+                mode['sistemcall']=false
+                mode['dialcall']=false
+                mode['config'] = {}
+                mode['config']['origem']="interna"
+                mode['config']['modo_atendimento']="manual"
+                mode['info']="Sem Dados Chamada"
             res.json(mode)
             return false;
         }else{
            
-            const modo_atendimento = 'auto'// atendimentoAgente['modo_atendimento']
+            const modo_atendimento = dadosChamada[0].modo_atendimento
             const numero = dadosChamada[0].numero
             const idMailing = dadosChamada[0].id_mailing
             const tipo_discador = dadosChamada[0].tipo_discador
@@ -173,7 +188,7 @@ class AgenteController{
         const ramal = req.params.ramal
         console.log('Chave',`${empresa}:atendimentoAgente:${ramal}`)
         const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-        if(atendimentoAgente===null){
+        if(atendimentoAgente==null){
             const mode={}
                 mode['sistemcall']=false
                 mode['dialcall']=false
@@ -395,7 +410,7 @@ class AgenteController{
     async voltaRegistro(req,res){
         const empresa = await User.getEmpresa(req)
         const idHistorico = req.params.idHistorico
-        const r =  await Discador.voltaRegistro(empresa,idHistorico)
+        const r =  await Agente.voltaRegistro(empresa,idHistorico)
         res.json(r)
     }
 
@@ -407,7 +422,8 @@ class AgenteController{
         let nome=""
         
         const errors={}
-        if(dadosChamadaDesligada === false){
+        if(dadosChamadaDesligada == false){
+            console.log('DESLIGA CHAMADA','dadosChamadaDesligada')
             //Atualiza estado do agente para disponivel    
             await Agente.alterarEstadoAgente(empresa,ramal,1,0)//Altera o status do agente para ativo
             errors['message']=`Nenhuma chamada encontrada em atendimento com o agente ${ramal} `
@@ -419,12 +435,14 @@ class AgenteController{
         
         //Inicia verificacao se a chamada ja esta tabulada
         if(dadosChamadaDesligada['event_tabulada']==1){
+            console.log('DESLIGA CHAMADA','JA TABULADA')
             //Remove chamada simultanea 
             await Agente.clearCallsAgent(empresa,ramal);
             //Atualiza estado do agente para disponivel
             await Agente.alterarEstadoAgente(empresa,ramal,1,0)//Altera o status do agente para ativo
             errors['message']=`Chamada em atendimento pelo ramal ${ramal} ja estava tabulada!`            
             errors['warning']=true
+            errors['tabulate']=true
             res.json(errors)
             return false
         }
@@ -434,6 +452,7 @@ class AgenteController{
         
         const tabulacoesCampanha = await Discador.tabulacoesCampanha(empresa,nome,dadosChamadaDesligada['id_campanha'])
         if(tabulacoesCampanha==false){
+             console.log('DESLIGA CHAMADA','SEM TABULACAO')
             //Registra uma tabulacao padrão
             const contatado = 'S'
             const produtivo = 0

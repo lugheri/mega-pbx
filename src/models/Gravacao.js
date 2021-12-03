@@ -89,17 +89,11 @@ class Gravacao{
                     }
                 }
                 //Data
-                let sepDate_de = de.split('/')
-                let data_de=`${sepDate_de[2]}-${sepDate_de[1]}-${sepDate_de[0]}`
-
-                let sepDate_ate = ate.split('/')
-                let data_ate=`${sepDate_ate[2]}-${sepDate_ate[1]}-${sepDate_ate[0]}`
-
                 if(de){
-                    filter += ` AND r.date >= "${data_de} 00:00:00"`
+                    filter += ` AND r.date >= "${de} 00:00:00"`
                 }
                 if(ate){
-                    filter += ` AND r.date <=  "${data_ate} 23:59:59"`
+                    filter += ` AND r.date <=  "${ate} 23:59:59"`
                 }
 
                 if(buscarPor){

@@ -11,4 +11,5 @@ module.exports = (routes) => {
     routes.post('/getAllRedisKeys',TestController.getAllRedisKeys)
     routes.delete('/delAllRedisKeys',TestController.delAllRedisKeys)
     routes.get('/chamadasSimultaneas/:empresa/:ramal',TestController.chamadasSimultaneas)
+    routes.post('/simularChamadasSimultaneas/',TestController.simularChamadasSimultaneas)
 }

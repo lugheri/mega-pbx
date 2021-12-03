@@ -37,9 +37,19 @@ class Report{
         
         return total
     }
+    async statusTabulacaoAgente(empresa,idAgente){
+        const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${idAgente}`)
+        //console.log('atendimentoAgente DASHBOARD',atendimentoAgente)
+        if((atendimentoAgente==null)||(atendimentoAgente.length==0)){
+            return 0
+        }   
+        return atendimentoAgente
+    }
+
     async statusAtendimentoChamada(empresa,idAgente){
         const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${idAgente}`)
-        if((atendimentoAgente===null)||(atendimentoAgente.length==0)){
+        //console.log('atendimentoAgente DASHBOARD',atendimentoAgente)
+        if((atendimentoAgente==null)||(atendimentoAgente.length==0)){
             return 0
         }   
         const atendimento = atendimentoAgente.event_falando
@@ -111,7 +121,7 @@ class Report{
                 const users = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 resolve(users)
             })
@@ -129,7 +139,7 @@ class Report{
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -147,7 +157,7 @@ class Report{
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -165,7 +175,7 @@ class Report{
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -189,7 +199,7 @@ class Report{
                 const u = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_usuarioCampanha:${idAgente}:Campanha:${idCampanha}`,u.length,15)
                 resolve(u.length)
@@ -216,7 +226,7 @@ class Report{
                 const user = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:redis_infoAgente:${agente}`,user,15)
                 resolve(user)
@@ -245,7 +255,7 @@ class Report{
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -268,7 +278,7 @@ class Report{
                 const e = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_infoEstadoAgente:${ramal}`,e[0].estado,5)
                 resolve(e[0].estado)
@@ -297,7 +307,7 @@ class Report{
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 resolve(t[0].tempo)
             })
@@ -326,7 +336,7 @@ class Report{
                
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_tempoEstadoAgente:${ramal}`,tempoEstado,5)
                 resolve(tempoEstado)
@@ -366,7 +376,7 @@ class Report{
                  
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_chamadasSimultaneas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}`,c,2)
                 resolve(c)
@@ -410,10 +420,10 @@ class Report{
                                LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
                               WHERE 1=1 ${filter} 
                               GROUP BY status_tabulacao`
-                console.log('chamadasRealizadas',sql)
+                //console.log('chamadasRealizadas',sql)
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{                    
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -468,7 +478,7 @@ class Report{
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_chamadasRealizadas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`,rows,15)
                 resolve(rows)
@@ -518,7 +528,7 @@ class Report{
                 const rows = await this.querySync(conn,sql)   
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_chamadasRealizadas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`,rows,15)
                 resolve(rows)
@@ -548,7 +558,7 @@ class Report{
                 if(t.length==0){
                     pool.end((err)=>{
                         
-                        if(err) console.log('Reports ...', err)
+                        if(err) console.error('Reports ...', err)
                     })
                     resolve(0)
                     return 0
@@ -565,7 +575,7 @@ class Report{
                 const d = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_timeCall:${uniqueid}`,d[0].tempo,5)
                 resolve(d[0].tempo)
@@ -588,7 +598,7 @@ class Report{
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.getter(`${empresa}:reports_totalChamadasRecebidas:${idAgente}:${de}:${ate}`,t[0].tempo,15)
                 resolve(t[0].tempo)
@@ -611,7 +621,7 @@ class Report{
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.getter(`${empresa}:reports_totalChamadasRealizadas:${idAgente}:${de}:${ate}`,t[0].tempo,15)
                 resolve(t[0].tempo)
@@ -634,7 +644,7 @@ class Report{
                 const t = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.getter(`${empresa}:reports_totalChamadasManuais:${idAgente}:${de}:${ate}`,t[0].tempo,15)
                 resolve(t[0].tempo)
@@ -665,7 +675,7 @@ class Report{
                 const ca = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_chamadasAtendidas:${ramal}:${campanha}:${dataI}:${dataF}:${hoje}`,ca[0].total,15)
                 resolve(ca[0].total)
@@ -703,7 +713,7 @@ class Report{
                 const tm = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_tempoMedioAgente:${agente}:${tempoMedido}:${idCampanha}:${dataI}:${dataF}:${hoje}`,tm[0].tempoMedio,15)
                 resolve(Math.floor(tm[0].tempoMedio))
@@ -740,7 +750,7 @@ class Report{
                 const p=await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_chamadasProdutividade:${statusProdutividade}:${idAgente}:${idCampanha}:${dataI}:${dataF}:${hoje}`,p[0].produtivas,15)
                 resolve(p[0].produtivas)
@@ -763,7 +773,7 @@ class Report{
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_chamadasAtendidasCampanha:${campanha}`,a[0].atendidas,15)
                 resolve(a[0].atendidas)
@@ -786,7 +796,7 @@ class Report{
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_chamadasProdutivaCampanha:${campanha}`,a[0].produtivas,15)
                 resolve(a[0].produtivas)
@@ -809,7 +819,7 @@ class Report{
                     const a=await this.querySync(conn,sql);
                     pool.end((err)=>{
                         
-                        if(err) console.log('Reports ...', err)
+                        if(err) console.error('Reports ...', err)
                     })
                     await Redis.setter(`${empresa}:reports_chamadasEmAtendimentoCampanha:${campanha}`,a[0].atendidas,15)
                     resolve(a[0].atendidas)
@@ -832,7 +842,7 @@ class Report{
                 const na=await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_chamadasNaoAtendidasCampanha:${campanha}`,na[0].nao_atendidas,15)
                 resolve(na[0].nao_atendidas)
@@ -855,7 +865,7 @@ class Report{
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_chamadasContatadasCampanha:${idCampanha}`,c[0].contatados,15)
                 resolve(c[0].contatados)
@@ -877,7 +887,7 @@ class Report{
                 }
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 resolve(c[0].agressividade)
             })
@@ -895,7 +905,7 @@ class Report{
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 resolve(rows)
             })
@@ -918,7 +928,7 @@ class Report{
                 const tm=await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_TempoMedioDeAtendimentoCampanha:${idCampanha}`,tm[0].tempoMedio,10)
                 resolve(tm[0].tempoMedio)
@@ -948,7 +958,7 @@ class Report{
                 
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_mailingsProdutivosPorCampanha:${idCampanha}:${idMailing}:${status}`,total_mailing[0].total,30)
                 resolve(total_mailing[0].total)
@@ -971,7 +981,7 @@ class Report{
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_redis_totalChamadasDia:${idCampanha}:${hoje}`,c[0].chamadas,15)
                 resolve(c[0].chamadas)
@@ -995,7 +1005,7 @@ class Report{
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_totalChamadas_UltimosDias:${idCampanha}:${hoje}`,rows,120)
                 resolve(rows)
@@ -1019,7 +1029,7 @@ class Report{
                 const c = await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_totalChamadasCompletadasDia:${idCampanha}:${hoje}`,c[0].chamadas,15)
                 resolve(c[0].chamadas)
@@ -1042,7 +1052,7 @@ class Report{
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_ChamadasCompletadas_UltimosDias:${idCampanha}:${hoje}`,rows,120)
                 resolve(rows)
@@ -1067,7 +1077,7 @@ class Report{
                 const c=await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_totalTabulacoesVendaDia:${idCampanha}:${hoje}`,c[0].chamadas,15)
                 resolve(c[0].chamadas)
@@ -1091,7 +1101,7 @@ class Report{
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_totalChamadasVendas_UltimosDias:${idCampanha}:${hoje}`,rows,120)
                 resolve(rows)
@@ -1114,7 +1124,7 @@ class Report{
                 const a=await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_totalChamadasAbandonadasDia:${idCampanha}:${hoje}`,a[0].abandonadas,15)
                 resolve(a[0].abandonadas)
@@ -1137,7 +1147,7 @@ class Report{
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
                     
-                    if(err) console.log('Reports ...', err)
+                    if(err) console.error('Reports ...', err)
                 })
                 await Redis.setter(`${empresa}:reports_totalChamadasAbandonadas_UltimosDias:${idCampanha}:${hoje}`,rows,120)
                 resolve(rows)

@@ -508,7 +508,7 @@ class Discador{
     }
     async checaAgendamento(empresa,data,hora){
         const agendaRetornos = await Redis.getter(`${empresa}:agendaRetornos`)
-        if((agendaRetornos!==null)||(agendaRetornos.length>0)){
+        if(agendaRetornos!=null){
             //console.log('agendaRetornos>>>>>>>>>>>>>>>>>>ZERO',agendaRetornos)
             return agendaRetornos
         }
@@ -640,7 +640,7 @@ class Discador{
     }
     async totalChamadasSimultaneas(empresa,idCampanha){
         let chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`) 
-        if(chamadasSimultaneas===null){
+        if(chamadasSimultaneas==null){
             chamadasSimultaneas = []
             return 0
         }
@@ -653,31 +653,36 @@ class Discador{
         for(let c=0;c<chamadasSimultaneasCampanha.length;c++){
             const statusChannel = await Asterisk.statusChannel(empresa,chamadasSimultaneasCampanha[c].uniqueid)
             if(statusChannel===false){
-                //Removendo a chamada caso o canal nao exista                  
+                //Removendo a chamada caso o canal nao exista    
+                 
                 await this.removeChamadaSimultanea(empresa,chamadasSimultaneasCampanha[c])            
             }else{         
                 if(statusChannel['state']=='Down'){
                     chamadasSimultaneasCampanha[c].status='Discando . . .'
                 }
-                if(statusChannel['state']=='Up'){
-                   //console.log('>>>>>>>>>>>>>>>>>>>>>>> STATUS DE UP <<<<<<<<<<<<<<<<<<<')
-                    if(statusChannel['App']=='AMD'){
-                      //console.log('>>>>>>>>>>>>>>>>>>>>>>> APP AMD <<<<<<<<<<<<<<<<<<<')
-                        chamadasSimultaneasCampanha[c].status='Analisando'
-                    }else if(statusChannel['App']=='Queue'){
-                     //console.log('>>>>>>>>>>>>>>>>>>>>>>> APP QUEUE <<<<<<<<<<<<<<<<<<<')
-                        chamadasSimultaneasCampanha[c].status='Na Fila'
+                if(chamadasSimultaneasCampanha[c].event_em_atendimento==1){
+                    chamadasSimultaneasCampanha[c].status='Em Atendimento'
+                }else{
+                    if(statusChannel['state']=='Up'){
+                    //console.log('>>>>>>>>>>>>>>>>>>>>>>> STATUS DE UP <<<<<<<<<<<<<<<<<<<')
+                        if(statusChannel['App']=='AMD'){
+                        //console.log('>>>>>>>>>>>>>>>>>>>>>>> APP AMD <<<<<<<<<<<<<<<<<<<')
+                            chamadasSimultaneasCampanha[c].status='Analisando'
+                        }else if(statusChannel['App']=='Queue'){
+                        //console.log('>>>>>>>>>>>>>>>>>>>>>>> APP QUEUE <<<<<<<<<<<<<<<<<<<')
+                            chamadasSimultaneasCampanha[c].status='Na Fila'
+                        }
                     }
+                    if(statusChannel['state']=='Ringing'){
+                        if((statusChannel['App']=='Queue')||(statusChannel['App']=='AppQueue')){
+                            chamadasSimultaneasCampanha[c].status='Na Fila'
+                        }else if(statusChannel['App']=='AMD'){
+                            chamadasSimultaneasCampanha[c].status='Analisando'
+                        }else{
+                            chamadasSimultaneasCampanha[c].status='Chamando . .'
+                        }
+                    }  
                 }
-                if(statusChannel['state']=='Ringing'){
-                    if((statusChannel['App']=='Queue')||(statusChannel['App']=='AppQueue')){
-                        chamadasSimultaneasCampanha[c].status='Na Fila'
-                    }else if(statusChannel['App']=='AMD'){
-                        chamadasSimultaneasCampanha[c].status='Analisando'
-                    }else{
-                        chamadasSimultaneasCampanha[c].status='Chamando . .'
-                    }
-                }  
                 chamadasAtivas.push(chamadasSimultaneasCampanha[c])             
             }
         }
@@ -894,9 +899,12 @@ class Discador{
      //Verificando se existem agentes disponiveis na fila
      async agentesDisponiveis(empresa,idFila){  
         const agentesDisponiveis = await Redis.getter(`${empresa}:agentesDisponiveis:${idFila}`)
+        //console.log('\n[❗][❗]','Agentes Disponiveis',agentesDisponiveis)
         if(agentesDisponiveis!==null){
             return agentesDisponiveis
         }
+
+        
 
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
@@ -911,6 +919,7 @@ class Discador{
                     if(err) console.error(err)
                 }) 
                 const agentesDisponiveis = a[0].total
+                
                 await Redis.setter(`${empresa}:agentesDisponiveis:${idFila}`,agentesDisponiveis,360)
                 resolve(agentesDisponiveis) 
             })
@@ -1018,8 +1027,18 @@ class Discador{
         if(chamadasSimultaneas===null){
             chamadasSimultaneas = []
         }
+        //console.log('chamadasSimultaneas',chamadasSimultaneas)
+        //console.log('NUMERo',numero)
+
         const chamadasSimultaneasCampanha = chamadasSimultaneas.filter(chamadas => chamadas.id_campanha == idCampanha)   
+
+        //console.log('chamadasSimultaneasCampanha',chamadasSimultaneasCampanha)
         const numeroFiltrado = chamadasSimultaneasCampanha.filter(chamadas => chamadas.numero == numero)
+
+        //console.log('numeroFiltrado',numeroFiltrado)
+
+        //console.log('numeroFiltrado length',numeroFiltrado.length)
+
         if(numeroFiltrado.length>0){
             return true
         }
@@ -1093,7 +1112,7 @@ class Discador{
         })       
     }
     //Registra chamada simultanea
-    async registraChamada(empresa,ramal,idAtendimento,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila){
+    async registraChamada(empresa,ramal,idAtendimento,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila,falando){
         let tipo = 'discador'
         if(tipoDiscador=="manual"){
             tipo = 'manual'
@@ -1126,23 +1145,20 @@ class Discador{
               novaChamada['id_numero']=id_numero
               novaChamada['numero']=numero
               novaChamada['fila']=fila
-              novaChamada['event_falando']=0    
+              novaChamada['event_falando']=falando   
               novaChamada['event_tabulando']=0
               novaChamada['event_tabulada']=0
               novaChamada['event_desligada']=0  
 
-              //console.log('novaChamada',novaChamada)
+            console.log('\n >>>>>> Setando Chamada Agente:',ramal,'Dados da chamada:',novaChamada)
         
         //await Redis.setter(`${empresa}:chamadasEmAtendimento`,chamadasEmAtendimento,43200)
-       // await Redis.delete(`${empresa}:chamadasEmAtendimento`)
+        //await Redis.delete(`${empresa}:chamadasEmAtendimento`)
         await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,novaChamada,43200)
-        const chave = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+        //const chave = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
         //console.log('>>>>>>>>>>>>>>>>>>>>>> chave',`${empresa}:atendimentoAgente:${ramal}`,chave)
-
-
-
-
     } 
+
     async discar(empresa,ramal,idAtendimento,numero,fila,modoAtendimento,saudacao,aguarde,idCampanha,idMailing,tabelaDados,tabelaNumeros,idRegistro,idNumero){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
@@ -1177,7 +1193,7 @@ class Discador{
                     
                     const uniqueid = call['id']
                     const novaChamada={}
-                          novaChamada['idAtendimento'] = uniqueid//idAtendimento
+                          novaChamada['idAtendimento'] = idAtendimento
                           novaChamada['uniqueid'] = uniqueid
                           novaChamada['id_campanha'] = idCampanha
                           novaChamada['id_mailing'] = idMailing
@@ -1202,10 +1218,7 @@ class Discador{
                           
                     //console.log('Discando para',numero)
                     //console.log('Nova Chamada',novaChamada)
-                    if(empresa=='supremapromotora'){
-                        logs.saveLog(`Registrando novo atendimento da chamada simultanea Tipo Discador: power Id:${idAtendimento} Uniqueid:${uniqueid}`)
-                    }
-
+                   
                     chamadasSimultaneas.push(novaChamada)
                     await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas,43200)                   
                     pool.end((err)=>{
@@ -1712,6 +1725,7 @@ class Discador{
 
                 const  infoInt={}
                     infoInt['status']=true
+                    infoInt['nome']=info[0].descricao
                     infoInt['modo']=info[0].modoAbertura
                     infoInt['link']=url
                 pool.end((err)=>{
@@ -1833,11 +1847,17 @@ class Discador{
     
 
     async tabulaChamada(empresa,contatado,status_tabulacao,observacao,produtivo,ramal,idNumero,removeNumero){
+        console.log('> > > > TABULA CHAMADA')
         const dadosAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-        if(dadosAtendimento===null){
+        if(dadosAtendimento==null){
             
             return false
         }
+
+        console.log('> > > > STATUS',status_tabulacao)
+        console.log('> > > > PROTOCOLO',dadosAtendimento['protocolo'])
+        console.log('> > > > TIPO CHAMADA',dadosAtendimento['tipo_ligacao'])
+
         const tabelaNumero = dadosAtendimento['tabela_numeros']
         const tabelaDados = dadosAtendimento['tabela_dados']
         const idRegistro = dadosAtendimento['id_registro']
@@ -1976,7 +1996,7 @@ class Discador{
                     await Agente.alterarEstadoAgente(empresa,ramal,1,0)//Altera o status do agente para ativo
                 }else{ 
                     dadosAtendimento['event_tabulando']=0 
-                    dadosAtendimento['event_tabulado']=1
+                    dadosAtendimento['event_tabulada']=1
                     await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,dadosAtendimento)                    
                 }                
                 pool.end((err)=>{

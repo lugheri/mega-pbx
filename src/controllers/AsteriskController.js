@@ -20,6 +20,7 @@ class AsteriskController{
         const action = req.params.action
         const dados = req.body        
         if(action=='get_trunk'){
+            console.log('\n[❗] AGI -> GET TRUNK')
             const empresa = dados.empresa
             const register=[]
             const trunk = await Clients.getTrunk(empresa)
@@ -31,6 +32,7 @@ class AsteriskController{
             res.json(r);
         }
         if(action=='set_queue'){//Quando reconhece a voz humana
+            console.log('\n[❗] AGI -> SET QUEUE')
             const empresa = dados.empresa
             const dadosAtendimento = await Asterisk.setaRegistroNaFila(dados)
              if(dadosAtendimento===false){
@@ -47,11 +49,12 @@ class AsteriskController{
              res.json(true)            
         }        
         if(action=='desligou'){//Quando abandona fila 
+            console.log('\n[❗] AGI -> DESLIGOU')
             const r = await Asterisk.desligaChamada(dados)
             res.json(r);
         }
         if(action=='set_call'){
-            //console.log('SET CALL')
+            console.log('\n[❗] AGI -> SET CALL')
             let ch = dados.ramal;
                 ch = ch.split("-");
                 ch = ch[0].split("/")
@@ -61,11 +64,9 @@ class AsteriskController{
             if(chamadasSimultaneas===null){
                 chamadasSimultaneas=[]
             }
-            if(empresa=='supremapromotora'){
-                logs.saveLog(`Setando a chamada: Tipo Discador: ${chamadasSimultaneas[0].tipo_discador} idAtendimento:${chamadasSimultaneas[0].idAtendimento} Uniqueid:${chamadasSimultaneas[0].uniqueid}`)
-            }
+           
             const novaChamada={}
-                  novaChamada['idAtendimento'] = dados.uniqueid
+                  novaChamada['idAtendimento'] = dados.idAtendimento
                   novaChamada['uniqueid'] =  dados.uniqueid
                   novaChamada['ramal'] = ramal
                   novaChamada['numero'] = dados.numero
@@ -119,10 +120,11 @@ class AsteriskController{
 
         }
 
-        if(action=='answer'){//Quando ligacao eh atendida pelo agente
+        if(action=='answer'){//Quando ligacao eh atendida pelo agente.
+            console.log('\n[❗] AGI -> ANSWER')
             const empresa = dados.empresa            
             const uniqueid = dados.uniqueid 
-            const idAtendimento = dados.uniqueid
+            const idAtendimento = dados.idAtendimento
             const numero = dados.numero
             const tipoChamada = dados.tipoChamada       
             
@@ -132,26 +134,23 @@ class AsteriskController{
                 ch = ch[0].split("/")
             const ramal = ch[1]
 
-            console.log('ramal',ramal)
+            //console.log('ramal - >',ramal)
             //console.log('>>>>>>>>>>>>>>>>>>>>>>>ATENDEU CHAMADA',tipoChamada)
             const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
             if((chamadasSimultaneas===null)||(chamadasSimultaneas.length==0)){
                 return false
             }
 
-            if(empresa=='supremapromotora'){
-                logs.saveLog(`Atendendo a chamada:Tipo Discador: ${chamadasSimultaneas[0].tipo_discador} idAtendimento: ${idAtendimento} nas chamadas simultaneas: ${chamadasSimultaneas[0].idAtendimento} Uniqueid:${chamadasSimultaneas[0].uniqueid}`)
-            }
-
+            //console.log('tipoChamada - >',tipoChamada)
             if(tipoChamada=="manual"){
                 //console.log("\n","INICIAR SEPARAÇÃO DE REGISTRO")
-                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)  
+                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)  
                 //console.log("\n","Dados do Atendimento",dadosChamada)
                 //console.log("\n","Atualizando registro na fila")
-                dadosChamada[0].event_chamando=0
+                dadosChamada[0].event_chamando=0                
                 dadosChamada[0].event_em_atendimento = 1
                 //console.log("\n","Registro Atualizado",dadosChamada)
-                const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
+                const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.numero != numero)
                 const concatenarAtendimentos=outrosAtendimentos.concat(dadosChamada)
                 //console.log("\n","Todos atendimentos",concatenarAtendimentos)
                 await Redis.setter(`${empresa}:chamadasSimultaneas`,concatenarAtendimentos)
@@ -170,28 +169,23 @@ class AsteriskController{
                 await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             
             }else if(tipoChamada=="POWER"){  
-                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)                
-
-                if(empresa=='supremapromotora'){
-                    if(dadosChamada.length==0){
-                        logs.saveLog(`Chamada Tipo Discador: POWER idAtendimento:  ${idAtendimento} ja foi removida`)
-                    }else{
-                        for(let i=0;i<dadosChamada.length;i++){
-                            logs.saveLog(`Atendendo a chamada:Tipo Discador: POWER idAtendimento: ${idAtendimento}  dadosChamada:${dadosChamada[i].idAtendimento}`)
-                        }
-                    }
-                }
+                console.log("IdAtendimento do POWER",idAtendimento)
+                console.log("chamadasSimultaneas",chamadasSimultaneas)
+                const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)    
+                console.log("dadosChamada",dadosChamada)            
                
                 if(dadosChamada.length==0){
                     res.json(true)
                     return false
                 }
-                console.log('dados Chamada Asterisk',dadosChamada)
-                console.log('ramal',ramal)
+                //console.log('dados Chamada Asterisk',dadosChamada)
+                //console.log('ramal',ramal)
+                dadosChamada[0].status = 'Em Atendimento'
                 dadosChamada[0].ramal = ramal
                 dadosChamada[0].event_chamando = 0
+                dadosChamada[0].event_na_fila=0
                 dadosChamada[0].event_em_atendimento = 1
-                const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento != idAtendimento)
+                const outrosAtendimentos = chamadasSimultaneas.filter(atendimento => atendimento.numero != numero)
                 const concatenarAtendimentos=outrosAtendimentos.concat(dadosChamada)
                 await Redis.setter(`${empresa}:chamadasSimultaneas`,concatenarAtendimentos)
 
@@ -204,9 +198,12 @@ class AsteriskController{
                 const tabela_numeros = dadosChamada[0].tabela_numeros
                 const idNumero = dadosChamada[0].id_numero
                 const nomeFila = dadosChamada[0].nomeFila
-                await Discador.registraChamada(empresa,ramal,idAtendimento,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila)
+                console.log('Registrando Chamada')
+                await Discador.registraChamada(empresa,ramal,idAtendimento,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,1)
+                await Agente.alterarEstadoAgente(empresa,ramal,3,0)
                 await Cronometro.saiuDaFila(empresa,numero)
-                await Cronometro.iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,tipoChamada,numero,ramal,uniqueid)
+                console.log('Iniciou Atendimento',uniqueid,dadosChamada[0].uniqueid)                                                   
+                await Cronometro.iniciouAtendimento(empresa,idCampanha,idMailing,idRegistro,tipoChamada,numero,ramal,dadosChamada[0].uniqueid)
 
                 
 

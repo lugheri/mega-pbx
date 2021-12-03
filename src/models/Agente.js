@@ -32,12 +32,16 @@ class Agente{
             const pool = await connect.pool(empresa,'dados',`mysql`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
-                //console.log(empresa,ramal)
+                console.log(`\n ❗  ${empresa} Status Ramal . . . . . . . . . . . . \n`) 
+                console.log(empresa,ramal)
                 const sql = `SELECT estado, datetime_estado as tempo
                                FROM ${empresa}_dados.user_ramal 
                               WHERE ramal=${ramal}
-                              LIMIT 1`        
+                              LIMIT 1`  
+                console.log(`\n ❗  Query . . . . . . . . . . . .`,sql,` \n`)       
                 const rows = await this.querySync(conn,sql)
+
+
                 pool.end((err)=>{
                     if(err) console.error(err)
                 }) 
@@ -56,6 +60,7 @@ class Agente{
         //Removendo caches do redis
         await Redis.delete(`${empresa}:agentesLogados`)
         await Redis.delete(`${agente}:estadoRamal`)
+        await Redis.delete(`${empresa}:agentesPorEstado:0`)
         await Redis.delete(`${empresa}:agentesPorEstado:1`)
         await Redis.delete(`${empresa}:agentesPorEstado:2`)
         await Redis.delete(`${empresa}:agentesPorEstado:3`)
@@ -65,7 +70,7 @@ class Agente{
         await Redis.delete(`${empresa}:agentesFalando`)
         await Redis.delete(`${empresa}:agentesEmPausa`)
         await Redis.delete(`${empresa}:agentesDisponiveis`)
-        await Redis.delete(`${empresa}:listarAgentesLogados`)
+        await Redis.delete(`${empresa}:listarAgentesLogados`)        
         if(estado>0){
             await Redis.setter(`${agente}:logado`,true,90)
         }
@@ -580,7 +585,7 @@ class Agente{
                         registro['dadosAtendimento']['tabulacao']=dados[i].tabulacao
                         registro['dadosAtendimento']['observacoes']=dados[i].obs_tabulacao      
                         
-                        console.log('dados do agente',dados[i].agente)
+                        //console.log('dados do agente',dados[i].agente)
                             
                     const agente = await this.infoAgente(empresa,dados[i].agente)
                             
@@ -644,7 +649,7 @@ class Agente{
         //Checa se existem chamadas no redis
         let historico = await Redis.getter(`${empresa}:historicoChamadas:${ramal}`)
         if(historico!==null){
-            console.log(`Retornando historico de chamadas do ramal ${ramal} do redis`)
+            //console.log(`Retornando historico de chamadas do ramal ${ramal} do redis`)
             return historico
         }
 
@@ -759,6 +764,8 @@ class Agente{
                     tabela_dados = infoMailing[0].tabela_dados
                     tabela_numeros = infoMailing[0].tabela_numeros
                 }  
+                const hoje = moment().format("YYYY-MM-DD")
+                const hora = moment().format("HH:mm:ss")
                 
                 const novaChamada = {}
                       novaChamada['data']=hoje
@@ -795,8 +802,9 @@ class Agente{
     
 
     async clearCallsAgent(empresa,ramal){
+        console.log('> > > > CLEAR CALLS AGENTE:',ramal)
         const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-        if(atendimentoAgente === null) return false
+        if(atendimentoAgente == null) return false
 
         const idCampanha = atendimentoAgente['id_campanha']
         const idNumero = atendimentoAgente['id_numero']
