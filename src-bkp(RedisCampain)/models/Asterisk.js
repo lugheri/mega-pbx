@@ -3,14 +3,14 @@ import connect from '../Config/dbConnection';
 import ari from 'ari-client';
 import util from 'util';
 import AmiIo from 'ami-io';
-import Tabulacoes from '../models/Tabulacoes';
+import Tabulacoes from './Tabulacoes';
 import moment from 'moment';
 import Campanhas from './Campanhas';
 import Discador from './Discador';
 import Cronometro from './Cronometro';
 import Clients from './Clients';
 import Redis from '../Config/Redis'
-import Agente from '../models/Agente';
+import Agente from './Agente';
 import logs from '../Config/logs';
 import { Console } from 'console';
 
@@ -165,13 +165,10 @@ class Asterisk{
        
       
         let dadosChamada=[]
-        if(idAtendimento==0){
             dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)
-        }else{
-            dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)
-        }
+        
        
-        if((dadosChamada===null)||(dadosChamada.length==0)){
+        if((dadosChamada==null)||(dadosChamada.length==0)){
             return false
         }     
 
@@ -212,18 +209,14 @@ class Asterisk{
             //Registra histórico de chamada
             await Discador.autoTabulacao(empresa,protocolo,idCampanha,idMailing,idRegistro,idNumero,ramal,uniqueid,numero,tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros)
             //remove chamada simultanea
-            if(idAtendimento==0){
-                chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.numero == numero),1)
-            }else{
-                chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.idAtendimento == idAtendimento),1)
-            }
+            chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.numero == numero),1)
             await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)   
             return true         
         }else{
             console.log('-|-> -> DESLIGANDO A CHAMADA <- <-|-')
             const ramal=dadosChamada[0].ramal
             const chamadaEmAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-            if((chamadaEmAtendimento===null)||(chamadaEmAtendimento.length==0)){
+            if((chamadaEmAtendimento==null)||(chamadaEmAtendimento.length==0)){
                 return false
             }   
             chamadaEmAtendimento['event_desligada'] = 1

@@ -116,9 +116,8 @@ class CampanhasController{
         const valores = req.body       
         await Campanhas.atualizaCampanha(empresa,idCampanha,valores)
         if(valores.estado!=1){           
-            await Discador.clearCallsCampanhas(empresa,idCampanha)           
+            await Discador.clearCallsCampanhas(empresa,idCampanha)
         }
-      
         const agentesCampanhas = await Campanhas.membrosCampanhas(empresa,idCampanha)        
         for(let i=0; i<agentesCampanhas.length; i++){
             await Redis.delete(`${empresa}:campanhasAtivasAgente:${agentesCampanhas[i].ramal}`)
@@ -459,6 +458,7 @@ class CampanhasController{
         const dT = req.body.data_termino
         const hI = req.body.hora_inicio
         const hT = req.body.hora_termino
+      
         const r = await Campanhas.agendarCampanha(empresa,idCampanha,dI,dT,hI,hT)
         res.json(r)
     }

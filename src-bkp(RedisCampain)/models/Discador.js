@@ -219,7 +219,7 @@ class Discador{
     }
     async chamadasProdutividade_porCampanha(empresa,idCampanha,statusProdutividade,idMailing){
         const chamadasProdutividade_porCampanha = await Redis.getter(`${empresa}:chamadasProdutividade_porCampanha:${idCampanha}:mailing:${idMailing}:statusProdutividade:${statusProdutividade}`)
-        if(chamadasProdutividade_porCampanha===null){
+        if(chamadasProdutividade_porCampanha==null){
             return 0
         }
         return new Promise (async (resolve,reject)=>{ 
@@ -654,14 +654,17 @@ class Discador{
             const statusChannel = await Asterisk.statusChannel(empresa,chamadasSimultaneas[c].uniqueid)
             if(statusChannel==false){
                 //Removendo a chamada caso o canal nao exista   
+                console.log("> >> >> >> >> >> >> >","Status Chanel False",statusChannel)
                 if(chamadasSimultaneas[c].event_na_fila==1){
+                    console.log("> >> >> >> >> >> >> >","event_na_fila",event_na_fila)
                    const hoje = moment().format("YYYY-MM-DD")
                    const horario = chamadasSimultaneas[c].horario
                    const dataLigacao = moment(`${hoje} ${horario}`).format("YYYY-MM-DD HH:mm:ss")
                    const now = moment(new Date());         
                    const duration = moment.duration(now.diff(dataLigacao))
                    const segundos = duration.asSeconds()
-                   if(segundos<=30){
+                   if(segundos<=160){
+                    console.log("> >> >> >> >> >> >> >","Segundos",segundos)
                     chamadasSimultaneas[c].status='Abandonou Fila!' 
                     // await this.removeChamadaSimultanea(empresa,chamadasSimultaneasCampanha[c])     
                     chamadasAtivas.push(chamadasSimultaneas[c])        
@@ -962,12 +965,6 @@ class Discador{
                 //4 - Já Trabalhado 
                 //filtrando
                 //let filtro = await this.filtrosDiscagem(empresa,idCampanha,idMailing)   
-
-
-                
-
-
-
                 
                 //VERIFICANDO NUMEROS NOVOS
                 let sql = `SELECT id as idNumero,id_registro,numero 

@@ -13,6 +13,4 @@ module.exports = (routes) => {
     routes.get('/chamadasSimultaneas/:empresa/:ramal',TestController.chamadasSimultaneas)
     routes.post('/simularChamadasSimultaneas/',TestController.simularChamadasSimultaneas)
     routes.get('/mailingCampanha/:empresa/:idCampanha',TestController.mailingCampanha)
-    routes.get('/filtrarRegistro/:empresa/:idCampanha/:limitRegistros',TestController.filtrarRegistro)
-    routes.get('/removeNumeroMailing/:empresa/:idCampanha/:numero',TestController.removeNumeroMailing)
 }

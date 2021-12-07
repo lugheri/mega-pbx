@@ -90,7 +90,6 @@ class TestController{
       const numero = req.body.numero
       const fila = req.body.fila
       const falando = req.body.falando
-
       await Discador.registraChamada(empresa,ramal,idAtendimento,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila,falando)
         
         res.json(true)
@@ -101,53 +100,12 @@ class TestController{
       const idCampanha = req.params.idCampanha
       const keys = []
       const mailingCampanha = {}
-            mailingCampanha['key']=`${empresa}:numerosMailingCampanha:${idCampanha}`
-            mailingCampanha['value'] = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
+            mailingCampanha['key']=`${empresa}:mailingCampanha:${idCampanha}`
+            mailingCampanha['value'] = await Redis.getter(`${empresa}:mailingCampanha:${idCampanha}`)
             mailingCampanha['expire'] = 0
       keys.push(mailingCampanha)
      
       res.json(keys)
   }
-
-
-  async filtrarRegistro(req,res){
-      const empresa = req.params.empresa
-      const idCampanha = req.params.idCampanha
-      const limitRegistros = req.params.limitRegistros
-
-      const registros = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
-      console.log(registros[0])
-
-      for(let i=0;i<limitRegistros;++i){
-            const idNumero = registros[i].id_numero
-            console.log('idNumero',idNumero)
-            console.log(registros.length)
-            registros.splice(i,1)
-            console.log(registros.length)
-            
-      }
-      await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,registros)
-      console.log(registros.length)
-
-      res.json(true)
-  }
-
-  async removeNumeroMailing(req,res){
-      const empresa = req.params.empresa
-      const idCampanha = req.params.idCampanha
-      const numero = req.params.numero
-
-      const registros = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
-      console.log('Antes', registros.length)
-      const n = registros.filter(registro => registro.numero == numero)
-      for(let i=0;i<n.length;++i){
-            registros.splice(registros.findIndex(registro => registro.numero == numero),1)
-      }
-      await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,registros)
-      console.log('Depois', registros.length)
-
-      res.json(true)
-  }
-     
 }
 export default new TestController()
