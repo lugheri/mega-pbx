@@ -116,9 +116,8 @@ class CampanhasController{
         const valores = req.body       
         await Campanhas.atualizaCampanha(empresa,idCampanha,valores)
         if(valores.estado!=1){           
-            await Discador.clearCallsCampanhas(empresa,idCampanha)           
+            await Discador.clearCallsCampanhas(empresa,idCampanha)
         }
-      
         const agentesCampanhas = await Campanhas.membrosCampanhas(empresa,idCampanha)        
         for(let i=0; i<agentesCampanhas.length; i++){
             await Redis.delete(`${empresa}:campanhasAtivasAgente:${agentesCampanhas[i].ramal}`)

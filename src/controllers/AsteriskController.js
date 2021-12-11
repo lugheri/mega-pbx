@@ -61,7 +61,7 @@ class AsteriskController{
             const ramal = ch[1]
             const empresa = dados.empresa
             let chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
-            if(chamadasSimultaneas===null){
+            if(chamadasSimultaneas==null){
                 chamadasSimultaneas=[]
             }
            
@@ -70,7 +70,7 @@ class AsteriskController{
                   novaChamada['uniqueid'] =  dados.uniqueid
                   novaChamada['ramal'] = ramal
                   novaChamada['numero'] = dados.numero
-                  novaChamada['status'] = 'Chamando ...'
+                  novaChamada['status'] = 'Discando ...'
                   novaChamada['horario'] = moment().format("HH:mm:ss")
                   novaChamada['tipo_discador'] = dados.tipoDiscador
 
@@ -169,8 +169,22 @@ class AsteriskController{
                 await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             
             }else if(tipoChamada=="POWER"){  
+                console.log("TIPO CHAMADA",tipoChamada)
                 console.log("IdAtendimento do POWER",idAtendimento)
                 console.log("chamadasSimultaneas",chamadasSimultaneas)
+
+
+
+                const canal = await Asterisk.statusChannel(empresa,uniqueid)
+
+                console.log('->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> CANAL',canal)
+
+               /* if(canal['state']!='Up'){
+                    res.json(false)
+                    return false
+                }*/
+
+
                 const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)    
                 console.log("dadosChamada",dadosChamada)            
                
@@ -193,7 +207,9 @@ class AsteriskController{
                 const idCampanha = dadosChamada[0].id_campanha
                 const idMailing = dadosChamada[0].id_mailing
                 const idRegistro = dadosChamada[0].id_registro
-                const modoAtendimento = dadosChamada[0].modoAtendimento
+                console.log(idCampanha,idMailing,idRegistro,"TIPO CHAMADA",tipoChamada)
+                const modoAtendimento = dadosChamada[0].modo_atendimento
+               
                 const tipoDiscador="power"
                 const tabela_dados = dadosChamada[0].tabela_dados
                 const tabela_numeros = dadosChamada[0].tabela_numeros

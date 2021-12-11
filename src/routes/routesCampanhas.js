@@ -115,6 +115,10 @@ module.exports = (routes) => {
     routes.get('/moveAllMembers/:idFila/:destino',FilasController.moveAllMembers)//update getMembers
 
     //#########  B A S E S  ############
+    routes.post('/importarMailing',multer(multerDataFiles).single('file'), MailingController.importarMailing)//Importar Arquivo
+    routes.get('/iniciarConfigMailing/:idBase',MailingController.iniciarConfigMailing)
+    routes.post('/concluirConfigMailing', MailingController.concluirConfigMailing)//Conclui a importação do mailing
+
     routes.post('/enviarArquivo',multer(multerDataFiles).single('file'), MailingController.importarBase)//Importar Arquivo
     routes.get('/iniciarConfigBase/:idBase',MailingController.iniciarConfigBase)//separa os campos do mailing para configuracao do seu tipo
     routes.post('/concluirConfigBase', MailingController.concluirConfigBase)//Conclui a importação do mailing

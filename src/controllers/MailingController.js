@@ -3,19 +3,158 @@ import Mailing from '../models/Mailing';
 import Campanhas from '../models/Campanhas';
 import User from '../models/User';
 import moment from "moment";
-import csv from 'csvtojson';
 import { Parser } from 'json2csv';
-import utf8 from 'utf8';
-import md5 from "md5";
-import { json } from 'express';
+
+import { Readable } from "stream"
+import readLine from "readline"
+
+import csvtojson from 'csvtojson';
+import {pipeline, Readable, Writable, Transform } from 'stream';
+import { promisify } from 'util';
+import fs from 'fs';
+import { createWriteStream } from 'fs';
+
 
 
 class MailingController{
+    //Novo modelo de importação de dados
+    async importarMailing(req,res){
+        const empresa = await User.getEmpresa(req)
+        //Recebendo o arquivo
+        const path=`tmp/files/`
+        const filename=req.file.filename
+        const file=path+filename
+        const delimitador = req.body.delimitador 
+        const header = req.body.header
+        const nome = req.body.nome
+        const tipoImportacao="horizontal"        
+      
+        //Abrindo o Arquivo
+        Mailing.abreCsv(file,delimitador,async (jsonFile)=>{
+            //Separa as chaves para serem os campos da tabela
+
+            //Criando tabela do novo mailing   
+            const hoje = moment().format("YMMDDHHmmss")
+            const nomeTabela = hoje   
+            //Colunas de titulos do arquivo
+            const keys = Object.keys(jsonFile[0])           
+            
+            const infoMailing=await Mailing.salvaDadosMailing(empresa,tipoImportacao,keys,nome,header,filename,delimitador,jsonFile)
+            
+            res.json(infoMailing)
+        })        
+    }
+
+    async iniciarConfigMailing(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idBase = req.params.idBase
+        const infoMailing=await Mailing.infoMailing(empresa,idBase)
+        const header = infoMailing[0].header
+        const path=`tmp/files/`
+        const filename= infoMailing[0].arquivo
+        const file=path+filename
+        const delimitador= infoMailing[0].delimitador
+
+        //Abrindo Mailing Importado 
+        Mailing.abreCsv(file,delimitador,async (jsonFile)=>{
+        //const resumoBase = await Mailing.resumoDadosBase(empresa,infoMailing[0].tabela_dados)
+
+            const title = Object.keys(jsonFile[0]) 
+                
+            console.log(title)
+            const campos=[]
+            for(let i=0; i<title.length; i++){
+                let item={}
+                    item['titulo']=title[i]
+                    item['ordem']=i+1
+                let data=[]
+                for(let d=0; d<10; d++){
+                    if(d<=(jsonFile.length-1)){
+                        let value=jsonFile[d][title[i]]                                                             
+                        data.push(value)
+                    }                    
+                }
+                let typeField=await Mailing.verificaTipoCampo(header,title[i],jsonFile[1][title[i]]) 
+                item['tipoSugerido']=typeField
+                item['previewData']={data}
+                campos.push(item)            
+            }
+            res.json(campos) 
+        })
+    }
+
+    async concluirConfigMailing(req, res) {
+        res.json(true)
+        const empresa = await User.getEmpresa(req)
+        const idBase = req.body.idBase
+        const tipoCampos = req.body.fields
+        const infoMailing=await Mailing.infoMailing(empresa,idBase)
+        const path=`tmp/files/`
+        const filename = infoMailing[0].arquivo
+        const header = infoMailing[0].header
+        const delimitador = infoMailing[0].delimitador
+        const file=path+filename
+        const tipoImportacao="horizontal"
+
+        Mailing.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo            
+            let idKey = 1
+            let transferRate=1
+            const fileOriginal=jsonFile
+            const keys = Object.keys(jsonFile[0]) 
+            await Mailing.configuraTipoCampos(empresa,idBase,header,tipoCampos,keys)//Configura os tipos de campos
+            
+            const infoMailing = await Mailing.infoMailing(empresa,idBase)
+            const dataTab = infoMailing[0].tabela_dados
+            const numTab = infoMailing[0].tabela_numeros
+            console.log('Agendando a Importacao')
+
+            //PERCORRE REGISTROS
+            let campos_arquivo = Object.keys(jsonFile[0]) 
+            //Populando array com o titulo das colunas conforme foram formatadas na tabela
+            let campos_tabela = []                
+            for(let i = 0; i <campos_arquivo.length;i++){
+                //Verifica se o arquivo possui linha de titulo
+                if(header==0){
+                    let n = i+1
+                    campos_tabela.push("`campo_"+n+"`")
+                }else{
+                    campos_tabela.push("`"+this.removeCaracteresEspeciais_title(campos_arquivo[i])+"`")
+                }
+            } 
+
+
+
+
+
+
+            
+            console.log('Retornando True')
+             //Salvando mailing no Redis
+             return true
+             //await Mailing.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
+        }) 
+
+
+
+
+
+
+    }
+    
+
     async formataValor(req,res){
         const valor = req.body.valor;
         const valorFormatado = Mailing.removeCaracteresEspeciais(valor)
         res.json(valorFormatado)
     }
+
+
+
+
+
+
+
+
 
     async importarBase(req,res){
         const empresa = await User.getEmpresa(req)
@@ -119,8 +258,11 @@ class MailingController{
                     Mailing.importarMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,idKey,transferRate)
                 },5000)
                 console.log('Retornando True')
+                //Salvando mailing no Redis
                 return true
-               // await Mailing.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
+                //await Mailing.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
+
+                
             }else{
                 await Mailing.importarDadosMailing(empresa,idBase,jsonFile,file,delimitador,header,tabData,tabNumbers,idKey,transferRate)
             }            

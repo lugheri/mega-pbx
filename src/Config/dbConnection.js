@@ -92,9 +92,9 @@ const connect = ()=>{};
             password : process.env.DB_PASS,
             database : database,
             waitForConnections: true,
-            connectionLimit: 10,
+            connectionLimit: 0,
             queueLimit: 0,
-            connectTimeout : 20000 
+            connectTimeout : 0 
         })
     }
 export default connect;

@@ -36,6 +36,11 @@ class Mailing{
            }) 
         })
     }
+
+    //Abre o csv do mailing a ser importado
+    async abreCsv(path,delimitador,callback){
+        await csv({delimiter:delimitador}).fromFile(path,'binary').then(callback)
+    }
     
     
 
@@ -46,10 +51,7 @@ class Mailing{
 
 /*-----------------------------------------------------------------------------------------------------------------------------------------------------------*/    
 
-    //Abre o csv do mailing a ser importado
-    async abreCsv(path,delimitador,callback){
-        await csv({delimiter:delimitador}).fromFile(path,'binary').then(callback)
-    }
+   
 
     removeCaracteresEspeciais_title(valor){
         if(valor===undefined) return ""
@@ -89,6 +91,29 @@ class Mailing{
             return Number(value);
         return 0;
     }
+
+    async salvaDadosMailing(empresa,tipoImportacao,keys,nome,header,filename,delimitador,jsonFile){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:criarTabelaMailing","message":err.message,"stack":err.stack});
+               
+                const insertMailing = await this.addInfoMailing(empresa,nome,"","",filename,header,delimitador)
+                const infoMailing = await this.infoMailing(empresa,insertMailing['insertId']);
+                const idBase = infoMailing[0].id
+              
+                pool.end((err)=>{
+                    if(err) console.error('Mailings 111', err)
+                })
+                
+               resolve(infoMailing)                      
+            })            
+        })   
+    }
+
+
+
+
                             
     async criarTabelaMailing(empresa,tipoImportacao,keys,nome,nomeTabela,header,filename,delimitador,jsonFile){
         return new Promise (async (resolve,reject)=>{ 
@@ -199,14 +224,12 @@ class Mailing{
                         campos_tabela.push(`${campoFormatado}`)
                     }
                 } 
-
                 //Iniciar query de importação
                 let sqlData="INSERT INTO "+tabelaDados
                             +"(`id_key_base`,"+campos_tabela+",`valido`,`tratado`)"
                             +"VALUES ";
 
                 //Iniciar separação dos registros
-
                 //Id do registro
                 let indice = 1
                 const totalBase = jsonFile.length
@@ -220,36 +243,27 @@ class Mailing{
                     let indiceReg = (idBase * 1000000) + indice
                     let regValido=1//Flag de registro valido
                     let linha_arquivo
-
                     //Começa a montagem da query de cada registro       
                     sqlData+=" (";  
                     sqlData+=`${indiceReg},`                    
-                    //Verifica primeiro campo                   
-                
-
+                    //Verifica primeiro campo  
                     if(header==0 && i == 0){//Caso o arquivo nao tenha linha de titulos, insere a 1 linha na tabela
                         linha_arquivo =  Object.keys(jsonFile[i])
                     }else{
                         linha_arquivo =  Object.values(jsonFile[i])
                     }
-
-                  
-                   
                     //Separando valores
                     for(let v=0; v<linha_arquivo.length;v++){
                         let valor = this.removeCaracteresEspeciais(linha_arquivo[v])
                         //verifica se o valor eh objeto de
                         if(typeof linha_arquivo[0] === 'object'){
                             valor = this.removeCaracteresEspeciais(Object.values(linha_arquivo[0]))
-                        }
-
-                       
+                        }                       
                         //Insere o valor formatado de cada coluna na query    
                         sqlData+="'"+valor.toString().replace(/'/gi,'')+"',"
                     }
                     sqlData+=`${regValido},`//CPF
-                    sqlData+='0)'//Tratado                   
-
+                    sqlData+='0)'//Tratado  
                     //Fecha a query
                     if(i>=resumo-1){
                         sqlData+=`;`;
@@ -258,15 +272,11 @@ class Mailing{
                     }
                     //Incrementa o indice para proximo loop
                     indice++
-                    //Removendo campos importados do arquivo carregado 
-                   
+                    //Removendo campos importados do arquivo carregado                    
                 } 
-
-                //Executa a query de insersão de dados   
-                
+                //Executa a query de insersão de dados                   
                 //console.log('insert',sqlData)
-                await this.querySync(conn,sqlData)                
-               
+                await this.querySync(conn,sqlData)    
                 pool.end((err)=>{
                     if(err) console.error('Mailings 225', err)
                 })
@@ -1595,7 +1605,7 @@ class Mailing{
            //Paraíba
            {ddd:83,uf:'PB'},
            //Pernambuco
-           {ddd:87,uf:'PE'},            
+           {ddd:81,uf:'PE'},            
            {ddd:87,uf:'PE'},
            //Piauí
            {ddd:86,uf:'PI'},

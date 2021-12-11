@@ -1442,7 +1442,7 @@ class Clients{
 
     async planoEmpresa(empresa){
       const redis_planoEmpresa = await Redis.getter(`${empresa}:planoEmpresa`)
-      if(redis_planoEmpresa!==null){
+      if(redis_planoEmpresa){
         return redis_planoEmpresa
       }
 
