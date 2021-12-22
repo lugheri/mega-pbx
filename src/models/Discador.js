@@ -58,6 +58,7 @@ class Discador{
     }
     //INFORMACOES DO AGENTE
     async agentesLogados(empresa){
+
         const agentesLogados = await Redis.getter(`${empresa}:agentesLogados`)
         if(agentesLogados!==null){
             return agentesLogados

@@ -96,6 +96,27 @@ class Campanhas{
         })
     }  
 
+    async idCampanhaByNome(empresa,nomeCampanha){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                const sql = `SELECT id
+                               FROM ${empresa}_dados.campanhas 
+                              WHERE nome='${nomeCampanha}'
+                               AND status=1`
+                const rows =  await this.querySync(conn,sql) 
+                if(rows.length==0){
+                    resolve(false)
+                    return
+                }
+                pool.end((err)=>{
+                    if(err) console.error('Campanhas.js 59', err)
+                })
+                resolve(rows[0].id) 
+            })
+        })
+    }
 
     //######################CONFIGURAÇÃO DE CAMPANHA ATIVA################################
     

@@ -4,6 +4,8 @@ import Campanhas from '../models/Campanhas';
 import User from '../models/User';
 import moment from "moment";
 import { Parser } from 'json2csv';
+import connect from '../Config/dbConnection';
+import mongoose from 'mongoose'
 
 import { Readable } from "stream"
 import readLine from "readline"
@@ -13,12 +15,82 @@ import {pipeline, Readable, Writable, Transform } from 'stream';
 import { promisify } from 'util';
 import fs from 'fs';
 import { createWriteStream } from 'fs';
+import Redis from '../Config/Redis';
 
 
 
 class MailingController{
-    //Novo modelo de importação de dados
-    async importarMailing(req,res){
+    //Nova Controller Mailings Mongo
+    //Listar Mailings
+    //Lista os mailings importados
+    async listarMailings(req,res){
+        const empresa = await User.getEmpresa(req)
+        const mailingData = await Mailing.listaMailing(empresa)
+
+        const mailings = []
+
+        
+        for(let i=0; i<mailingData.length;i++){
+            const infoMailing={}
+                  infoMailing['id'] = mailingData[i].id
+                  infoMailing['data_importacao'] = mailingData[i].id
+                  infoMailing['conclusao_importacao'] = mailingData[i].id
+                  infoMailing['nome'] = mailingData[i].nome
+                  infoMailing['arquivo'] = mailingData[i].arquivo
+                  /*infoMailing['tabela_dados'] = mailingData[i].arquivo
+                  infoMailing['tabela_numeros'] = mailingData[i].id*/
+                  infoMailing['totalReg'] = mailingData[i].totalRegistros
+                  infoMailing['totalNumeros'] = mailingData[i].totalNumeros
+                  infoMailing['numerosRepetidos'] = mailingData[i].repetidos
+                  infoMailing['numerosInvalidos'] = mailingData[i].numerosInvalidos
+                  
+                  let configurado = 0
+                  if(mailingData[i].configurado==true){
+                    configurado=1
+                  }
+                  let pronto = 0
+                  if(mailingData[i].pronto==true){
+                      pronto=1
+                  }
+                  let status = 0
+                  if(mailingData[i].status==true){
+                    status=1
+                  }
+                  infoMailing['configurado'] = configurado
+                  infoMailing['pronto'] = pronto
+                  infoMailing['status'] = status
+            
+            const totalRegistros = mailingData[i].totalRegistros
+            let contatados = 0
+            let naoContatados = 0
+            if(pronto!=0){
+                contatados = 0//await Mailing.registrosContatados(empresa,tabela)
+                naoContatados = 0//await Mailing.registrosNaoContatados(empresa,tabela)
+            }
+            
+            const trabalhados = contatados + naoContatados
+            const naoTrabalhados = totalRegistros-trabalhados
+            let perc_naotrabalhados = 100
+            let perc_contatados = 0
+            let perc_naoContatados = 0            
+            if(totalRegistros!=0){
+                perc_naotrabalhados = parseFloat((naoTrabalhados / totalRegistros)*100).toFixed(1)
+                perc_contatados = parseFloat((contatados / totalRegistros)*100).toFixed(1)
+                perc_naoContatados = parseFloat((naoContatados / totalRegistros)*100).toFixed(1)                            
+            }          
+                infoMailing['saude']=[]       
+            const saude={}
+                  saude['nao_trabalhados']=perc_naotrabalhados
+                  saude['contatados']=perc_contatados
+                  saude['nao_contatados']=perc_naoContatados                
+                infoMailing['saude'].push(saude);       
+                mailings.push(infoMailing);   
+        }       
+        res.json(mailings);
+    }
+
+     //Novo modelo de importação de dados
+     async importarMailing(req,res){
         const empresa = await User.getEmpresa(req)
         //Recebendo o arquivo
         const path=`tmp/files/`
@@ -29,39 +101,33 @@ class MailingController{
         const nome = req.body.nome
         const tipoImportacao="horizontal"        
       
-        //Abrindo o Arquivo
+        //Abrindo o Arquivo        
         Mailing.abreCsv(file,delimitador,async (jsonFile)=>{
             //Separa as chaves para serem os campos da tabela
-
             //Criando tabela do novo mailing   
             const hoje = moment().format("YMMDDHHmmss")
             const nomeTabela = hoje   
             //Colunas de titulos do arquivo
             const keys = Object.keys(jsonFile[0])           
-            
             const infoMailing=await Mailing.salvaDadosMailing(empresa,tipoImportacao,keys,nome,header,filename,delimitador,jsonFile)
             
-            res.json(infoMailing)
+            res.json([infoMailing])
         })        
-    }
+    } 
 
     async iniciarConfigMailing(req,res){
         const empresa = await User.getEmpresa(req)
         const idBase = req.params.idBase
         const infoMailing=await Mailing.infoMailing(empresa,idBase)
-        const header = infoMailing[0].header
+        console.log('info',infoMailing)
+        const header = infoMailing['header']
         const path=`tmp/files/`
-        const filename= infoMailing[0].arquivo
+        const filename= infoMailing['arquivo']
         const file=path+filename
-        const delimitador= infoMailing[0].delimitador
-
+        const delimitador= infoMailing['delimitador']
         //Abrindo Mailing Importado 
         Mailing.abreCsv(file,delimitador,async (jsonFile)=>{
-        //const resumoBase = await Mailing.resumoDadosBase(empresa,infoMailing[0].tabela_dados)
-
             const title = Object.keys(jsonFile[0]) 
-                
-            console.log(title)
             const campos=[]
             for(let i=0; i<title.length; i++){
                 let item={}
@@ -90,56 +156,121 @@ class MailingController{
         const tipoCampos = req.body.fields
         const infoMailing=await Mailing.infoMailing(empresa,idBase)
         const path=`tmp/files/`
-        const filename = infoMailing[0].arquivo
-        const header = infoMailing[0].header
-        const delimitador = infoMailing[0].delimitador
+        const filename = infoMailing['arquivo']
+        const header = infoMailing['header']
+        const delimitador = infoMailing['delimitador']
         const file=path+filename
         const tipoImportacao="horizontal"
+        const idKey=1
 
-        Mailing.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo            
-            let idKey = 1
-            let transferRate=1
-            const fileOriginal=jsonFile
+        Mailing.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo   
+            connect.mongoose('megaconecta')  
+            console.log('iniciando a importacao')      
+            console.time('importacao')      
             const keys = Object.keys(jsonFile[0]) 
+            
             await Mailing.configuraTipoCampos(empresa,idBase,header,tipoCampos,keys)//Configura os tipos de campos
+           
+            //Criando a chave do redis           
+            //Cria Arquivo do Mailing
+            //let writer = fs.createWriteStream(`${path}mailing_${idBase}.json`) 
+
+            //Criando Model do Mongo
+            const campoTipo_CPF = tipoCampos.filter(campo=>campo.tipo=='cpf')
+            const campoTipo_dados = tipoCampos.filter(campo=>campo.tipo=='dados')  
+            //modelDados
+            const dadosMailing = {}
+                  dadosMailing['id_key_base']=`Number`
+                  dadosMailing['nome']=`String`
+            if(campoTipo_CPF.length>0){
+                dadosMailing['cpf']=`String`
+            }
+            for(let d=0;d<campoTipo_dados.length;d++){
+                    dadosMailing[`${campoTipo_dados[d].name}`]=`String`
+            }
+            //console.log("dados",dadosMailing)
+            const modelDadosMailing = mongoose.model(`dadosMailing_${idBase}`,dadosMailing)
+
+            //modelNumeros
+            const modelNumerosMailing = mongoose.model(`numerosMailing_${idBase}`,{
+                idNumero: Number,
+                idRegistro: String,
+                ddd: String,
+                numero: String,
+                uf:String,
+                valido: Boolean,
+                message: String
+            })
+
+            await Mailing.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idKey,modelDadosMailing,modelNumerosMailing)
             
-            const infoMailing = await Mailing.infoMailing(empresa,idBase)
-            const dataTab = infoMailing[0].tabela_dados
-            const numTab = infoMailing[0].tabela_numeros
-            console.log('Agendando a Importacao')
-
-            //PERCORRE REGISTROS
-            let campos_arquivo = Object.keys(jsonFile[0]) 
-            //Populando array com o titulo das colunas conforme foram formatadas na tabela
-            let campos_tabela = []                
-            for(let i = 0; i <campos_arquivo.length;i++){
-                //Verifica se o arquivo possui linha de titulo
-                if(header==0){
-                    let n = i+1
-                    campos_tabela.push("`campo_"+n+"`")
-                }else{
-                    campos_tabela.push("`"+this.removeCaracteresEspeciais_title(campos_arquivo[i])+"`")
-                }
-            } 
-
-
-
-
-
-
-            
-            console.log('Retornando True')
+            console.log('Concluido')
              //Salvando mailing no Redis
              return true
              //await Mailing.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
         }) 
-
-
-
-
-
-
     }
+
+    //remove um mailing
+    async removerMailing(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idMailing = parseInt(req.params.idMailing);
+        const check = await Campanhas.campanhaDoMailing(empresa,idMailing)
+        if(check.length==1){
+            const rt={}
+            rt['error']=true
+            rt['message']=`O mailing está ativo na campanha '${check[0].nome}'`
+            res.send(rt)
+            return false
+        }
+            
+        const r = await Mailing.removerMailing(empresa,idMailing)
+        res.json(r)
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+    
+
+    
     
 
     async formataValor(req,res){
@@ -270,44 +401,7 @@ class MailingController{
     }
     
     //Lista os mailings importados
-    async listarMailings(req,res){
-        const empresa = await User.getEmpresa(req)
-        const r = await Mailing.listaMailing(empresa)
-        
-        for(let i=0; i<r.length;i++){
-            const idMailing = r[i].id
-            const infoTabela= await Mailing.tabelaMailing(empresa,idMailing)
-            if(infoTabela.length != 0){
-                const tabela = infoTabela[0].tabela_numeros
-                const totalRegistros = infoTabela[0].totalNumeros
-                let contatados = 0
-                let naoContatados = 0
-                if(infoTabela[0].pronto!=0){
-                    contatados = await Mailing.registrosContatados(empresa,tabela)
-                    naoContatados = await Mailing.registrosNaoContatados(empresa,tabela)
-                }
-            
-                const trabalhados = contatados + naoContatados
-                const naoTrabalhados = totalRegistros-trabalhados
-                let perc_naotrabalhados = 0
-                let perc_contatados = 0
-                let perc_naoContatados = 0            
-
-                if(totalRegistros!=0){
-                    perc_naotrabalhados = parseFloat((naoTrabalhados / totalRegistros)*100).toFixed(1)
-                    perc_contatados = parseFloat((contatados / totalRegistros)*100).toFixed(1)
-                    perc_naoContatados = parseFloat((naoContatados / totalRegistros)*100).toFixed(1)                            
-                }                 
-                const saude={}
-                saude['nao_trabalhados']=perc_naotrabalhados
-                saude['contatados']=perc_contatados
-                saude['nao_contatados']=perc_naoContatados                
-                r[i]['saude']=[]
-                r[i]['saude'].push(saude);
-            }
-        }       
-        res.json(r);
-    }
+   
 
     //Abre um mailing
     async abrirMailing(req,res){
@@ -319,22 +413,7 @@ class MailingController{
         res.json(registros)
     }
 
-    //remove um mailing
-    async removerMailing(req,res){
-        const empresa = await User.getEmpresa(req)
-        const idMailing = parseInt(req.params.idMailing);
-        const check = await Campanhas.campanhaDoMailing(empresa,idMailing)
-        if(check.length==1){
-            const rt={}
-            rt['error']=true
-            rt['message']=`O mailing está ativo na campanha '${check[0].nome}'`
-            res.send(rt)
-            return false
-        }
-            
-        const r = await Mailing.removerMailing(empresa,idMailing)
-        res.json(r)
-    }
+    
 
     //Exporta os registros de um mailing
     async exportarMailing(req,res){
@@ -445,8 +524,8 @@ class MailingController{
         if(infoTabela.length != 0){
             const tabela = infoTabela[0].tabela_numeros
             const totalRegistros = infoTabela[0].totalNumeros
-            const contatados = await Mailing.registrosContatados(empresa,tabela)
-            const naoContatados = await Mailing.registrosNaoContatados(empresa,tabela)
+            const contatados = 0//await Mailing.registrosContatados(empresa,tabela)
+            const naoContatados = 0//await Mailing.registrosNaoContatados(empresa,tabela)
 
             const trabalhados = contatados + naoContatados
             const naoTrabalhados = totalRegistros-trabalhados

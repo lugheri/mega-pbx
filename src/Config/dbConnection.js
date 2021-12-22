@@ -1,6 +1,7 @@
 import mysql from 'mysql2';
 import Clients from '../models/Clients'
 import redis from 'promise-redis'
+import mongoose from 'mongoose'
 
 const connect = ()=>{};
       connect.redisConn = async () => {
@@ -29,6 +30,40 @@ const connect = ()=>{};
                 
             return client
         }
+      }
+
+      connect.mongoose = (empresa)=>{
+        mongoose.Promise = global.Promise;
+        const hosts = {}
+            hosts['DEV']={}
+            hosts['DEV']['LOCAL']=process.env.MONGO_LOCAL_HOST_DEV
+            hosts['DEV']['PUBLIC']=process.env.MONGO_PUBLIC_HOST_DEV
+            hosts['SP']={}
+            hosts['SP']['LOCAL']=process.env.MONGO_LOCAL_HOST_SP
+            hosts['SP']['PUBLIC']=process.env.MONGO_PUBLIC_HOST_SP
+            hosts['PG']={}
+            hosts['PG']['LOCAL']=process.env.MONGO_LOCAL_HOST_PG
+            hosts['PG']['PUBLIC']=process.env.MONGO_PUBLIC_HOST_PG
+        const host = hosts[process.env.ENVIRONMENT][process.env.TYPE_IP]
+        let mongoUri=`mongodb://root:Megaconecta_2021@${host}:27017/${empresa}?authSource=admin`
+        let options = {
+                        "user":process.env.MONGODB_USER,
+                        "pass":process.env.MONGODB_PASS,
+                        useUnifiedTopology: true  
+                      }
+        if(process.env.TYPE_IP=='PUBLIC'){   
+            mongoUri=`mongodb://${host}:27017/${empresa}`         
+            options={
+                useUnifiedTopology: true  
+            }
+        }
+        console.log('mongoUri',mongoUri,options)
+
+        mongoose.connect(mongoUri,options)
+        .then(()=>{
+           // console.log('Mongo Conectado!')
+        
+        }).catch((err) => console.error('Ocorreu um erro ao conectar ao mongo',err,`mongodb://${host}:27017/${empresa}`))
       }
 
 

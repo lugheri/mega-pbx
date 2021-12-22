@@ -21,7 +21,7 @@ class Dashboard{
         })
     } 
 
-    async painel(empresa){       
+    async painel(empresa){         
         const hoje = moment().format("YYYY-MM-DD")
         const agentesLogados = await Discador.agentesLogados(empresa)
         const produtivas = await Discador.chamadasProdutividade_CampanhasAtivas_dia(empresa,1)

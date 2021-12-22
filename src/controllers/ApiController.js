@@ -20,6 +20,7 @@ class ApiController{
         const delimitador = ";"
         const header = 1
         const tipoImportacao="horizontal"
+        const nomeCampanha=req.body.nomeCampanha
        
         //Abrindo o Arquivo
         Mailing.abreCsv(file,delimitador,async (jsonFile)=>{
@@ -153,6 +154,23 @@ class ApiController{
                         Mailing.importarMailing(empresa,idBase,jsonFile,file,delimitador,header,dataTab,numTab,idKey,transferRate)
                     },5000)
                     console.log('Retornando True')
+                    console.log('Nome da campanha recebido',nomeCampanha)
+                        
+                    if(nomeCampanha){
+                        console.log('Nome da Campanha',nomeCampanha)
+                        const idCampanha = await Campanhas.idCampanhaByNome(empresa,nomeCampanha)
+                        if(idCampanha!=false){
+                            await Campanhas.addMailingCampanha(empresa,idCampanha,idBase)
+                            const infoCampanha = {}
+                                  infoCampanha['idCampanha']=idCampanha
+                                  infoCampanha['nomeCampanha']=nomeCampanha
+                                  infoMailing.push(infoCampanha)
+                        }else{
+                            infoMailing.push({"erroCampanha":"Campanha não existe"})
+                        }
+
+                       
+                    }
                     res.json(infoMailing)
                     return true
                    // await Mailing.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)

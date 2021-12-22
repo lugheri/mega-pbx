@@ -1,8 +1,51 @@
 import Discador from '../models/Discador'
 import User from '../models/User'
 import Redis from '../Config/Redis'
+import connect from '../Config/dbConnection'
+import Test from '../database/Test'
+import mongoose from 'mongoose'
 
 class TestController{
+
+      //Teste de conexao Mongo
+      async testMongodb(req,res){
+            const nome = req.body.nome
+            const sobrenome = req.body.sobrenome
+            connect.mongoose('megaconecta')
+            try{
+                  console.log("Inserindo registro no mongo")
+                await Test.create({'name':`${nome}`,'sobrenome':`${sobrenome}`})
+                res.json(true)
+                
+            }catch(error){
+                console.log({"error":error})
+                res.json(false)
+            }
+        }
+
+       //Teste de conexao Mongo
+       async testMongodb_dinamicModel(req,res){
+            const nome = req.body.nome
+            const sobrenome = req.body.sobrenome
+
+            const dinamicModel = mongoose.model('dimanicModel',{
+                  name: String,
+                  sobrenome: String
+            })
+
+
+            connect.mongoose('megaconecta')
+            try{
+                  console.log("Inserindo registro no mongo")
+                await dinamicModel.create({'name':`${nome}`,'sobrenome':`${sobrenome}`})
+                res.json(true)
+                
+            }catch(error){
+                console.log({"error":error})
+                res.json(false)
+            }
+        }
+  
 
     //Test
     async dialPowerTest(req,res){
