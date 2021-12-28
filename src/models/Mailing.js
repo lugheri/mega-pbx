@@ -11,6 +11,7 @@ import moment from 'moment'
 
 import Mailings from '../database/Mailings'
 import MailingsTypeFields from '../database/MailingsTypeFields'
+import dddsMailing from '../database/dddsMailing'
 
 
 class Mailing{
@@ -33,7 +34,7 @@ class Mailing{
         const idBase = moment().format("YYYYMMDDHHmmss")
         const infoMailing = {}
               infoMailing['id']=idBase
-              infoMailing['data']=moment().format("YYYY-MM-DD")
+              infoMailing['data']=  moment().format("YYYY-MM-DD HH:mm:ss")
               infoMailing['nome']=nome
               infoMailing['arquivo']=filename
               infoMailing['header']=header
@@ -143,7 +144,7 @@ class Mailing{
         return true
     }
 
-    async geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idKey,modelDadosMailing,modelNumerosMailing){
+    async geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idKey,modelDadosMailing,modelNumerosMailing,limite){
         const header = infoMailing['header']
          let campos_arquivo = Object.keys(jsonFile[0]) 
          //Populando array com o titulo das colunas conforme foram formatadas na tabela           
@@ -169,28 +170,36 @@ class Mailing{
  
          //PERCORRE REGISTROS 
          let idReg
+         
          const dadosMailing=[]
          const numerosMailing=[]
+       
          //Limite de Importacao 
-         let limit = 5000
+         let limit = limite*2
+         if(limit>=1000){
+            limit = 1000
+        }
          if(limit>=jsonFile.length){
              limit = jsonFile.length
          }
+         //console.log('Limite',limit)
          
-         
-         for(let r = 0; r<limit; r++){
+         for(let r = 0; r<limit; r++){            
              if(jsonFile[r]){
                  idReg=r+idKey
                  //Preparando dados
                  const registro = {} 
-                     registro['id_key_base']=idReg
-                     registro['nome']=jsonFile[r][`${campoTipo_Nome[0].name}`]
-                     if(campoTipo_CPF.length>0){
-                         registro['cpf']=jsonFile[r][`${campoTipo_CPF[0].name}`]
-                     }
-                     for(let d = 0; d<campoTipo_dados.length; d++){
-                         registro[`${campoTipo_dados[d].name}`]=jsonFile[r][`${campoTipo_dados[d].name}`]
-                     }
+                       registro['id_key_base']=idReg
+                       registro['nome']=jsonFile[r][`${campoTipo_Nome[0].name}`]
+                       if(campoTipo_CPF.length>0){
+                          registro['cpf']=jsonFile[r][`${campoTipo_CPF[0].name}`]
+                       }
+                       registro['dados']=[]
+                       const dados = {}
+                       for(let d = 0; d<campoTipo_dados.length; d++){
+                           dados[`${campoTipo_dados[d].name}`]=jsonFile[r][`${campoTipo_dados[d].name}`]
+                       }
+                 registro['dados'].push(dados)       
                  dadosMailing.push(registro)  
                  
  
@@ -244,18 +253,20 @@ class Mailing{
                              numerosMailing.push(telefone)
                              //console.log(telefone)
                              idNumero++
-                         } 
-                     }
-                 }      
+                        } 
+                    }
+                }      
                  //writer.write(`${JSON.stringify(line)},`);
                  //await Redis.setter(`${empresa}:mailing:${idBase}:${idReg}`,line)
                  //console.log("line",JSON.stringify(registros))
+                
                  jsonFile.shift()  
-             }
-         }   
+            }
+        }            
+        
+        await modelDadosMailing.insertMany(dadosMailing)
+        await modelNumerosMailing.insertMany(numerosMailing)  
          
-         await modelDadosMailing.create(dadosMailing)
-         await modelNumerosMailing.create(numerosMailing)   
          
         
          //console.timeEnd('tratando lote registros')
@@ -265,33 +276,55 @@ class Mailing{
             const totalRegistros = await modelDadosMailing.count()
             const totalNumeros = await modelNumerosMailing.count()
             await Mailings.updateOne({id:idBase},{totalRegistros:totalRegistros,totalNumeros:totalNumeros})
-            this.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idRegistro,modelDadosMailing,modelNumerosMailing)
+            this.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idRegistro,modelDadosMailing,modelNumerosMailing,limit)
             // console.log(`Continuando...restam ${jsonFile.length} registros`,idRegistro)
          }else{
-             const totalRegistros = await modelDadosMailing.count()
-             const totalNumeros = await modelNumerosMailing.count()
-             await Mailings.updateOne({id:idBase},{pronto:true,totalRegistros:totalRegistros,totalNumeros:totalNumeros})
-             console.log('Importação concluida')
-             console.timeEnd('importacao')
-             return true
-         }       
+            const totalRegistros = await modelDadosMailing.count()
+            const totalNumeros = await modelNumerosMailing.count()
+            await Mailings.updateOne({id:idBase},{pronto:true,totalRegistros:totalRegistros,totalNumeros:totalNumeros})
+            //console.log('Importação concluida')
+            //console.timeEnd('importacao')
+
+            const porEstado = []
+            //Grava a quantidade de registros por DDD
+            const ufs = await modelNumerosMailing.distinct("uf")
+            for(let u = 0;u<ufs.length;u++){
+                const uf=ufs[u]               
+                const totalNumerosUF = await modelNumerosMailing.find({uf:`${uf}`}).count() 
+                const totalRegistrosUF = await modelNumerosMailing.distinct("idRegistro",{uf:`${uf}`})
+                const ddds = await modelNumerosMailing.distinct("ddd",{uf:`${uf}`})
+                for(let d = 0;d<ddds.length;d++){
+                    const ddd=ddds[d]
+                    const totalNumerosDDD = await modelNumerosMailing.find({ddd:`${ddd}`}).count()                    
+                    const totalRegistroDDD = await modelNumerosMailing.distinct("idRegistro",{ddd:`${ddd}`})
+                    
+                    const insertDDD = {}
+                    insertDDD['idMailing'] = idBase
+                    insertDDD['uf'] = uf
+                    insertDDD['totalNumerosUF'] = totalNumerosUF  
+                    insertDDD['totalRegistrosUF'] = totalRegistrosUF.length
+                    insertDDD['ddd'] = ddd
+                    insertDDD['totalNumerosDDD'] = totalNumerosDDD  
+                    insertDDD['totalRegistrosDDD'] = totalRegistroDDD.length
+                    porEstado.push(insertDDD)                    
+                }
+            }
+            //Inserindo Registros
+            await dddsMailing.insertMany(porEstado) 
+            return true
+        }       
     }
     
      //Remover Mailing
      async removerMailing(empresa,idMailing){
         const conn = connect.mongoose(empresa)
         await Mailings.deleteOne({id:idMailing})
-        try{
-            await MailingsTypeFields.delete({idMailing:idMailing})
-        }
-        catch(err){
-            console.error(err)
-        }
-        //const modelDadosMailing = mongoose.model(`dadosMailing_${idMailing}`)
-        conn.collection(`dadosMailing_${idMailing}`).drop()
         
-        const modelNumerosMailing = mongoose.model(`numerosMailing_${idMailing}`)
-        await modelNumerosMailing.drop()
+        //const modelDadosMailing = mongoose.model(`dadosMailing_${idMailing}`)
+        
+        conn.getCollection(`dadosMailing_${idMailing}`).drop()
+        conn.getCollection(`numerosMailing_${idMailing}`).drop()
+
         return true
 
         /*return new Promise (async (resolve,reject)=>{
@@ -334,13 +367,122 @@ class Mailing{
         })*/
     }
 
+    //Status mailing
+      async statusMailing(empresa,idMailing){
+        connect.mongoose(empresa) 
+        return await Mailings
+              .find({id:idMailing})        
+    }
+
+    //Resumo por ddd
+    async totalRegUF(idMailing){
+        return await dddsMailing.distinct("uf",{idMailing:idMailing})
+    }
+
+    async totalRegistrosUF(idMailing,uf){
+        const infoUf = await dddsMailing.find({idMailing:idMailing,uf:uf})
+        const total = {}
+              total['totalNumerosUF']=infoUf[0].totalNumerosUF
+              total['totalRegistrosUF']=infoUf[0].totalRegistrosUF
+        return total  
+    }
+
+
+    
 
 
 
 
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //Conta os ufs do mailing
+    async ufsMailing(empresa,idCampanha){
+       
 
+
+
+        return new Promise (async (resolve,reject)=>{
+            const pool =  await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:ufsMailing","message":err.message,"stack":err.stack});
+                const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
+                if(infoMailing.length==0){
+                    pool.end((err)=>{
+                        if(err) console.error('Mailings 1188', err)
+                    }) 
+                    
+                    resolve(false)
+                    return false
+                }
+                const idMailing = infoMailing[0].id
+                const tabela = infoMailing[0].tabela_numeros
+
+                let sql = `SELECT COUNT(uf) AS total, uf 
+                            FROM ${empresa}_mailings.${tabela} 
+                            WHERE valido=1 GROUP BY uf`
+                const r = await  this.querySync(conn,sql)    
+                const estados=[
+                    //Centro-Oeste       
+                    {estado:'Distrito Federal',uf:'DF'},
+                    {estado:'Goiás',uf:'GO'},
+                    {estado:'Mato Grosso',uf:'MT'},
+                    {estado:'Mato Grosso do Sul',uf:'MS'},       
+                    //Nordeste
+                    {estado:'Alagoas',uf:'AL'},
+                    {estado:'Bahia',uf:'BA'},
+                    {estado:'Ceará',uf:'CE'},
+                    {estado:'Maranhão',uf:'MA'},
+                    {estado:'Paraíba',uf:'PB'},
+                    {estado:'Pernambuco',uf:'PE'},
+                    {estado:'Piauí',uf:'PI'},
+                    {estado:'Rio Grande do Norte ',uf:'RN'},
+                    {estado:'Sergipe',uf:'SE'},       
+                    //Norte
+                    {estado:'Acre',uf:'AC'},
+                    {estado:'Amapá',uf:'AP'},
+                    {estado:'Amazonas',uf:'AM'},
+                    {estado:'Pará',uf:'PA'},
+                    {estado:'Rondônia',uf:'RO'},
+                    {estado:'Roraima',uf:'RR'},
+                    {estado:'Tocantins',uf:'TO'},       
+                    //Sudeste
+                    {estado:'Espírito Santo',uf:'ES'},
+                    {estado:'Minas Gerais',uf:'MG'},
+                    {estado:'Rio de Janeiro',uf:'RJ'},
+                    {estado:'São Paulo',uf:'SP'},       
+                    //Sul
+                    {estado:'Paraná',uf:'PR'},
+                    {estado:'Rio Grande do Sul',uf:'RS'},
+                    {estado:'Santa Catarina',uf:'SC'}            
+                ]  
+                const ufs={}
+                for(let i=0; i<r.length; i++){
+                    let fill = "#185979"
+                    let totalNumeros=r[i].total
+                    let numerosFiltrados = await this.totalNumerosFiltrados(empresa,tabela,idCampanha,r[i].uf)
+                    let disponiveis = totalNumeros-numerosFiltrados
+                
+                    if(disponiveis==0){
+                        fill="#f74c4c"
+                    }
+                    ufs[`${r[i].uf}`]={}
+                    ufs[`${r[i].uf}`]['fill']=fill
+                    ufs[`${r[i].uf}`]['total']=totalNumeros
+                    ufs[`${r[i].uf}`]['filtrados']=numerosFiltrados,
+                    ufs[`${r[i].uf}`]['disponiveis']=disponiveis
+                    const filter = estados.find(estado => estado.uf == r[i].uf)
+                    ufs[`${r[i].uf}`]['name']=`${filter.estado}`
+                }
+                pool.end((err)=>{
+                    if(err) console.error('Mailings 1241', err)
+                }) 
+                
+                resolve(ufs)
+            })
+        })
+    }
+    
     async querySync(conn,sql){         
         return new Promise((resolve,reject)=>{            
             conn.query(sql, (err,rows)=>{
@@ -2038,106 +2180,9 @@ class Mailing{
 
    
 
-    //Status mailing
-    async statusMailing(empresa,idMailing){
-        return new Promise (async (resolve,reject)=>{
-            const pool =  await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:statusMailing","message":err.message,"stack":err.stack});
-                const sql = `SELECT configurado,totalReg,totalNumeros,numerosInvalidos,pronto,status 
-                            FROM ${empresa}_dados.mailings 
-                            WHERE id=${idMailing}`
-                const rows = await this.querySync(conn,sql) 
-                pool.end((err)=>{
-                    if(err) console.error('Mailings 1165', err)
-                })
-                resolve(rows)
-            })
-        })
-    }
+  
 
-    //Conta os ufs do mailing
-    async ufsMailing(empresa,idCampanha){
-        return new Promise (async (resolve,reject)=>{
-            const pool =  await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:ufsMailing","message":err.message,"stack":err.stack});
-                const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
-                if(infoMailing.length==0){
-                    pool.end((err)=>{
-                        if(err) console.error('Mailings 1188', err)
-                    }) 
-                    
-                    resolve(false)
-                    return false
-                }
-                const idMailing = infoMailing[0].id
-                const tabela = infoMailing[0].tabela_numeros
-
-                let sql = `SELECT COUNT(uf) AS total, uf 
-                            FROM ${empresa}_mailings.${tabela} 
-                            WHERE valido=1 GROUP BY uf`
-                const r = await  this.querySync(conn,sql)    
-                const estados=[
-                    //Centro-Oeste       
-                    {estado:'Distrito Federal',uf:'DF'},
-                    {estado:'Goiás',uf:'GO'},
-                    {estado:'Mato Grosso',uf:'MT'},
-                    {estado:'Mato Grosso do Sul',uf:'MS'},       
-                    //Nordeste
-                    {estado:'Alagoas',uf:'AL'},
-                    {estado:'Bahia',uf:'BA'},
-                    {estado:'Ceará',uf:'CE'},
-                    {estado:'Maranhão',uf:'MA'},
-                    {estado:'Paraíba',uf:'PB'},
-                    {estado:'Pernambuco',uf:'PE'},
-                    {estado:'Piauí',uf:'PI'},
-                    {estado:'Rio Grande do Norte ',uf:'RN'},
-                    {estado:'Sergipe',uf:'SE'},       
-                    //Norte
-                    {estado:'Acre',uf:'AC'},
-                    {estado:'Amapá',uf:'AP'},
-                    {estado:'Amazonas',uf:'AM'},
-                    {estado:'Pará',uf:'PA'},
-                    {estado:'Rondônia',uf:'RO'},
-                    {estado:'Roraima',uf:'RR'},
-                    {estado:'Tocantins',uf:'TO'},       
-                    //Sudeste
-                    {estado:'Espírito Santo',uf:'ES'},
-                    {estado:'Minas Gerais',uf:'MG'},
-                    {estado:'Rio de Janeiro',uf:'RJ'},
-                    {estado:'São Paulo',uf:'SP'},       
-                    //Sul
-                    {estado:'Paraná',uf:'PR'},
-                    {estado:'Rio Grande do Sul',uf:'RS'},
-                    {estado:'Santa Catarina',uf:'SC'}            
-                ]  
-                const ufs={}
-                for(let i=0; i<r.length; i++){
-                    let fill = "#185979"
-                    let totalNumeros=r[i].total
-                    let numerosFiltrados = await this.totalNumerosFiltrados(empresa,tabela,idCampanha,r[i].uf)
-                    let disponiveis = totalNumeros-numerosFiltrados
-                
-                    if(disponiveis==0){
-                        fill="#f74c4c"
-                    }
-                    ufs[`${r[i].uf}`]={}
-                    ufs[`${r[i].uf}`]['fill']=fill
-                    ufs[`${r[i].uf}`]['total']=totalNumeros
-                    ufs[`${r[i].uf}`]['filtrados']=numerosFiltrados,
-                    ufs[`${r[i].uf}`]['disponiveis']=disponiveis
-                    const filter = estados.find(estado => estado.uf == r[i].uf)
-                    ufs[`${r[i].uf}`]['name']=`${filter.estado}`
-                }
-                pool.end((err)=>{
-                    if(err) console.error('Mailings 1241', err)
-                }) 
-                
-                resolve(ufs)
-            })
-        })
-    }
+    
 
     async retrabalharMailing(empresa,idMailing){
         return new Promise (async (resolve,reject)=>{
@@ -2187,24 +2232,7 @@ class Mailing{
         })
     }
 
-    //Resumo por ddd
-    async totalRegUF(empresa,tabela){
-        return new Promise (async (resolve,reject)=>{
-            const pool =  await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:totalRegUF","message":err.message,"stack":err.stack});
-                const sql = `SELECT uf AS UF, COUNT(id) AS numeros, COUNT(DISTINCT id_registro) AS registros 
-                            FROM ${empresa}_mailings.${tabela} 
-                            GROUP BY uf 
-                            ORDER BY uf ASC`
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Mailings 1306', err)
-                }) 
-                resolve(rows)
-            })
-        })
-    }
+    
 
     //Saude do mailing
     async totalRegistros(empresa,tabela){

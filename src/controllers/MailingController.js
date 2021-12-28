@@ -165,31 +165,18 @@ class MailingController{
 
         Mailing.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo   
             connect.mongoose('megaconecta')  
-            console.log('iniciando a importacao')      
-            console.time('importacao')      
+            /*console.log('iniciando a importacao')      
+            console.time('importacao')      */
             const keys = Object.keys(jsonFile[0]) 
             
             await Mailing.configuraTipoCampos(empresa,idBase,header,tipoCampos,keys)//Configura os tipos de campos
-           
-            //Criando a chave do redis           
-            //Cria Arquivo do Mailing
-            //let writer = fs.createWriteStream(`${path}mailing_${idBase}.json`) 
-
-            //Criando Model do Mongo
-            const campoTipo_CPF = tipoCampos.filter(campo=>campo.tipo=='cpf')
-            const campoTipo_dados = tipoCampos.filter(campo=>campo.tipo=='dados')  
             //modelDados
-            const dadosMailing = {}
-                  dadosMailing['id_key_base']=`Number`
-                  dadosMailing['nome']=`String`
-            if(campoTipo_CPF.length>0){
-                dadosMailing['cpf']=`String`
-            }
-            for(let d=0;d<campoTipo_dados.length;d++){
-                    dadosMailing[`${campoTipo_dados[d].name}`]=`String`
-            }
-            //console.log("dados",dadosMailing)
-            const modelDadosMailing = mongoose.model(`dadosMailing_${idBase}`,dadosMailing)
+            const modelDadosMailing = mongoose.model(`dadosMailing_${idBase}`,{
+                id_key_base:{type:Number, index:true},
+                nome:String,
+                cpf:String,
+                dados:Array
+            })
 
             //modelNumeros
             const modelNumerosMailing = mongoose.model(`numerosMailing_${idBase}`,{
@@ -201,10 +188,10 @@ class MailingController{
                 valido: Boolean,
                 message: String
             })
-
-            await Mailing.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idKey,modelDadosMailing,modelNumerosMailing)
+            const limit=1
+            await Mailing.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idKey,modelDadosMailing,modelNumerosMailing,limit)
             
-            console.log('Concluido')
+            //console.log('Concluido')
              //Salvando mailing no Redis
              return true
              //await Mailing.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
@@ -226,6 +213,60 @@ class MailingController{
             
         const r = await Mailing.removerMailing(empresa,idMailing)
         res.json(r)
+    }
+
+    //Status do Mailing
+    async statusMailing(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idMailing = req.params.idMailing
+        const statusMailing = await Mailing.statusMailing(empresa,idMailing)
+        console.log('totalRegistros',statusMailing)
+        console.log('totalRegistros',statusMailing[0].totalRegistros)
+        const result={}
+        result['pronto']=false
+        if(statusMailing.length==0){
+            result['status']="Mailing não encontrado"
+            res.json(result)
+            return false
+        }
+        if(statusMailing[0].status==false){
+            result['status']="Mailing Inativo"
+            res.json(result)
+            return false
+        }    
+        //Verifica se o mailing esta importado
+        if(statusMailing[0].pronto==false){            
+            result['status']="Importação não concluída"
+            res.json(result)
+            return false
+        }
+        result['pronto']=true
+        result['status']="Pronto"
+        result['Reg.']=statusMailing[0].totalRegistros
+        result['Numeros']=statusMailing[0].totalNumeros-statusMailing[0].numerosInvalidos
+        res.json(result)
+        return false
+    } 
+
+     //Resumo por ddd
+     async totalRegUF(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idMailing = req.params.idMailing
+        
+        const ufs = await Mailing.totalRegUF(idMailing)
+        console.log('UF',ufs)
+        const registros=[]
+        for(let i=0; i<ufs.length;i++){
+            const uf=ufs[i]
+            let reg={}
+                reg['fill']='#185979'
+                reg['UF']=uf
+                const total = await Mailing.totalRegistrosUF(idMailing,uf,)
+                reg['registros']=total['totalRegistrosUF']
+                reg['numeros']=total['totalNumerosUF']
+            registros.push(reg)
+        }
+        res.json(registros)
     }
 
 
@@ -429,36 +470,7 @@ class MailingController{
         
     }
 
-    //Status do Mailing
-    async statusMailing(req,res){
-        const empresa = await User.getEmpresa(req)
-        const idMailing = req.params.idMailing
-        const statusMailing = await Mailing.statusMailing(empresa,idMailing)
-        const result={}
-        result['pronto']=false
-        if(statusMailing.length==0){
-            result['status']="Mailing não encontrado"
-            res.json(result)
-            return false
-        }
-        if(statusMailing[0].status==0){
-            result['status']="Mailing Inativo"
-            res.json(result)
-            return false
-        }
-        //Verifica se o mailing esta importado
-        if(statusMailing[0].pronto==0){            
-            result['status']="Importação não concluída"
-            res.json(result)
-            return false
-        }
-        result['pronto']=true
-        result['status']="Pronto"
-        result['Reg.']=statusMailing[0].totalReg
-        result['Numeros']=statusMailing[0].totalNumeros-statusMailing[0].numerosInvalidos
-        res.json(result)
-        return false
-    }    
+       
     //Exibe os ufs de um mailing
     async ufsMailing(req,res){
         const empresa = await User.getEmpresa(req)
@@ -494,28 +506,7 @@ class MailingController{
             }                              
          res.json(retorno)      
     }
-    //Resumo por ddd
-    async totalRegUF(req,res){
-        const empresa = await User.getEmpresa(req)
-        const idMailing = req.params.idMailing
-        const infoTabela= await Mailing.tabelaMailing(empresa,idMailing)
-        if(infoTabela.length == 0){
-            res.json(false)
-            return false;
-        }
-        const tabela = infoTabela[0].tabela_numeros
-        const r = await Mailing.totalRegUF(empresa,tabela)
-        const registros=[]
-        for(let i=0; i<r.length;i++){
-            let reg={}
-                reg['fill']='#185979'
-                reg['UF']=r[i].UF
-                reg['registros']=r[i].registros
-                reg['numeros']=r[i].numeros
-            registros.push(reg)
-        }
-        res.json(registros)
-    }
+   
     //Saude do mailing
     async saudeMailing(req,res){
         const empresa = await User.getEmpresa(req)

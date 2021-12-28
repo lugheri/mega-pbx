@@ -53,16 +53,14 @@ const connect = ()=>{};
                       }
         if(process.env.TYPE_IP=='PUBLIC'){   
             mongoUri=`mongodb://${host}:27017/${empresa}`         
-            options={
-                useUnifiedTopology: true  
-            }
+            options={}
         }
-        console.log('mongoUri',mongoUri,options)
+        //console.log('mongoUri',mongoUri,options)
 
         mongoose.connect(mongoUri,options)
         .then(()=>{
            // console.log('Mongo Conectado!')
-        
+           
         }).catch((err) => console.error('Ocorreu um erro ao conectar ao mongo',err,`mongodb://${host}:27017/${empresa}`))
       }
 

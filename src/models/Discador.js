@@ -5,7 +5,7 @@ import Agente from './Agente';
 import Mailing from './Mailing';
 import Cronometro from './Cronometro';
 import logs from '../Config/logs';
-
+import mongoose from 'mongoose'
 import moment from 'moment';
 import Redis from '../Config/Redis'
 
@@ -213,8 +213,8 @@ class Discador{
     }
      //Status atual de uma campanha 
      async statusCampanha(empresa,idCampanha){
-        const statusCampanha =await Redis.getter(`${empresa}:statusCampanha:${idCampanha}`)
-        if(statusCampanha===null){
+        const statusCampanha =await Redis.getter(`${empresa}:statusCampanha:${idCampanha}`)       
+        if(statusCampanha==null){
             return false
         }
         return statusCampanha
@@ -445,14 +445,17 @@ class Discador{
         })        
     }
     async atualizaStatus(empresa,idCampanha,msg,estado){      
-        //console.log(`\n[❗]${msg}...................`,`📣${idCampanha}\n`)
+        console.log(`\n[❗]${msg}...................`,`📣${idCampanha}\n`)
+        await Redis.delete(`${empresa}:statusCampanha:${idCampanha}`)
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
                 //verificando se a campanha ja possui status
                 let sql = `SELECT * FROM ${empresa}_dados.campanhas_status WHERE idCampanha='${idCampanha}'`
-                const statusCampanha_db = await this.querySync(conn,sql)                 
+                const statusCampanha_db = await this.querySync(conn,sql)     
+                
+                
                 if(statusCampanha_db.length==0){
                     //Caso nao, insere o status
                     const sql = `INSERT INTO ${empresa}_dados.campanhas_status
@@ -469,8 +472,11 @@ class Discador{
 
                 sql = `SELECT * FROM ${empresa}_dados.campanhas_status WHERE idCampanha='${idCampanha}'`
                 const rows = await this.querySync(conn,sql)                 
-
+               
                 await Redis.setter(`${empresa}:statusCampanha:${idCampanha}`,rows)
+                console.log('Chave',`${empresa}:statusCampanha:${idCampanha}`)
+                const status = await Redis.getter(`${empresa}:statusCampanha:${idCampanha}`)
+                console.log('status',status)
 
                 //console.log(`\n ❗  ${empresa} Campanha:${idCampanha} ${msg} . . . . . . . . . . . . \n`)
 
@@ -616,21 +622,19 @@ class Discador{
     //Verifica se existem campanhas ativas
     async campanhasAtivas(empresa){   
         const campanhasAtivas = await Redis.getter(`${empresa}:campanhasAtivas_comInformacoes`)
-        if(campanhasAtivas){           
-            return campanhasAtivas
-        }
-        
+        if((campanhasAtivas)&&(campanhasAtivas.length>0)){ 
+            console.log('redis')         
+           return campanhasAtivas
+        }        
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});                
-                const sql = `SELECT c.id,f.idFila,f.nomeFila,mc.idMailing,ml.tabela_dados,ml.tabela_numeros,d.tipo_discador,d.agressividade,d.tipo_discagem,d.ordem_discagem,d.modo_atendimento,d.saudacao
+                const sql = `SELECT c.id,f.idFila,f.nomeFila,d.tipo_discador,d.agressividade,d.tipo_discagem,d.ordem_discagem,d.modo_atendimento,d.saudacao
                                FROM ${empresa}_dados.campanhas AS c
                                JOIN ${empresa}_dados.campanhas_filas AS f ON c.id=f.idCampanha
-                               JOIN ${empresa}_dados.campanhas_mailing AS mc ON mc.idCampanha=c.id
-                               JOIN ${empresa}_dados.mailings AS ml ON ml.id=mc.idMailing
                                JOIN ${empresa}_dados.campanhas_discador AS d ON c.id=d.idCampanha
-                              WHERE c.tipo='a' AND c.status=1 AND c.estado=1`                                
+                              WHERE c.tipo='a' AND c.status=1 AND c.estado=1` 
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.error(err)
@@ -933,8 +937,35 @@ class Discador{
     }
 
     //MODO DE FILTRAGEM AVANÇADO
-    async selecionaNumerosCampanha(empresa,idCampanha,tabela_numeros,idMailing,limit){
+    async selecionaNumerosCampanha(empresa,idCampanha,limit){
+        const base = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
+        if(base==null){
+            return false
+        }
+        let limite=limit
+        if(limit>base.length){
+            limite=base.length
+        }
+        const registrosFiltrados=[]
+        for(let b=0;b<limite;b++){
+            const registro = {}
+                  registro['idNumero'] = base[b].idNumero
+                  registro['idRegistro'] = base[b].idRegistro
+                  registro['numero'] = base[b].numero
+          
+            //Verifica tabulacao
 
+            //Remove da lista de bases
+            base.splice(base.findIndex(registros => registros.idNumero == base[b].idNumero),1)
+            await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,base)
+
+            //Verifica Filtros de regiao
+
+            //Adiciona na lista de numeros selecionadas
+            registrosFiltrados.push(registro)
+        }
+
+        return registrosFiltrados
     }
 
     async getRegistersCache(empresa,idCampanha,limit) {
@@ -1404,16 +1435,12 @@ class Discador{
         })       
     }
     //Registra chamada simultanea
-    async registraChamada(empresa,ramal,idAtendimento,uniqueid,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,id_reg,id_numero,numero,fila,falando){
+          
+    async registraChamada(empresa,ramal,idAtendimento,uniqueid,idMailing,idCampanha,modoAtendimento,tipoDiscador,id_reg,id_numero,numero,fila,falando){
         let tipo = 'discador'
         if(tipoDiscador=="manual"){
             tipo = 'manual'
-        } 
-
-        let sql = `INSERT INTO ${empresa}_dados.campanhas_chamadas_simultaneas 
-                          (data,ramal,uniqueid,protocolo,tipo_ligacao,tipo_discador,retorno,modo_atendimento,id_campanha,id_mailing,tabela_dados,tabela_numeros,id_registro,id_numero,numero,fila,tratado,atendido,na_fila,falando,tabulando,desligada)
-                   VALUES (now(),${ramal},${uniqueid},${idAtendimento},${tipo},${tipoDiscador},0,${modoAtendimento},${idCampanha},${idMailing},${tabela_dados},${tabela_numeros},${id_reg},${id_numero},${numero},${fila},1,1,1,${falando},0,0)`
-
+        }         
         //console.log('Registra atendimento')
         
       
@@ -1436,8 +1463,6 @@ class Discador{
               novaChamada['modo_atendimento']=modoAtendimento
               novaChamada['id_campanha']=idCampanha
               novaChamada['id_mailing']=idMailing
-              novaChamada['tabela_dados']=tabela_dados
-              novaChamada['tabela_numeros']=tabela_numeros
               novaChamada['id_registro']=id_reg
               novaChamada['id_numero']=id_numero
               novaChamada['numero']=numero
@@ -1456,7 +1481,7 @@ class Discador{
         //console.log('>>>>>>>>>>>>>>>>>>>>>> chave',`${empresa}:atendimentoAgente:${ramal}`,chave)
     } 
 
-    async discar(empresa,ramal,idAtendimento,numero,fila,modoAtendimento,saudacao,aguarde,idCampanha,idMailing,tabelaDados,tabelaNumeros,idRegistro,idNumero){
+    async discar(empresa,ramal,idAtendimento,numero,fila,modoAtendimento,saudacao,aguarde,idCampanha,idMailing,idRegistro,idNumero){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -1492,10 +1517,8 @@ class Discador{
                     const novaChamada={}
                           novaChamada['idAtendimento'] = idAtendimento
                           novaChamada['uniqueid'] = uniqueid
-                          novaChamada['id_campanha'] = idCampanha
                           novaChamada['id_mailing'] = idMailing
-                          novaChamada['tabela_dados'] = tabelaDados
-                          novaChamada['tabela_numeros'] = tabelaNumeros
+                          novaChamada['id_campanha'] = idCampanha
                           novaChamada['id_registro'] = idRegistro
                           novaChamada['id_numero'] = idNumero
 
@@ -1529,7 +1552,7 @@ class Discador{
 
 
     //Tabulação automática do sistema    
-    async autoTabulacao(empresa,protocolo,idCampanha,idMailing,idRegistro,id_numero,ramal,uniqueid,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros){
+    async autoTabulacao(empresa,protocolo,idCampanha,idRegistro,id_numero,ramal,uniqueid,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao){
         const test = await Redis.getter(`${empresa}:tabulacoesRegistros:${idCampanha}`)
         if(test==null){
             await Redis.setter(`${empresa}:tabulacoesRegistros:${idCampanha}`,[])
@@ -1539,8 +1562,7 @@ class Discador{
         
         const tabular = {}
               tabular['tipo']='auto'
-              tabular['protocolo']=protocolo
-              tabular['idMailing']=idMailing
+              tabular['protocolo']=protocolo              
               tabular['idRegistro']=idRegistro
               tabular['id_numero']=id_numero
               tabular['ramal']=ramal
@@ -1550,96 +1572,21 @@ class Discador{
               tabular['observacoes']=observacoes
               tabular['contatado']=contatado
               tabular['produtivo']=produtivo
-              tabular['tipo_ligacao']=tipo_ligacao
-              tabular['tabela_numeros']=tabela_numeros        
+              tabular['tipo_ligacao']=tipo_ligacao    
+              const idMailing = await Campanhas.idMailingCampanha(empresa,idCampanha)   
         tabulacoes.push(tabular)
         await Redis.setter(`${empresa}:tabulacoesRegistros:${idCampanha}`,tabulacoes)
         await this.registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,idRegistro,id_numero,ramal,uniqueid,tipo_ligacao,numero,status_tabulacao,observacoes,contatado)
-                
-
-
-        /*
-
-       
-        
-        
-        
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
-                let sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
-                            SET estado=0, 
-                                desc_estado='Disponivel',
-                                contatado='${contatado}', 
-                                observacao='${observacoes}', 
-                                tentativas=tentativas+1,
-                                max_tent_status=4
-                            WHERE idCampanha=${idCampanha} 
-                            AND idMailing=${idMailing} 
-                            AND idRegistro=${idRegistro}
-                            AND (produtivo IS NULL OR produtivo=0)`
-                await this.querySync(conn,sql)
-                //Grava no histórico de atendimento
-                await this.registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,idRegistro,id_numero,ramal,uniqueid,tipo_ligacao,numero,status_tabulacao,observacoes,contatado)
-                //Marcando numero na tabela de numeros como disponivel
-                sql = `UPDATE ${empresa}_mailings.${tabela_numeros} 
-                          SET tentativas=tentativas+1, 
-                              contatado='${contatado}', 
-                              status_tabulacao=${status_tabulacao}, 
-                              produtivo='${produtivo}', 
-                              discando=0
-                        WHERE id_registro=${idRegistro}`
-                await this.querySync(conn,sql) 
-
-                //Deixa indisponiveis todos os produtivos
-                sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
-                        SET estado=4, desc_estado='Já trabalhado'
-                        WHERE produtivo=1`
-                await this.querySync(conn,sql)  
-                                            
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                }) 
-                resolve(true) 
-            })
-        })   */ 
         return true
     }
-    async campoNomeRegistro(empresa,idMailing,idRegistro,tabelaDados){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
-
-                let sql = `SELECT campo 
-                            FROM ${empresa}_dados.mailing_tipo_campo 
-                            WHERE idMailing=${idMailing}
-                            AND tipo='nome'`
-                const campoNome = await this.querySync(conn,sql)
-                if(campoNome.length==0){
-                    pool.end((err)=>{
-                        if(err) console.error(err)
-                    }) 
-                    resolve(false)
-                    return 
-                }
-                const campo = campoNome[0].campo
-                sql = `SELECT ${campo} as nome
-                        FROM ${empresa}_mailings.${tabelaDados}
-                        WHERE id_key_base=${idRegistro}`
-                        //console.log(sql)
-                const nome = await this.querySync(conn,sql)
-                if(nome.length==0){
-                    resolve('sem nome')
-                    return false
-                }
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                })               
-                resolve(nome[0].nome) 
-            })
-        })         
+    async campoNomeRegistro(empresa,idMailing,idRegistro){
+        connect.mongoose(empresa) 
+        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,{})
+        const dados = await modelDadosMailing.find({id_key_base:idRegistro})
+        console.log('idRegistro',idRegistro)
+        console.log('dados',dados[0])
+        delete mongoose.connection.models[`dadosmailing_${idMailing}`];
+        return dados[0].nome      
     }
 
     async camposMailing(empresa,idMailing,idCampanha){
@@ -1742,41 +1689,36 @@ class Discador{
     }
 
     //Informações da chamada a ser atendida
-    async infoChamada_byDialNumber(empresa,idCampanha,idReg,id_numero,tabela_numeros,numero){ 
+    async infoChamada_byDialNumber(empresa,idMailing,idCampanha,idReg,id_numero,numero){
+        connect.mongoose(empresa) 
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{})
         const info = {};
+              info['numeros']=[]
+
+        const campos_numeros = await modelNumerosMailing.find({idRegistro:idReg})
+        for(let i=0; i<campos_numeros.length; i++){    
+            info['numeros'].push(await this.tabulacoesNumero(empresa,campos_numeros[i].id,`${campos_numeros[i].numero}`));
+        }
+        info['id_numeros_discado']=id_numero
+        info['numeros_discado']=numero    
+        delete mongoose.connection.models[`numerosmailing_${idMailing}`];   
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
-            
-                info['numeros']=[]
-                //CAMPOS DE TELEFONE
-                let sql = `SELECT id, numero
-                            FROM ${empresa}_mailings.${tabela_numeros}
-                            WHERE id_registro='${idReg}'
-                        ORDER BY id ASC`;
-                const campos_numeros = await this.querySync(conn,sql)
-                for(let i=0; i<campos_numeros.length; i++){    
-                    info['numeros'].push(await this.tabulacoesNumero(empresa,campos_numeros[i].id,`${campos_numeros[i].numero}`));
-                }
-            
-                info['id_numeros_discado']=id_numero
-                info['numeros_discado']=numero                
-
-                
-                sql = `SELECT id,nome,descricao 
-                        FROM ${empresa}_dados.campanhas 
-                        WHERE id=${idCampanha}`
-                const dadosCampanha = await this.querySync(conn,sql)
-                if(dadosCampanha.length != 0 ){
-                    info['dadosCampanha']=dadosCampanha
-                }
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                }) 
-                resolve(info) 
-            })
-        }) 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});         
+                    let sql = `SELECT id,nome,descricao 
+                                FROM ${empresa}_dados.campanhas 
+                                WHERE id=${idCampanha}`
+                    const dadosCampanha = await this.querySync(conn,sql)
+                    if(dadosCampanha.length != 0 ){
+                        info['dadosCampanha']=dadosCampanha
+                    }
+                    pool.end((err)=>{
+                        if(err) console.error(err)
+                    }) 
+                    resolve(info) 
+                })
+            })         
     }
     
     async tabulacoesNumero(empresa,id,numero){

@@ -13,7 +13,7 @@ module.exports = () => {
     app.use(express.urlencoded({extended:true, limit:'250mb'}));
 
     
-    app.use(morgan('dev'));
+   // app.use(morgan('dev'));
     app.use(routes);
  
  return app

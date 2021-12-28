@@ -295,9 +295,27 @@ class CampanhasController{
         const empresa = await User.getEmpresa(req)
         const idCampanha = req.body.idCampanha
         const idMailing = req.body.idMailing
+        
+
         const r = await Campanhas.addMailingCampanha(empresa,idCampanha,idMailing)
+        res.json(true)
+    }
+
+    async addNumerosCampanha(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idCampanha = req.params.idCampanha
+        const idMailing = req.params.idMailing
+        const r = await Campanhas.addNumerosCampanha(empresa,idMailing,idCampanha)
+        res.json(true)
+    }
+
+    async idMailingCampanha(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idCampanha = req.params.idCampanha
+        const r = await Campanhas.idMailingCampanha(empresa,idCampanha)
         res.json(r)
     }
+
     //Lista mailing da campanha
     async listarMailingCampanha(req,res){
         const empresa = await User.getEmpresa(req)

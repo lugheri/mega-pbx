@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 const MailingsTypeFields = mongoose.model('MailingsTypeFields',
 {
-    idMailing:Number,
+    idMailing:{type:Number, index:true},
     campo: String,
     nome_original_campo:String,
     apelido:String,

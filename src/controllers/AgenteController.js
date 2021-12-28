@@ -115,8 +115,6 @@ class AgenteController{
             const tipo= dadosChamada[0].tipo
             const idReg = dadosChamada[0].id_registro
             const id_numero = dadosChamada[0].id_numero
-            const tabela_dados = dadosChamada[0].tabela_dados
-            const tabela_numeros = dadosChamada[0].tabela_numeros
             const idCampanha = dadosChamada[0].id_campanha
             const protocolo = dadosChamada[0].idAtendimento            
             let sistemcall=false
@@ -154,12 +152,12 @@ class AgenteController{
             info['dados']['idMailing']=idMailing              
             info['dados']['tipo_ligacao']=tipo
             info['dados']['protocolo']=protocolo
-            const nomeCliente = await Discador.campoNomeRegistro(empresa,idMailing,idReg,tabela_dados)
+            const nomeCliente = await Discador.campoNomeRegistro(empresa,idMailing,idReg)
             info['dados']['nome_registro']=nomeCliente
             info['dados']['campos']={}
             info['dados']['campos']['idRegistro']=idReg
             info['dados']['campos']['Nome']=nomeCliente
-            const numeros = await Discador.infoChamada_byDialNumber(empresa,idCampanha,idReg,id_numero,tabela_numeros,numero)
+            const numeros = await Discador.infoChamada_byDialNumber(empresa,idMailing,idCampanha,idReg,id_numero,numero)
             info['dados']['numeros'] = numeros['numeros']
             info['dados']['id_numeros_discado'] = numeros['id_numeros_discado']
             info['dados']['numeros_discado'] = numeros['numeros_discado']
