@@ -96,6 +96,27 @@ class Campanhas{
         })
     }  
 
+    async idCampanhaByNome(empresa,nomeCampanha){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                const sql = `SELECT id
+                               FROM ${empresa}_dados.campanhas 
+                              WHERE nome='${nomeCampanha}'
+                               AND status=1`
+                const rows =  await this.querySync(conn,sql) 
+                if(rows.length==0){
+                    resolve(false)
+                    return
+                }
+                pool.end((err)=>{
+                    if(err) console.error('Campanhas.js 59', err)
+                })
+                resolve(rows[0].id) 
+            })
+        })
+    }
 
     //######################CONFIGURAÇÃO DE CAMPANHA ATIVA################################
     
@@ -210,76 +231,6 @@ class Campanhas{
             })
         })       
     }
-
-    async  inserindoMailingCacheCampanha(empresa,idCampanha){
-        console.log("REMOVENDO numerosMailingCampanha")
-        await Redis.delete(`${empresa}:numerosMailingCampanha:${idCampanha}`)
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-
-                let sql = `SELECT ordem_discagem, m.idMailing
-                             FROM ${empresa}_dados.campanhas_discador AS c
-                             JOIN ${empresa}_dados.campanhas_mailing AS m 
-                               ON c.idCampanha=m.idCampanha
-                            WHERE c.idCampanha=${idCampanha}`
-                const infoCampanha = await this.querySync(conn,sql)
-                const idMailing = infoCampanha[0].idMailing
-                const infoMailing = await Mailing.infoMailing(empresa,idMailing)
-                const ordenacao = infoCampanha[0].ordem_discagem
-
-                if(infoMailing.length==0){
-                    resolve(false)
-                    return false
-                }  
-
-                //Informações do Mailing                   
-                const totalNumeros = infoMailing[0].totalNumeros
-                const tabelaNumeros = infoMailing[0].tabela_numeros                   
-                const reg_por_pag = 30
-                const pag = Math.ceil(totalNumeros/reg_por_pag); 
-
-               /* console.log('totalNumeros',totalNumeros)
-                console.log('tabelaNumeros',tabelaNumeros)
-                console.log('pag',pag)*/
-
-                //SELECIONANDO MAILING
-                const numeros=[]
-                for(let p=0;p<pag;p++){
-                    const limit_de = p*reg_por_pag
-                    sql = `SELECT id,id_registro,ddd,numero,uf,tipo 
-                             FROM ${empresa}_mailings.${tabelaNumeros} 
-                            WHERE valido=1
-                            ORDER BY id ${ordenacao}
-                            LIMIT ${limit_de},${reg_por_pag}`
-                    const rows = await this.querySync(conn,sql)
-                    for(let r=0;r<rows.length;r++){
-                        const numero = {}
-                              numero['id_numero']=rows[r].id
-                              numero['id_registro']=rows[r].id_registro
-                              numero['ddd']=rows[r].ddd
-                              numero['numero']=rows[r].numero
-                              numero['uf']=rows[r].uf
-                              numero['tipo']=rows[r].tipo
-                        numeros.push(numero)
-                    }
-
-                   // console.log('Total de numeros na pag',p,':',numeros.length)
-                   
-                    
-                }
-                
-                await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,numeros)
-                console.log("GRAVANDO numerosMailingCampanha")
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 605', err)
-                })
-                resolve(true)
-            })
-        })
-    }
-
     //TABULACOES
     //######################Gestão das listas de tabulacao das campanhas######################
     //Adiciona lista de tabulacao na campanha
@@ -646,6 +597,10 @@ class Campanhas{
     //MAILING
     //ADICIONA O MAILING A UMA CAMPANHA
     async addMailingCampanha(empresa,idCampanha,idMailing){
+        //REMOVENDO MAILINGS DA CAMPANHA 
+        await Redis.delete(`${empresa}:mailingCampanha:${idCampanha}`)
+
+        //OLD
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
@@ -697,8 +652,6 @@ class Campanhas{
                 pool.end((err)=>{
                     if(err) console.error('Campanhas.js 605', err)
                 })
-
-                await this.inserindoMailingCacheCampanha(empresa,idCampanha)
                 resolve(true)                             
             })
         })        
@@ -706,8 +659,7 @@ class Campanhas{
     //Lista os mailings adicionados em uma campanha
     async listarMailingCampanha(empresa,idCampanha){
         const mailingCampanha = await Redis.getter(`${empresa}:mailingCampanha:${idCampanha}`)
-        //console.log('Redis: mailingCampanha',mailingCampanha)
-        if(mailingCampanha!=null){
+        if(mailingCampanha!==null){
             return mailingCampanha
         }
         return new Promise (async (resolve,reject)=>{ 
@@ -734,9 +686,6 @@ class Campanhas{
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)
-
-                await Redis.delete(`${empresa}:mailingCampanha:${idCampanha}`)
-                await Redis.delete(`${empresa}:numerosMailingCampanha:${idCampanha}`)
 
                 //Recuperando o id da campanha
                 let sql = `SELECT idCampanha 

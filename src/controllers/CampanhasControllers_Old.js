@@ -295,10 +295,8 @@ class CampanhasController{
         const empresa = await User.getEmpresa(req)
         const idCampanha = req.body.idCampanha
         const idMailing = req.body.idMailing
-        
-
         const r = await Campanhas.addMailingCampanha(empresa,idCampanha,idMailing)
-        res.json(true)
+        res.json(r)
     }
     //Lista mailing da campanha
     async listarMailingCampanha(req,res){

@@ -1,7 +1,8 @@
 import customExpress from './Config/customExpress';
 import http from 'http';
 import sockets from './Config/sockets'
-import logs from './Config/logs'
+import logs from './Config/logs';
+import connect from './Config/dbConnection';
 
 import DiscadorController from './controllers/DiscadorController';
 import UserController from './controllers/UserController';
@@ -14,14 +15,12 @@ app.use(function(err, req, res, next) {
 
 
 const httpServer = sockets(app)
-//const httpServer = http.createServer(app);
 
 
-
+    
 //Iniciando Discador
 DiscadorController.checkAccounts()
 UserController.checkUsers()
-
-
 httpServer.listen(3000,()=>console.log('Servidor de testes online!'));
+
 

@@ -75,7 +75,9 @@ class AgenteController{
         const ramal = req.params.ramal
         //console.log(ramal)
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
-        console.log('> > > > > > > > > > > > > > > > > > > > chamadasSimultaneas',chamadasSimultaneas)
+        const dadosChamadas = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+        console.log('>Modo Atendimento > > > > > > > > > > > > > > > > > > > chamadasSimultaneas',chamadasSimultaneas)
+        console.log('>Modo Atendimento > > > > > > > > > > > > > > > > > > > dadosChamadas',dadosChamadas)
         if((chamadasSimultaneas==null)||(chamadasSimultaneas.length==0)){
             const mode={}
                 mode['sistemcall']=false
@@ -102,8 +104,11 @@ class AgenteController{
             res.json(mode)
             return false;
         }else{
-           
-            const modo_atendimento = dadosChamada[0].modo_atendimento
+            let modo_atendimento = 'auto'
+            if(dadosChamada[0].modo_atendimento!=undefined){               
+                modo_atendimento = dadosChamada[0].modo_atendimento
+            }
+            
             const numero = dadosChamada[0].numero
             const idMailing = dadosChamada[0].id_mailing
             const tipo_discador = dadosChamada[0].tipo_discador
@@ -183,11 +188,11 @@ class AgenteController{
     }
 
     async dadosChamadaAtendida(req,res){
-        console.log('Dados Chamada')
         const empresa = await User.getEmpresa(req)
         const ramal = req.params.ramal
-        console.log('Chave',`${empresa}:atendimentoAgente:${ramal}`)
+        
         const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+        
         if(atendimentoAgente==null){
             const mode={}
                 mode['sistemcall']=false
@@ -196,11 +201,15 @@ class AgenteController{
                 mode['config']['origem']="interna"
                 mode['config']['modo_atendimento']="manual"
 
-                console.log('Sem Dados',mode)
+               
             res.json(mode)
             return false;
         }
-        const modo_atendimento = atendimentoAgente['modo_atendimento']
+
+        let modo_atendimento = 'auto'
+        if(atendimentoAgente['modo_atendimento']){               
+             modo_atendimento = atendimentoAgente['modo_atendimento']
+        }
         const numero = atendimentoAgente['numero']
         const idAtendimento = atendimentoAgente['idAtendimento']
         const idMailing = atendimentoAgente['id_mailing']
@@ -216,7 +225,6 @@ class AgenteController{
 
         //Caso a chamada nao possua id de registro
         if(idReg==0){           
-            console.log('Sem id')
             res.json({"sistemcall":false,"dialcall":false})             
         }
 
@@ -272,7 +280,7 @@ class AgenteController{
         info['config']['origem']="discador"
         info['config']['modo_atendimento']=modo_atendimento
 
-        console.log('Info',info)
+        
         res.json(info) 
     }
 

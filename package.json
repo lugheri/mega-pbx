@@ -12,8 +12,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@sentry/node": "^6.15.0",
-    "@sentry/tracing": "^6.15.0",
     "ami-io": "^1.2.1",
     "ari-client": "^2.2.0",
     "asterisk-ami": "^0.1.0",
@@ -29,6 +27,7 @@
     "jssip-node-websocket": "^3.0.0",
     "md5": "^2.3.0",
     "moment": "^2.29.1",
+    "mongoose": "^6.1.1",
     "morgan": "^1.10.0",
     "multer": "^1.4.2",
     "mysql": "^2.18.1",

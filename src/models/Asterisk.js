@@ -161,17 +161,10 @@ class Asterisk{
         if((chamadasSimultaneas==null)||(chamadasSimultaneas.length==0)){
             return false
         }     
-        
-       
-      
-        let dadosChamada=[]
-        if(idAtendimento==0){
-            dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)
-        }else{
-            dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.idAtendimento == idAtendimento)
-        }
-       
-        if((dadosChamada===null)||(dadosChamada.length==0)){
+
+
+        let dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)
+        if((dadosChamada==null)||(dadosChamada.length==0)){
             return false
         }     
 

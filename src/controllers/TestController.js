@@ -1,8 +1,51 @@
 import Discador from '../models/Discador'
 import User from '../models/User'
 import Redis from '../Config/Redis'
+import connect from '../Config/dbConnection'
+import Test from '../database/Test'
+import mongoose from 'mongoose'
 
 class TestController{
+
+      //Teste de conexao Mongo
+      async testMongodb(req,res){
+            const nome = req.body.nome
+            const sobrenome = req.body.sobrenome
+            connect.mongoose('megaconecta')
+            try{
+                  console.log("Inserindo registro no mongo")
+                await Test.create({'name':`${nome}`,'sobrenome':`${sobrenome}`})
+                res.json(true)
+                
+            }catch(error){
+                console.log({"error":error})
+                res.json(false)
+            }
+        }
+
+       //Teste de conexao Mongo
+       async testMongodb_dinamicModel(req,res){
+            const nome = req.body.nome
+            const sobrenome = req.body.sobrenome
+
+            const dinamicModel = mongoose.model('dimanicModel',{
+                  name: String,
+                  sobrenome: String
+            })
+
+
+            connect.mongoose('megaconecta')
+            try{
+                  console.log("Inserindo registro no mongo")
+                await dinamicModel.create({'name':`${nome}`,'sobrenome':`${sobrenome}`})
+                res.json(true)
+                
+            }catch(error){
+                console.log({"error":error})
+                res.json(false)
+            }
+        }
+  
 
     //Test
     async dialPowerTest(req,res){
@@ -96,58 +139,26 @@ class TestController{
         res.json(true)
   }
 
-  async mailingCampanha(req,res){
+  async abrirMailings(req,res){
       const empresa = req.params.empresa
-      const idCampanha = req.params.idCampanha
+      const idMailing = req.params.idMailing
       const keys = []
-      const mailingCampanha = {}
-            mailingCampanha['key']=`${empresa}:numerosMailingCampanha:${idCampanha}`
-            mailingCampanha['value'] = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
-            mailingCampanha['expire'] = 0
-      keys.push(mailingCampanha)
-     
+      const infoMailing = {}
+            infoMailing['key']=`${empresa}:mailing:${idMailing}`
+            const values = await Redis.getter(`${empresa}:mailing:${idMailing}`)
+            let length = 0
+            if(values){
+                  length = values.length
+            }
+
+            infoMailing['length']=length
+            infoMailing['value'] = values
+            infoMailing['expire'] = 0
+      keys.push(infoMailing)
       res.json(keys)
   }
 
 
-  async filtrarRegistro(req,res){
-      const empresa = req.params.empresa
-      const idCampanha = req.params.idCampanha
-      const limitRegistros = req.params.limitRegistros
 
-      const registros = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
-      console.log(registros[0])
-
-      for(let i=0;i<limitRegistros;++i){
-            const idNumero = registros[i].id_numero
-            console.log('idNumero',idNumero)
-            console.log(registros.length)
-            registros.splice(i,1)
-            console.log(registros.length)
-            
-      }
-      await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,registros)
-      console.log(registros.length)
-
-      res.json(true)
-  }
-
-  async removeNumeroMailing(req,res){
-      const empresa = req.params.empresa
-      const idCampanha = req.params.idCampanha
-      const numero = req.params.numero
-
-      const registros = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
-      console.log('Antes', registros.length)
-      const n = registros.filter(registro => registro.numero == numero)
-      for(let i=0;i<n.length;++i){
-            registros.splice(registros.findIndex(registro => registro.numero == numero),1)
-      }
-      await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,registros)
-      console.log('Depois', registros.length)
-
-      res.json(true)
-  }
-     
 }
 export default new TestController()

@@ -7,47 +7,109 @@ import Campanhas from '../models/Campanhas'
 import moment from 'moment';
 import Redis from '../Config/Redis'
 import mongoose from 'mongoose'
-import moment from 'moment'
-
-import Mailings from '../database/Mailings'
-import MailingsTypeFields from '../database/MailingsTypeFields'
 
 
 class Mailing{
     //Mailings em Mongo
-    //Listar mailings importados
-    async listaMailing(empresa){
-        connect.mongoose(empresa) 
-        return await Mailings
-              .find({status:true})
-              .sort({id: -1})
+     //Listar mailings importados
+     async listaMailing(empresa){
+        return new Promise (async (resolve,reject)=>{
+            const pool =  await connect.pool(empresa,'dados')
+                pool.getConnection(async (err,conn)=>{ 
+                    if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:listaMailing","message":err.message,"stack":err.stack});
+                    const sql = `SELECT id,
+                                        DATE_FORMAT (data,'%d/%m/%Y') AS data_importacao,
+                                        DATE_FORMAT (termino_importacao,'%d/%m/%Y') AS conclusao_importacao,
+                                        nome,
+                                        arquivo,
+                                        tabela_dados,
+                                        tabela_numeros,                            
+                                        totalReg,
+                                        totalNumeros,
+                                        repetidos as numerosRepetidos,
+                                        numerosInvalidos,
+                                        configurado,
+                                        pronto,
+                                        status 
+                                FROM ${empresa}_dados.mailings 
+                                WHERE status=1 ORDER BY id DESC`
+                    const rows =  await this.querySync(conn,sql);
+                    pool.end((err)=>{
+                        if(err) console.error('Mailings 1060', err)
+                    })
+                    resolve(rows)  
+            })
+        }) 
     }
 
-    async infoMailing(empresa,idMailing){
-        connect.mongoose(empresa) 
-        return await Mailings.findOne({id:idMailing})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    async querySync(conn,sql){         
+        return new Promise((resolve,reject)=>{            
+            conn.query(sql, (err,rows)=>{
+                if(err){ 
+                    console.error({"errorCode":err.code,"arquivo":"Mailing.js:querySync","message":err.message,"stack":err.stack, "sql":sql}) 
+                    resolve(false);
+                }
+                resolve(rows)
+            })
+        })
     }
+   
 
     async salvaDadosMailing(empresa,tipoImportacao,keys,nome,header,filename,delimitador,jsonFile){
-        connect.mongoose(empresa) 
-        const idBase = moment().format("YYYYMMDDHHmmss")
-        const infoMailing = {}
-              infoMailing['id']=idBase
-              infoMailing['data']=  moment().format("YYYY-MM-DD HH:mm:ss")
-              infoMailing['nome']=nome
-              infoMailing['arquivo']=filename
-              infoMailing['header']=header
-              infoMailing['delimitador']=delimitador
-              infoMailing['configurado']=false
-              infoMailing['totalRegistros']=0
-              infoMailing['totalNumeros']=0
-              infoMailing['repetidos']=0
-              infoMailing['numerosInvalidos']=0
-              infoMailing['pronto']=false
-              infoMailing['status']=true
-        await Mailings.create(infoMailing)
+        const insertMailing = await this.addInfoMailing(empresa,nome,"","",filename,header,delimitador)
+        const infoMailing = await this.infoMailing(empresa,insertMailing['insertId']);
+        const idBase = infoMailing[0].id
+       // console.log('idBase',idBase)
         return(infoMailing)    
     }   
+
+    async infoMailingAtivo(empresa,idMailing){
+        return new Promise (async (resolve,reject)=>{ 
+            const sql = `SELECT * 
+                           FROM ${empresa}_dados.mailings 
+                          WHERE id=${idMailing} AND pronto=1`
+           //Executando query
+           const pool =  await connect.pool(empresa,'dados')
+           pool.getConnection(async (err,conn)=>{                           
+               if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:infoMailingAtivo","message":err.message,"stack":err.stack});
+               const rows =  await this.querySync(conn,sql)                  
+               pool.end((err)=>{
+                  if(err) console.error('Mailings 167', err)
+               }) 
+               resolve(rows)   
+           }) 
+        })
+    }
 
     //Abre o csv do mailing a ser importado
     async abreCsv(path,delimitador,callback){
@@ -113,407 +175,207 @@ class Mailing{
         })        
     }
 
-    async configuraTipoCampos(empresa,idBase,header,campos,camposOriginais){
-        connect.mongoose(empresa) 
-        await Mailings.updateOne({id:idBase},{configurado:true})
-        const typeFields=[]
-        for(let i=0; i<campos.length; i++){                           
-            let nomeOriginal=campos[i].name
-            let nomeCampo=this.removeCaracteresEspeciais_title(nomeOriginal)
-            if(header==0){
-                nomeCampo=`campo_${i+1}`
-                nomeOriginal=nomeCampo
-            }
-            let ordem = i+1
-            if(campos[i].tipo=="nome"){
-                ordem=0
-            }
-
-            const field = {}
-                  field['idMailing']=idBase
-                  field['campo']==nomeCampo
-                  field['nome_original_campo']=nomeOriginal
-                  field['apelido']=campos[i].apelido
-                  field['tipo']=campos[i].tipo
-                  field['conferido']=true
-                  field['ordem']=ordem
-            typeFields.push(field)
-        }
-        await MailingsTypeFields.create(typeFields)
-        return true
+    async infoMailing(empresa,idMailing){
+        return new Promise (async (resolve,reject)=>{       
+            const sql = `SELECT * 
+                        FROM ${empresa}_dados.mailings 
+                        WHERE id=${idMailing}`
+            
+            //Executando query
+            const pool =  await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:infoMailing","message":err.message,"stack":err.stack});
+                const rows =  await this.querySync(conn,sql)                  
+                pool.end((err)=>{
+                   if(err) console.error('Mailings 150', err)
+                }) 
+                resolve(rows)   
+            })
+        })   
     }
 
-    async geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idKey,modelDadosMailing,modelNumerosMailing,limite){
-        const header = infoMailing['header']
-         let campos_arquivo = Object.keys(jsonFile[0]) 
-         //Populando array com o titulo das colunas conforme foram formatadas na tabela           
-         let campos_tabela = []                
-         for(let i = 0; i <campos_arquivo.length;i++){
-             //Verifica se o arquivo possui linha de titulo
-             if(header==0){
-                 let n = i+1
-                 campos_tabela.push("`campo_"+n+"`")
-             }else{
-                 //campos_tabela.push("`"+this.removeCaracteresEspeciais_title(campos_arquivo[i])+"`")
-                 campos_tabela.push(campos_arquivo[i])
-             }
-         }
-         //campo de nome
-         const campoTipo_Nome = tipoCampos.filter(campo=>campo.tipo=='nome')
-         const campoTipo_CPF = tipoCampos.filter(campo=>campo.tipo=='cpf')
-         const campoTipo_DDD = tipoCampos.filter(campo=>campo.tipo=='ddd')
-         const campoTipo_Telefone = tipoCampos.filter(campo=>campo.tipo=='telefone')
-         const campoTipo_DDD_e_telefone = tipoCampos.filter(campo=>campo.tipo=='ddd_e_telefone') 
-         const campoTipo_dados = tipoCampos.filter(campo=>campo.tipo=='dados')         
-         
- 
-         //PERCORRE REGISTROS 
-         let idReg
-         
-         const dadosMailing=[]
-         const numerosMailing=[]
-       
-         //Limite de Importacao 
-         let limit = limite*2
-         if(limit>=1000){
-            limit = 1000
+    async configuraTipoCampos(empresa,idBase,header,campos,camposOriginais){
+        return new Promise (async (resolve,reject)=>{      
+            const pool =  await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:configuraTipoCampos","message":err.message,"stack":err.stack});
+                
+                let sql = `UPDATE ${empresa}_dados.mailings 
+                            SET configurado=1
+                        WHERE id='${idBase}'`
+                await this.querySync(conn,sql)   
+
+                sql=`INSERT INTO ${empresa}_dados.mailing_tipo_campo 
+                                (idMailing,campo,nome_original_campo,apelido,tipo,conferido,ordem) 
+                        VALUES `;       
+
+                for(let i=0; i<campos.length; i++){
+                    
+                    let nomeCampo=this.removeCaracteresEspeciais_title(campos[i].name)               
+                    let nomeOriginal=camposOriginais[i]//.replace("-", "_").replace(" ", "_").replace("/", "_").normalize("NFD").replace(/[^a-zA-Z0-9]/g, "")
+                    let apelido = campos[i].apelido
+                    if(header==0){
+                        nomeCampo=`campo_${i+1}`
+                        nomeOriginal=nomeCampo
+                    }
+                    //Caso o tipo seja nome a ordem será zero
+                    let ordem = i+1
+                    if(campos[i].tipo=="nome"){
+                        ordem=0
+                    }
+                    sql +=`(${idBase},'${nomeCampo}','${nomeOriginal}','${apelido}','${campos[i].tipo}',1,${ordem})`
+                    if((i+1)<campos.length){ sql +=', '}
+                }
+            
+                //Executando query
+              
+                const rows =  await this.querySync(conn,sql)                  
+                pool.end((err)=>{
+                    if(err) console.error('Mailings 285', err)
+                }) 
+                resolve(rows)   
+            })
+        })
+    }
+
+    async geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idKey,modelDadosMailing,modelNumerosMailing){
+       const header = infoMailing[0].header
+        let campos_arquivo = Object.keys(jsonFile[0]) 
+        //Populando array com o titulo das colunas conforme foram formatadas na tabela           
+        let campos_tabela = []                
+        for(let i = 0; i <campos_arquivo.length;i++){
+            //Verifica se o arquivo possui linha de titulo
+            if(header==0){
+                let n = i+1
+                campos_tabela.push("`campo_"+n+"`")
+            }else{
+                //campos_tabela.push("`"+this.removeCaracteresEspeciais_title(campos_arquivo[i])+"`")
+                campos_tabela.push(campos_arquivo[i])
+            }
         }
-         if(limit>=jsonFile.length){
-             limit = jsonFile.length
-         }
-         //console.log('Limite',limit)
-         
-         for(let r = 0; r<limit; r++){            
-             if(jsonFile[r]){
-                 idReg=r+idKey
-                 //Preparando dados
-                 const registro = {} 
-                       registro['id_key_base']=idReg
-                       registro['nome']=jsonFile[r][`${campoTipo_Nome[0].name}`]
-                       if(campoTipo_CPF.length>0){
-                          registro['cpf']=jsonFile[r][`${campoTipo_CPF[0].name}`]
-                       }
-                       registro['dados']=[]
-                       const dados = {}
-                       for(let d = 0; d<campoTipo_dados.length; d++){
-                           dados[`${campoTipo_dados[d].name}`]=jsonFile[r][`${campoTipo_dados[d].name}`]
-                       }
-                 registro['dados'].push(dados)       
-                 dadosMailing.push(registro)  
-                 
- 
-                 //Preparando numeros
-                 let ddd=0
-                 //Verificando se foi enviado o campo de ddd
-                 if(campoTipo_DDD.length>0){
-                     ddd = this.removeCaracteresEspeciais_numero(jsonFile[r][`${campoTipo_DDD[0].name}`]) 
-                 }
-                 //Verificando se foi enviado o campo de telefone
-                 let idNumero = 1
-                 if(campoTipo_Telefone.length>0){
-                     for(let t = 0; t<campoTipo_Telefone.length; t++){
-                         const numero = this.removeCaracteresEspeciais_numero(jsonFile[r][`${campoTipo_Telefone[t].name}`])
-                         if(numero){ 
-                             let numeroCompleto = ddd.toString()+numero.toString()
-                             const infoN = this.validandoNumero(ddd,numeroCompleto)                     
-                             const telefone = {}
-                                 telefone['idNumero']=idNumero
-                                 telefone['idRegistro']=idReg
-                                 telefone['ddd']=infoN['ddd']
-                                 telefone['numero']=numeroCompleto
-                                 telefone['uf']=infoN['uf']
-                                 telefone['tipo']=infoN['tipo']
-                                 telefone['valido']=infoN['valido']
-                                 telefone['message']=infoN['message']
-                             //console.log(telefone)
-                         numerosMailing.push(telefone)
-                             idNumero++
-                         }
-                     }
-                 }
- 
-                 //Verificando se foi enviado o campo de DDD e Telefone
-                 if(campoTipo_DDD_e_telefone.length>0){
-                     for(let td = 0; td<campoTipo_DDD_e_telefone.length; td++){
-                         const numeroCompleto = this.removeCaracteresEspeciais_numero(jsonFile[r][`${campoTipo_DDD_e_telefone[td].name}`])
-                         if(numeroCompleto){
-                             let dddC = numeroCompleto.toString().slice(0,2)     
-                             const infoN = this.validandoNumero(dddC,numeroCompleto)                   
-                             const telefone = {}
-                                 telefone['idNumero']=idNumero
-                                 telefone['idRegistro']=idReg
-                                 telefone['ddd']=infoN['ddd']
-                                 telefone['numero']=numeroCompleto
-                                 telefone['uf']=infoN['uf']
-                                 telefone['tipo']=infoN['tipo']
-                                 telefone['valido']=infoN['valido']
-                                 telefone['message']=infoN['message']
-                             
-                             numerosMailing.push(telefone)
-                             //console.log(telefone)
-                             idNumero++
+        //campo de nome
+        const campoTipo_Nome = tipoCampos.filter(campo=>campo.tipo=='nome')
+        const campoTipo_CPF = tipoCampos.filter(campo=>campo.tipo=='cpf')
+        const campoTipo_DDD = tipoCampos.filter(campo=>campo.tipo=='ddd')
+        const campoTipo_Telefone = tipoCampos.filter(campo=>campo.tipo=='telefone')
+        const campoTipo_DDD_e_telefone = tipoCampos.filter(campo=>campo.tipo=='ddd_e_telefone') 
+        const campoTipo_dados = tipoCampos.filter(campo=>campo.tipo=='dados')         
+        
+
+        //PERCORRE REGISTROS 
+        let idReg
+        const dadosMailing=[]
+        const numerosMailing=[]
+        //Limite de Importacao 
+        let limit = 100000
+        if(limit>=jsonFile.length){
+            limit = jsonFile.length
+        }
+        
+        
+        for(let r = 0; r<limit; r++){
+            if(jsonFile[r]){
+                idReg=r+idKey
+                //Preparando dados
+                const registro = {} 
+                    registro['id_key_base']=idReg
+                    registro['nome']=jsonFile[r][`${campoTipo_Nome[0].name}`]
+                    if(campoTipo_CPF.length>0){
+                        registro['cpf']=jsonFile[r][`${campoTipo_CPF[0].name}`]
+                    }
+                    for(let d = 0; d<campoTipo_dados.length; d++){
+                        registro[`${campoTipo_dados[d].name}`]=jsonFile[r][`${campoTipo_dados[d].name}`]
+                    }
+                dadosMailing.push(registro)  
+                
+
+                //Preparando numeros
+                let ddd=0
+                //Verificando se foi enviado o campo de ddd
+                if(campoTipo_DDD.length>0){
+                    ddd = this.removeCaracteresEspeciais_numero(jsonFile[r][`${campoTipo_DDD[0].name}`]) 
+                }
+                //Verificando se foi enviado o campo de telefone
+                let idNumero = 1
+                if(campoTipo_Telefone.length>0){
+                    for(let t = 0; t<campoTipo_Telefone.length; t++){
+                        const numero = this.removeCaracteresEspeciais_numero(jsonFile[r][`${campoTipo_Telefone[t].name}`])
+                        if(numero){ 
+                            let numeroCompleto = ddd.toString()+numero.toString()
+                            const infoN = this.validandoNumero(ddd,numeroCompleto)                     
+                            const telefone = {}
+                                telefone['idNumero']=idNumero
+                                telefone['idRegistro']=idReg
+                                telefone['ddd']=infoN['ddd']
+                                telefone['numero']=numeroCompleto
+                                telefone['uf']=infoN['uf']
+                                telefone['tipo']=infoN['tipo']
+                                telefone['valido']=infoN['valido']
+                                telefone['message']=infoN['message']
+                            //console.log(telefone)
+                        numerosMailing.push(telefone)
+                            idNumero++
+                        }
+                    }
+                }
+
+                //Verificando se foi enviado o campo de DDD e Telefone
+                if(campoTipo_DDD_e_telefone.length>0){
+                    for(let td = 0; td<campoTipo_DDD_e_telefone.length; td++){
+                        const numeroCompleto = this.removeCaracteresEspeciais_numero(numeroCompleto)
+                        if(numeroCompleto){
+                            let dddC = numeroCompleto.toString().slice(0,2)     
+                            const infoN = this.validandoNumero(dddC,numeroCompleto)                   
+                            const telefone = {}
+                                telefone['idNumero']=idNumero
+                                telefone['idRegistro']=idReg
+                                telefone['ddd']=infoN['ddd']
+                                telefone['numero']=numeroCompleto
+                                telefone['uf']=infoN['uf']
+                                telefone['tipo']=infoN['tipo']
+                                telefone['valido']=infoN['valido']
+                                telefone['message']=infoN['message']
+                            
+                            numerosMailing.push(telefone)
+                            //console.log(telefone)
+                            idNumero++
                         } 
                     }
                 }      
-                 //writer.write(`${JSON.stringify(line)},`);
-                 //await Redis.setter(`${empresa}:mailing:${idBase}:${idReg}`,line)
-                 //console.log("line",JSON.stringify(registros))
-                
-                 jsonFile.shift()  
+                //writer.write(`${JSON.stringify(line)},`);
+                //await Redis.setter(`${empresa}:mailing:${idBase}:${idReg}`,line)
+                //console.log("line",JSON.stringify(registros))
+                jsonFile.shift()  
             }
-        }            
+        }   
         
-        await modelDadosMailing.insertMany(dadosMailing)
-        await modelNumerosMailing.insertMany(numerosMailing)  
-         
-         
+        await modelDadosMailing.create(dadosMailing)
+        await modelNumerosMailing.create(numerosMailing)   
         
-         //console.timeEnd('tratando lote registros')
- 
-         if(jsonFile.length>0){ 
+       
+        //console.timeEnd('tratando lote registros')
+
+        if(jsonFile.length>0){ 
             const idRegistro = idReg+1
+            const mod = idReg%10000
+            if(mod==0){
+                const totalRegistros = await modelDadosMailing.count()
+                const totalNumeros = await modelNumerosMailing.count()
+                await this.atualizaInfoMailing(empresa,idBase,0,totalRegistros,totalNumeros)
+                //console.log('Prosseguindo')
+            }
+            //console.log('Prosseguindo ---',jsonFile.length)
+            this.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idRegistro,modelDadosMailing,modelNumerosMailing)
+           // console.log(`Continuando...restam ${jsonFile.length} registros`,idRegistro)
+        }else{
             const totalRegistros = await modelDadosMailing.count()
             const totalNumeros = await modelNumerosMailing.count()
-            await Mailings.updateOne({id:idBase},{totalRegistros:totalRegistros,totalNumeros:totalNumeros})
-            this.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idRegistro,modelDadosMailing,modelNumerosMailing,limit)
-            // console.log(`Continuando...restam ${jsonFile.length} registros`,idRegistro)
-         }else{
-            const totalRegistros = await modelDadosMailing.count()
-            const totalNumeros = await modelNumerosMailing.count()
-            await Mailings.updateOne({id:idBase},{pronto:true,totalRegistros:totalRegistros,totalNumeros:totalNumeros})
+            await this.atualizaInfoMailing(empresa,idBase,1,totalRegistros,totalNumeros)
             console.log('Importação concluida')
             console.timeEnd('importacao')
-
-            //Grava a quantidade de registros por DDD
-            const ufs = modelNumerosMailing.distinct("uf")
-            console.log('UFs',ufs)
-
-            //Inicia separação dos ddds
-
             return true
-         }       
-    }
-    
-     //Remover Mailing
-     async removerMailing(empresa,idMailing){
-        const conn = connect.mongoose(empresa)
-        await Mailings.deleteOne({id:idMailing})
-        
-        //const modelDadosMailing = mongoose.model(`dadosMailing_${idMailing}`)
-        
-        conn.getCollection(`dadosMailing_${idMailing}`).drop()
-        conn.getCollection(`numerosMailing_${idMailing}`).drop()
-
-        return true
-
-        /*return new Promise (async (resolve,reject)=>{
-            const pool =  await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:removerMailing","message":err.message,"stack":err.stack});
-                let sql = `SELECT tabela_dados,tabela_numeros 
-                            FROM ${empresa}_dados.mailings 
-                            WHERE id=${idMailing}`
-                const result = await this.querySync(conn,sql)
-                if(result.length==0){
-                    return false
-                }
-                //Removendo os dados do mailing
-                const tabelaDados = result[0].tabela_dados
-                const tabelaNumeros = result[0].tabela_numeros
-                sql = `DROP TABLE ${empresa}_mailings.${tabelaDados}`//Removendo tabela de dados
-                await this.querySync(conn,sql)
-                sql = `DROP TABLE ${empresa}_mailings.${tabelaNumeros}`//Removendo tabela de numeros
-                await this.querySync(conn,sql)
-                /*sql=`DELETE FROM ${empresa}_dados.mailings 
-                    WHERE id=${idMailing}` //Removendo informações do Mailing
-                await this.querySync(conn,sql)
-                sql=`DELETE FROM ${empresa}_dados.mailing_tipo_campo 
-                    WHERE idMailing=${idMailing}` //Removendo configuracoes dos tipos de campos
-                await this.querySync(conn,sql)*/
-
-                /*
-                sql=`DELETE FROM ${empresa}_dados.campanhas_mailing 
-                    WHERE idMailing=${idMailing}`//Removendo mailing das campanhas
-                await this.querySync(conn,sql)
-                sql=`DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
-                    WHERE idMailing='${idMailing}'` //Removendo configurações da tela do agente
-                await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Mailings 1148', err)
-                })
-                resolve(true)
-            })
-        })*/
-    }
-
-    //Status mailing
-      async statusMailing(empresa,idMailing){
-        connect.mongoose(empresa) 
-        return await Mailings
-              .find({id:idMailing})        
-    }
-
-    //Resumo por ddd
-    async totalRegUF(empresa,idMailing){
-        connect.mongoose(empresa)
-        //const collection = .db.connect(`numerosmailing_${idMailing}`)
-        return collection.distinct("uf")
-        
-      
-        //return await modelNum.distinct("uf")        
-    }
-
-    async totalRegistrosUF(empresa,idMailing,uf){
-        const conn = connect.mongoose(empresa)
-        const modelReg = conn.dbConnection.getCollection(`dadosmailing_${idMailing}`)
-        
-        return 0//await modelReg.find({uf:uf}).count()        
-    }
-
-
-    async totalNumerosUF(empresa,idMailing,uf){
-        const conn = connect.mongoose(empresa)
-        const modelNum = conn.dbConnection.getCollection(`numerosmailing_${idMailing}`)
-        return 0//await modelNum.find({uf:uf}).count()        
-    }
-
-    
-
-
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //Conta os ufs do mailing
-    async ufsMailing(empresa,idCampanha){
-       
-
-
-
-        return new Promise (async (resolve,reject)=>{
-            const pool =  await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:ufsMailing","message":err.message,"stack":err.stack});
-                const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
-                if(infoMailing.length==0){
-                    pool.end((err)=>{
-                        if(err) console.error('Mailings 1188', err)
-                    }) 
-                    
-                    resolve(false)
-                    return false
-                }
-                const idMailing = infoMailing[0].id
-                const tabela = infoMailing[0].tabela_numeros
-
-                let sql = `SELECT COUNT(uf) AS total, uf 
-                            FROM ${empresa}_mailings.${tabela} 
-                            WHERE valido=1 GROUP BY uf`
-                const r = await  this.querySync(conn,sql)    
-                const estados=[
-                    //Centro-Oeste       
-                    {estado:'Distrito Federal',uf:'DF'},
-                    {estado:'Goiás',uf:'GO'},
-                    {estado:'Mato Grosso',uf:'MT'},
-                    {estado:'Mato Grosso do Sul',uf:'MS'},       
-                    //Nordeste
-                    {estado:'Alagoas',uf:'AL'},
-                    {estado:'Bahia',uf:'BA'},
-                    {estado:'Ceará',uf:'CE'},
-                    {estado:'Maranhão',uf:'MA'},
-                    {estado:'Paraíba',uf:'PB'},
-                    {estado:'Pernambuco',uf:'PE'},
-                    {estado:'Piauí',uf:'PI'},
-                    {estado:'Rio Grande do Norte ',uf:'RN'},
-                    {estado:'Sergipe',uf:'SE'},       
-                    //Norte
-                    {estado:'Acre',uf:'AC'},
-                    {estado:'Amapá',uf:'AP'},
-                    {estado:'Amazonas',uf:'AM'},
-                    {estado:'Pará',uf:'PA'},
-                    {estado:'Rondônia',uf:'RO'},
-                    {estado:'Roraima',uf:'RR'},
-                    {estado:'Tocantins',uf:'TO'},       
-                    //Sudeste
-                    {estado:'Espírito Santo',uf:'ES'},
-                    {estado:'Minas Gerais',uf:'MG'},
-                    {estado:'Rio de Janeiro',uf:'RJ'},
-                    {estado:'São Paulo',uf:'SP'},       
-                    //Sul
-                    {estado:'Paraná',uf:'PR'},
-                    {estado:'Rio Grande do Sul',uf:'RS'},
-                    {estado:'Santa Catarina',uf:'SC'}            
-                ]  
-                const ufs={}
-                for(let i=0; i<r.length; i++){
-                    let fill = "#185979"
-                    let totalNumeros=r[i].total
-                    let numerosFiltrados = await this.totalNumerosFiltrados(empresa,tabela,idCampanha,r[i].uf)
-                    let disponiveis = totalNumeros-numerosFiltrados
-                
-                    if(disponiveis==0){
-                        fill="#f74c4c"
-                    }
-                    ufs[`${r[i].uf}`]={}
-                    ufs[`${r[i].uf}`]['fill']=fill
-                    ufs[`${r[i].uf}`]['total']=totalNumeros
-                    ufs[`${r[i].uf}`]['filtrados']=numerosFiltrados,
-                    ufs[`${r[i].uf}`]['disponiveis']=disponiveis
-                    const filter = estados.find(estado => estado.uf == r[i].uf)
-                    ufs[`${r[i].uf}`]['name']=`${filter.estado}`
-                }
-                pool.end((err)=>{
-                    if(err) console.error('Mailings 1241', err)
-                }) 
-                
-                resolve(ufs)
-            })
-        })
-    }
-    
-    async querySync(conn,sql){         
-        return new Promise((resolve,reject)=>{            
-            conn.query(sql, (err,rows)=>{
-                if(err){ 
-                    console.error({"errorCode":err.code,"arquivo":"Mailing.js:querySync","message":err.message,"stack":err.stack, "sql":sql}) 
-                    resolve(false);
-                }
-                resolve(rows)
-            })
-        })
-    }
-
-    
-   
-
-   
-
-    async infoMailingAtivo(empresa,idMailing){
-        return new Promise (async (resolve,reject)=>{ 
-            const sql = `SELECT * 
-                           FROM ${empresa}_dados.mailings 
-                          WHERE id=${idMailing} AND pronto=1`
-           //Executando query
-           const pool =  await connect.pool(empresa,'dados')
-           pool.getConnection(async (err,conn)=>{                           
-               if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:infoMailingAtivo","message":err.message,"stack":err.stack});
-               const rows =  await this.querySync(conn,sql)                  
-               pool.end((err)=>{
-                  if(err) console.error('Mailings 167', err)
-               }) 
-               resolve(rows)   
-           }) 
-        })
-    }
-
-    
-    
-
-    
-    
-
-    
+        }       
+    }  
    
      //Adiciona as informacoes do mailing na tabela de controle de mailings
      async atualizaInfoMailing(empresa,idBase,pronto,totalRegistros,totalNumeros){
@@ -1136,7 +998,26 @@ class Mailing{
         })
     }
 
-    
+    //Adiciona as informacoes do mailing na tabela de controle de mailings
+    async addInfoMailing(empresa,nome,tableData,tableNumber,arquivo,header,delimitador){
+        return new Promise (async (resolve,reject)=>{       
+            const sql = `INSERT INTO ${empresa}_dados.mailings
+                                (data,nome,arquivo,header,delimitador,tabela_dados,tabela_numeros,configurado,repetidos,numerosInvalidos,pronto,status) 
+                            VALUES (NOW(),'${nome}','${arquivo}',${header},'${delimitador}','${tableData}','${tableNumber}',0,0,0,0,1)`
+            //Executando query
+            const pool =  await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{                           
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:addInfoMailing","message":err.message,"stack":err.stack});
+                const rows =  await this.querySync(conn,sql)                  
+                pool.end((err)=>{
+                   if(err) console.error('Mailings 132', err)
+                }) 
+                resolve(rows)   
+            })
+        })                   
+    }
+
+   
 
     async resumoDadosBase(empresa,tabela_dados){
         return new Promise (async (resolve,reject)=>{ 
@@ -1168,7 +1049,7 @@ class Mailing{
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:tabelaMailing","message":err.message,"stack":err.stack});
                 const rows =  await this.querySync(conn,sql)                  
                 pool.end((err)=>{
-                    if(err) console.error('Mailings 184', err)
+                if(err) console.error('Mailings 184', err)
                 }) 
                 resolve(rows)   
             })
@@ -2167,11 +2048,146 @@ class Mailing{
             })
     }   
 
-   
+    //Remover Mailing
+    async removerMailing(empresa,idMailing){
+        return new Promise (async (resolve,reject)=>{
+            const pool =  await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:removerMailing","message":err.message,"stack":err.stack});
+                let sql = `SELECT tabela_dados,tabela_numeros 
+                            FROM ${empresa}_dados.mailings 
+                            WHERE id=${idMailing}`
+                const result = await this.querySync(conn,sql)
+                if(result.length==0){
+                    return false
+                }
+                //Removendo os dados do mailing
+                const tabelaDados = result[0].tabela_dados
+                const tabelaNumeros = result[0].tabela_numeros
+                sql = `DROP TABLE ${empresa}_mailings.${tabelaDados}`//Removendo tabela de dados
+                await this.querySync(conn,sql)
+                sql = `DROP TABLE ${empresa}_mailings.${tabelaNumeros}`//Removendo tabela de numeros
+                await this.querySync(conn,sql)
+                sql=`DELETE FROM ${empresa}_dados.mailings 
+                    WHERE id=${idMailing}` //Removendo informações do Mailing
+                await this.querySync(conn,sql)
+                sql=`DELETE FROM ${empresa}_dados.mailing_tipo_campo 
+                    WHERE idMailing=${idMailing}` //Removendo configuracoes dos tipos de campos
+                await this.querySync(conn,sql)
+                sql=`DELETE FROM ${empresa}_dados.campanhas_mailing 
+                    WHERE idMailing=${idMailing}`//Removendo mailing das campanhas
+                await this.querySync(conn,sql)
+                sql=`DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
+                    WHERE idMailing='${idMailing}'` //Removendo configurações da tela do agente
+                await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.error('Mailings 1148', err)
+                })
+                resolve(true)
+            })
+        })
+    }
 
-  
+    //Status mailing
+    async statusMailing(empresa,idMailing){
+        return new Promise (async (resolve,reject)=>{
+            const pool =  await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:statusMailing","message":err.message,"stack":err.stack});
+                const sql = `SELECT configurado,totalReg,totalNumeros,numerosInvalidos,pronto,status 
+                            FROM ${empresa}_dados.mailings 
+                            WHERE id=${idMailing}`
+                const rows = await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.error('Mailings 1165', err)
+                })
+                resolve(rows)
+            })
+        })
+    }
 
-    
+    //Conta os ufs do mailing
+    async ufsMailing(empresa,idCampanha){
+        return new Promise (async (resolve,reject)=>{
+            const pool =  await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:ufsMailing","message":err.message,"stack":err.stack});
+                const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
+                if(infoMailing.length==0){
+                    pool.end((err)=>{
+                        if(err) console.error('Mailings 1188', err)
+                    }) 
+                    
+                    resolve(false)
+                    return false
+                }
+                const idMailing = infoMailing[0].id
+                const tabela = infoMailing[0].tabela_numeros
+
+                let sql = `SELECT COUNT(uf) AS total, uf 
+                            FROM ${empresa}_mailings.${tabela} 
+                            WHERE valido=1 GROUP BY uf`
+                const r = await  this.querySync(conn,sql)    
+                const estados=[
+                    //Centro-Oeste       
+                    {estado:'Distrito Federal',uf:'DF'},
+                    {estado:'Goiás',uf:'GO'},
+                    {estado:'Mato Grosso',uf:'MT'},
+                    {estado:'Mato Grosso do Sul',uf:'MS'},       
+                    //Nordeste
+                    {estado:'Alagoas',uf:'AL'},
+                    {estado:'Bahia',uf:'BA'},
+                    {estado:'Ceará',uf:'CE'},
+                    {estado:'Maranhão',uf:'MA'},
+                    {estado:'Paraíba',uf:'PB'},
+                    {estado:'Pernambuco',uf:'PE'},
+                    {estado:'Piauí',uf:'PI'},
+                    {estado:'Rio Grande do Norte ',uf:'RN'},
+                    {estado:'Sergipe',uf:'SE'},       
+                    //Norte
+                    {estado:'Acre',uf:'AC'},
+                    {estado:'Amapá',uf:'AP'},
+                    {estado:'Amazonas',uf:'AM'},
+                    {estado:'Pará',uf:'PA'},
+                    {estado:'Rondônia',uf:'RO'},
+                    {estado:'Roraima',uf:'RR'},
+                    {estado:'Tocantins',uf:'TO'},       
+                    //Sudeste
+                    {estado:'Espírito Santo',uf:'ES'},
+                    {estado:'Minas Gerais',uf:'MG'},
+                    {estado:'Rio de Janeiro',uf:'RJ'},
+                    {estado:'São Paulo',uf:'SP'},       
+                    //Sul
+                    {estado:'Paraná',uf:'PR'},
+                    {estado:'Rio Grande do Sul',uf:'RS'},
+                    {estado:'Santa Catarina',uf:'SC'}            
+                ]  
+                const ufs={}
+                for(let i=0; i<r.length; i++){
+                    let fill = "#185979"
+                    let totalNumeros=r[i].total
+                    let numerosFiltrados = await this.totalNumerosFiltrados(empresa,tabela,idCampanha,r[i].uf)
+                    let disponiveis = totalNumeros-numerosFiltrados
+                
+                    if(disponiveis==0){
+                        fill="#f74c4c"
+                    }
+                    ufs[`${r[i].uf}`]={}
+                    ufs[`${r[i].uf}`]['fill']=fill
+                    ufs[`${r[i].uf}`]['total']=totalNumeros
+                    ufs[`${r[i].uf}`]['filtrados']=numerosFiltrados,
+                    ufs[`${r[i].uf}`]['disponiveis']=disponiveis
+                    const filter = estados.find(estado => estado.uf == r[i].uf)
+                    ufs[`${r[i].uf}`]['name']=`${filter.estado}`
+                }
+                pool.end((err)=>{
+                    if(err) console.error('Mailings 1241', err)
+                }) 
+                
+                resolve(ufs)
+            })
+        })
+    }
 
     async retrabalharMailing(empresa,idMailing){
         return new Promise (async (resolve,reject)=>{
@@ -2221,7 +2237,24 @@ class Mailing{
         })
     }
 
-    
+    //Resumo por ddd
+    async totalRegUF(empresa,tabela){
+        return new Promise (async (resolve,reject)=>{
+            const pool =  await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:totalRegUF","message":err.message,"stack":err.stack});
+                const sql = `SELECT uf AS UF, COUNT(id) AS numeros, COUNT(DISTINCT id_registro) AS registros 
+                            FROM ${empresa}_mailings.${tabela} 
+                            GROUP BY uf 
+                            ORDER BY uf ASC`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.error('Mailings 1306', err)
+                }) 
+                resolve(rows)
+            })
+        })
+    }
 
     //Saude do mailing
     async totalRegistros(empresa,tabela){
