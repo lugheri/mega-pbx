@@ -1,8 +1,12 @@
 import connect from '../Config/dbConnection';
 import Mailing from './Mailing';
-import Clients from './Clients';
 import moment from 'moment';
 import Redis from '../Config/Redis'
+
+//Mongo models
+import mongoose from 'mongoose'
+import MailingCampanha from '../database/MailingCampanha'
+import MailingsTypeFields from '../database/MailingsTypeFields'
 
 class Campanhas{ 
     async querySync(conn,sql){         
@@ -221,8 +225,7 @@ class Campanhas{
                 await Redis.delete(`${empresa}:dadosCampanha:${idCampanha}`)                
                 await Redis.delete(`${empresa}:totalMailingsCampanha:${idCampanha}`)  
                 await Redis.delete(`${empresa}:agendamentoCampanha`)
-                await Redis.delete(`${empresa}:infoCampanha:${idCampanha}`)            
-                
+                await Redis.delete(`${empresa}:infoCampanha:${idCampanha}`)      
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
                     if(err) console.error('Campanhas.js 176', err)
@@ -597,6 +600,7 @@ class Campanhas{
     //MAILING
     //ADICIONA O MAILING A UMA CAMPANHA
     async addMailingCampanha(empresa,idCampanha,idMailing){
+<<<<<<< HEAD
         //REMOVENDO MAILINGS DA CAMPANHA 
         await Redis.delete(`${empresa}:mailingCampanha:${idCampanha}`)
 
@@ -655,38 +659,101 @@ class Campanhas{
                 resolve(true)                             
             })
         })        
-    }
-    //Lista os mailings adicionados em uma campanha
-    async listarMailingCampanha(empresa,idCampanha){
-        const mailingCampanha = await Redis.getter(`${empresa}:mailingCampanha:${idCampanha}`)
-        if(mailingCampanha!==null){
+=======
+        connect.mongoose(empresa)
+        const mailingCampanha = await MailingCampanha.find({idMailing:idMailing,idCampanha:idCampanha});
+        if(mailingCampanha.length == 1) {
             return mailingCampanha
         }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT * 
-                            FROM ${empresa}_dados.campanhas_mailing 
-                            WHERE idCampanha=${idCampanha}
-                            LIMIT 1`
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 630', err)
-                })
-                await Redis.setter(`${empresa}:mailingCampanha:${idCampanha}`,mailingCampanha)
-                resolve(rows)
-            })
-        })                
+        await Redis.delete(`${empresa}:mailingCampanha:${idCampanha}`)
+        const dadosMailing = await MailingsTypeFields.find({idMailing:idMailing}).sort({ordem:1})
+        const campos = []
+        for(let i = 0; i < dadosMailing.length; i++){
+            const campo={}
+                  campo['nome']=dadosMailing[i].nome_original_campo
+                  campo['apelido']=dadosMailing[i].apelido
+                  campo['tipo']=dadosMailing[i].tipo
+                  campo['habilitado']=1
+            campos.push(campo)
+        }
+
+        //Insere Mailing na Campanha
+        const infoMailingCampanha = {}
+              infoMailingCampanha['id']=moment().format("YYYYMMDDHHmmss")
+              infoMailingCampanha['idMailing'] = idMailing
+              infoMailingCampanha['idCampanha'] = idCampanha
+              infoMailingCampanha['camposMailing'] = campos
+        await MailingCampanha.create(infoMailingCampanha)
+
+       
+        this.addNumerosCampanha(empresa,idMailing,idCampanha)        
+
+        return infoMailingCampanha
     }
+
+
+    async addNumerosCampanha(empresa,idMailing,idCampanha){
+        connect.mongoose(empresa)
+        //Cria Schema dos numeros na campanha
+       /* const NumerosCampanha_Schema = new Schema({
+            idMailing:Number,
+            idCampanha:Number,
+            idRegistro:Number,
+            valido:Number,
+            telefone:Number
+        });*/
+
+        //modelNumeros
+        const modelNumerosBase = mongoose.model(`numerosmailing_${idMailing}`,{})
+        console.log(`numerosmailing_${idMailing}`)
+
+        const numeros = await modelNumerosBase.find({valido:true});
+        console.log(numeros.length);
+        await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,numeros)
+
+        console.log('Contando Numeros')
+        const numerosAdd = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
+        console.log('Numeros Adicionados',numerosAdd.length)
+
+        delete mongoose.connection.models[`numerosmailing_${idMailing}`];
+        return true
+    }
+
+    async idMailingCampanha(empresa,idCampanha){
+        connect.mongoose(empresa)
+
+        const mailingCampanha = await MailingCampanha.find({idCampanha:idCampanha});
+        console.log(mailingCampanha)
+        return mailingCampanha[0].idMailing
+
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
+    }
+
+
+    //Lista os mailings adicionados em uma campanha
+    async listarMailingCampanha(empresa,idCampanha){
+<<<<<<< HEAD
+        const mailingCampanha = await Redis.getter(`${empresa}:mailingCampanha:${idCampanha}`)
+        if(mailingCampanha!==null){
+=======
+        connect.mongoose(empresa)
+        const mailingCampanha = await Redis.getter(`${empresa}:mailingCampanha:${idCampanha}`)       
+        if(mailingCampanha!=null){
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
+            return mailingCampanha
+        }
+        const infoMailingCampanha = await MailingCampanha.find({idCampanha:idCampanha})
+        
+        await Redis.setter(`${empresa}:mailingCampanha:${idCampanha}`,infoMailingCampanha)
+        return infoMailingCampanha
+    }
+
     //Remove o mailing de uma campanha
     async removeMailingCampanha(empresa,idCampanha){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)
+        connect.mongoose(empresa)
+        await Redis.delete(`${empresa}:mailingCampanha:${idCampanha}`)
 
+<<<<<<< HEAD
                 //Recuperando o id da campanha
                 let sql = `SELECT idCampanha 
                             FROM ${empresa}_dados.campanhas_mailing 
@@ -719,7 +786,15 @@ class Campanhas{
                 resolve(true)
             })
         })       
+=======
+        //Remove Filtros
+        //Remove Campos tela agente
+       
+        await MailingCampanha.deleteOne({idCampanha:idCampanha})
+        return true
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     }
+
     //FILTROS DE DISCAGEM ##################################################################################
     //Aplica/remove um filtro de discagem
     async filtrarRegistrosCampanha(empresa,parametros){  

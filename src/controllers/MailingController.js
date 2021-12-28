@@ -165,14 +165,23 @@ class MailingController{
 
         Mailing.abreCsv(file,delimitador,async (jsonFile)=>{//abrindo arquivo   
             connect.mongoose('megaconecta')  
+<<<<<<< HEAD
             console.log('iniciando a importacao')      
             console.time('importacao')      
+=======
+            /*console.log('iniciando a importacao')      
+            console.time('importacao')      */
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
             const keys = Object.keys(jsonFile[0]) 
             
             await Mailing.configuraTipoCampos(empresa,idBase,header,tipoCampos,keys)//Configura os tipos de campos
             //modelDados
             const modelDadosMailing = mongoose.model(`dadosMailing_${idBase}`,{
+<<<<<<< HEAD
                 id_key_base:{type:[Number], index:true},
+=======
+                id_key_base:{type:Number, index:true},
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
                 nome:String,
                 cpf:String,
                 dados:Array
@@ -191,7 +200,11 @@ class MailingController{
             const limit=1
             await Mailing.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idKey,modelDadosMailing,modelNumerosMailing,limit)
             
+<<<<<<< HEAD
             console.log('Concluido')
+=======
+            //console.log('Concluido')
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
              //Salvando mailing no Redis
              return true
              //await Mailing.insereNumeros(empresa,idBase,jsonFile,file,dataTab,numTab,idKey,transferRate)
@@ -248,6 +261,30 @@ class MailingController{
         return false
     } 
 
+<<<<<<< HEAD
+=======
+     //Resumo por ddd
+     async totalRegUF(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idMailing = req.params.idMailing
+        
+        const ufs = await Mailing.totalRegUF(idMailing)
+        console.log('UF',ufs)
+        const registros=[]
+        for(let i=0; i<ufs.length;i++){
+            const uf=ufs[i]
+            let reg={}
+                reg['fill']='#185979'
+                reg['UF']=uf
+                const total = await Mailing.totalRegistrosUF(idMailing,uf,)
+                reg['registros']=total['totalRegistrosUF']
+                reg['numeros']=total['totalNumerosUF']
+            registros.push(reg)
+        }
+        res.json(registros)
+    }
+
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
 
 
 
@@ -485,6 +522,7 @@ class MailingController{
             }                              
          res.json(retorno)      
     }
+<<<<<<< HEAD
     //Resumo por ddd
     async totalRegUF(req,res){
         const empresa = await User.getEmpresa(req)
@@ -505,6 +543,9 @@ class MailingController{
         }
         res.json(registros)
     }
+=======
+   
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     //Saude do mailing
     async saudeMailing(req,res){
         const empresa = await User.getEmpresa(req)

@@ -11,6 +11,10 @@ import moment from 'moment'
 
 import Mailings from '../database/Mailings'
 import MailingsTypeFields from '../database/MailingsTypeFields'
+<<<<<<< HEAD
+=======
+import dddsMailing from '../database/dddsMailing'
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
 
 
 class Mailing{
@@ -281,6 +285,7 @@ class Mailing{
             const totalRegistros = await modelDadosMailing.count()
             const totalNumeros = await modelNumerosMailing.count()
             await Mailings.updateOne({id:idBase},{pronto:true,totalRegistros:totalRegistros,totalNumeros:totalNumeros})
+<<<<<<< HEAD
             console.log('Importação concluida')
             console.timeEnd('importacao')
 
@@ -292,6 +297,39 @@ class Mailing{
 
             return true
          }       
+=======
+            //console.log('Importação concluida')
+            //console.timeEnd('importacao')
+
+            const porEstado = []
+            //Grava a quantidade de registros por DDD
+            const ufs = await modelNumerosMailing.distinct("uf")
+            for(let u = 0;u<ufs.length;u++){
+                const uf=ufs[u]               
+                const totalNumerosUF = await modelNumerosMailing.find({uf:`${uf}`}).count() 
+                const totalRegistrosUF = await modelNumerosMailing.distinct("idRegistro",{uf:`${uf}`})
+                const ddds = await modelNumerosMailing.distinct("ddd",{uf:`${uf}`})
+                for(let d = 0;d<ddds.length;d++){
+                    const ddd=ddds[d]
+                    const totalNumerosDDD = await modelNumerosMailing.find({ddd:`${ddd}`}).count()                    
+                    const totalRegistroDDD = await modelNumerosMailing.distinct("idRegistro",{ddd:`${ddd}`})
+                    
+                    const insertDDD = {}
+                    insertDDD['idMailing'] = idBase
+                    insertDDD['uf'] = uf
+                    insertDDD['totalNumerosUF'] = totalNumerosUF  
+                    insertDDD['totalRegistrosUF'] = totalRegistrosUF.length
+                    insertDDD['ddd'] = ddd
+                    insertDDD['totalNumerosDDD'] = totalNumerosDDD  
+                    insertDDD['totalRegistrosDDD'] = totalRegistroDDD.length
+                    porEstado.push(insertDDD)                    
+                }
+            }
+            //Inserindo Registros
+            await dddsMailing.insertMany(porEstado) 
+            return true
+        }       
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     }
     
      //Remover Mailing
@@ -354,6 +392,7 @@ class Mailing{
     }
 
     //Resumo por ddd
+<<<<<<< HEAD
     async totalRegUF(empresa,idMailing){
         connect.mongoose(empresa)
         //const collection = .db.connect(`numerosmailing_${idMailing}`)
@@ -377,6 +416,21 @@ class Mailing{
         return 0//await modelNum.find({uf:uf}).count()        
     }
 
+=======
+    async totalRegUF(idMailing){
+        return await dddsMailing.distinct("uf",{idMailing:idMailing})
+    }
+
+    async totalRegistrosUF(idMailing,uf){
+        const infoUf = await dddsMailing.find({idMailing:idMailing,uf:uf})
+        const total = {}
+              total['totalNumerosUF']=infoUf[0].totalNumerosUF
+              total['totalRegistrosUF']=infoUf[0].totalRegistrosUF
+        return total  
+    }
+
+
+>>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     
 
 
