@@ -445,7 +445,7 @@ class Discador{
         })        
     }
     async atualizaStatus(empresa,idCampanha,msg,estado){      
-        console.log(`\n[❗]${msg}...................`,`📣${idCampanha}\n`)
+        //console.log(`\n[❗]${msg}...................`,`📣${idCampanha}\n`)
         await Redis.delete(`${empresa}:statusCampanha:${idCampanha}`)
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
@@ -474,9 +474,9 @@ class Discador{
                 const rows = await this.querySync(conn,sql)                 
                
                 await Redis.setter(`${empresa}:statusCampanha:${idCampanha}`,rows)
-                console.log('Chave',`${empresa}:statusCampanha:${idCampanha}`)
+                //console.log('Chave',`${empresa}:statusCampanha:${idCampanha}`)
                 const status = await Redis.getter(`${empresa}:statusCampanha:${idCampanha}`)
-                console.log('status',status)
+                //console.log('status',status)
 
                 //console.log(`\n ❗  ${empresa} Campanha:${idCampanha} ${msg} . . . . . . . . . . . . \n`)
 
@@ -1581,15 +1581,41 @@ class Discador{
     }
     async campoNomeRegistro(empresa,idMailing,idRegistro){
         connect.mongoose(empresa) 
-        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,{})
-        const dados = await modelDadosMailing.find({id_key_base:idRegistro})
-        console.log('idRegistro',idRegistro)
-        console.log('dados',dados[0])
+        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,{
+            id_key_base:{type:Number, index:true},
+            nome:String,
+            cpf:String,
+            dados:Array
+        })
+        const dados = await modelDadosMailing.find({"id_key_base":`${idRegistro}`})
+      
         delete mongoose.connection.models[`dadosmailing_${idMailing}`];
         return dados[0].nome      
     }
 
     async camposMailing(empresa,idMailing,idCampanha){
+        connect.mongoose(empresa) 
+        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,{
+            id_key_base:{type:Number, index:true},
+            nome:String,
+            cpf:String,
+            dados:Array
+        })
+        const dados = await modelDadosMailing.find({"id_key_base":`${idRegistro}`})
+      
+        delete mongoose.connection.models[`dadosmailing_${idMailing}`];
+        const campos = dados[0].dados
+        
+      /*  const camposMailing = []
+        for(let i=0; i<campos.length; i++){
+            camposMailing['id']=campos[i].
+            camposMailing['campo']=campos[i].
+            camposMailing['apelido']=campos[i].
+        }
+*/
+
+
+
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -1691,7 +1717,15 @@ class Discador{
     //Informações da chamada a ser atendida
     async infoChamada_byDialNumber(empresa,idMailing,idCampanha,idReg,id_numero,numero){
         connect.mongoose(empresa) 
-        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{})
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{
+            idNumero: Number,
+            idRegistro: String,
+            ddd: String,
+            numero: String,
+            uf:String,
+            valido: Boolean,
+            message: String
+        })
         const info = {};
               info['numeros']=[]
 
@@ -1973,7 +2007,7 @@ class Discador{
 
 
     //INTEGRAÇÕES
-    async integracoes(empresa,numeroDiscado,idCampanha,ramal,idMailing,idRegistro,tabelaDados){
+    async integracoes(empresa,numeroDiscado,idCampanha,ramal,idMailing,idRegistro){
         //console.log('\n',']]]]]]]]]]]]]]]]]]]]]]]]]]]]]]','empresa',empresa,'numero',numeroDiscado,'idCampanha',idCampanha,'ramal',ramal,'idMailing',idMailing,'idReg',idRegistro,'tabela_dados',tabelaDados)
 
 
@@ -2015,13 +2049,13 @@ class Discador{
         }) 
     }   
 
-    async trataUrlIntegracao(empresa,numeroDiscado,ramal,url,idCampanha,idMailing,idRegistro,tabelaDados){
+    async trataUrlIntegracao(empresa,numeroDiscado,ramal,url,idCampanha,idMailing,idRegistro){
         //console.log('trataUrlIntegracao',idMailing)
-        const cpf = await this.campoCpfRegistro(empresa,idMailing,idRegistro,tabelaDados)
-        const var1 = await this.campoVariavel(empresa,idMailing,idRegistro,tabelaDados,'var1')
-        const var2 = await this.campoVariavel(empresa,idMailing,idRegistro,tabelaDados,'var2')
-        const nomeCliente = await this.campoNomeRegistro(empresa,idMailing,idRegistro,tabelaDados)
-        const link = url.replace('{CPF}',cpf)
+        //const cpf = await this.campoCpfRegistro(empresa,idMailing,idRegistro,tabelaDados)
+      //  const var1 = await this.campoVariavel(empresa,idMailing,idRegistro,tabelaDados,'var1')
+       // const var2 = await this.campoVariavel(empresa,idMailing,idRegistro,tabelaDados,'var2')
+        //const nomeCliente = await this.campoNomeRegistro(empresa,idMailing,idRegistro)
+        /*const link = url.replace('{CPF}',cpf)
                         .replace('{RAMAL}',ramal)
                         .replace('{NUMERO_DISCADO}',numeroDiscado)
                         .replace('{ID_CAMPANHA}',idCampanha)
@@ -2029,6 +2063,8 @@ class Discador{
                         .replace('{ID_REGISTRO}',idRegistro)
                         .replace('{VAR_1}',var1)
                         .replace('{VAR_2}',var2)
+*/
+        const link = 'TESTE'
         return(link)
     }
 

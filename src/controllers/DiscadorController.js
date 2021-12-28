@@ -59,7 +59,7 @@ class DiscadorController{
 
         //Iniciando verificação das campanhas ativas
         const campanhasAtivas = await Discador.campanhasAtivas(empresa);      
-        console.log('\n[ ❗] Verificador-> [',empresa,'] fnc->','campanhasAtivas',campanhasAtivas) 
+        //console.log('\n[ ❗] Verificador-> [',empresa,'] fnc->','campanhasAtivas',campanhasAtivas) 
         //console.log(`${campanhasAtivas.length} campanhas ativas`)
         if(campanhasAtivas.length === 0){
             return false

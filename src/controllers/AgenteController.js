@@ -166,6 +166,8 @@ class AgenteController{
             info['config']['origem']="discador"
             info['config']['modo_atendimento']=modo_atendimento
 
+            console.log('INFO',info)
+
             res.json(info)              
         }
     }
@@ -216,8 +218,6 @@ class AgenteController{
         const retorno = atendimentoAgente['retorno']
         const idReg = atendimentoAgente['id_registro']
         const id_numero = atendimentoAgente['id_numero']
-        const tabela_dados = atendimentoAgente['tabela_dados']
-        const tabela_numeros = atendimentoAgente['tabela_numeros']
         const idCampanha = atendimentoAgente['id_campanha']
         const protocolo = atendimentoAgente['protocolo']
 
@@ -238,7 +238,7 @@ class AgenteController{
             info['dialcall']=false
         }
         //Integração  
-        info['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal,idMailing,idReg,tabela_dados)
+        info['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal,idMailing,idReg)
         info['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)  
         info['tipo_discador']=tipo_discador
         if(retorno==1){
@@ -250,7 +250,7 @@ class AgenteController{
         info['idMailing']=idMailing  
         info['tipo_ligacao']=tipo_ligacao
         info['protocolo']=protocolo
-        const nomeCliente = await Discador.campoNomeRegistro(empresa,idMailing,idReg,tabela_dados)
+        const nomeCliente = await Discador.campoNomeRegistro(empresa,idMailing,idReg)
         info['nome_registro']=nomeCliente
         info['campos']={}
         info['campos']['idRegistro']=idReg
@@ -278,7 +278,7 @@ class AgenteController{
         info['config']['origem']="discador"
         info['config']['modo_atendimento']=modo_atendimento
 
-        
+        console.log('INFO ATENDE CHAMADA',info)
         res.json(info) 
     }
 
