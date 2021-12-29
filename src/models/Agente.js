@@ -1,4 +1,5 @@
 import connect from '../Config/dbConnection';
+import mongoose from 'mongoose'
 import Redis from '../Config/Redis'
 
 import Filas from './Filas'
@@ -548,12 +549,25 @@ class Agente{
                         resolve(false) 
                         return false
                     }
-                    const tabela = infoMailing[0].tabela_numeros
-                    //Listando todos os numeros do historico
-                    sql = `SELECT numero 
-                                FROM ${empresa}_mailings.${tabela} 
-                                WHERE id_registro=${idReg}`
-                    const n = await this.querySync(conn,sql)            
+                    connect.mongoose(empresa) 
+                    delete mongoose.connection.models[`numerosmailing_${idMailing}`];   
+                    const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{
+                        idNumero: Number,
+                        idRegistro: String,
+                        ddd: String,
+                        numero: String,
+                        uf:String,
+                        valido: Boolean,
+                        message: String
+                    })
+                    const n=[]
+                    const numeros = await modelNumerosMailing.find({idRegistro:idReg})
+                    for(let i=0; i<numeros.length; i++){    
+                        const numero={}
+                              numero['numero']= numeros[i].numero
+                        n.push(numero);
+                    }
+
                     for(let num=0; num<n.length; num++){
                         fNumeros+=` AND numero_discado='${n[num].numero}'`
                     }
@@ -757,13 +771,6 @@ class Agente{
                 //Removendo outras chamadas do agente
                 await Redis.delete(`${empresa}:atendimentoAgente:${ramal}`)
                 //console.log(h[0].mailing)
-                const infoMailing = await Mailing.infoMailing(empresa,h[0].mailing)
-                let tabela_dados = ''
-                let tabela_numeros = ''
-                if(infoMailing.length>0){
-                    tabela_dados = infoMailing[0].tabela_dados
-                    tabela_numeros = infoMailing[0].tabela_numeros
-                }  
                 const hoje = moment().format("YYYY-MM-DD")
                 const hora = moment().format("HH:mm:ss")
                 
@@ -778,8 +785,6 @@ class Agente{
                       novaChamada['modo_atendimento']= 'manual'
                       novaChamada['id_campanha']=h[0].campanha
                       novaChamada['id_mailing']=h[0].mailing
-                      novaChamada['tabela_dados']=tabela_dados
-                      novaChamada['tabela_numeros']=tabela_numeros
                       novaChamada['id_registro']=h[0].id_registro
                       novaChamada['id_numero']=h[0].id_numero
                       novaChamada['numero']=h[0].numero_discado
@@ -806,34 +811,8 @@ class Agente{
         const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
         if(atendimentoAgente == null) return false
 
-        const idCampanha = atendimentoAgente['id_campanha']
-        const idNumero = atendimentoAgente['id_numero']
-        const tabelaNumeros = atendimentoAgente['tabela_numeros']
-        const idMailing = atendimentoAgente['id_mailing']
         await Redis.delete(`${empresa}:atendimentoAgente:${ramal}`)
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:clearCallsAgent","message":err.message,"stack":err.stack});
-                let sql
-                //Setando registro como disponivel na tabela de tabulacoes
-                sql = `UPDATE ${empresa}_mailings.campanhas_tabulacao_mailing 
-                        SET estado=0, desc_estado='Disponivel'
-                        WHERE idCampanha=${idCampanha} AND idNumero=${idNumero} AND idMailing=${idMailing} AND produtivo <> 1`
-                await this.querySync(conn,sql)
-
-                //Atualiza o status do numero como nao discando
-                sql = `UPDATE ${empresa}_mailings.${tabelaNumeros} 
-                          SET discando=0   
-                        WHERE id=${idNumero}`
-                await this.querySync(conn,sql)
-
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                }) 
-                resolve(true)
-            })
-        })       
+        return true
     }
 
      //Status de pausa do agente

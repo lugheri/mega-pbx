@@ -55,11 +55,7 @@ const connect = ()=>{};
             mongoUri=`mongodb://${host}:27017/${empresa}`         
             options={}
         }
-<<<<<<< HEAD
-        console.log('mongoUri',mongoUri,options)
-=======
         //console.log('mongoUri',mongoUri,options)
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
 
         mongoose.connect(mongoUri,options)
         .then(()=>{

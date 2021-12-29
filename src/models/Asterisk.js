@@ -99,14 +99,13 @@ class Asterisk{
             const idCampanha = dadosChamada[0].id_campanha
             const idMailing = dadosChamada[0].id_mailing
             const idRegistro = dadosChamada[0].id_registro
-            const tabela_numeros = dadosChamada[0].tabela_numeros
             const tipo_ligacao = dadosChamada[0].tipo
             const numero = dadosChamada[0].numero
             //Status de tabulacao referente ao nao atendido
             const contatado = 'N'
             const produtivo = 0
             const status_tabulacao = 0
-            await Discador.autoTabulacao(empresa,0,idCampanha,idMailing,idRegistro,id_numero,0,0,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros)
+            await Discador.autoTabulacao(empresa,0,idCampanha,idMailing,idRegistro,id_numero,0,0,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao)
             chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.idAtendimento == idAtendimento),1)
             //console.log('chamadasSimultaneas apos',chamadasSimultaneas)
             await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)
@@ -194,7 +193,6 @@ class Asterisk{
             const tabulacao = 0
             const contatado = 'N'
             const produtivo = 0
-            const tabela_numeros = dadosChamada[0].tabela_numeros
             let observacoes = dados.motivo
             if(dados.abandonada==true){
                 observacoes="ABANDONADA";
@@ -203,7 +201,7 @@ class Asterisk{
             //retira da fila e registra como abandonou fila
             await Cronometro.saiuDaFila(empresa,numero)
             //Registra histórico de chamada
-            await Discador.autoTabulacao(empresa,protocolo,idCampanha,idMailing,idRegistro,idNumero,ramal,uniqueid,numero,tabulacao,observacoes,contatado,produtivo,tipo_ligacao,tabela_numeros)
+            await Discador.autoTabulacao(empresa,protocolo,idCampanha,idMailing,idRegistro,idNumero,ramal,uniqueid,numero,tabulacao,observacoes,contatado,produtivo,tipo_ligacao)
             //remove chamada simultanea
             if(idAtendimento==0){
                 chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.numero == numero),1)

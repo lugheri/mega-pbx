@@ -299,8 +299,6 @@ class CampanhasController{
 
         const r = await Campanhas.addMailingCampanha(empresa,idCampanha,idMailing)
         res.json(true)
-<<<<<<< HEAD
-=======
     }
 
     async addNumerosCampanha(req,res){
@@ -316,7 +314,6 @@ class CampanhasController{
         const idCampanha = req.params.idCampanha
         const r = await Campanhas.idMailingCampanha(empresa,idCampanha)
         res.json(r)
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     }
 
     //Lista mailing da campanha

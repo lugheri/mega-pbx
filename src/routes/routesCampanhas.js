@@ -54,8 +54,6 @@ module.exports = (routes) => {
     routes.post('/addMailingCampanha',CampanhasController.addMailingCampanha)//Adiciona Mailing Campanha      
     routes.get('/listarMailingsCampanha/:idCampanha', CampanhasController.listarMailingCampanha) //Lista Mailing Campanha  
     routes.delete('/removerMailingCampanha/:idCampanha',CampanhasController.removeMailingCampanha)//Remove Mailing Campanha
-<<<<<<< HEAD
-=======
 
     routes.get('/testAddNumerosCampanha/:idMailing/:idCampanha',CampanhasController.addNumerosCampanha)
     routes.get('/testIdMailingCampanha/:idCampanha',CampanhasController.idMailingCampanha)
@@ -65,7 +63,6 @@ module.exports = (routes) => {
      
           
     
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     
     //Em Refatoração
     routes.post('/filtrarDiscagem',CampanhasController.filtrarDiscagem)//Remove Mailing Campanha

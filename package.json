@@ -29,10 +29,7 @@
     "md5": "^2.3.0",
     "moment": "^2.29.1",
     "mongoose": "^6.1.1",
-<<<<<<< HEAD
-=======
     "mongose": "^0.0.2-security",
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     "morgan": "^1.10.0",
     "multer": "^1.4.2",
     "mysql": "^2.18.1",

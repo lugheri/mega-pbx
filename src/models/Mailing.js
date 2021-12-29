@@ -11,10 +11,7 @@ import moment from 'moment'
 
 import Mailings from '../database/Mailings'
 import MailingsTypeFields from '../database/MailingsTypeFields'
-<<<<<<< HEAD
-=======
 import dddsMailing from '../database/dddsMailing'
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
 
 
 class Mailing{
@@ -285,19 +282,6 @@ class Mailing{
             const totalRegistros = await modelDadosMailing.count()
             const totalNumeros = await modelNumerosMailing.count()
             await Mailings.updateOne({id:idBase},{pronto:true,totalRegistros:totalRegistros,totalNumeros:totalNumeros})
-<<<<<<< HEAD
-            console.log('Importação concluida')
-            console.timeEnd('importacao')
-
-            //Grava a quantidade de registros por DDD
-            const ufs = modelNumerosMailing.distinct("uf")
-            console.log('UFs',ufs)
-
-            //Inicia separação dos ddds
-
-            return true
-         }       
-=======
             //console.log('Importação concluida')
             //console.timeEnd('importacao')
 
@@ -329,7 +313,6 @@ class Mailing{
             await dddsMailing.insertMany(porEstado) 
             return true
         }       
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     }
     
      //Remover Mailing
@@ -392,31 +375,6 @@ class Mailing{
     }
 
     //Resumo por ddd
-<<<<<<< HEAD
-    async totalRegUF(empresa,idMailing){
-        connect.mongoose(empresa)
-        //const collection = .db.connect(`numerosmailing_${idMailing}`)
-        return collection.distinct("uf")
-        
-      
-        //return await modelNum.distinct("uf")        
-    }
-
-    async totalRegistrosUF(empresa,idMailing,uf){
-        const conn = connect.mongoose(empresa)
-        const modelReg = conn.dbConnection.getCollection(`dadosmailing_${idMailing}`)
-        
-        return 0//await modelReg.find({uf:uf}).count()        
-    }
-
-
-    async totalNumerosUF(empresa,idMailing,uf){
-        const conn = connect.mongoose(empresa)
-        const modelNum = conn.dbConnection.getCollection(`numerosmailing_${idMailing}`)
-        return 0//await modelNum.find({uf:uf}).count()        
-    }
-
-=======
     async totalRegUF(idMailing){
         return await dddsMailing.distinct("uf",{idMailing:idMailing})
     }
@@ -430,7 +388,6 @@ class Mailing{
     }
 
 
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     
 
 

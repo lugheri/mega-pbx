@@ -600,66 +600,6 @@ class Campanhas{
     //MAILING
     //ADICIONA O MAILING A UMA CAMPANHA
     async addMailingCampanha(empresa,idCampanha,idMailing){
-<<<<<<< HEAD
-        //REMOVENDO MAILINGS DA CAMPANHA 
-        await Redis.delete(`${empresa}:mailingCampanha:${idCampanha}`)
-
-        //OLD
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const infoMailing = await Mailing.infoMailing(empresa,idMailing)
-                const tabelaDados = infoMailing[0].tabela_dados
-                const tabelaNumeros = infoMailing[0].tabela_numeros
-                //verifica se mailing ja existem na campanha
-                let sql = `SELECT id 
-                            FROM ${empresa}_dados.campanhas_mailing 
-                            WHERE idCampanha=${idCampanha} 
-                            AND idMailing=${idMailing}`
-                const r = await this.querySync(conn,sql)
-                
-                if(r.length==1){
-                    pool.end((err)=>{
-                        if(err) console.error('Campanhas.js 605', err)
-                    })
-                    resolve(false)
-                    return
-                }
-                //Inserindo coluna da campanha na tabela de numeros
-                sql = `ALTER TABLE ${empresa}_mailings.${tabelaNumeros} 
-                      ADD COLUMN campanha_${idCampanha} INT NULL DEFAULT '1' AFTER produtivo`
-                await this.querySync(conn,sql)
-                //Atualiza os registros como disponíveis (1)
-                //sql = `UPDATE mailings.${tabelaNumeros} SET campanha_${idCampanha}=1`
-                //await this.querySync(sql,empresa)
-                
-                //Inserindo informacao do id do mailing na campanha 
-                sql = `INSERT INTO ${empresa}_dados.campanhas_mailing 
-                                    (idCampanha,idMailing) 
-                            VALUES ('${idCampanha}','${idMailing}')`
-                await this.querySync(conn,sql)
-                //Inserindo campos do mailing
-                sql = `SELECT * 
-                        FROM ${empresa}_dados.mailing_tipo_campo 
-                        WHERE idMailing=${idMailing}`
-                const campos =  await this.querySync(conn,sql)
-                sql = `INSERT INTO ${empresa}_dados.campanhas_campos_tela_agente 
-                                    (idCampanha,idMailing,tabela,idCampo,ordem) 
-                            VALUES ` 
-                    for(let i=0; i<campos.length; i++){
-                        sql += `(${idCampanha},${idMailing},'${tabelaDados}',${campos[i].id},${i})`
-                        if((i+1)<campos.length){ sql +=', '}            
-                    }
-                //console.log(sql)
-                await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 605', err)
-                })
-                resolve(true)                             
-            })
-        })        
-=======
         connect.mongoose(empresa)
         const mailingCampanha = await MailingCampanha.find({idMailing:idMailing,idCampanha:idCampanha});
         if(mailingCampanha.length == 1) {
@@ -704,6 +644,7 @@ class Campanhas{
         });*/
 
         //modelNumeros
+        delete mongoose.connection.models[`numerosmailing_${idMailing}`];
         const modelNumerosBase = mongoose.model(`numerosmailing_${idMailing}`,{})
         console.log(`numerosmailing_${idMailing}`)
 
@@ -715,7 +656,7 @@ class Campanhas{
         const numerosAdd = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
         console.log('Numeros Adicionados',numerosAdd.length)
 
-        delete mongoose.connection.models[`numerosmailing_${idMailing}`];
+        
         return true
     }
 
@@ -726,20 +667,14 @@ class Campanhas{
         console.log(mailingCampanha)
         return mailingCampanha[0].idMailing
 
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     }
 
 
     //Lista os mailings adicionados em uma campanha
     async listarMailingCampanha(empresa,idCampanha){
-<<<<<<< HEAD
-        const mailingCampanha = await Redis.getter(`${empresa}:mailingCampanha:${idCampanha}`)
-        if(mailingCampanha!==null){
-=======
         connect.mongoose(empresa)
         const mailingCampanha = await Redis.getter(`${empresa}:mailingCampanha:${idCampanha}`)       
         if(mailingCampanha!=null){
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
             return mailingCampanha
         }
         const infoMailingCampanha = await MailingCampanha.find({idCampanha:idCampanha})
@@ -753,46 +688,11 @@ class Campanhas{
         connect.mongoose(empresa)
         await Redis.delete(`${empresa}:mailingCampanha:${idCampanha}`)
 
-<<<<<<< HEAD
-                //Recuperando o id da campanha
-                let sql = `SELECT idCampanha 
-                            FROM ${empresa}_dados.campanhas_mailing 
-                            WHERE idCampanha=${idCampanha}`
-                const r = await this.querySync(conn,sql)
-                if(r.length==0){
-                    return false
-                }
-                //Removendo coluna da campanha no mailing
-                sql = `ALTER TABLE ${empresa}_mailings.${infoMailing[0].tabela_numeros} 
-                        DROP COLUMN campanha_${idCampanha}`
-                await this.querySync(conn,sql)
-            
-                //Removendo informacao do mailing da campanha
-                sql = `DELETE FROM ${empresa}_dados.campanhas_mailing 
-                        WHERE idCampanha=${idCampanha}`
-                await this.querySync(conn,sql)
-                //Removendo filtros do mailing na campanha
-                sql = `DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
-                            WHERE idCampanha=${idCampanha}`
-                await this.querySync(conn,sql)
-                //removendo campos do mailing na campanha
-                sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
-                        WHERE idCampanha=${idCampanha}` 
-                await this.querySync(conn,sql)
-               
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 691', err)
-                })
-                resolve(true)
-            })
-        })       
-=======
         //Remove Filtros
         //Remove Campos tela agente
        
         await MailingCampanha.deleteOne({idCampanha:idCampanha})
         return true
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
     }
 
     //FILTROS DE DISCAGEM ##################################################################################

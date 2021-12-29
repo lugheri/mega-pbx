@@ -144,7 +144,7 @@ class AgenteController{
             info['dados']['idAtendimento']=protocolo
             
                     
-            info['dados']['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal,idMailing,idReg,tabela_dados)
+            info['dados']['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal,idMailing,idReg)
             info['dados']['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)
             info['dados']['tipo_discador']=tipo_discador
             info['dados']['retorno']=false
@@ -166,7 +166,7 @@ class AgenteController{
             info['config']['origem']="discador"
             info['config']['modo_atendimento']=modo_atendimento
 
-            console.log('INFO',info)
+           
 
             res.json(info)              
         }
@@ -189,19 +189,15 @@ class AgenteController{
 
     async dadosChamadaAtendida(req,res){
         const empresa = await User.getEmpresa(req)
-        const ramal = req.params.ramal
-        
+        const ramal = req.params.ramal        
         const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-        
         if(atendimentoAgente==null){
             const mode={}
-                mode['sistemcall']=false
-                mode['dialcall']=false
-                mode['config'] = {}
-                mode['config']['origem']="interna"
-                mode['config']['modo_atendimento']="manual"
-
-               
+                  mode['sistemcall']=false
+                  mode['dialcall']=false
+                  mode['config'] = {}
+                  mode['config']['origem']="interna"
+                  mode['config']['modo_atendimento']="manual"               
             res.json(mode)
             return false;
         }
@@ -251,25 +247,26 @@ class AgenteController{
         info['tipo_ligacao']=tipo_ligacao
         info['protocolo']=protocolo
         const nomeCliente = await Discador.campoNomeRegistro(empresa,idMailing,idReg)
+        const cpfCliente = await Discador.campoCPFRegistro(empresa,idMailing,idReg)
         info['nome_registro']=nomeCliente
         info['campos']={}
         info['campos']['idRegistro']=idReg
         info['campos']['Nome']=nomeCliente
-        const camposMailing = await Discador.camposMailing(empresa,idMailing,idCampanha)
-        for(let i=0; i<camposMailing.length; i++){
-            let apelido=''
-            if(camposMailing[i].apelido === null){
-                apelido=camposMailing[i].campo
-            }else{
-                apelido=camposMailing[i].apelido
-            }  
-            //console.log('Info Chamada - Valor do Campo',campos_dados[i].campo)
-            let nomeCampo = camposMailing[i].campo;
-            const apelidoCampo = await Discador.apelidoCampo(empresa,nomeCampo,tabela_dados,idReg)
-            info['campos'][apelido]=apelidoCampo
+        info['campos']['CPF']=cpfCliente
+
+        const valores_dados = await Discador.dadosRegistro(empresa,idMailing,idReg)
+        const listaCampos = await Discador.camposMailing(empresa,idMailing,idCampanha)
+
+        for(let c=0;c<listaCampos.length;c++){
+            if((listaCampos[c].tipo=='dados')&&(listaCampos[c].habilitado==1)){
+                const nomeCampo=listaCampos[c].nome
+                const apelidoCampo=listaCampos[c].apelido
+                const valor = valores_dados[0][`${nomeCampo}`] 
+                info['campos'][`${apelidoCampo}`]=valor 
+            }
         }      
 
-        const numeros = await Discador.infoChamada_byDialNumber(empresa,idCampanha,idReg,id_numero,tabela_numeros,numero)
+        const numeros = await Discador.infoChamada_byDialNumber(empresa,idMailing,idCampanha,idReg,id_numero,numero)
         info['numeros'] = numeros['numeros']
         info['id_numeros_discado'] = numeros['id_numeros_discado']
         info['numeros_discado'] = numeros['numeros_discado']
@@ -278,11 +275,7 @@ class AgenteController{
         info['config']['origem']="discador"
         info['config']['modo_atendimento']=modo_atendimento
 
-<<<<<<< HEAD
         
-=======
-        console.log('INFO ATENDE CHAMADA',info)
->>>>>>> 6e6f0827f14de2b2f25c763a3fac3100573bd98d
         res.json(info) 
     }
 
@@ -377,9 +370,8 @@ class AgenteController{
         const idCampanha = dadosAtendimento['id_campanha']
         const idMailing = dadosAtendimento['id_mailing']
         const idRegistro = dadosAtendimento['id_registro']
-        const tabelaDados = dadosAtendimento['tabela_dados']
         const numero = dadosAtendimento['numero']
-        const nome = await Discador.campoNomeRegistro(empresa,idMailing,idRegistro,tabelaDados);
+        const nome = await Discador.campoNomeRegistro(empresa,idMailing,idRegistro);
         
         const tabulacoesCampanha = await Discador.tabulacoesCampanha(empresa,nome,idCampanha)
         if(tabulacoesCampanha===false){
@@ -458,7 +450,7 @@ class AgenteController{
         }
 
         //Verificando se a campanha possui tabulacao configurada
-        nome = await Discador.campoNomeRegistro(empresa,dadosChamadaDesligada['id_mailing'],dadosChamadaDesligada['id_registro'],dadosChamadaDesligada['tabela_dados']);
+        nome = await Discador.campoNomeRegistro(empresa,dadosChamadaDesligada['id_mailing'],dadosChamadaDesligada['id_registro']);
         
         const tabulacoesCampanha = await Discador.tabulacoesCampanha(empresa,nome,dadosChamadaDesligada['id_campanha'])
         if(tabulacoesCampanha==false){
