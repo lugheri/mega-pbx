@@ -77,8 +77,6 @@ class AsteriskController{
             if(dados.tipoDiscador=="manual"){                
                 novaChamada['id_campanha'] =  0
                 novaChamada['id_mailing'] =  0
-                novaChamada['tabela_dados'] = ''
-                novaChamada['tabela_numeros'] = ''
                 novaChamada['id_registro'] = 0
                 novaChamada['id_numero'] = 0
                 novaChamada['tipo'] = 'manual'  
@@ -100,8 +98,6 @@ class AsteriskController{
                 //const dadosAtendimento = chamadasEmAtendimento.filter(atendimento => atendimento.numero == dados.numero)
                 novaChamada['id_campanha'] =  dadosAtendimento['id_campanha']
                 novaChamada['id_mailing'] =  dadosAtendimento['id_mailing']
-                novaChamada['tabela_dados'] = dadosAtendimento['tabela_dados']
-                novaChamada['tabela_numeros'] = dadosAtendimento['tabela_numeros']
                 novaChamada['id_registro'] = dadosAtendimento['id_registro']
                 novaChamada['id_numero'] = dadosAtendimento['id_numero']
                 novaChamada['tipo'] = 'Discador'
@@ -164,7 +160,7 @@ class AsteriskController{
                 const tabulacao=0
                 const observacoes=""
                 const contatado=0                   
-           
+                                                   
                 await Discador.registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,id_reg,id_numero,ramal,uniqueid,tipoDiscador,numero,tabulacao,observacoes,contatado)
                 await Cronometro.iniciouAtendimento(empresa,0,0,0,tipoChamada,numero,ramal,uniqueid)
             
@@ -173,18 +169,14 @@ class AsteriskController{
                 console.log("IdAtendimento do POWER",idAtendimento)
                 console.log("chamadasSimultaneas",chamadasSimultaneas)
 
-
-
                 const canal = await Asterisk.statusChannel(empresa,uniqueid)
 
-                console.log('->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> CANAL',canal)
+                //console.log('->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> ->> >> CANAL',canal)
 
                /* if(canal['state']!='Up'){
                     res.json(false)
                     return false
                 }*/
-
-
                 const dadosChamada = chamadasSimultaneas.filter(atendimento => atendimento.numero == numero)    
                 console.log("dadosChamada",dadosChamada)            
                
@@ -216,7 +208,8 @@ class AsteriskController{
                 const idNumero = dadosChamada[0].id_numero
                 const nomeFila = dadosChamada[0].nomeFila
                 console.log('Registrando Chamada')
-                await Discador.registraChamada(empresa,ramal,idAtendimento,uniqueid,idCampanha,modoAtendimento,tipoDiscador,idMailing,tabela_dados,tabela_numeros,idRegistro,idNumero,numero,nomeFila,1)
+                                               
+                await Discador.registraChamada(empresa,ramal,idAtendimento,uniqueid,idMailing,idCampanha,modoAtendimento,tipoDiscador,idRegistro,idNumero,numero,nomeFila,1)
                 await Agente.alterarEstadoAgente(empresa,ramal,3,0)
                 await Cronometro.saiuDaFila(empresa,numero)
                 console.log('Iniciou Atendimento',uniqueid,dadosChamada[0].uniqueid)                                                   

@@ -244,25 +244,49 @@ class Asterisk{
         })           
     }
 
+    //######################DISCAR######################                 
+    async discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,idCampanha,callback){
+        const accountId = await Clients.accountId(empresa)
+        ari.connect(server, user, pass, async (err,client)=>{
+          if(err) throw err         
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          //Extension
+          let context
+          let endpoint
+          const trunk = await Clients.getTrunk(empresa)
+          const prefix = trunk[0].tech_prefix         
+          const tronco = trunk[0].trunk
+          const type_dial = trunk[0].type_dial
+          if(modo=='discador'){
+            context = 'dialer'
+            endpoint = `PJSIP/${prefix}${type_dial}${numero}@${tronco}`
+          }else{
+            context = 'external'
+            endpoint = `PJSIP/${tronco}/` 
+          }
+          const options = {            
+            "endpoint"       : `${endpoint}`,
+            "extension"      : `${numero}`,
+            "context"        : `${context}`,
+            "priority"       : 1,
+            "app"            : "",
+            "variables"      : {
+                                "EMPRESA":`${empresa}`,
+                                "FILA":`${fila}`,
+                                "ID_ATENDIMENTO":`${idAtendimento}`,
+                                "SAUDACAO":`${saudacao}`,
+                                "AGUARDE":`${aguarde}`
+                               },
+            "Async"          : true,
+            "appArgs"        : "",
+            "callerid"       : '',//numero,
+            "timeout"        : 20, 
+            /*"channelId"      : `${accountId}.${idCampanha}.${idAtendimento}`,
+            "otherChannelId" : ""*/
+          }          
+          client.channels.originate(options,callback)
+        })  
+    }
 
 
 
@@ -275,57 +299,7 @@ class Asterisk{
 
 
 
-
-
-
 //REFATORAÇÃO REDIS
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-   
-
-    
-    
-
-
-
-
-
-   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     
     //######################Configuração das filas######################
     
@@ -410,14 +384,6 @@ class Asterisk{
         connect.asterisk.query(sql,callback)
     }*/
 
-
-    
-
-    
-
-    
-
-    
 
     //Atendente atendeu chamada da fila
     async answer(empresa,uniqueid,idAtendimento,ramal){
@@ -544,49 +510,7 @@ class Asterisk{
         })
     }*/  
 
-    //######################DISCAR######################                 
-    async discar(empresa,fila,idAtendimento,saudacao,aguarde,server,user,pass,modo,ramal,numero,idCampanha,callback){
-        const accountId = await Clients.accountId(empresa)
-        ari.connect(server, user, pass, async (err,client)=>{
-          if(err) throw err         
-
-          //Extension
-          let context
-          let endpoint
-          const trunk = await Clients.getTrunk(empresa)
-          const prefix = trunk[0].tech_prefix         
-          const tronco = trunk[0].trunk
-          const type_dial = trunk[0].type_dial
-          if(modo=='discador'){
-            context = 'dialer'
-            endpoint = `PJSIP/${prefix}${type_dial}${numero}@${tronco}`
-          }else{
-            context = 'external'
-            endpoint = `PJSIP/${tronco}/` 
-          }
-          const options = {            
-            "endpoint"       : `${endpoint}`,
-            "extension"      : `${numero}`,
-            "context"        : `${context}`,
-            "priority"       : 1,
-            "app"            : "",
-            "variables"      : {
-                                "EMPRESA":`${empresa}`,
-                                "FILA":`${fila}`,
-                                "ID_ATENDIMENTO":`${idAtendimento}`,
-                                "SAUDACAO":`${saudacao}`,
-                                "AGUARDE":`${aguarde}`
-                               },
-            "Async"          : true,
-            "appArgs"        : "",
-            "callerid"       : '',//numero,
-            "timeout"        : 20, 
-            /*"channelId"      : `${accountId}.${idCampanha}.${idAtendimento}`,
-            "otherChannelId" : ""*/
-          }          
-          client.channels.originate(options,callback)
-        })  
-    }
+    
 }
 
 export default new Asterisk();

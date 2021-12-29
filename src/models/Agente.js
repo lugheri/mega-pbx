@@ -23,12 +23,10 @@ class Agente{
     } 
     //Retorna o estado atual do agente
     async statusRamal(empresa,ramal){
-        const redis_estadoRamal = await Redis.getter(`${ramal}:estadoRamal`)
-       
+        const redis_estadoRamal = await Redis.getter(`${ramal}:estadoRamal`)       
         if(redis_estadoRamal!==null){
             return redis_estadoRamal
         }
-
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`mysql`)
             pool.getConnection(async (err,conn)=>{ 
@@ -41,8 +39,6 @@ class Agente{
                               LIMIT 1`  
                 console.log(`\n ❗  Query . . . . . . . . . . . .`,sql,` \n`)       
                 const rows = await this.querySync(conn,sql)
-
-
                 pool.end((err)=>{
                     if(err) console.error(err)
                 }) 
@@ -51,7 +47,6 @@ class Agente{
                       estadoAgente['estado']=rows[0].estado
                       estadoAgente['hora']=rows[0].tempo                    
                 await Redis.setter(`${ramal}:estadoRamal`,estadoAgente,60)
-
                 resolve(estadoAgente) 
             })
         }) 
@@ -91,9 +86,6 @@ class Agente{
                 const estadoAnterior = await this.infoEstadoAgente(empresa,agente)
                 const horaAtual = moment().format("YYYY-MM-DD HH:mm:ss")
                 const estadoAgente={}
-               
-                
-
                 //zerando cronometro do estado anterior
                 let sql
                 if(estadoAnterior==2){//Caso o agente venha de uma pausa   
@@ -101,7 +93,6 @@ class Agente{
                     sql = `DELETE FROM ${empresa}_dados.agentes_pausados 
                             WHERE ramal='${agente}'`
                     await this.querySync(conn,sql)
-
                     //Atualiza Log
                     sql = `UPDATE ${empresa}_dados.log_pausas 
                             SET termino=now(), ativa=0 
@@ -109,23 +100,19 @@ class Agente{
                     await this.querySync(conn,sql)
                     await Cronometro.saiuDaPausa(empresa,agente)    
                 }
-
                 //MUDANDO O STATUS PARA DISPONIVEL
                 if(estado==1){//disponibiliza o ramal do agente no asterisk
                     //Remove qualquer chamada anterior presa com o agente
-                    this.clearCallsAgent(empresa,agente)           
-
+                    this.clearCallsAgent(empresa,agente) 
                     //verifica se o agente tinha solicidado saida do discador em ligacao
                     sql = `SELECT deslogado 
                             FROM ${empresa}_dados.user_ramal 
                             WHERE ramal=${agente}`
                     const user = await this.querySync(conn,sql)
-
                     let deslogar=0
                     if(user.length>=1){
                         deslogar = user[0].deslogado
                     }
-
                     //Caso o agente tenha solicitado o logout
                     if(deslogar==1){
                         const poolAsterisk = await connect.pool(empresa,'asterisk')
@@ -148,19 +135,16 @@ class Agente{
                                   SET estado=4, deslogado=0, datetime_estado=NOW() 
                                 WHERE userId=${agente}`
                         await this.querySync(conn,sql)
-
                         estadoAgente['estado']=4
                         estadoAgente['hora']=horaAtual                    
                         await Redis.setter(`${agente}:estadoRamal`,estadoAgente)
-
                         Cronometro.pararOciosidade(empresa,agente)
                         pool.end((err)=>{
                             if(err) console.error(err)
                         }) 
                         resolve(false) 
                         return ;
-                    }
-            
+                    }            
                     //Caso o agente venha de uma pausa dentro da valicadao do novo status 1
                     if(estadoAnterior==2){ //Remove a pausa do agente no asterisk 
                         const poolAsterisk = await connect.pool(empresa,'asterisk')
@@ -185,7 +169,6 @@ class Agente{
                         if(r.length==1){
                             statusPausa=r[0].idPausa
                         }
-
                         //Caso nenhuma pausa tenha sido pré setada
                         if((statusPausa==0)||(statusPausa==null)){//Disponibiliza o agente no ASTERISK
                             const poolAsterisk = await connect.pool(empresa,'asterisk')
@@ -243,11 +226,9 @@ class Agente{
                                     SET estado=2, datetime_estado=NOW() 
                                     WHERE userId=${agente}`
                             await this.querySync(conn,sql)
-
                             estadoAgente['estado']=2
                             estadoAgente['hora']=horaAtual                    
                             await Redis.setter(`${agente}:estadoRamal`,estadoAgente)
-
                             Cronometro.pararOciosidade(empresa,agente)
                             Cronometro.entrouEmPausa(empresa,idPausa,agente)
                             pool.end((err)=>{
@@ -259,7 +240,6 @@ class Agente{
                     }           
                 }
 
-
                 if(estado==2){//Caso o agente va para uma pausa
                 //Caso o agente solicite uma pausa durante um atendimento (estado 3)
                     if(estadoAnterior==3){
@@ -269,26 +249,21 @@ class Agente{
                                     idPausa=${pausa}
                                 WHERE ramal=${agente}` 
                         await this.querySync(conn,sql) 
-
                         sql = `UPDATE ${empresa}_dados.user_ramal
                                 SET estado=${estadoAnterior}, datetime_estado=NOW()
                                 WHERE userId=${agente}`
-                        await this.querySync(conn,sql)
-                        
+                        await this.querySync(conn,sql)                        
                         estadoAgente['estado']=estadoAnterior
                         estadoAgente['hora']=horaAtual                    
                         await Redis.setter(`${agente}:estadoRamal`,estadoAgente)
-
                         pool.end((err)=>{
                             if(err) console.error(err)
                         }) 
                         resolve(false)
                         return 
-                    }   
-                    
+                    }                       
                     //Limpa as chamadas presas com o agente caso existam
                     this.clearCallsAgent(empresa,agente)
-
                     //dados da pausa
                     sql = `SELECT * 
                             FROM ${empresa}_dados.pausas
@@ -298,7 +273,6 @@ class Agente{
                     const nomePausa = infoPausa[0].nome
                     const descricaoPausa = infoPausa[0].descricao
                     const tempo = infoPausa[0].tempo
-
                     const poolAsterisk = await connect.pool(empresa,'asterisk')
                     poolAsterisk.getConnection(async (err,connAst)=>{
                         //pausa agente no asterisk
@@ -310,10 +284,8 @@ class Agente{
                             if(err) console.log('Agente.js ...', err )
                         }) 
                     })  
-
                     let agora = moment().format("HH:mm:ss")
-                    let resultado = moment(agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")
-                    
+                    let resultado = moment(agora, "HH:mm:ss").add(tempo, 'minutes').format("HH:mm:ss")                    
                     //insere na lista dos agentes pausados
                     sql = `INSERT INTO ${empresa}_dados.agentes_pausados 
                                     (data,ramal,inicio,termino,idPausa,nome,descricao)
@@ -410,11 +382,9 @@ class Agente{
                         SET estado=${estado}, datetime_estado=NOW() 
                         WHERE userId=${agente}`
                 await this.querySync(conn,sql)
-
                 estadoAgente['estado']=estado
                 estadoAgente['hora']=horaAtual                    
-                await Redis.setter(`${agente}:estadoRamal`,estadoAgente)              
-
+                await Redis.setter(`${agente}:estadoRamal`,estadoAgente) 
                 pool.end((err)=>{
                     if(err) console.error(err)
                 }) 
@@ -427,7 +397,6 @@ class Agente{
         if(estadoAgente!==null){
             return estadoAgente['estado']
         }
-
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -450,77 +419,14 @@ class Agente{
             })
         })         
     }
-    //Dados do Agente
-    async infoAgente(empresa,ramal){
-        const infoAgente = await Redis.getter(`${ramal}:infoAgente`)
-        if(infoAgente!==null){
-            return infoAgente
-        }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
-                const sql = `SELECT id as ramal, nome 
-                               FROM ${empresa}_dados.users 
-                              WHERE id=${ramal}`
-                const rows = await this.querySync(conn,sql)   
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                }) 
 
-                await Redis.setter(`${ramal}:infoAgente`,rows,240)
-                resolve(rows) 
-            })
-        })              
+    async clearCallsAgent(empresa,ramal){
+        console.log('> > > > CLEAR CALLS AGENTE:',ramal)
+        const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+        if(atendimentoAgente == null) return false
+        await Redis.delete(`${empresa}:atendimentoAgente:${ramal}`)
+        return true
     }
-    //Desliga Chamada
-    async desligaChamada(empresa,ramal){
-        const atendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-        if((atendimento===null)||(atendimento.length==0)){
-            return false
-        }
-        atendimento['event_desligada']=1
-        await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,atendimento,43200)
-        //Para cronometro do atendimento
-        await Cronometro.saiuLigacao(empresa,atendimento['id_campanha'],atendimento['numero'],ramal)
-        return(atendimento) 
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-   
-    
-
-    
-
-    
-
-    
 
     //Retorna o histórico de atendimento do registro
     async historicoRegistro(empresa,idMailing,idReg){
@@ -621,6 +527,29 @@ class Agente{
         })         
     }
 
+     //Dados do Agente
+     async infoAgente(empresa,ramal){
+        const infoAgente = await Redis.getter(`${ramal}:infoAgente`)
+        if(infoAgente!==null){
+            return infoAgente
+        }
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
+                const sql = `SELECT id as ramal, nome 
+                               FROM ${empresa}_dados.users 
+                              WHERE id=${ramal}`
+                const rows = await this.querySync(conn,sql)   
+                pool.end((err)=>{
+                    if(err) console.error(err)
+                }) 
+                await Redis.setter(`${ramal}:infoAgente`,rows,240)
+                resolve(rows) 
+            })
+        })              
+    }
+
     async historicoRegistroChamadaManual(empresa,numero,agente){
         const historicoRegistroChamadaManual = await Redis.getter(`${empresa}:historicoRegistroChamadaManual:${numero}:agente:${agente}`)
         if(historicoRegistroChamadaManual!==null){
@@ -657,7 +586,6 @@ class Agente{
             })
         })          
     }
-
     //Retorna o histórico de atendimento do agente
     async historicoChamadas(empresa,ramal){
         //Checa se existem chamadas no redis
@@ -666,12 +594,10 @@ class Agente{
             //console.log(`Retornando historico de chamadas do ramal ${ramal} do redis`)
             return historico
         }
-
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Agente.js:","message":err.message,"stack":err.stack});
-
                 const sql = `SELECT h.id,
                                     nome_registro,
                                     numero_discado,
@@ -804,19 +730,21 @@ class Agente{
         }) 
     }
 
-    
-
-    async clearCallsAgent(empresa,ramal){
-        console.log('> > > > CLEAR CALLS AGENTE:',ramal)
-        const atendimentoAgente = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
-        if(atendimentoAgente == null) return false
-
-        await Redis.delete(`${empresa}:atendimentoAgente:${ramal}`)
-        return true
+    //Desliga Chamada
+    async desligaChamada(empresa,ramal){
+        const atendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)
+        if((atendimento===null)||(atendimento.length==0)){
+            return false
+        }
+        atendimento['event_desligada']=1
+        await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,atendimento,43200)
+        //Para cronometro do atendimento
+        await Cronometro.saiuLigacao(empresa,atendimento['id_campanha'],atendimento['numero'],ramal)
+        return(atendimento) 
     }
 
-     //Status de pausa do agente
-     async infoPausaAgente(empresa,ramal){
+    //Status de pausa do agente
+    async infoPausaAgente(empresa,ramal){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -833,7 +761,6 @@ class Agente{
             })
         })         
     } 
-    
     async agendandoRetorno(empresa,ramal,campanha,mailing,id_numero,id_registro,numero,data,hora){
         await Redis.delete(`${empresa}:agendaRetornos`)
         return new Promise (async (resolve,reject)=>{ 
@@ -852,5 +779,4 @@ class Agente{
         })                
     }
 }
-
 export default new Agente();

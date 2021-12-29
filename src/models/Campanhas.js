@@ -226,6 +226,7 @@ class Campanhas{
                 await Redis.delete(`${empresa}:totalMailingsCampanha:${idCampanha}`)  
                 await Redis.delete(`${empresa}:agendamentoCampanha`)
                 await Redis.delete(`${empresa}:infoCampanha:${idCampanha}`)      
+                
                 const rows =  await this.querySync(conn,sql) 
                 pool.end((err)=>{
                     if(err) console.error('Campanhas.js 176', err)

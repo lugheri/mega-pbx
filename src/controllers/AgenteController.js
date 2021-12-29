@@ -40,8 +40,7 @@ class AgenteController{
         estado = estadoRamal['estado'];
         const now = moment(new Date());         
         const duration = moment.duration(now.diff(estadoRamal['hora']))
-        tempo=await Report.converteSeg_tempo(duration.asSeconds())       
-    
+        tempo=await Report.converteSeg_tempo(duration.asSeconds())    
         const estados=['deslogado','disponivel','em pausa','falando','indisponivel','tela reg.','ch manual','lig. manual'];
         const status = {}
             status['idEstado']=estado
@@ -89,9 +88,7 @@ class AgenteController{
             res.json(mode)
             return false;
         }
-
         const dadosChamada = chamadasSimultaneas.filter(chamadas => chamadas.event_na_fila == 1)
-
         console.log('> > > > > > > > > > > > > > > > > > > > dados chamada',dadosChamada)
         if((dadosChamada==null)||(dadosChamada.length==0)){
             const mode={}
@@ -107,8 +104,7 @@ class AgenteController{
             let modo_atendimento = 'auto'
             if(dadosChamada[0].modo_atendimento!=undefined){               
                 modo_atendimento = dadosChamada[0].modo_atendimento
-            }
-            
+            }            
             const numero = dadosChamada[0].numero
             const idMailing = dadosChamada[0].id_mailing
             const tipo_discador = dadosChamada[0].tipo_discador
@@ -133,7 +129,6 @@ class AgenteController{
                 sistemcall=false
                 dialcall=false
             }
-
             const info = {};
             info['sistemcall']=sistemcall
             info['dialcall']=dialcall
@@ -141,8 +136,7 @@ class AgenteController{
             info['dados']={}
             info['dados']['sistemcall']=sistemcall
             info['dados']['dialcall']=dialcall
-            info['dados']['idAtendimento']=protocolo
-            
+            info['dados']['idAtendimento']=protocolo            
                     
             info['dados']['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal,idMailing,idReg)
             info['dados']['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)
@@ -164,9 +158,7 @@ class AgenteController{
             info['dados']['dadosCampanha'] = numeros['dadosCampanha']
             info['config'] = {}
             info['config']['origem']="discador"
-            info['config']['modo_atendimento']=modo_atendimento
-
-           
+            info['config']['modo_atendimento']=modo_atendimento          
 
             res.json(info)              
         }
@@ -221,7 +213,6 @@ class AgenteController{
         if(idReg==0){           
             res.json({"sistemcall":false,"dialcall":false})             
         }
-
         const info = {};
         if((tipo_ligacao=='discador')||(tipo_ligacao==='retorno')){
             info['sistemcall']=false
@@ -265,7 +256,6 @@ class AgenteController{
                 info['campos'][`${apelidoCampo}`]=valor 
             }
         }      
-
         const numeros = await Discador.infoChamada_byDialNumber(empresa,idMailing,idCampanha,idReg,id_numero,numero)
         info['numeros'] = numeros['numeros']
         info['id_numeros_discado'] = numeros['id_numeros_discado']
@@ -274,7 +264,6 @@ class AgenteController{
         info['config'] = {}
         info['config']['origem']="discador"
         info['config']['modo_atendimento']=modo_atendimento
-
         
         res.json(info) 
     }
@@ -323,12 +312,10 @@ class AgenteController{
                 registro['dadosAtendimento']['contatado']=historico[i].contatado
                 registro['dadosAtendimento']['produtivo']=historico[i].produtivo
                 registro['dadosAtendimento']['tabulacao']=historico[i].tabulacao
-                registro['dadosAtendimento']['observacoes']=historico[i].obs_tabulacao                
-                
+                registro['dadosAtendimento']['observacoes']=historico[i].obs_tabulacao
                 const agente = await Agente.infoAgente(empresa,ramal)
                 registro['informacoesAtendente']={}
                 registro['informacoesAtendente'] = agente[0]
-
                 registro['dadosRegistro']={}
                 registro['dadosRegistro']['nome']=historico[i].nome_registro
                 registro['dadosRegistro']['numeroDiscado']=historico[i].numero_discado
@@ -359,7 +346,7 @@ class AgenteController{
         const ramal = req.params.ramal
         const dadosAtendimento = await Redis.getter(`${empresa}:atendimentoAgente:${ramal}`)     
 
-        console.log('dados Atendimento',`${empresa}:atendimentoAgente:${ramal}`,dadosAtendimento)
+        //console.log('dados Atendimento',`${empresa}:atendimentoAgente:${ramal}`,dadosAtendimento)
         if(dadosAtendimento===null){
             const error={}
                 error['message']=`Nenhuma chamada em atendimento para o ramal ${ramal}`
@@ -381,10 +368,8 @@ class AgenteController{
             res.json(error)
             return false
         }
-
         dadosAtendimento['event_tabulando']=1
-        await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,dadosAtendimento)
-                        
+        await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,dadosAtendimento)                        
         //Pega os status de tabulacao da campanha
         res.json(tabulacoesCampanha)
         return true
@@ -450,8 +435,7 @@ class AgenteController{
         }
 
         //Verificando se a campanha possui tabulacao configurada
-        nome = await Discador.campoNomeRegistro(empresa,dadosChamadaDesligada['id_mailing'],dadosChamadaDesligada['id_registro']);
-        
+        nome = await Discador.campoNomeRegistro(empresa,dadosChamadaDesligada['id_mailing'],dadosChamadaDesligada['id_registro']);        
         const tabulacoesCampanha = await Discador.tabulacoesCampanha(empresa,nome,dadosChamadaDesligada['id_campanha'])
         if(tabulacoesCampanha==false){
              console.log('DESLIGA CHAMADA','SEM TABULACAO')
@@ -469,14 +453,7 @@ class AgenteController{
             errors['warning']=true
             res.json(errors)
             return false
-        }
-
-        //Lista os status de tabulacao
-        const idCampanha = dadosChamadaDesligada['id_campanha']
-        const idMailing = dadosChamadaDesligada['id_mailing']
-        const idRegistro = dadosChamadaDesligada['id_registro']
-        const numeroDiscado  = dadosChamadaDesligada['numero']
-                    
+        }                         
         //Inicia a contagem da tabulacao 
         dadosChamadaDesligada['event_tabulada']==1
         await Redis.setter(`${empresa}:atendimentoAgente:${ramal}`,dadosChamadaDesligada,43200)
