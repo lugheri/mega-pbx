@@ -105,7 +105,8 @@ class Asterisk{
             const contatado = 'N'
             const produtivo = 0
             const status_tabulacao = 0
-            await Discador.autoTabulacao(empresa,0,idCampanha,idMailing,idRegistro,id_numero,0,0,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao)
+                                         
+            await Discador.autoTabulacao(empresa,0,idCampanha,idRegistro,id_numero,0,0,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao)
             chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.idAtendimento == idAtendimento),1)
             //console.log('chamadasSimultaneas apos',chamadasSimultaneas)
             await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)
@@ -200,8 +201,9 @@ class Asterisk{
             const removeNumero =0
             //retira da fila e registra como abandonou fila
             await Cronometro.saiuDaFila(empresa,numero)
-            //Registra histórico de chamada
-            await Discador.autoTabulacao(empresa,protocolo,idCampanha,idMailing,idRegistro,idNumero,ramal,uniqueid,numero,tabulacao,observacoes,contatado,produtivo,tipo_ligacao)
+            //Registra histórico de chamada          
+                                                                        
+            await Discador.autoTabulacao(empresa,protocolo,idCampanha,idRegistro,idNumero,ramal,uniqueid,numero,tabulacao,observacoes,contatado,produtivo,tipo_ligacao)
             //remove chamada simultanea
             if(idAtendimento==0){
                 chamadasSimultaneas.splice(chamadasSimultaneas.findIndex(atendimento => atendimento.numero == numero),1)

@@ -858,6 +858,7 @@ class Discador{
     }
 
     async campanhasTabulacaoMailing(empresa,dadosTabulacao){
+        console.log('Dados Tabulacao',dadosTabulacao)
         return true
     }
 
@@ -951,7 +952,7 @@ class Discador{
               tabular['tipo_ligacao']=tipo_ligacao    
               const idMailing = await Campanhas.idMailingCampanha(empresa,idCampanha)   
         this.campanhasTabulacaoMailing(empresa,tabular)
-       
+                                                
         await this.registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,idRegistro,id_numero,ramal,uniqueid,tipo_ligacao,numero,status_tabulacao,observacoes,contatado)
         return true
     }
@@ -1216,6 +1217,7 @@ class Discador{
             })
         })       
     }
+    
     async chamadasProdutividade_porMailing(empresa,statusProdutividade,idMailing){
         const chamadasProdutividade_porMailing = await Redis.getter(`${empresa}:chamadasProdutividade_porMailing:${idMailing}:statusProdutividade:${statusProdutividade}`)
         if(chamadasProdutividade_porMailing===null){
@@ -1376,7 +1378,7 @@ class Discador{
         if(chamadasSimultaneas===null){
             return false
         }        
-        return new Promise (async (resolve,reject)=>{ 
+        /*return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:clearCallsCampanhas","message":err.message,"stack":err.stack});
@@ -1408,7 +1410,8 @@ class Discador{
                 resolve(true)
                 await Redis.setter(`${empresa}:chamadasSimultaneas`,chamadasSimultaneas)
             })
-        })        
+        })   */
+        return false     
     }
 
     async removeChamadaSimultanea(empresa,dadosChamada){        
@@ -1442,6 +1445,7 @@ class Discador{
                             AND (produtivo IS NULL OR produtivo=0)`
                 await this.querySync(conn,sql)
                 //Grava no histórico de atendimento
+                
                 await this.registraHistoricoAtendimento(empresa,0,idCampanha,idMailing,idRegistro,id_numero,0,0,tipo_ligacao,numero,tabulacao,observacoes,contatado)
                 //Marcando numero na tabela de numeros como disponivel
                 sql = `UPDATE ${empresa}_mailings.${tabela_numeros} 
@@ -1505,7 +1509,7 @@ class Discador{
         return (numerosFiltrados)
     }
 
-    
+    /*
     async registraNumero(empresa,idCampanha,idMailing,idRegistro,idNumero,numero,tabela_numeros){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
@@ -1538,7 +1542,7 @@ class Discador{
                 resolve(true) 
             })
         })        
-    }
+    }*/
     //Seleciona um agente disponivel
     async agenteDisponivel(empresa,idFila){
         if((empresa==undefined)||(empresa==null)||(empresa==0)||(empresa=='')){
@@ -1574,7 +1578,7 @@ class Discador{
         })       
     }
    
-
+/*
     async apelidoCampo(empresa,nomeCampo,tabela_dados,idReg){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
@@ -1589,7 +1593,7 @@ class Discador{
                 resolve(rows[0].valor)
             })
         })
-    }
+    }*/
     async atendeChamada(empresa,ramal){
         const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
         const calldata = chamadasSimultaneas.filter(chamada=>chamada.ramal = ramal)
@@ -1620,6 +1624,57 @@ class Discador{
             return({"sistemcall":false,"dialcall":false}) 
         }
 
+        if((calldata[0].tipo_ligacao=='discador')||(calldata[0].tipo_ligacao==='retorno')){
+            info['sistemcall']=false
+            info['dialcall']=true
+        }else if(calldata[0].tipo_ligacao=='interna'){
+             info['sistemcall']=true
+            info['dialcall']=false
+        }else{
+            info['sistemcall']=false
+            info['dialcall']=false
+        }
+
+        //Integração  
+        info['integracao']=await Discador.integracoes(empresa,numero,idCampanha,ramal,idMailing,idReg)
+        info['listaTabulacao']=await Campanhas.checklistaTabulacaoCampanha(empresa,idCampanha)  
+        info['tipo_discador']=tipo_discador
+        info['retorno']=false
+        info['modo_atendimento']=modo_atendimento
+        info['idMailing']=idMailing  
+        info['tipo_ligacao']=tipo_ligacao
+        info['protocolo']=protocolo
+        const nomeCliente = await Discador.campoNomeRegistro(empresa,idMailing,idReg)
+        const cpfCliente = await Discador.campoCPFRegistro(empresa,idMailing,idReg)
+        info['nome_registro']=nomeCliente
+        info['campos']={}
+        info['campos']['idRegistro']=idReg
+        info['campos']['Nome']=nomeCliente
+        info['campos']['CPF']=cpfCliente
+
+        const valores_dados = await Discador.dadosRegistro(empresa,idMailing,idReg)
+        const listaCampos = await Discador.camposMailing(empresa,idMailing,idCampanha)
+
+        for(let c=0;c<listaCampos.length;c++){
+            if((listaCampos[c].tipo=='dados')&&(listaCampos[c].habilitado==1)){
+                const nomeCampo=listaCampos[c].nome
+                const apelidoCampo=listaCampos[c].apelido
+                const valor = valores_dados[0][`${nomeCampo}`] 
+                info['campos'][`${apelidoCampo}`]=valor 
+            }
+        }      
+        const numeros = await Discador.infoChamada_byDialNumber(empresa,idMailing,idCampanha,idReg,id_numero,numero)
+        info['numeros'] = numeros['numeros']
+        info['id_numeros_discado'] = numeros['id_numeros_discado']
+        info['numeros_discado'] = numeros['numeros_discado']
+        info['dadosCampanha'] = numeros['dadosCampanha']
+        info['config'] = {}
+        info['config']['origem']="discador"
+        info['config']['modo_atendimento']=modo_atendimento
+
+        return info
+
+        /*
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -1636,17 +1691,8 @@ class Discador{
                     ORDER BY cc.ordem ASC`;
             
                 const campos_dados = await this.querySync(conn,sql)
-                //montando a query de busca dos dados 
-                if((calldata[0].tipo_ligacao=='discador')||(calldata[0].tipo_ligacao==='retorno')){
-                    info['sistemcall']=false
-                    info['dialcall']=true
-                }else if(calldata[0].tipo_ligacao=='interna'){
-                     info['sistemcall']=true
-                    info['dialcall']=false
-                }else{
-                    info['sistemcall']=false
-                    info['dialcall']=false
-                }
+                //montando a query de busca dos dados                
+                
                 
                 info['idAtendimento']=idAtendimento
                 //Integração                    
@@ -1708,7 +1754,7 @@ class Discador{
                 }) 
                 resolve(info) 
             })
-        })
+        })*/
     }
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------------------*/

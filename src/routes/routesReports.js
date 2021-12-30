@@ -1,23 +1,44 @@
 import ReportController from '../controllers/ReportController';
 
 module.exports = (routes) => {
+    //FILTROS
+
+
+    
     //RELATORIOS
+    //Pausas
+    //Login x logout
+    routes.post('/loginXLogout',ReportController.loginXLogout)
+    //Chamadas
+    //Monitoramento de Agentes
+    //Monitoramento de Campanhas
+
+
+
+
+
+
+
+
+
+
+
     //Relatório de Pausas
     routes.post('/relatorioPausas',ReportController.relatorioPausas)
     //Detalhamento de Chamadas
     routes.post('/detalhamentoChamadas',ReportController.detalhamentoChamadas)
     //Monitoramento de Agentes
     routes.post('/monitoramentoAgente',ReportController.monitoramentoAgente)
-     //Assertividade Mailing
-     routes.post('/detalhamentoTabulacoes',ReportController.detalhamentoTabulacoes)
+    //Assertividade Mailing
+    routes.post('/detalhamentoTabulacoes',ReportController.detalhamentoTabulacoes)
     //Monitoramento de Campanhas
     routes.get('/monitoramentoCampanha/:idCampanha',ReportController.monitoramentoCampanhas)
    
 
     //Atualiza Agressividade
     routes.patch('/atualizaAgressividade/:idCampanha',ReportController.atualizaAgressividade)
-    //LoginXLogout
-    routes.post('/loginXLogout',ReportController.loginXLogout)
+    
+    
     //FILTROS
     //Lista de Agentes
     routes.get('/filtroAgentes/', ReportController.filtroAgentes)

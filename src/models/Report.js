@@ -17,6 +17,45 @@ class Report{
             })
         })
     }    
+
+    //FILTROS
+    async filtrarAgentes(empresa,dataInicio,dataFinal,ramal,estado,equipe,logados,status){
+        //Filtrando data de entrada/saida do agente
+        let filter=''
+        if(dataInicio!=false){filter+=` AND u.criacao>='${dataInicio} 00:00:00'`;}
+        if(dataFinal!=false){filter+=` AND u.criacao<='${dataFinal} 23:59:59'`;}
+        if(status!=false){filter+=` AND u.status=${status}`;}
+        if(estado!=false){filter+=` AND r.estado=${estado}`;}
+        if(ramal!=false){filter+=` AND u.id=${ramal}`;}
+        if(equipe!=false){filter+=` AND u.equipe=${equipe}`;}
+        if(logados!=false){filter+=` AND u.logado=${logados}`;}
+        
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+
+                const sql = `SELECT u.id, u.nome 
+                               FROM ${empresa}_dados.users AS u
+                               JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
+                              WHERE 1=1 ${filter}`
+                              console.log('sql',sql)
+                const users = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.error('Reports ...', err)
+                    resolve(users)
+                })                
+            })
+        }) 
+    }
+
+
+
+
+
+
+
+
     async diaAtual(){
         const dia = moment().format("DD")
         const m =  moment().format("M")-1
@@ -90,42 +129,7 @@ class Report{
     /*---------------------------------------------------------------------------------------------------------------------------------------------------*/  
 
     //Funcoes auxiliares 
-   //FILTROS
-    async filtrarAgentes(empresa,dataInicio,dataFinal,status,estado,ramal,equipe,login,pagina,registros){
-        
-        let filter=""       
-        let reg=registros
-        let pag=(pagina-1)*reg
-       //Filtrando data de entrada/saida do agente
-        if((dataInicio!=false)||(dataInicio!="")){filter+=` AND u.criacao>='${dataInicio} 00:00:00'`;}
-        if((dataFinal!=false)||(dataFinal!="")){filter+=` AND u.criacao<='${dataFinal} 23:59:59'`;}
-
-        if((status===1)||(status===0)){filter+=` AND u.status=${status}`;}
-        if((estado!=false)||(estado!="")){filter+=` AND r.estado=${estado}`;}
-        if((ramal!=false)||(ramal!="")){filter+=` AND u.id=${ramal}`;}
-        if((equipe!=false)||(equipe!="")){filter+=` AND u.equipe=${equipe}`;}
-        if((login===1)||(login===0)){filter+=` AND u.logado=${login}`;}
-
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{   
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-
-                const sql = `SELECT u.id, u.nome 
-                            FROM ${empresa}_dados.users AS u
-                            JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
-                            WHERE 1=1 ${filter}
-                            LIMIT ${pag},${reg}`
-                                
-                const users = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    
-                    if(err) console.error('Reports ...', err)
-                })
-                resolve(users)
-            })
-        }) 
-    }
+  
 
     async filtroEquipes(empresa){
         return new Promise (async (resolve,reject)=>{ 
@@ -233,30 +237,45 @@ class Report{
         })      
     }
 
-    async dadosLogin(empresa,idAgente,de,ate,acao,idLogin){
+    async dadosLogin(empresa,idAgente,de,ate,acao,idLogin,estado,equipe,logados,status,registros,pagina){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 let sql
+                let filter=''
+                if(idAgente!=false){filter+=` AND l.user_id=${idAgente}`;}
+                if(status!=false){filter+=` AND u.status=${status}`;}
+                if(estado!=false){filter+=` AND r.estado=${estado}`;}                
+                if(equipe!=false){filter+=` AND u.equipe=${equipe}`;}
+                if(logados!=false){filter+=` AND u.logado=${logados}`;}
+                let reg=registros
+                let pag=(pagina-1)*reg
                 if(acao=="login"){
-                    sql = `SELECT id,DATE_FORMAT(data,'%Y-%m-%d') as data, hora
-                            FROM ${empresa}_dados.registro_logins 
-                            WHERE user_id=${idAgente} AND acao='login' AND id>${idLogin} AND data>='${de}' AND data<='${ate}'
-                        ORDER BY id DESC`
+                    sql = `SELECT u.id as idAgente, u.nome,l.id,DATE_FORMAT(l.data,'%Y-%m-%d') as data, l.hora
+                             FROM ${empresa}_dados.registro_logins AS l
+                             JOIN ${empresa}_dados.users AS u ON u.id=l.user_id
+                             JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
+                            WHERE l.acao='login' AND l.id>${idLogin} AND l.data>='${de}' AND l.data<='${ate}' 
+                            ${filter}
+                         ORDER BY l.id DESC                        
+                            LIMIT ${pag},${reg}`
                 }else{
-                    sql = `SELECT id,DATE_FORMAT(data,'%Y-%m-%d') as data, hora
-                            FROM ${empresa}_dados.registro_logins 
-                            WHERE user_id=${idAgente} AND acao='${acao}' AND id>${idLogin} AND data>='${de}' AND data<='${ate}'
-                        ORDER BY id ASC 
-                                LIMIT 1`
+                    sql = `SELECT u.id as idAgente, u.nome,l.id,DATE_FORMAT(l.data,'%Y-%m-%d') as data, l.hora
+                             FROM ${empresa}_dados.registro_logins AS l
+                             JOIN ${empresa}_dados.users AS u ON u.id=l.user_id
+                             JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
+                            WHERE l.acao='${acao}' AND l.id>${idLogin} AND l.data>='${de}' AND l.data<='${ate}'
+                            ${filter}
+                         ORDER BY id ASC 
+                            LIMIT 1`
                 }
+                console.log(sql)
                 const rows = await this.querySync(conn,sql)
                 pool.end((err)=>{
-                    
                     if(err) console.error('Reports ...', err)
-                })
-                resolve(rows)
+                    resolve(rows)
+                })                
             })
         })      
     }

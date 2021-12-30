@@ -11,6 +11,181 @@ import Tabulacoes from '../models/Tabulacoes'
 import Redis from '../Config/Redis'
 
 class ReportController{  
+    //FILTROS
+
+
+    
+    //RELATORIOS
+    //Pausas
+    //Login x logout
+    async loginXLogout(req,res){
+        const empresa = await User.getEmpresa(req)
+        const params = req.body
+        const hoje = moment().format("YYYY-MM-DD")
+        //Parametros de Filtragem
+        let de = hoje
+        let ate=hoje
+        if((params.dataInicio)||(params.dataFinal!='')) de  = params.dataInicio
+        if((params.dataFinal)||(params.dataFinal!='')) ate = params.dataFinal        
+        let ramal = false 
+        let estado = false 
+        let equipe = false
+        let logados = false
+        let pagina = 1
+        let status = false
+        let registros = 20
+        if(params.ramal)         ramal     = params.ramal
+        if(params.estado)        estado    = params.estado
+        if(params.equipe)        equipe    = params.equipe
+        if(params.logados)       logados   = params.logados
+        if(params.pagina)        pagina    = params.pagina
+        if(params.status)        status    = params.status
+        if(params.registros) registros = params.registros
+
+        const login = await Report.dadosLogin(empresa,ramal,de,ate,'login',0,estado,equipe,logados,status,registros,pagina) 
+         
+        const loginLogout = []
+        for(let i = 0; i <login.length; i++){
+            const idAgente=login[i].idAgente
+            console.log('idAgente',idAgente)
+              let dataLogin = `${login[i].data} ${login[i].hora}`
+            const llAgente = {}
+                  llAgente["ramal"]=idAgente
+                  llAgente["agente"]=login[i].nome
+                  llAgente["Login"]=moment(dataLogin, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
+            const logout = await Report.dadosLogin(empresa,idAgente,de,ate,'logout',login[i].id,estado,equipe,logados,status,registros,pagina)
+            let dataLogout = moment().format("YYYY-MM-DD HH:mm:ss")  
+            if(logout.length>0){  
+               
+                dataLogout = `${logout[0].data} ${logout[0].hora}`  
+                console.log('agente',idAgente, 'deslogou as',dataLogout)
+                llAgente["Logout"]=moment(dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
+            }else{
+                console.log('agente',idAgente, 'LOGADO',dataLogin,dataLogout)
+                llAgente["Logout"]="Logado"
+            }
+            const tl = moment(dataLogout,"YYYY-MM-DD HH:mm:ss").diff(moment(dataLogin,"YYYY-MM-DD HH:mm:ss"))
+            const tempoLogado = moment.duration(tl).asSeconds()
+            console.log ('tempo Logado',tempoLogado)
+                 llAgente["Tempo Logado"]=await Report.converteSeg_tempo(tempoLogado)
+            const tempoChamadasRecebidas = await Report.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
+                 llAgente["Chamadas Recebidas"]=await Report.converteSeg_tempo(tempoChamadasRecebidas)
+            const tempoChamadasRealizadas = await Report.totalChamadasRealizadas(empresa,idAgente,dataLogin,dataLogout)                      
+                 llAgente["Chamadas Realizadas"]=await Report.converteSeg_tempo(tempoChamadasRealizadas)
+            const tempoChamadasManuais = await Report.totalChamadasManuais(empresa,idAgente,dataLogin,dataLogout)                      
+                 llAgente["Chamadas Manuais"]=await Report.converteSeg_tempo(tempoChamadasManuais)      
+            const tempoEmChamadas=tempoChamadasRecebidas+tempoChamadasRealizadas+tempoChamadasManuais
+                 llAgente["Tempo em Chamada"]=await Report.converteSeg_tempo(tempoEmChamadas)
+            const perc_servico = Math.floor((tempoEmChamadas/tempoLogado)*100)
+                  llAgente["% de Serviço"]=`${perc_servico}%`
+                  llAgente["Status"]=await Report.infoEstadoAgente(empresa,idAgente)
+            loginLogout.push(llAgente)
+        }
+        res.json(loginLogout)
+    }
+
+    //Chamadas
+    //Gerenciamento
+    async detalhamentoTabulacoes(req,res){
+        const empresa = await User.getEmpresa(req)
+        //Filtros
+        let dataInicio  = req.body.dataInicio
+        let dataFinal  = req.body.dataFinal
+        let ramal = req.body.ramal
+        let equipe = req.body.equipe
+        let campanha = req.body.campanha
+        let mailing = req.body.mailing
+        let numero = req.body.numero 
+        let tipo = req.body.tipo         
+        let contatados = req.body.contatados
+        let produtivo = req.body.produtivo
+        let tabulacao = req.body.tabulacao
+        let pagina    = 1
+        let registros = 20
+
+        if(req.body.dataInicio)    dataInicio = req.body.dataInicio
+        if(req.body.dataFinal)     dataFinal  = req.body.dataFinal
+        if(req.body.ramal)         ramal      = req.body.ramal
+        if(req.body.equipe)        equipe     = req.body.equipe
+        if(req.body.campanha)      campanha   = req.body.campanha
+        if(req.body.mailing)       mailing    = req.body.mailing
+        if(req.body.numero)        numero     = req.body.numero 
+        if(req.body.tipo)          tipo       = req.body.tipo         
+        if(req.body.contatados)    contatados = req.body.contatados
+        if(req.body.produtivo)     produtivo  = req.body.produtivo
+        if(req.body.tabulacao)     tabulacao  = req.body.tabulacao
+        if(req.body.pagina)        pagina     = req.body.pagina
+        if(req.body.totalRegistro) registros  = req.body.totalRegistro
+        
+        const hoje = moment().format("YYYY-MM-DD")
+        const detalhamentoTabulacoes=[]
+        const sinteticos = {}
+              sinteticos['tabulacoes']= {}
+
+        const sinteticosTabulacoes = await Report.sinteticosTabulacoes(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
+        for(let i = 0;i<sinteticosTabulacoes.length; i++) {
+                const status = await Tabulacoes.nomeStatus(empresa,sinteticosTabulacoes[i].status_tabulacao) 
+                  sinteticos['tabulacoes'][status]=sinteticosTabulacoes[i].total        
+        }
+        detalhamentoTabulacoes.push(sinteticos)
+        const chamadas = await Report.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
+        for(let i = 0;i<chamadas.length; i++) {
+            const call={}
+                  call['ramal']=chamadas[i].agente
+                  call['agente']=chamadas[i].nome
+                  call['data']=chamadas[i].dataCall
+                  call['hora']=chamadas[i].hora
+                  call['campanha']=await Campanhas.nomeCampanhas(empresa,chamadas[i].campanha)
+                  call['cliente']=chamadas[i].nome_registro
+                  call['numero']=chamadas[i].numero_discado
+                  if(chamadas[i].contatado=='S'){
+                    call['contatado']='Sim'
+                  }else{
+                    call['contatado']='Não'
+                  }
+                  if(chamadas[i].produtivo==1){
+                    call['produtivo']='Sim'
+                  }else{
+                    call['produtivo']='Não'
+                  }       
+                  if(chamadas[i].status_tabulacao==0){
+                    call['tabulacao']=chamadas[i].obs_tabulacao
+                    call['observacoes']="Tabulação automática"
+                  }else{
+                    call['tabulacao']=await Tabulacoes.nomeStatus(empresa,chamadas[i].status_tabulacao) 
+                    call['observacoes']=chamadas[i].obs_tabulacao
+                  }                 
+            detalhamentoTabulacoes.push(call)
+        }
+        res.json(detalhamentoTabulacoes)
+    }
+
+    //Monitoramento de Agentes
+    //Monitoramento de Campanhas
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     async relatorioPausas(req,res){
         const empresa = await User.getEmpresa(req)
         let dataInicio  = req.body.dataInicio
@@ -68,75 +243,7 @@ class ReportController{
         return res.json(relatorioPausas)
     }
 
-    async loginXLogout(req,res){
-        const empresa = await User.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
-        const ramal = req.body.ramal
-        const estado = req.body.estado
-        const equipe = req.body.equipe
-        const logados = req.body.logados
-        const pagina = req.body.pagina
-        let registros = 20
-        if(req.body.totalRegistro==false){
-           registros = req.body.totalRegistro
-        }
-
-        
-        
-        const status = req.body.status
-        const hoje = moment().format("Y-MM-DD")
-        const loginLogout = []
-        const agentes = await Report.filtrarAgentes(empresa,0,0,status,estado,ramal,equipe,logados,pagina,registros)
-        let de = hoje
-        let ate = hoje
-        if((dataInicio!=false)||(dataInicio!="")){de=dataInicio;}
-        if((dataFinal!=false)||(dataFinal!="")){ate=dataFinal;}
-        for(let i = 0; i <agentes.length; i++){
-            const idAgente=agentes[i].id
-            const login = await Report.dadosLogin(empresa,idAgente,de,ate,'login',0)
-          
-            for(let l=0; l<login.length;l++) {
-                const llAgente = {}
-                      llAgente["ramal"]=idAgente
-                      llAgente["agente"]=agentes[i].nome
-                let dataLogin = `${login[l].data} ${login[l].hora}`
-                      llAgente["Login"]=moment(dataLogin, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
-
-                const logout = await Report.dadosLogin(empresa,idAgente,de,ate,'logout',login[l].id)
-                let dataLogout = moment().format("YYYY-MM-DD HH:mm:ss")
-                if(logout.length>0){
-                    dataLogout = `${logout[0].data} ${logout[0].hora}`
-                      llAgente["Logout"]=moment(dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
-                }else{
-                      llAgente["Logout"]="Logado"
-                }
-                
-                const tl = moment(dataLogout,"YYYY-MM-DD HH:mm:ss").diff(moment(dataLogin,"YYYY-MM-DD HH:mm:ss"))
-                const tempoLogado = moment.duration(tl).asSeconds()
-                      llAgente["Tempo Logado"]=await Report.converteSeg_tempo(tempoLogado)
-
-                const tempoChamadasRecebidas = await Report.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
-                      llAgente["Chamadas Recebidas"]=await Report.converteSeg_tempo(tempoChamadasRecebidas)
-
-                const tempoChamadasRealizadas = await Report.totalChamadasRealizadas(empresa,idAgente,dataLogin,dataLogout)                      
-                      llAgente["Chamadas Realizadas"]=await Report.converteSeg_tempo(tempoChamadasRealizadas)
-                
-                const tempoChamadasManuais = await Report.totalChamadasManuais(empresa,idAgente,dataLogin,dataLogout)                      
-                      llAgente["Chamadas Manuais"]=await Report.converteSeg_tempo(tempoChamadasManuais)      
-                      
-                const tempoEmChamadas=tempoChamadasRecebidas+tempoChamadasRealizadas+tempoChamadasManuais
-                      llAgente["Tempo em Chamada"]=await Report.converteSeg_tempo(tempoEmChamadas)
-
-                const perc_servico = Math.floor((tempoEmChamadas/tempoLogado)*100)
-                      llAgente["% de Serviço"]=`${perc_servico}%`
-                
-                      llAgente["Status"]=await Report.infoEstadoAgente(empresa,idAgente)
-                loginLogout.push(llAgente)
-            }
-        }
-        res.json(loginLogout)
-    }
+   
 
     async monitoramentoAgente(req,res){
         const empresa = await User.getEmpresa(req)
@@ -239,72 +346,7 @@ class ReportController{
     }
 
 
-    async detalhamentoTabulacoes(req,res){
-        const empresa = await User.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
-        const ramal = req.body.ramal
-        const equipe = req.body.ramal
-        const campanha = req.body.campanha
-        const mailing = req.body.mailing
-        const numero = req.body.numero 
-        const tipo = req.body.tipo         
-        const contatados = req.body.contatados
-        const produtivo = req.body.produtivo
-        const tabulacao = req.body.tabulacao
-        const pagina = req.body.pagina
-        let registros = 20
-        if(req.body.totalRegistro==false){
-           registros = req.body.totalRegistro
-        }
-        const hoje = moment().format("Y-MM-DD")
-        const detalhamentoTabulacoes=[]
-        const sinteticos = {}
-        sinteticos['tabulacoes']= {}
-
-        const sinteticosTabulacoes = await Report.sinteticosTabulacoes(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
-        for(let i = 0;i<sinteticosTabulacoes.length; i++) {
-                const status = await Tabulacoes.nomeStatus(empresa,sinteticosTabulacoes[i].status_tabulacao) 
-                  sinteticos['tabulacoes'][status]=sinteticosTabulacoes[i].total
-           
-        
-        }
-
-        detalhamentoTabulacoes.push(sinteticos)
-        
-        
-        
-        const chamadas = await Report.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
-        for(let i = 0;i<chamadas.length; i++) {
-            const call={}
-                  call['ramal']=chamadas[i].agente
-                  call['agente']=chamadas[i].nome
-                  call['data']=chamadas[i].dataCall
-                  call['hora']=chamadas[i].hora
-                  call['campanha']=await Campanhas.nomeCampanhas(empresa,chamadas[i].campanha)
-                  call['cliente']=chamadas[i].nome_registro
-                  call['numero']=chamadas[i].numero_discado
-                  if(chamadas[i].contatado=='S'){
-                    call['contatado']='Sim'
-                  }else{
-                    call['contatado']='Não'
-                  }
-                  if(chamadas[i].produtivo==1){
-                    call['produtivo']='Sim'
-                  }else{
-                    call['produtivo']='Não'
-                  }       
-                  if(chamadas[i].status_tabulacao==0){
-                    call['tabulacao']=chamadas[i].obs_tabulacao
-                    call['observacoes']="Tabulação automática"
-                  }else{
-                    call['tabulacao']=await Tabulacoes.nomeStatus(empresa,chamadas[i].status_tabulacao) 
-                    call['observacoes']=chamadas[i].obs_tabulacao
-                  }                 
-            detalhamentoTabulacoes.push(call)
-        }
-        res.json(detalhamentoTabulacoes)
-    }
+    
 
 
 
@@ -601,7 +643,26 @@ class ReportController{
 
     async filtroAgentes(req,res){
         const empresa = await User.getEmpresa(req)
-        const agentes = await Report.filtrarAgentes(empresa,0,0,1,false,0,0,false,1,30)
+        const params = req.body
+        const hoje = moment().format("YYYY-MM-DD")
+        let dataInicio = false
+        let dataFinal  = false
+        let ramal = false 
+        let estado = false 
+        let equipe = false
+        let logados = false
+        let pagina = 1
+        let status = false
+        let registros = 20
+        if(params.ramal)         ramal     = params.ramal
+        if(params.estado)        estado    = params.estado
+        if(params.equipe)        equipe    = params.equipe
+        if(params.logados)       logados   = params.logados
+        if(params.pagina)        pagina    = params.pagina
+        if(params.status)        status    = params.status
+        if(params.totalRegistro) registros = params.totalRegistro
+
+        const agentes = await Report.filtrarAgentes(empresa,dataInicio,dataFinal,ramal,estado,equipe,logados,status)
         res.json(agentes)
     }
     
