@@ -12,11 +12,67 @@ import Redis from '../Config/Redis'
 
 class ReportController{  
     //FILTROS
-
-
     
     //RELATORIOS
     //Pausas
+    async relatorioPausas(req,res){
+        const empresa = await User.getEmpresa(req)
+        const params = req.body
+        const hoje = moment().format('YYYY-MM-DD')
+        //Argumento dos Filtros
+        let dataInicio = hoje //Data no Formato YYYY-MM-DD, filtra os registros a partir esta data, vazio exibe registros a partir de hoje
+        let dataFinal = hoje //Data no Formato YYYY-MM-DD, filtra os registros ate esta data, vazio exibe registros ate a data de hoje
+        let ramal=false    //Cod do Ramal do agente a ser filtrado, vazio lista todos
+        let equipe=false   //Cod do Equipe de agentes a ser filtrada, vazio lista todas
+        let logados=false  //1 ou 0 - 1 = Agentes Logados, 2 = Deslogados, vazio lista todos
+        let status=false   //1 ou 0 - 1 = Agentes Ativos, 2 = Inativos, vazio lista todos
+        let pagina = 1 //Numero da página a ser exibida, vazio exibe a 1ª pagina
+        let registros=20 // Qtd de registros a serem exibidos por pagina, vazio limita a 20 registros        
+        //Verificando parametros recebidos
+        if(params.dataInicio) dataInicio = params.dataInicio
+        if(params.dataFinal) dataFinal = params.dataInicio
+        if(params.ramal) ramal = params.ramal
+        if(params.equipe) equipe = params.equipe
+        if(params.logados) logados = params.logados
+        if(params.pagina) pagina = params.pagina
+        if(params.registros) registros = params.registros
+        
+        const relatorioPausas = []
+
+        //Linha do tempo das pausas consolidado
+        const linhaResumo = {}
+        const tempoPausas = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,false,false) 
+              linhaResumo['Total em pausa']= await Report.converteSeg_tempo(tempoPausas)            
+        const pausas = await Pausas.listarPausas(empresa) // Pausas cadastradas        
+        for(let p=0; p<pausas.length;p++){
+            const idPausa = pausas[p].id
+            const tempoPausa = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,false)
+            linhaResumo[`${pausas[p].nome}`] = await Report.converteSeg_tempo(tempoPausa)
+        }
+        relatorioPausas.push(linhaResumo)
+
+        //Linhas de Pausas dos agentes
+        const agentes = await Report.filtrarAgentes(empresa,false,false,ramal,false,equipe,logados,status)
+        for(let i=0; i<agentes.length; i++){
+            const linhaAgente = {}
+            const idAgente = agentes[i].id
+                  linhaAgente['Ramal']=idAgente
+                  linhaAgente['Agente']=agentes[i].nome
+            const pausas = await Pausas.listarPausas(empresa)   //Listar pausas     
+            for(let p=0; p<pausas.length;p++){
+                const idPausa = pausas[p].id 
+                const tempoPausaAgente = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,idAgente) 
+                   linhaAgente[`${pausas[p].nome}`] = await Report.converteSeg_tempo(tempoPausaAgente)
+            }
+            const totalPausasAgente = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,false,idAgente)                    
+                   linhaAgente['Total']=await Report.converteSeg_tempo(totalPausasAgente)
+            if(linhaAgente['Total']!='00:00:00'){
+                relatorioPausas.push(linhaAgente)
+            }
+        }
+        return res.json(relatorioPausas)
+    }
+
     //Login x logout
     async loginXLogout(req,res){
         const empresa = await User.getEmpresa(req)
@@ -41,13 +97,10 @@ class ReportController{
         if(params.pagina)        pagina    = params.pagina
         if(params.status)        status    = params.status
         if(params.registros) registros = params.registros
-
         const login = await Report.dadosLogin(empresa,ramal,de,ate,'login',0,estado,equipe,logados,status,registros,pagina) 
-         
         const loginLogout = []
         for(let i = 0; i <login.length; i++){
-            const idAgente=login[i].idAgente
-            console.log('idAgente',idAgente)
+            const idAgente=login[i].idAgente           
               let dataLogin = `${login[i].data} ${login[i].hora}`
             const llAgente = {}
                   llAgente["ramal"]=idAgente
@@ -55,18 +108,14 @@ class ReportController{
                   llAgente["Login"]=moment(dataLogin, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
             const logout = await Report.dadosLogin(empresa,idAgente,de,ate,'logout',login[i].id,estado,equipe,logados,status,registros,pagina)
             let dataLogout = moment().format("YYYY-MM-DD HH:mm:ss")  
-            if(logout.length>0){  
-               
+            if(logout.length>0){                 
                 dataLogout = `${logout[0].data} ${logout[0].hora}`  
-                console.log('agente',idAgente, 'deslogou as',dataLogout)
                 llAgente["Logout"]=moment(dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")
-            }else{
-                console.log('agente',idAgente, 'LOGADO',dataLogin,dataLogout)
+            }else{               
                 llAgente["Logout"]="Logado"
             }
             const tl = moment(dataLogout,"YYYY-MM-DD HH:mm:ss").diff(moment(dataLogin,"YYYY-MM-DD HH:mm:ss"))
             const tempoLogado = moment.duration(tl).asSeconds()
-            console.log ('tempo Logado',tempoLogado)
                  llAgente["Tempo Logado"]=await Report.converteSeg_tempo(tempoLogado)
             const tempoChamadasRecebidas = await Report.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
                  llAgente["Chamadas Recebidas"]=await Report.converteSeg_tempo(tempoChamadasRecebidas)
@@ -84,60 +133,200 @@ class ReportController{
         res.json(loginLogout)
     }
 
-    //Chamadas
     //Gerenciamento
     async detalhamentoTabulacoes(req,res){
         const empresa = await User.getEmpresa(req)
+        const params = req.body
+        const hoje = moment().format("YYYY-MM-DD")
         //Filtros
-        let dataInicio  = req.body.dataInicio
-        let dataFinal  = req.body.dataFinal
-        let ramal = req.body.ramal
-        let equipe = req.body.equipe
-        let campanha = req.body.campanha
-        let mailing = req.body.mailing
-        let numero = req.body.numero 
-        let tipo = req.body.tipo         
-        let contatados = req.body.contatados
-        let produtivo = req.body.produtivo
-        let tabulacao = req.body.tabulacao
+        let dataInicio  = hoje
+        let dataFinal  = hoje
+        let ramal = false
+        let equipe = false
+        let campanha = false
+        let mailing = false
+        let numero = false
+        let tipo = false        
+        let contatados = false
+        let produtivo = false
+        let tabulacao = false
         let pagina    = 1
         let registros = 20
-
-        if(req.body.dataInicio)    dataInicio = req.body.dataInicio
-        if(req.body.dataFinal)     dataFinal  = req.body.dataFinal
-        if(req.body.ramal)         ramal      = req.body.ramal
-        if(req.body.equipe)        equipe     = req.body.equipe
-        if(req.body.campanha)      campanha   = req.body.campanha
-        if(req.body.mailing)       mailing    = req.body.mailing
-        if(req.body.numero)        numero     = req.body.numero 
-        if(req.body.tipo)          tipo       = req.body.tipo         
-        if(req.body.contatados)    contatados = req.body.contatados
-        if(req.body.produtivo)     produtivo  = req.body.produtivo
-        if(req.body.tabulacao)     tabulacao  = req.body.tabulacao
-        if(req.body.pagina)        pagina     = req.body.pagina
-        if(req.body.totalRegistro) registros  = req.body.totalRegistro
-        
-        const hoje = moment().format("YYYY-MM-DD")
+        if(params.dataInicio) dataInicio = params.dataInicio
+        if(params.dataFinal)  dataFinal  = params.dataFinal
+        if(params.ramal)      ramal      = params.ramal
+        if(params.equipe)     equipe     = params.equipe
+        if(params.campanha)   campanha   = params.campanha
+        if(params.mailing)    mailing    = params.mailing
+        if(params.numero)     numero     = params.numero 
+        if(params.tipo)       tipo       = params.tipo         
+        if(params.contatados) contatados = params.contatados
+        if(params.produtivo)  produtivo  = params.produtivo
+        if(params.tabulacao)  tabulacao  = params.tabulacao
+        if(params.pagina)     pagina     = params.pagina
+        if(params.registros)  registros  = params.registros
+                
         const detalhamentoTabulacoes=[]
+        //Informações Consolidadas
         const sinteticos = {}
               sinteticos['tabulacoes']= {}
 
-        const sinteticosTabulacoes = await Report.sinteticosTabulacoes(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
+        const sinteticosTabulacoes = await Report.sinteticosTabulacoes(empresa,dataInicio,dataFinal,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
         for(let i = 0;i<sinteticosTabulacoes.length; i++) {
                 const status = await Tabulacoes.nomeStatus(empresa,sinteticosTabulacoes[i].status_tabulacao) 
                   sinteticos['tabulacoes'][status]=sinteticosTabulacoes[i].total        
         }
         detalhamentoTabulacoes.push(sinteticos)
+        //Registros do Historico
+        const historico = await Report.historicoChamadas(empresa,dataInicio,dataFinal,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
+        for(let i = 0;i<historico.length; i++) {
+            const call={}
+                  call['ramal']=historico[i].agente
+                  call['agente']=historico[i].nome
+                  call['data']=historico[i].dataCall
+                  call['hora']=historico[i].hora
+                  call['campanha']=await Campanhas.nomeCampanhas(empresa,historico[i].campanha)
+                  call['cliente']=historico[i].nome_registro
+                  call['numero']=historico[i].numero_discado
+                  if(historico[i].contatado=='S'){
+                    call['contatado']='Sim'
+                  }else{
+                    call['contatado']='Não'
+                  }
+                  if(historico[i].produtivo==1){
+                    call['produtivo']='Sim'
+                  }else{
+                    call['produtivo']='Não'
+                  }       
+                  if(historico[i].status_tabulacao==0){
+                    call['tabulacao']=historico[i].obs_tabulacao
+                    call['observacoes']="Tabulação automática"
+                  }else{
+                    call['tabulacao']=await Tabulacoes.nomeStatus(empresa,historico[i].status_tabulacao) 
+                    call['observacoes']=historico[i].obs_tabulacao
+                  }                 
+            detalhamentoTabulacoes.push(call)
+        }
+        res.json(detalhamentoTabulacoes)
+    }
+
+    //Chamadas
+    async detalhamentoChamadas(req,res){
+        const empresa = await User.getEmpresa(req)
+        const params = req.body
+        const hoje = moment().format("YYYY-MM-DD")
+        let dataInicio  = hoje
+        let dataFinal  = hoje
+        let ramal = false
+        let equipe = false
+        let campanha = false
+        let mailing = false
+        let numero = false
+        let tipo = false        
+        let contatados = false
+        let produtivo = false
+        let tabulacao = false
+        let pagina    = 1
+        let registros = 20
+        if(params.dataInicio) dataInicio = params.dataInicio
+        if(params.dataFinal)  dataFinal  = params.dataFinal
+        if(params.ramal)      ramal      = params.ramal
+        if(params.equipe)     equipe     = params.equipe
+        if(params.campanha)   campanha   = params.campanha
+        if(params.mailing)    mailing    = params.mailing
+        if(params.numero)     numero     = params.numero 
+        if(params.tipo)       tipo       = params.tipo         
+        if(params.contatados) contatados = params.contatados
+        if(params.produtivo)  produtivo  = params.produtivo
+        if(params.tabulacao)  tabulacao  = params.tabulacao
+        if(params.pagina)     pagina     = params.pagina
+        if(params.registros)  registros  = params.registros  
+        
+        const detChamadas=[]
+
+        //DETALHAMENTO DE CHAMADAS DO MONITORAMENTO DE CAMPANHA
+        if((campanha)&&(dataInicio == hoje)){
+            registros = 0 //Qtd Limit de registros
+            const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
+            if((chamadasSimultaneas!=null)&&(chamadasSimultaneas.length>0)){
+               
+                
+                const chamadasSimultaneasCampanha = chamadasSimultaneas.filter(chamada => chamada.id_campanha == campanha)
+                const chamadasEmAtendimento = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_em_atendimento == 1) 
+                const chamadasNaFila = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_na_fila == 1) 
+                const chamadasAguardando = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_chamando == 1) 
+                
+                for(let i = 0;i<chamadasEmAtendimento.length; i++) { 
+                    const callSim={}
+                    callSim['ramal']=chamadasEmAtendimento[i].ramal 
+                    callSim['agente']=''
+                    callSim['data']=hoje
+                    callSim['hora']=chamadasEmAtendimento[i].horario
+                    callSim['duracao']=await Report.converteSeg_tempo(await Report.timeCall(empresa,chamadasEmAtendimento[i].uniqueid))
+                    callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
+                    callSim['tipo']=chamadasEmAtendimento[i].tipo
+                    callSim['telefone']=chamadasEmAtendimento[i].numero
+                    callSim['contatado']=""
+                    callSim['produtivo']=""
+                    callSim['tabulacao']=""                 
+                    callSim['status']=chamadasEmAtendimento[i].status
+                    callSim['gravacao']="/"
+                    detChamadas.push(callSim)      
+                }
+
+                for(let i = 0;i<chamadasNaFila.length; i++) {  
+                    const callSim={}
+                        callSim['ramal']=chamadasNaFila[i].ramal 
+                        callSim['agente']=''
+                        callSim['data']=hoje
+                        callSim['hora']=chamadasNaFila[i].horario
+                        callSim['duracao']='00:00:00'
+                        callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
+                        callSim['tipo']=chamadasNaFila[i].tipo
+                        callSim['telefone']=chamadasNaFila[i].numero
+                        callSim['contatado']=""
+                        callSim['produtivo']=""
+                        callSim['tabulacao']=""                 
+                        callSim['status']=chamadasNaFila[i].status
+                        callSim['gravacao']="/"
+                        detChamadas.push(callSim)      
+                }     
+                
+
+                for(let i = 0;i<chamadasAguardando.length; i++) {  
+                    const callSim={}
+                        callSim['ramal']=chamadasAguardando[i].ramal 
+                        callSim['agente']=''
+                        callSim['data']=hoje
+                        callSim['hora']=chamadasAguardando[i].horario
+                        callSim['duracao']='00:00:00'
+                        callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
+                        callSim['tipo']=chamadasAguardando[i].tipo
+                        callSim['telefone']=chamadasAguardando[i].numero
+                        callSim['contatado']=""
+                        callSim['produtivo']=""
+                        callSim['tabulacao']=""                 
+                        callSim['status']=chamadasAguardando[i].status
+                        callSim['gravacao']="/"
+                        detChamadas.push(callSim)                     
+                }
+            }
+        }
+
+
+      
         const chamadas = await Report.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
+
         for(let i = 0;i<chamadas.length; i++) {
             const call={}
                   call['ramal']=chamadas[i].agente
                   call['agente']=chamadas[i].nome
                   call['data']=chamadas[i].dataCall
                   call['hora']=chamadas[i].hora
+                  call['duracao']=await Report.converteSeg_tempo(await Report.timeCall(empresa,chamadas[i].uniqueid))
                   call['campanha']=await Campanhas.nomeCampanhas(empresa,chamadas[i].campanha)
-                  call['cliente']=chamadas[i].nome_registro
-                  call['numero']=chamadas[i].numero_discado
+                  call['tipo']=chamadas[i].tipo
+                  call['telefone']=chamadas[i].numero_discado
                   if(chamadas[i].contatado=='S'){
                     call['contatado']='Sim'
                   }else{
@@ -147,17 +336,24 @@ class ReportController{
                     call['produtivo']='Sim'
                   }else{
                     call['produtivo']='Não'
-                  }       
-                  if(chamadas[i].status_tabulacao==0){
-                    call['tabulacao']=chamadas[i].obs_tabulacao
-                    call['observacoes']="Tabulação automática"
-                  }else{
-                    call['tabulacao']=await Tabulacoes.nomeStatus(empresa,chamadas[i].status_tabulacao) 
-                    call['observacoes']=chamadas[i].obs_tabulacao
                   }                 
-            detalhamentoTabulacoes.push(call)
+                  call['tabulacao']=await Tabulacoes.nomeStatus(empresa,chamadas[i].status_tabulacao) 
+                  call['status']='Encerrada'
+                  let gravacao = " - "
+                  const linkGrav = await Gravacao.linkByUniqueid(empresa,chamadas[i].uniqueid)
+                  if(linkGrav!=0){ 
+                    const server = await Asterisk.getDomain(empresa)
+                    const pasta = linkGrav[0].date_record
+                    
+                    const arquivo = `${linkGrav[0].callfilename}.wav`
+                    gravacao = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
+                  }
+                  call['gravacao']=gravacao
+
+            detChamadas.push(call)
         }
-        res.json(detalhamentoTabulacoes)
+        //console.log('\n','detChamadas',detChamadas)
+        res.json(detChamadas)
     }
 
     //Monitoramento de Agentes
@@ -186,62 +382,7 @@ class ReportController{
 
 
 
-    async relatorioPausas(req,res){
-        const empresa = await User.getEmpresa(req)
-        let dataInicio  = req.body.dataInicio
-        let dataFinal  = req.body.dataFinal
-        const ramal = req.body.ramal
-        const equipe = req.body.equipe
-        const logados = req.body.logados
-        const pagina = req.body.pagina
-        let registros = 20
-        if(req.body.totalRegistro==false){
-           registros = req.body.totalRegistro
-        }
-        const status = req.body.status
-       
-        if((dataInicio==false)||(dataInicio=="")){ dataInicio=moment().format("Y-MM-DD")}
-        if((dataFinal==false)||(dataFinal=="")){ dataFinal=moment().format("Y-MM-DD");}
-
-        const relatorioPausas = []  
-        
-        //Resumo Linha
-        const linhaResumo = {}
-
-        const totalPausas = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,false,false)
-              linhaResumo['Total em pausa']= await Report.converteSeg_tempo(totalPausas)
-
-        const pausas = await Pausas.listarPausas(empresa)
-        for(let p=0; p<pausas.length;p++){
-            const idPausa = pausas[p].id                     
-            const tempoPausa = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,false)
-              linhaResumo[`${pausas[p].nome}`] = await Report.converteSeg_tempo(tempoPausa)
-        }
-   
-        relatorioPausas.push(linhaResumo)
-
-        const agentesAtivos = await Report.filtrarAgentes(empresa,0,0,status,false,ramal,equipe,logados,pagina,registros)
-        for(let i=0; i<agentesAtivos.length; i++){
-            const agente = {}
-            const idAgente = agentesAtivos[i].id
-                  agente['Ramal']=idAgente
-                  agente['Agente']=agentesAtivos[i].nome
-                  //Listar pausas 
-                  const pausas = await Pausas.listarPausas(empresa)
-                  for(let p=0; p<pausas.length;p++){
-                      const idPausa = pausas[p].id            
-                      const tempoPausa = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,idAgente)
-                      agente[`${pausas[p].nome}`] = await Report.converteSeg_tempo(tempoPausa)
-                  }
-            const totalPausasAgente = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,false,idAgente)
-                  agente['Total']=await Report.converteSeg_tempo(totalPausasAgente)
-            if(agente['Total']!='00:00:00'){
-              relatorioPausas.push(agente)
-            }
-        }
-       
-        return res.json(relatorioPausas)
-    }
+    
 
    
 
@@ -351,137 +492,7 @@ class ReportController{
 
 
 
-    async detalhamentoChamadas(req,res){
-        const empresa = await User.getEmpresa(req)
-        const dataInicio  = req.body.dataInicio
-        const dataFinal  = req.body.dataFinal
-        const ramal = req.body.ramal
-        const equipe = req.body.ramal
-        const campanha = req.body.campanha
-        const mailing = req.body.mailing
-        const numero = req.body.numero 
-        const tipo = req.body.tipo         
-        const contatados = req.body.contatados
-        const produtivo = req.body.produtivo
-        const tabulacao = req.body.tabulacao
-        const pagina = req.body.pagina
-        let registros = 20
-        if(req.body.totalRegistro==false){
-           registros = req.body.totalRegistro
-        }
-        const hoje = moment().format("Y-MM-DD")
-        const detChamadas=[]
-
-        //console.log('\n','campanha',campanha)
-        if(campanha){
-            registros = 0 //Qtd Limit de registros
-            const chamadasSimultaneas = await Redis.getter(`${empresa}:chamadasSimultaneas`)
-            //console.log("chamadasSimultaneas > > > ",chamadasSimultaneas)
-            if((chamadasSimultaneas!=null)&&(chamadasSimultaneas.length>0)){
-               
-                
-                const chamadasSimultaneasCampanha = chamadasSimultaneas.filter(chamada => chamada.id_campanha == campanha)
-                const chamadasEmAtendimento = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_em_atendimento == 1) 
-                const chamadasNaFila = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_na_fila == 1) 
-                const chamadasAguardando = chamadasSimultaneasCampanha.filter(campanhas => campanhas.event_chamando == 1) 
-                
-                for(let i = 0;i<chamadasEmAtendimento.length; i++) { 
-                    const callSim={}
-                    callSim['ramal']=chamadasEmAtendimento[i].ramal 
-                    callSim['agente']=''
-                    callSim['data']=hoje
-                    callSim['hora']=chamadasEmAtendimento[i].horario
-                    callSim['duracao']=await Report.converteSeg_tempo(await Report.timeCall(empresa,chamadasEmAtendimento[i].uniqueid))
-                    callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
-                    callSim['tipo']=chamadasEmAtendimento[i].tipo
-                    callSim['telefone']=chamadasEmAtendimento[i].numero
-                    callSim['contatado']=""
-                    callSim['produtivo']=""
-                    callSim['tabulacao']=""                 
-                    callSim['status']=chamadasEmAtendimento[i].status
-                    callSim['gravacao']="/"
-                    detChamadas.push(callSim)      
-                }
-
-                for(let i = 0;i<chamadasNaFila.length; i++) {  
-                    const callSim={}
-                        callSim['ramal']=chamadasNaFila[i].ramal 
-                        callSim['agente']=''
-                        callSim['data']=hoje
-                        callSim['hora']=chamadasNaFila[i].horario
-                        callSim['duracao']='00:00:00'
-                        callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
-                        callSim['tipo']=chamadasNaFila[i].tipo
-                        callSim['telefone']=chamadasNaFila[i].numero
-                        callSim['contatado']=""
-                        callSim['produtivo']=""
-                        callSim['tabulacao']=""                 
-                        callSim['status']=chamadasNaFila[i].status
-                        callSim['gravacao']="/"
-                        detChamadas.push(callSim)      
-                }     
-                
-
-                for(let i = 0;i<chamadasAguardando.length; i++) {  
-                    const callSim={}
-                        callSim['ramal']=chamadasAguardando[i].ramal 
-                        callSim['agente']=''
-                        callSim['data']=hoje
-                        callSim['hora']=chamadasAguardando[i].horario
-                        callSim['duracao']='00:00:00'
-                        callSim['campanha']=await Campanhas.nomeCampanhas(empresa,campanha)
-                        callSim['tipo']=chamadasAguardando[i].tipo
-                        callSim['telefone']=chamadasAguardando[i].numero
-                        callSim['contatado']=""
-                        callSim['produtivo']=""
-                        callSim['tabulacao']=""                 
-                        callSim['status']=chamadasAguardando[i].status
-                        callSim['gravacao']="/"
-                        detChamadas.push(callSim)                     
-                }
-            }
-        }
-      
-        const chamadas = await Report.chamadasRealizadas(empresa,dataInicio,dataFinal,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
-
-        for(let i = 0;i<chamadas.length; i++) {
-            const call={}
-                  call['ramal']=chamadas[i].agente
-                  call['agente']=chamadas[i].nome
-                  call['data']=chamadas[i].dataCall
-                  call['hora']=chamadas[i].hora
-                  call['duracao']=await Report.converteSeg_tempo(await Report.timeCall(empresa,chamadas[i].uniqueid))
-                  call['campanha']=await Campanhas.nomeCampanhas(empresa,chamadas[i].campanha)
-                  call['tipo']=chamadas[i].tipo
-                  call['telefone']=chamadas[i].numero_discado
-                  if(chamadas[i].contatado=='S'){
-                    call['contatado']='Sim'
-                  }else{
-                    call['contatado']='Não'
-                  }
-                  if(chamadas[i].produtivo==1){
-                    call['produtivo']='Sim'
-                  }else{
-                    call['produtivo']='Não'
-                  }                 
-                  call['tabulacao']=await Tabulacoes.nomeStatus(empresa,chamadas[i].status_tabulacao) 
-                  call['status']='Encerrada'
-                  let gravacao = " - "
-                  const linkGrav = await Gravacao.linkByUniqueid(empresa,chamadas[i].uniqueid)
-                  if(linkGrav!=0){ 
-                    const server = await Asterisk.getDomain(empresa)
-                    const pasta = linkGrav[0].date_record
-                    
-                    const arquivo = `${linkGrav[0].callfilename}.wav`
-                    gravacao = `https://${server[0].ip}/api/gravacoes/${empresa}/${pasta}/${arquivo}`
-                  }
-                  call['gravacao']=gravacao
-
-            detChamadas.push(call)
-        }
-        //console.log('\n','detChamadas',detChamadas)
-        res.json(detChamadas)
-    }
+    
 
     
 

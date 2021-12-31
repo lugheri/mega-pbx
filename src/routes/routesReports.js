@@ -7,8 +7,15 @@ module.exports = (routes) => {
     
     //RELATORIOS
     //Pausas
+    //Relatório de Pausas
+    routes.post('/relatorioPausas',ReportController.relatorioPausas)
     //Login x logout
     routes.post('/loginXLogout',ReportController.loginXLogout)
+    //Assertividade Mailing
+    routes.post('/detalhamentoTabulacoes',ReportController.detalhamentoTabulacoes)
+    //Detalhamento de Chamadas
+    routes.post('/detalhamentoChamadas',ReportController.detalhamentoChamadas)
+
     //Chamadas
     //Monitoramento de Agentes
     //Monitoramento de Campanhas
@@ -23,14 +30,11 @@ module.exports = (routes) => {
 
 
 
-    //Relatório de Pausas
-    routes.post('/relatorioPausas',ReportController.relatorioPausas)
-    //Detalhamento de Chamadas
-    routes.post('/detalhamentoChamadas',ReportController.detalhamentoChamadas)
+    
+    
     //Monitoramento de Agentes
     routes.post('/monitoramentoAgente',ReportController.monitoramentoAgente)
-    //Assertividade Mailing
-    routes.post('/detalhamentoTabulacoes',ReportController.detalhamentoTabulacoes)
+    /
     //Monitoramento de Campanhas
     routes.get('/monitoramentoCampanha/:idCampanha',ReportController.monitoramentoCampanhas)
    

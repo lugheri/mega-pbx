@@ -34,7 +34,6 @@ class Report{
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-
                 const sql = `SELECT u.id, u.nome 
                                FROM ${empresa}_dados.users AS u
                                JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
@@ -49,13 +48,280 @@ class Report{
         }) 
     }
 
+    //Relatorio de Pausas
+    async calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,agente){
+        let filter=""        
+        //Filtrando data de entrada/saida do agente
+        filter+=` AND entrada>='${dataInicio} 00:00:00'`;
+        filter+=` AND saida<='${dataFinal} 23:59:59'`;
+        if((idPausa!=false)||(idPausa!="")){filter+=` AND idPausa=${idPausa}`;}
+        if((agente!=false)||(agente!="")){filter+=` AND idAgente=${agente}`;}
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+
+                const sql = `SELECT SUM(tempo_total) AS tempo
+                               FROM ${empresa}_dados.tempo_pausa 
+                              WHERE 1=1 ${filter}`
+                const t = await this.querySync(conn,sql)
+                pool.end((err)=>{                    
+                    if(err) console.error('Reports ...', err)
+                    resolve(t[0].tempo)
+                })                
+            })
+        }) 
+    }  
+
+    //Login X Login
+    async dadosLogin(empresa,idAgente,de,ate,acao,idLogin,estado,equipe,logados,status,registros,pagina){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                let sql
+                let filter=''
+                if(idAgente!=false){filter+=` AND l.user_id=${idAgente}`;}
+                if(status!=false){filter+=` AND u.status=${status}`;}
+                if(estado!=false){filter+=` AND r.estado=${estado}`;}                
+                if(equipe!=false){filter+=` AND u.equipe=${equipe}`;}
+                if(logados!=false){filter+=` AND u.logado=${logados}`;}
+                let reg=registros
+                let pag=(pagina-1)*reg
+                if(acao=="login"){
+                    sql = `SELECT u.id as idAgente, u.nome,l.id,DATE_FORMAT(l.data,'%Y-%m-%d') as data, l.hora
+                             FROM ${empresa}_dados.registro_logins AS l
+                             JOIN ${empresa}_dados.users AS u ON u.id=l.user_id
+                             JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
+                            WHERE l.acao='login' AND l.id>${idLogin} AND l.data>='${de}' AND l.data<='${ate}' 
+                            ${filter}
+                         ORDER BY l.id DESC                        
+                            LIMIT ${pag},${reg}`
+                }else{
+                    sql = `SELECT u.id as idAgente, u.nome,l.id,DATE_FORMAT(l.data,'%Y-%m-%d') as data, l.hora
+                             FROM ${empresa}_dados.registro_logins AS l
+                             JOIN ${empresa}_dados.users AS u ON u.id=l.user_id
+                             JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
+                            WHERE l.acao='${acao}' AND l.id>${idLogin} AND l.data>='${de}' AND l.data<='${ate}'
+                            ${filter}
+                         ORDER BY id ASC 
+                            LIMIT 1`
+                }
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.error('Reports ...', err)
+                    resolve(rows)
+                })                
+            })
+        })      
+    }
+
+    converteSeg_tempo(segundos_totais){
+        return new Promise((resolve, reject)=>{
+            if((segundos_totais==null)||(segundos_totais=="")||(segundos_totais==false)){segundos_totais=0}
+            let horas = Math.floor(segundos_totais / 3600);
+            let minutos = Math.floor((segundos_totais - (horas * 3600)) / 60);
+            let segundos = Math.floor(segundos_totais % 60);
+            if(horas<=9){horas="0"+horas}
+            if(minutos<=9){minutos="0"+minutos}
+            if(segundos<=9){segundos="0"+segundos}
+            const tempo =`${horas}:${minutos}:${segundos}`
+            resolve(tempo);
+        })
+    }
+
+    async totalChamadasRecebidas(empresa,idAgente,de,ate){
+        const redis_totalChamadasRecebidas = await Redis.getter(`${empresa}:reports_totalChamadasRecebidas:${idAgente}:${de}:${ate}`)
+        if(redis_totalChamadasRecebidas!==null){
+            return redis_totalChamadasRecebidas
+        } 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                let sql = `SELECT SUM(tempo_total) AS tempo
+                            FROM ${empresa}_dados.tempo_ligacao
+                            WHERE idAgente=${idAgente} AND tipoDiscador='receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
+                const t = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    
+                    if(err) console.error('Reports ...', err)
+                })
+                await Redis.getter(`${empresa}:reports_totalChamadasRecebidas:${idAgente}:${de}:${ate}`,t[0].tempo,15)
+                resolve(t[0].tempo)
+            })
+        })
+    }
+
+    async totalChamadasRealizadas(empresa,idAgente,de,ate){
+        const redis_totalChamadasRealizadas = await Redis.getter(`${empresa}:reports_totalChamadasRealizadas:${idAgente}:${de}:${ate}`)
+        if(redis_totalChamadasRealizadas!==null){
+            return redis_totalChamadasRealizadas
+        } 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                let sql = `SELECT SUM(tempo_total) AS tempo
+                            FROM ${empresa}_dados.tempo_ligacao
+                            WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND tipoDiscador<>'manual' AND entrada>='${de}' AND saida <= '${ate}'`
+                const t = await this.querySync(conn,sql)
+                pool.end((err)=>{                    
+                    if(err) console.error('Reports ...', err)
+                })
+                await Redis.getter(`${empresa}:reports_totalChamadasRealizadas:${idAgente}:${de}:${ate}`,t[0].tempo,15)
+                resolve(t[0].tempo)
+            })
+        })      
+    }   
+
+    async totalChamadasManuais(empresa,idAgente,de,ate){
+        const redis_totalChamadasManuais = await Redis.getter(`${empresa}:reports_totalChamadasManuais:${idAgente}:${de}:${ate}`)
+        if(redis_totalChamadasManuais!==null){
+            return redis_totalChamadasManuais
+        } 
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                let sql = `SELECT SUM(tempo_total) AS tempo
+                            FROM ${empresa}_dados.tempo_ligacao
+                            WHERE idAgente=${idAgente} AND tipoDiscador='manual' AND entrada>='${de}' AND saida <= '${ate}'`
+                const t = await this.querySync(conn,sql)
+                pool.end((err)=>{                    
+                    if(err) console.error('Reports ...', err)
+                })
+                await Redis.getter(`${empresa}:reports_totalChamadasManuais:${idAgente}:${de}:${ate}`,t[0].tempo,15)
+                resolve(t[0].tempo)
+            })
+        })
+    }  
+
+    async infoEstadoAgente(empresa,ramal){ 
+        const redis_infoEstadoAgente = await Redis.getter(`${empresa}:reports_infoEstadoAgente:${ramal}`)
+        if(redis_infoEstadoAgente!==null){
+            return redis_infoEstadoAgente
+        }       
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                const sql = `SELECT e.estado 
+                            FROM ${empresa}_dados.user_ramal AS r
+                            JOIN ${empresa}_dados.estadosAgente AS e ON r.estado=e.cod
+                            WHERE r.ramal='${ramal}'`
+                const e = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    
+                    if(err) console.error('Reports ...', err)
+                })
+                await Redis.setter(`${empresa}:reports_infoEstadoAgente:${ramal}`,e[0].estado,5)
+                resolve(e[0].estado)
+            })
+        })      
+    }
+
+    //Detalhamento de Tabulacoes
+    async sinteticosTabulacoes(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao){
+        let filter=""
+        filter+=` AND h.data>='${dataI}' AND h.data<='${dataF}'`;
+        if(ramal!=false){filter+=` AND h.agente=${ramal}`;}
+        if(equipe!=false){filter+=` AND u.equipe=${equipe}`;}
+        if(campanha!=false){filter+=` AND h.campanha=${campanha}`;}
+        if(mailing!=false){filter+=` AND h.mailing=${mailing}`;}
+        if(numero!=false){filter+=` AND h.numero_discado LIKE '%${numero}%'`;}
+        if(tipo!=false){filter+=` AND h.tipo = '${tipo}'`;}
+        if(contatados!=false){
+            if(contatados==1){
+                filter+=` AND h.contatado='S'`
+            }else{
+                filter+=` AND h.contatado<>'S'`
+            }
+        }
+        if(produtivo!=false){
+            if(produtivo==1){
+                filter+=` AND h.produtivo=1`
+            }else{
+                filter+=` AND h.contatado<>1`
+            }
+        }
+        if(tabulacao!=false){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
+
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                const sql = `SELECT h.status_tabulacao, count(h.id) as total
+                               FROM ${empresa}_dados.historico_atendimento AS h
+                          LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
+                              WHERE 1=1 ${filter} 
+                           GROUP BY status_tabulacao`
+                //console.log('chamadasRealizadas',sql)
+                const rows = await this.querySync(conn,sql)   
+                pool.end((err)=>{                    
+                    if(err) console.error('Reports ...', err)
+                    resolve(rows)
+                })                
+            })
+        })    
+    }
+
+    async historicoChamadas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros){
+        const redis_historicoChamadas= await Redis.getter(`${empresa}:reports_historicoChamadas:${dataI}:${dataF}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`)
+        if(redis_historicoChamadas!=null){
+            console.log('REDIS')
+            return redis_historicoChamadas
+        } 
+        let filter=` AND h.data>='${dataI}' AND h.data<='${dataF}'`;
+        if(ramal!=false){filter+=` AND h.agente=${ramal}`;}
+        if(equipe!=false){filter+=` AND u.equipe=${equipe}`;}
+        if(campanha!=false){filter+=` AND h.campanha=${campanha}`;}
+        if(mailing!=false){filter+=` AND h.mailing=${mailing}`;}
+        if(numero!=false){filter+=` AND h.numero_discado LIKE '%${numero}%'`;}
+        if(tipo!=false){filter+=` AND h.tipo = '${tipo}'`;}
+        if(contatados!=false){
+            if(contatados==1){
+                filter+=` AND h.contatado='S'`
+            }else{
+                filter+=` AND h.contatado<>'S'`
+            }
+        }
+        if(produtivo!=false){
+            if(produtivo==1){
+                filter+=` AND h.produtivo=1`
+            }else{
+                filter+=` AND h.contatado<>1`
+            }
+        }
+        if(tabulacao!=false){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
+        //Paginacao   
+        let reg=registros
+        let pag=(pagina-1)*reg
+
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+        
+                const sql = `SELECT h.agente,u.nome,DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall,h.hora,h.uniqueid,h.campanha,h.tipo,h.nome_registro,h.numero_discado,h.contatado,h.produtivo,h.status_tabulacao,h.obs_tabulacao
+                              FROM ${empresa}_dados.historico_atendimento AS h
+                         LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
+                             WHERE 1=1 ${filter} ORDER BY h.id DESC LIMIT ${pag},${reg} `
+                const rows = await this.querySync(conn,sql)
+                await Redis.setter(`${empresa}:reports_historicoChamadas:${dataI}:${dataF}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`,rows,15)
+                pool.end((err)=>{
+                    if(err) console.error('Reports ...', err)
+                    resolve(rows)
+                })               
+            })
+        })
+    }
 
 
 
 
 
-
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
     async diaAtual(){
         const dia = moment().format("DD")
         const m =  moment().format("M")-1
@@ -237,100 +503,11 @@ class Report{
         })      
     }
 
-    async dadosLogin(empresa,idAgente,de,ate,acao,idLogin,estado,equipe,logados,status,registros,pagina){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{   
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                let sql
-                let filter=''
-                if(idAgente!=false){filter+=` AND l.user_id=${idAgente}`;}
-                if(status!=false){filter+=` AND u.status=${status}`;}
-                if(estado!=false){filter+=` AND r.estado=${estado}`;}                
-                if(equipe!=false){filter+=` AND u.equipe=${equipe}`;}
-                if(logados!=false){filter+=` AND u.logado=${logados}`;}
-                let reg=registros
-                let pag=(pagina-1)*reg
-                if(acao=="login"){
-                    sql = `SELECT u.id as idAgente, u.nome,l.id,DATE_FORMAT(l.data,'%Y-%m-%d') as data, l.hora
-                             FROM ${empresa}_dados.registro_logins AS l
-                             JOIN ${empresa}_dados.users AS u ON u.id=l.user_id
-                             JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
-                            WHERE l.acao='login' AND l.id>${idLogin} AND l.data>='${de}' AND l.data<='${ate}' 
-                            ${filter}
-                         ORDER BY l.id DESC                        
-                            LIMIT ${pag},${reg}`
-                }else{
-                    sql = `SELECT u.id as idAgente, u.nome,l.id,DATE_FORMAT(l.data,'%Y-%m-%d') as data, l.hora
-                             FROM ${empresa}_dados.registro_logins AS l
-                             JOIN ${empresa}_dados.users AS u ON u.id=l.user_id
-                             JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
-                            WHERE l.acao='${acao}' AND l.id>${idLogin} AND l.data>='${de}' AND l.data<='${ate}'
-                            ${filter}
-                         ORDER BY id ASC 
-                            LIMIT 1`
-                }
-                console.log(sql)
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Reports ...', err)
-                    resolve(rows)
-                })                
-            })
-        })      
-    }
+    
 
-    async infoEstadoAgente(empresa,ramal){ 
-        const redis_infoEstadoAgente = await Redis.getter(`${empresa}:reports_infoEstadoAgente:${ramal}`)
-        if(redis_infoEstadoAgente!==null){
-            return redis_infoEstadoAgente
-        }       
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{   
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT e.estado 
-                            FROM ${empresa}_dados.user_ramal AS r
-                            JOIN ${empresa}_dados.estadosAgente AS e ON r.estado=e.cod
-                            WHERE r.ramal='${ramal}'`
-                const e = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    
-                    if(err) console.error('Reports ...', err)
-                })
-                await Redis.setter(`${empresa}:reports_infoEstadoAgente:${ramal}`,e[0].estado,5)
-                resolve(e[0].estado)
-            })
-        })      
-    }
+    
 
-    async calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,agente){
-        let filter=""       
-        
-        //Filtrando data de entrada/saida do agente
-        if((dataInicio!=false)||(dataInicio!="")){filter+=` AND entrada>='${dataInicio} 00:00:00'`;}
-        if((dataFinal!=false)||(dataFinal!="")){filter+=` AND saida<='${dataFinal} 23:59:59'`;}
-
-        if((idPausa!=false)||(idPausa!="")){filter+=` AND idPausa=${idPausa}`;}
-        if((agente!=false)||(agente!="")){filter+=` AND idAgente=${agente}`;}
-
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{   
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-
-                const sql = `SELECT SUM(tempo_total) AS tempo
-                            FROM ${empresa}_dados.tempo_pausa 
-                            WHERE 1=1 ${filter}`
-                const t = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    
-                    if(err) console.error('Reports ...', err)
-                })
-                resolve(t[0].tempo)
-            })
-        }) 
-    }  
+    
 
     async tempoEstadoAgente(empresa,ramal){
         const redis_tempoEstadoAgente = await Redis.getter(`${empresa}:reports_tempoEstadoAgente:${ramal}`)
@@ -402,51 +579,9 @@ class Report{
         })      
     }
 
-    async sinteticosTabulacoes(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao){
-        let filter=""
-        if((dataI!=false)||(dataI!="")){filter+=` AND h.data>='${dataI}'`;}else{filter+=` AND h.data>='${hoje}'`;}
-        if((dataF!=false)||(dataF!="")){filter+=` AND h.data<='${dataF}'`;}else{filter+=` AND h.data<='${hoje}'`;}
-        if((ramal!=false)||(ramal!="")){filter+=` AND h.agente=${ramal}`;}
-        if((equipe!=false)||(equipe!="")){filter+=` AND u.equipe=${equipe}`;}
-        if((campanha!=false)||(campanha!="")){filter+=` AND h.campanha=${campanha}`;}
-        if((mailing!=false)||(mailing!="")){filter+=` AND h.mailing=${mailing}`;}
-        if((numero!=false)||(numero!="")){filter+=` AND h.numero_discado LIKE '%${numero}%'`;}
-        if((tipo!=false)||(tipo!="")){filter+=` AND h.tipo = '${tipo}'`;}
-        if((contatados!=false)||(contatados!="")){
-            if(contatados==1){
-                filter+=` AND h.contatado='S'`
-            }else{
-                filter+=` AND h.contatado<>'S'`
-            }
-        }
-        if((produtivo!=false)||(produtivo!="")){
-            if(produtivo==1){
-                filter+=` AND h.produtivo=1`
-            }else{
-                filter+=` AND h.contatado<>1`
-            }
-        }
-        if((tipo!=false)||(tipo!="")){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
+  
 
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{   
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-        
-                const sql = `SELECT h.status_tabulacao, count(h.id) as total
-                               FROM ${empresa}_dados.historico_atendimento AS h
-                               LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
-                              WHERE 1=1 ${filter} 
-                              GROUP BY status_tabulacao`
-                //console.log('chamadasRealizadas',sql)
-                const rows = await this.querySync(conn,sql)   
-                pool.end((err)=>{                    
-                    if(err) console.error('Reports ...', err)
-                })
-                resolve(rows)
-            })
-        })    
-    }
+    
 
     async chamadasRealizadas(empresa,dataI,dataF,hoje,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros){
         const redis_chamadasRealizadas = await Redis.getter(`${empresa}:reports_chamadasRealizadas:${dataI}:${dataF}:${hoje}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`)
@@ -601,74 +736,7 @@ class Report{
         })     
     }
 
-    async totalChamadasRecebidas(empresa,idAgente,de,ate){
-        const redis_totalChamadasRecebidas = await Redis.getter(`${empresa}:reports_totalChamadasRecebidas:${idAgente}:${de}:${ate}`)
-        if(redis_totalChamadasRecebidas!==null){
-            return redis_totalChamadasRecebidas
-        } 
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{   
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                let sql = `SELECT SUM(tempo_total) AS tempo
-                            FROM ${empresa}_dados.tempo_ligacao
-                            WHERE idAgente=${idAgente} AND tipoDiscador='receptivo' AND entrada>='${de}' AND saida <= '${ate}'`
-                const t = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    
-                    if(err) console.error('Reports ...', err)
-                })
-                await Redis.getter(`${empresa}:reports_totalChamadasRecebidas:${idAgente}:${de}:${ate}`,t[0].tempo,15)
-                resolve(t[0].tempo)
-            })
-        })
-    }
-
-    async totalChamadasRealizadas(empresa,idAgente,de,ate){
-        const redis_totalChamadasRealizadas = await Redis.getter(`${empresa}:reports_totalChamadasRealizadas:${idAgente}:${de}:${ate}`)
-        if(redis_totalChamadasRealizadas!==null){
-            return redis_totalChamadasRealizadas
-        } 
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{   
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                let sql = `SELECT SUM(tempo_total) AS tempo
-                            FROM ${empresa}_dados.tempo_ligacao
-                            WHERE idAgente=${idAgente} AND tipoDiscador<>'receptivo' AND tipoDiscador<>'manual' AND entrada>='${de}' AND saida <= '${ate}'`
-                const t = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    
-                    if(err) console.error('Reports ...', err)
-                })
-                await Redis.getter(`${empresa}:reports_totalChamadasRealizadas:${idAgente}:${de}:${ate}`,t[0].tempo,15)
-                resolve(t[0].tempo)
-            })
-        })      
-    }   
-
-    async totalChamadasManuais(empresa,idAgente,de,ate){
-        const redis_totalChamadasManuais = await Redis.getter(`${empresa}:reports_totalChamadasManuais:${idAgente}:${de}:${ate}`)
-        if(redis_totalChamadasManuais!==null){
-            return redis_totalChamadasManuais
-        } 
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{   
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                let sql = `SELECT SUM(tempo_total) AS tempo
-                            FROM ${empresa}_dados.tempo_ligacao
-                            WHERE idAgente=${idAgente} AND tipoDiscador='manual' AND entrada>='${de}' AND saida <= '${ate}'`
-                const t = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    
-                    if(err) console.error('Reports ...', err)
-                })
-                await Redis.getter(`${empresa}:reports_totalChamadasManuais:${idAgente}:${de}:${ate}`,t[0].tempo,15)
-                resolve(t[0].tempo)
-            })
-        })
-    }   
+     
 
     async chamadasAtendidas(empresa,ramal,campanha,dataI,dataF,hoje){
         const redis_chamadasAtendidas = await Redis.getter(`${empresa}:reports_chamadasAtendidas:${ramal}:${campanha}:${dataI}:${dataF}:${hoje}`)
@@ -1173,22 +1241,7 @@ class Report{
         })
     }
     
-    converteSeg_tempo(segundos_totais){
-        return new Promise((resolve, reject)=>{
-            if((segundos_totais==null)||(segundos_totais=="")||(segundos_totais==false)){segundos_totais=0}
-            let horas = Math.floor(segundos_totais / 3600);
-            let minutos = Math.floor((segundos_totais - (horas * 3600)) / 60);
-            let segundos = Math.floor(segundos_totais % 60);
-            if(horas<=9){horas="0"+horas}
-            if(minutos<=9){minutos="0"+minutos}
-            if(segundos<=9){segundos="0"+segundos}
-
-            const tempo =`${horas}:${minutos}:${segundos}`
-
-            resolve(tempo);
-
-        })
-    }
+    
    
 
 
