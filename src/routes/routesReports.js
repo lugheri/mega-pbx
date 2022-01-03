@@ -2,8 +2,14 @@ import ReportController from '../controllers/ReportController';
 
 module.exports = (routes) => {
     //FILTROS
-
-
+    //Lista de Agentes
+    routes.get('/filtroAgentes/', ReportController.filtroAgentes)
+    //Lista de Equipes
+    routes.get('/filtroEquipes/', ReportController.filtroEquipes)
+    //Lista de Campanhas ativas
+    routes.get('/filtroCampanhas', ReportController.filtroCampanhas)
+    //Lista de Mailings
+    routes.get('/filtroMailings/', ReportController.filtroMailings)
     
     //RELATORIOS
     //Pausas
@@ -15,47 +21,13 @@ module.exports = (routes) => {
     routes.post('/detalhamentoTabulacoes',ReportController.detalhamentoTabulacoes)
     //Detalhamento de Chamadas
     routes.post('/detalhamentoChamadas',ReportController.detalhamentoChamadas)
-
-    //Chamadas
-    //Monitoramento de Agentes
-    //Monitoramento de Campanhas
-
-
-
-
-
-
-
-
-
-
-
-    
-    
     //Monitoramento de Agentes
     routes.post('/monitoramentoAgente',ReportController.monitoramentoAgente)
-    /
     //Monitoramento de Campanhas
     routes.get('/monitoramentoCampanha/:idCampanha',ReportController.monitoramentoCampanhas)
-   
-
     //Atualiza Agressividade
     routes.patch('/atualizaAgressividade/:idCampanha',ReportController.atualizaAgressividade)
-    
-    
-    //FILTROS
-    //Lista de Agentes
-    routes.get('/filtroAgentes/', ReportController.filtroAgentes)
-    //Lista de Equipes
-    routes.get('/filtroEquipes/', ReportController.filtroEquipes)
-    //Lista de Campanhas ativas
-    routes.get('/filtroCampanhas', ReportController.filtroCampanhas)
-    //Lista de Mailings
-    routes.get('/filtroMailings/', ReportController.filtroMailings)
-
-
-
-
+    /*
     //Relatórios personalizados
     //Criar Relatorio
     routes.post('/criarRelatorio', ReportController.criarRelatorio)
@@ -79,5 +51,5 @@ module.exports = (routes) => {
     //Editar Campo relatorio
     routes.patch('/editCampoRelatorio/:idCampoRelatorio', ReportController.editCampoRelatorio)
     //Remover campo relatorio
-    routes.delete('/delCampoRelatorio/:idCampoRelatorio', ReportController.delCampoRelatorio)
+    routes.delete('/delCampoRelatorio/:idCampoRelatorio', ReportController.delCampoRelatorio)*/
 }

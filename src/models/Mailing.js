@@ -2156,26 +2156,61 @@ class Mailing{
             })
         })
     }
-
     //ExportarMailing
-    async exportarMailing(empresa,idMailing,res){
-        return new Promise (async (resolve,reject)=>{
-            const pool =  await connect.pool(empresa,'dados')
-                pool.getConnection(async (err,conn)=>{ 
-                    if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:exportarMailing","message":err.message,"stack":err.stack});
-                    let sql = `SELECT tabela_dados,nome 
-                                FROM ${empresa}_dados.mailings 
-                                WHERE id=${idMailing}` 
-                    const r = await this.querySync(conn,sql)
-                    sql = `SELECT * 
-                            FROM ${empresa}_mailings.${r[0].tabela_dados}`
-                    const data = await this.querySync(conn,sql)
-                    pool.end((err)=>{
-                        if(err) console.error('Mailings 1109', err)
-                    })
-                    resolve(data)
-                })
-            })
+    async exportarMailing(empresa,idMailing){
+        connect.mongoose(empresa)
+        delete mongoose.connection.models[`dadosmailing_${idMailing}`]
+        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,{
+            id_key_base:{type:Number, index:true},
+            nome:String,
+            cpf:String,
+            dados:Array
+        })
+        delete mongoose.connection.models[`numerosmailing_${idMailing}`]
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{
+            idNumero: Number,
+            idRegistro: String,
+            ddd: String,
+            numero: String,
+            uf:String,
+            valido: Boolean,
+            message: String
+        })
+        const registros = await modelDadosMailing.find()
+
+        const mailing = []
+        const fields = []
+        for(let i=0; i<registros.length;i++){
+            const linha={}
+            if(i==0){
+                fields.push('id')
+                fields.push('nome')
+                fields.push('cpf')
+            }
+            const id= registros[i].id_key_base
+            linha['id']=id
+            linha['nome']=registros[i].nome
+            linha['cpf']=registros[i].cpf
+            const camposDados = await MailingsTypeFields.find({idMailing:idMailing,tipo:"dados"})
+            for(let c=0;c<camposDados.length;c++){
+                const key = camposDados[c].nome_original_campo
+                if(i==0){fields.push(`${key}`)}
+                const values = registros[i].dados[0]
+                linha[`${key}`]=`${values[`${key}`]}`
+            }
+            //Telefones
+            const numeros = await modelNumerosMailing.find({idRegistro:id})
+            for(let n=0;n<numeros.length;n++){
+                if(i==0){fields.push('numero')}
+                linha['numero']=numeros[n].numero
+            }
+            mailing.push(linha)
+        }
+
+        const dados={}
+              dados['fields']=fields
+              dados['registros']=mailing
+        return dados
     }   
 
    

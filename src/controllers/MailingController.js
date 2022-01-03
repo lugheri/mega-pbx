@@ -3,9 +3,13 @@ import Mailing from '../models/Mailing';
 import Campanhas from '../models/Campanhas';
 import User from '../models/User';
 import moment from "moment";
+import fs from 'fs';
+let path = require('path');
 import { Parser } from 'json2csv';
 import connect from '../Config/dbConnection';
 import mongoose from 'mongoose'
+
+import excel from "exceljs"
 
 import { Readable } from "stream"
 import readLine from "readline"
@@ -13,7 +17,7 @@ import readLine from "readline"
 import csvtojson from 'csvtojson';
 import {pipeline, Readable, Writable, Transform } from 'stream';
 import { promisify } from 'util';
-import fs from 'fs';
+
 import { createWriteStream } from 'fs';
 import Redis from '../Config/Redis';
 
@@ -457,17 +461,48 @@ class MailingController{
     
 
     //Exporta os registros de um mailing
-    async exportarMailing(req,res){
+    async exportarMailing(req,res){     
+
         const empresa = await User.getEmpresa(req)
         const idMailing = parseInt(req.params.idMailing)        
         const data = await Mailing.exportarMailing(empresa,idMailing,res) 
-
         const json2csvParser = new Parser({ delimiter: ';' });
-        const csv = json2csvParser.parse(data);
+        const csv = json2csvParser.parse(data['registros']);
+        
+        const writable = 
+                fs.createWriteStream('src/tmp/files/mailing.csv', {flags: 'w', encoding: 'utf8'})
+        writable.write(csv)
+        writable.end('\n')
+        
+         res.download('src/tmp/files/mailing.csv', function(err) {
+            if(err) {
+                console.log(err);
+            }
+        })
+        
+        /*res.setHeader('Content-disposition', 'attachment; filename=mailing.csv');
+        res.set('Content-Type', 'text/csv');
+      
+        //res.send("ok<a href='src/tmp/files/mailing.csv' download='mailing.csv' id='download-link'></a><script>document.getElementById('download-link').click();</script>")
+        //res.sendFile('src/tmp/files/mailing.csv',options)
+        /*        
+        const fields = data['fields']
+        const csvParser = new Parser({fields})
+        const mailing = csvParser.parse(data['registros']);        
+    
+        res.status(200).end(mailing);/*       
+        fs.writeFile('data.csv', csv.parse(mailing), function(err){
+            if(err){
+                console.error(err)
+                throw err
+            }
+            console.log('arquivo salvo')
+        })
+        /*const json2csvParser = new Parser({ delimiter: ';' });
+        const csv = json2csvParser.parse(mailing);       
         res.setHeader('Content-disposition', 'attachment; filename=data.csv');
         res.set('Content-Type', 'text/csv');
-        res.status(200).send(csv);
-        
+        return res.status(200).send(csv);*/
     }
 
        
