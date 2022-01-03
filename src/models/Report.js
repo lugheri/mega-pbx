@@ -357,6 +357,99 @@ class Report{
         })
     }
 
+    async countHistoricoChamadas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao){
+        let filter=` AND h.data>='${dataI}' AND h.data<='${dataF}'`;
+        if(ramal!=false){filter+=` AND h.agente=${ramal}`;}
+        if(equipe!=false){filter+=` AND u.equipe=${equipe}`;}
+        if(campanha!=false){filter+=` AND h.campanha=${campanha}`;}
+        if(mailing!=false){filter+=` AND h.mailing=${mailing}`;}
+        if(numero!=false){filter+=` AND h.numero_discado LIKE '%${numero}%'`;}
+        if(tipo!=false){filter+=` AND h.tipo = '${tipo}'`;}
+        if(contatados!=false){
+            if((contatados==1)||(contatados=='Sim')){
+                filter+=` AND h.contatado='S'`
+            }else{
+                filter+=` AND h.contatado<>'S'`
+            }
+        }
+        if(produtivo!=false){
+            if((produtivo==1)||(produtivo=='Sim')){
+                filter+=` AND h.produtivo=1`
+            }else{
+                filter+=` AND h.contatado<>1`
+            }
+        }
+        if(tabulacao!=false){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+        
+                const sql = `SELECT count(h.id) as total
+                              FROM ${empresa}_dados.historico_atendimento AS h
+                         LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
+                             WHERE 1=1 ${filter} ORDER BY h.id DESC`                            
+                const rows = await this.querySync(conn,sql)
+              
+                pool.end((err)=>{
+                    if(err) console.error('Reports ...', err)
+                    resolve(rows[0].total)
+                })               
+            })
+        })
+    }
+
+    async exportHistoricoChamadas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros){
+        const redis_historicoChamadas= await Redis.getter(`${empresa}:reports_historicoChamadas:${dataI}:${dataF}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`)
+        if(redis_historicoChamadas!=null){
+            console.log('REDIS')
+            return redis_historicoChamadas
+        } 
+        let filter=` AND h.data>='${dataI}' AND h.data<='${dataF}'`;
+        if(ramal!=false){filter+=` AND h.agente=${ramal}`;}
+        if(equipe!=false){filter+=` AND u.equipe=${equipe}`;}
+        if(campanha!=false){filter+=` AND h.campanha=${campanha}`;}
+        if(mailing!=false){filter+=` AND h.mailing=${mailing}`;}
+        if(numero!=false){filter+=` AND h.numero_discado LIKE '%${numero}%'`;}
+        if(tipo!=false){filter+=` AND h.tipo = '${tipo}'`;}
+        if(contatados!=false){
+            if((contatados==1)||(contatados=='Sim')){
+                filter+=` AND h.contatado='S'`
+            }else{
+                filter+=` AND h.contatado<>'S'`
+            }
+        }
+        if(produtivo!=false){
+            if((produtivo==1)||(produtivo=='Sim')){
+                filter+=` AND h.produtivo=1`
+            }else{
+                filter+=` AND h.contatado<>1`
+            }
+        }
+        if(tabulacao!=false){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
+        //Paginacao   
+        let reg=registros
+        let pag=(pagina-1)*reg
+
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+        
+                const sql = `SELECT h.agente,u.nome,DATE_FORMAT(h.data,'%d/%m/%Y') AS dataCall,h.hora,h.uniqueid,h.campanha,h.tipo,h.nome_registro,h.numero_discado,h.contatado,h.produtivo,h.status_tabulacao,h.obs_tabulacao
+                              FROM ${empresa}_dados.historico_atendimento AS h
+                         LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
+                             WHERE 1=1 ${filter} ORDER BY h.id DESC LIMIT ${pag},${reg} `                            
+                const rows = await this.querySync(conn,sql)
+                await Redis.setter(`${empresa}:reports_historicoChamadas:${dataI}:${dataF}:${ramal}:${equipe}:${campanha}:${mailing}:${numero}:${tipo}:${contatados}:${produtivo}:${tabulacao}:${pagina}:${registros}`,rows,15)
+                pool.end((err)=>{
+                    if(err) console.error('Reports ...', err)
+                    resolve(rows)
+                })               
+            })
+        })
+    }
+
     async timeCall(empresa,uniqueid){
         const redis_timeCall = await Redis.getter(`${empresa}:reports_timeCall:${uniqueid}`)
         if(redis_timeCall!==null){

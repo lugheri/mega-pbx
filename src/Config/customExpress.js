@@ -2,6 +2,7 @@ import express from 'express';
 import routes from '../routes/routes';
 import morgan from 'morgan';
 import cors from 'cors';
+import path from 'path';
 
  
 module.exports = () => {
@@ -14,6 +15,9 @@ module.exports = () => {
 
     
    // app.use(morgan('dev'));
+  
+    console.log(path.resolve(__dirname,'..', '..','public'))
+    app.use('/static', express.static(path.resolve(__dirname,'..', '..','public')));
     app.use(routes);
  
  return app

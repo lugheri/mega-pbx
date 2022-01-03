@@ -38,3 +38,4 @@
 7;"JOAO BARBOZA DE SOUZA";"993.372.908-04";"5943640";"04\09\1956";"2013343706";"41";"04\09\2021";"1120120434"
 8;"LUZIA DOS SANTOS DE OLIVEIRA";"032.175.458-18";"5954961";"27\01\1963";"1995972450";"21";"21\08\2021";"1120126561"
 9;"LUZIA DOS SANTOS DE OLIVEIRA";"032.175.458-18";"5954961";"27\01\1963";"1995972450";"21";"21\08\2021";"1120126561"' 
+2022-01-03 15:44:05 - Error: ENOENT: no such file or directory, stat 'M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\src\tmp\megaconecta\src\tmp\megaconecta\relatorio_gerenciamentoGeral.csv' 

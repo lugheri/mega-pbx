@@ -4,14 +4,21 @@ import sockets from './Config/sockets'
 import logs from './Config/logs';
 import connect from './Config/dbConnection';
 
+
 import DiscadorController from './controllers/DiscadorController';
 import UserController from './controllers/UserController';
 
 const app = customExpress();
+
 app.use(function(err, req, res, next) {
     logs.getErrors(err.stack)
     next(err);
 });
+
+
+
+
+
 
 
 const httpServer = sockets(app)

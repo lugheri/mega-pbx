@@ -9,8 +9,6 @@ import { Parser } from 'json2csv';
 import connect from '../Config/dbConnection';
 import mongoose from 'mongoose'
 
-import excel from "exceljs"
-
 import { Readable } from "stream"
 import readLine from "readline"
 

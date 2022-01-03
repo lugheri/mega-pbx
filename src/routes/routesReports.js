@@ -21,6 +21,8 @@ module.exports = (routes) => {
     routes.post('/detalhamentoTabulacoes',ReportController.detalhamentoTabulacoes)
     //Detalhamento de Chamadas
     routes.post('/detalhamentoChamadas',ReportController.detalhamentoChamadas)
+    //Detalhamento de Chamadas
+    routes.post('/exportarDetalhamentoTabulacoes',ReportController.exportarDetalhamentoTabulacoes)
     //Monitoramento de Agentes
     routes.post('/monitoramentoAgente',ReportController.monitoramentoAgente)
     //Monitoramento de Campanhas

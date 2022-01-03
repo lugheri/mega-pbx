@@ -9,6 +9,8 @@ import Discador from '../models/Discador';
 import Agente from '../models/Agente';
 import Tabulacoes from '../models/Tabulacoes'
 import Redis from '../Config/Redis'
+import fs from 'fs';
+import { Parser } from 'json2csv';
 
 class ReportController{  
     //FILTROS
@@ -210,6 +212,122 @@ class ReportController{
         res.json(detalhamentoTabulacoes)
     }
 
+    //Exporta os registros de um mailing
+    async exportarDetalhamentoTabulacoes(req,res){
+        const empresa = await User.getEmpresa(req)
+        const params = req.body
+        const hoje = moment().format("YYYY-MM-DD")
+        //Filtros
+        let dataI  = hoje
+        let dataF  = hoje
+        let ramal = false
+        let equipe = false
+        let campanha = false
+        let mailing = false
+        let numero = false
+        let tipo = false        
+        let contatados = false
+        let produtivo = false
+        let tabulacao = false
+        if(params.dataInicio) dataI = params.dataInicio
+        if(params.dataFinal)  dataF  = params.dataFinal
+        if(params.ramal)      ramal      = params.ramal
+        if(params.equipe)     equipe     = params.equipe
+        if(params.campanha)   campanha   = params.campanha
+        if(params.mailing)    mailing    = params.mailing
+        if(params.numero)     numero     = params.numero 
+        if(params.tipo)       tipo       = params.tipo         
+        if(params.contatados) contatados = params.contatados
+        if(params.produtivo)  produtivo  = params.produtivo
+        if(params.tabulacao)  tabulacao  = params.tabulacao           
+        const total = await Report.countHistoricoChamadas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
+        const registros = 100     
+        const totalPaginas = Math.ceil(total/registros)
+        const dir = `public/${empresa}`;
+        const file = `${dir}/relatorio_gerenciamentoGeral.csv`
+        //Verifica se não existe
+        if (!fs.existsSync(dir)){
+            //Efetua a criação do diretório
+            fs.mkdir(dir, (err) => {
+                if (err) {
+                    console.log("Deu ruim...",err);
+                    return
+                }        
+                console.log("Diretório criado! =)")
+            });
+        }
+        const writable = 
+        fs.createWriteStream(`${file}`, {flags: 'w', encoding: 'utf8'})
+        for(let p=0; p<totalPaginas; p++){
+            const pagina = p+1
+            const historico = await Report.historicoChamadas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
+            const json2csvParser = new Parser({ delimiter: ';' });
+            for(let i = 0;i<historico.length; i++) {
+                const call={}
+                    call['ramal']=historico[i].agente
+                    call['agente']=historico[i].nome
+                    call['data']=historico[i].dataCall
+                    call['hora']=historico[i].hora
+                    call['campanha']=await Campanhas.nomeCampanhas(empresa,historico[i].campanha)
+                    call['cliente']=historico[i].nome_registro
+                    call['numero']=historico[i].numero_discado
+                    if(historico[i].contatado=='S'){
+                        call['contatado']='Sim'
+                    }else{
+                        call['contatado']='Não'
+                    }
+                    if(historico[i].produtivo==1){
+                        call['produtivo']='Sim'
+                    }else{
+                        call['produtivo']='Não'
+                    }       
+                    if(historico[i].status_tabulacao==0){
+                        call['tabulacao']=historico[i].obs_tabulacao
+                        call['observacoes']="Tabulação automática"
+                    }else{
+                        call['tabulacao']=await Tabulacoes.nomeStatus(empresa,historico[i].status_tabulacao) 
+                        call['observacoes']=historico[i].obs_tabulacao
+                    }
+                const csv = json2csvParser.parse(call);
+                writable.write(csv)
+            }
+        }        
+        writable.end('\n')
+        res.setHeader('Content-disposition', `attachment; filename=${file}`);
+        res.setHeader('Content-type', 'text/csv');
+       // res.sendFile('relatorio_gerenciamentoGeral.csv',{root:dir})
+        res.send(`static/${empresa}/relatorio_gerenciamentoGeral.csv`)
+
+        return false
+
+        
+        /*res.setHeader('Content-disposition', 'attachment; filename=mailing.csv');
+        res.set('Content-Type', 'text/csv');
+      
+        //res.send("ok<a href='src/tmp/files/mailing.csv' download='mailing.csv' id='download-link'></a><script>document.getElementById('download-link').click();</script>")
+        //res.sendFile('src/tmp/files/mailing.csv',options)
+        /*        
+        const fields = data['fields']
+        const csvParser = new Parser({fields})
+        const mailing = csvParser.parse(data['registros']);        
+    
+        res.status(200).end(mailing);/*       
+        fs.writeFile('data.csv', csv.parse(mailing), function(err){
+            if(err){
+                console.error(err)
+                throw err
+            }
+            console.log('arquivo salvo')
+        })
+        /*const json2csvParser = new Parser({ delimiter: ';' });
+        const csv = json2csvParser.parse(mailing);       
+        res.setHeader('Content-disposition', 'attachment; filename=data.csv');
+        res.set('Content-Type', 'text/csv');
+        return res.status(200).send(csv);*/
+    }
+
+
+
     //Chamadas
     async detalhamentoChamadas(req,res){
         const empresa = await User.getEmpresa(req)
@@ -349,6 +467,8 @@ class ReportController{
         }
         res.json(detChamadas)
     }
+
+    
 
     //Monitoramento de Agentes
     async monitoramentoAgente(req,res){
