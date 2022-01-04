@@ -616,9 +616,9 @@ class Discador{
                 if(i.length==0){
                     pool.end((err)=>{
                         if(err) console.error(err)
-                        resolve({"status":false})
-                        return 
+                        resolve({"status":false})                       
                     }) 
+                    return false
                 }
                 sql = `SELECT *
                          FROM ${empresa}_dados.campanhas_integracoes_disponiveis 
@@ -1475,15 +1475,48 @@ class Discador{
         }
         const registrosFiltrados=[]
         for(let b=0;b<limite;b++){
-            const registro = {}
-                  registro['idNumero'] = base[b].idNumero
-                  registro['idRegistro'] = base[b].idRegistro
-                  registro['numero'] = base[b].numero      
+            console.log(`valor b: ${b} Limit: ${limite}`)
+            //checando numero Disponivel
+            const filter = 1      
+            const numero =base[b].numero      
+            const check = await this.checkTabulacaoProdutivaNumero(empresa,numero,idCampanha)
+            if((check==0)&&(filter==1)){
+                const registro = {}
+                    registro['idNumero'] = base[b].idNumero
+                    registro['idRegistro'] = base[b].idRegistro
+                    registro['numero'] = numero      
+                    registrosFiltrados.push(registro)
+            }else{
+                b--
+                console.log(`Numero ja trabalhado: ${numero} valor b: ${b}`)
+            }
             base.splice(base.findIndex(registros => registros.idNumero == base[b].idNumero),1)
             await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,base)
-            registrosFiltrados.push(registro)
+            
+            
         }
         return registrosFiltrados
+    }
+
+    async checkTabulacaoProdutivaNumero(empresa,numero,idCampanha){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:","message":err.message,"stack":err.stack});
+
+                let sql = `SELECT count(id) as total
+                             FROM ${empresa}_dados.historico_atendimento
+                            WHERE campanha=${idCampanha} AND numero_discado='${numero}'
+                            AND produtivo=1
+                            LIMIT 1`
+                const total = await this.querySync(conn,sql) 
+                pool.end((err)=>{
+                    if(err) console.error(err)
+                    resolve(total[0].total) 
+                }) 
+                
+            })
+        }) 
     }
 
     async getRegistersCache(empresa,idCampanha,limit) {

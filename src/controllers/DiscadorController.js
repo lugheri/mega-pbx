@@ -193,7 +193,7 @@ class DiscadorController{
         }
         //console.log('Limit Final',limit)
         //SELECIONA OS NUMEROS DISPONIVEIS
-        const registros = await Discador.selecionaNumerosCampanha(empresa,idCampanha,limitRegistros)
+        const registros = []//await Discador.selecionaNumerosCampanha(empresa,idCampanha,limitRegistros)
         console.log('Filtrando Registros',registros) 
         if((registros==false)||(registros==[])){
             if(limitRegistros==0){
@@ -315,7 +315,7 @@ class DiscadorController{
                 ////console.log('==>> D I S C A R = > = >') 
                 ////console.log('Discando',idAtendimento)
                 const idMailing = await Campanhas.idMailingCampanha(empresa,idCampanha) 
-                await Discador.discar(empresa,0,idAtendimento,numero,nomeFila,modoAtendimento,saudacao,aguarde,idCampanha,idMailing,idRegistro,idNumero)          
+               // await Discador.discar(empresa,0,idAtendimento,numero,nomeFila,modoAtendimento,saudacao,aguarde,idCampanha,idMailing,idRegistro,idNumero)          
             }
         }
     }   
