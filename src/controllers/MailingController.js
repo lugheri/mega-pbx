@@ -187,8 +187,12 @@ class MailingController{
                 ddd: String,
                 numero: String,
                 uf:String,
+                tipo:String,
                 valido: Boolean,
-                message: String
+                message: String,
+                tratado:Boolean,
+                contatado: Boolean,
+                produtivo: Boolean
             })
             const limit=1
             await Mailing.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idKey,modelDadosMailing,modelNumerosMailing,limit)
@@ -273,7 +277,7 @@ class MailingController{
 
 
 
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 

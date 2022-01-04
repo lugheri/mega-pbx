@@ -114,6 +114,32 @@ class Report{
     }  
 
     //Login X Login
+    async countDadosLogin(empresa,ramal,de,ate,acao,idLogin,estado,equipe,logados,status){
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                let filter=''
+                if(ramal!=false){filter+=` AND l.user_id=${ramal}`;}
+                if(status!=false){filter+=` AND u.status=${status}`;}
+                if(estado!=false){filter+=` AND r.estado=${estado}`;}                
+                if(equipe!=false){filter+=` AND u.equipe=${equipe}`;}
+                if(logados!=false){filter+=` AND u.logado=${logados}`;}
+                const sql = `SELECT count(u.id) as total
+                             FROM ${empresa}_dados.registro_logins AS l
+                             JOIN ${empresa}_dados.users AS u ON u.id=l.user_id
+                             JOIN ${empresa}_dados.user_ramal AS r ON u.id=r.userId
+                            WHERE l.acao='login' AND l.id>${idLogin} AND l.data>='${de}' AND l.data<='${ate}' 
+                            ${filter}
+                         ORDER BY l.id DESC`
+                const rows = await this.querySync(conn,sql)
+                pool.end((err)=>{
+                    if(err) console.error('Reports ...', err)
+                    resolve(rows[0].total)
+                })                
+            })
+        })   
+    }
     async dadosLogin(empresa,idAgente,de,ate,acao,idLogin,estado,equipe,logados,status,registros,pagina){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
@@ -262,7 +288,51 @@ class Report{
     }
 
     //Detalhamento de Tabulacoes
-    async sinteticosTabulacoes(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao){
+    async sinteticosTabulacoesAutomaticas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao){
+        let filter=""
+        filter+=` AND h.data>='${dataI}' AND h.data<='${dataF}'`;
+        if(ramal!=false){filter+=` AND h.agente=${ramal}`;}
+        if(equipe!=false){filter+=` AND u.equipe=${equipe}`;}
+        if(campanha!=false){filter+=` AND h.campanha=${campanha}`;}
+        if(mailing!=false){filter+=` AND h.mailing=${mailing}`;}
+        if(numero!=false){filter+=` AND h.numero_discado LIKE '%${numero}%'`;}
+        if(tipo!=false){filter+=` AND h.tipo = '${tipo}'`;}
+        if(contatados!=false){
+            if(contatados==1){
+                filter+=` AND h.contatado='S'`
+            }else{
+                filter+=` AND h.contatado<>'S'`
+            }
+        }
+        if(produtivo!=false){
+            if(produtivo==1){
+                filter+=` AND h.produtivo=1`
+            }else{
+                filter+=` AND h.contatado<>1`
+            }
+        }
+        if(tabulacao!=false){filter+=` AND h.status_tabulacao = '${tabulacao}'`;}
+
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados')
+            pool.getConnection(async (err,conn)=>{   
+                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
+                const sql = `SELECT h.obs_tabulacao, count(h.id) as total
+                               FROM ${empresa}_dados.historico_atendimento AS h
+                          LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
+                              WHERE 1=1 ${filter} AND status_tabulacao=0
+                           GROUP BY obs_tabulacao`
+                //console.log('chamadasRealizadas',sql)
+                const rows = await this.querySync(conn,sql)   
+                pool.end((err)=>{                    
+                    if(err) console.error('Reports ...', err)
+                    resolve(rows)
+                })                
+            })
+        })    
+    }
+
+    async sinteticosTabulacoesManuais(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao){
         let filter=""
         filter+=` AND h.data>='${dataI}' AND h.data<='${dataF}'`;
         if(ramal!=false){filter+=` AND h.agente=${ramal}`;}
@@ -294,7 +364,7 @@ class Report{
                 const sql = `SELECT h.status_tabulacao, count(h.id) as total
                                FROM ${empresa}_dados.historico_atendimento AS h
                           LEFT JOIN ${empresa}_dados.users AS u ON h.agente=u.id
-                              WHERE 1=1 ${filter} 
+                              WHERE 1=1 ${filter} AND status_tabulacao>0
                            GROUP BY status_tabulacao`
                 //console.log('chamadasRealizadas',sql)
                 const rows = await this.querySync(conn,sql)   

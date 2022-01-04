@@ -32,7 +32,7 @@ class ReportController{
         let registros=20 // Qtd de registros a serem exibidos por pagina, vazio limita a 20 registros        
         //Verificando parametros recebidos
         if(params.dataInicio) dataInicio = params.dataInicio
-        if(params.dataFinal) dataFinal = params.dataInicio
+        if(params.dataFinal) dataFinal = params.dataFinal
         if(params.ramal) ramal = params.ramal
         if(params.equipe) equipe = params.equipe
         if(params.logados) logados = params.logados
@@ -73,6 +73,88 @@ class ReportController{
             }
         }
         return res.json(relatorioPausas)
+    }
+    //Exportar Relatório de Pausas
+    async exportar_relatorioPausas(req,res){
+        const empresa = await User.getEmpresa(req)
+        const params = req.body
+        const hoje = moment().format('YYYY-MM-DD')
+        //Argumento dos Filtros
+        let dataInicio = hoje //Data no Formato YYYY-MM-DD, filtra os registros a partir esta data, vazio exibe registros a partir de hoje
+        let dataFinal = hoje //Data no Formato YYYY-MM-DD, filtra os registros ate esta data, vazio exibe registros ate a data de hoje
+        let ramal=false    //Cod do Ramal do agente a ser filtrado, vazio lista todos
+        let equipe=false   //Cod do Equipe de agentes a ser filtrada, vazio lista todas
+        let logados=false  //1 ou 0 - 1 = Agentes Logados, 2 = Deslogados, vazio lista todos
+        let status=false   //1 ou 0 - 1 = Agentes Ativos, 2 = Inativos, vazio lista todos
+        let pagina = 1 //Numero da página a ser exibida, vazio exibe a 1ª pagina
+        let registros=20 // Qtd de registros a serem exibidos por pagina, vazio limita a 20 registros        
+        //Verificando parametros recebidos
+        if(params.dataInicio) dataInicio = params.dataInicio
+        if(params.dataFinal) dataFinal = params.dataFinal
+        if(params.ramal) ramal = params.ramal
+        if(params.equipe) equipe = params.equipe
+        if(params.logados) logados = params.logados
+        if(params.pagina) pagina = params.pagina
+        if(params.registros) registros = params.registros
+        const agentes = await Report.filtrarAgentes(empresa,false,false,ramal,false,equipe,logados,status)
+        //Preparando Arquivo
+        const dir = `public/${empresa}`;
+        const file = `${dir}/relatorio_de_pausas.csv`
+        //Verifica se não existe
+        if (!fs.existsSync(dir)){
+            //Efetua a criação do diretório
+            fs.mkdir(dir, (err) => {
+                if (err) {
+                    console.log("Deu ruim...",err);
+                    return
+                }        
+                console.log("Diretório criado! =)")
+            });
+        }
+        const writable = 
+        fs.createWriteStream(`${file}`, {flags: 'w', encoding: 'ascii'})
+        writable.write(`"Relatorio de Pausas gerado em ${moment().format('DD/MM/YYYY')}";\n`)
+        let filtros = `Filtro: De ${moment(dataInicio).format('DD/MM/YYYY')} a ${moment(dataFinal).format('DD/MM/YYYY')}`
+        if(ramal!=false){ filtros+=`, Agente: ${ramal}`}
+        if(equipe!=false){ filtros+=`, Equipe: ${equipe}`}
+        if(logados!=false){
+            let statusLogado = ', Agentes Deslogados'
+            if(logados==1){
+                statusLogado = ', Agentes Logados'
+            }
+            filtros+=`${statusLogado}`
+        }
+       
+        writable.write(`"${filtros}"\n`)
+        
+        //Montando linha de titulos
+        writable.write('"Ramal";')
+        writable.write('"Agente";')
+        const pausas = await Pausas.listarPausas(empresa)   //Listar pausas 
+        for(let p=0; p<pausas.length;p++){    
+            writable.write(`"${pausas[p].nome}";`)
+        }
+        writable.write('"Tempo total em pausa";')
+        writable.write('\n')
+
+        for(let i=0; i<agentes.length; i++){
+            const idAgente = agentes[i].id
+            writable.write(`"${idAgente}";`)
+            writable.write(`"${agentes[i].nome}";`)
+            const pausas = await Pausas.listarPausas(empresa)   //Listar pausas     
+            for(let p=0; p<pausas.length;p++){
+                const idPausa = pausas[p].id 
+                const tempoPausaAgente = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,idPausa,idAgente)
+                writable.write(`"${await Report.converteSeg_tempo(tempoPausaAgente)}";`) 
+            }
+            const totalPausasAgente = await Report.calculaTempoPausa(empresa,dataInicio,dataFinal,false,idAgente)  
+            writable.write(`"${await Report.converteSeg_tempo(totalPausasAgente)}";`)                   
+            writable.write('\n')
+        }      
+        writable.end()
+        //res.sendFile('relatorio_gerenciamentoGeral.csv',{root:dir})
+        res.send(`static/${empresa}/relatorio_de_pausas.csv`)
+        return false
     }
 
     //Login x logout
@@ -134,9 +216,130 @@ class ReportController{
         }
         res.json(loginLogout)
     }
+    
+    //Exportar Relatório de Login x Logout
+    async exportar_exportar_loginXLogout(req,res){
+        const empresa = await User.getEmpresa(req)
+        const params = req.body
+        const hoje = moment().format('YYYY-MM-DD')
+        //Argumento dos Filtros
+        let de = hoje
+        let ate=hoje      
+        let ramal = false 
+        let estado = false 
+        let equipe = false
+        let logados = false
+        let status = false
+        if(params.dataInicio)   de = params.dataInicio
+        if(params.dataFinal)   ate = params.dataFinal
+        if(params.ramal)     ramal = params.ramal
+        if(params.estado)   estado = params.estado
+        if(params.equipe)   equipe = params.equipe
+        if(params.logados) logados = params.logados
+        if(params.status)   status = params.status
+
+        //Preparando Arquivo
+        const dir = `public/${empresa}`;
+        const file = `${dir}/relatorio_de_login_x_logout.csv`
+        //Verifica se não existe
+        if (!fs.existsSync(dir)){
+            //Efetua a criação do diretório
+            fs.mkdir(dir, (err) => {
+                if (err) {
+                    console.log("Deu ruim...",err);
+                    return
+                }        
+                console.log("Diretório criado! =)")
+            });
+        }
+        const writable = 
+        fs.createWriteStream(`${file}`, {flags: 'w', encoding: 'ascii'})
+        writable.write(`"Relatorio de Login X Logout gerado em ${moment().format('DD/MM/YYYY')}";\n`)
+        let filtros = `Filtro: De ${moment(de).format('DD/MM/YYYY')} a ${moment(ate).format('DD/MM/YYYY')}`
+        if(ramal!=false){ filtros+=`, Agente: ${ramal}`}
+        if(equipe!=false){ filtros+=`, Equipe: ${equipe}`}
+        if(estado!=false){
+            if(estado==0){
+                filtros+= ', Agentes Deslogados'
+            }
+            if(estado==1){
+                filtros+=', Agentes Disponíveis'
+            }
+            if(estado==2){
+                filtros+= ', Agentes em pausa'
+            }
+            if(estado==3){
+                filtros+=', Agentes em atendimento'
+            }
+            if(estado==4){
+                filtros+= ', Agentes Indisponíveis'
+            }
+        }
+        if(logados!=false){
+            let statusLogado = ', Agentes Deslogados'
+            if(logados==1){
+                statusLogado = ', Agentes Logados'
+            }
+            filtros+=`${statusLogado}`
+        }
+        if(status!=false){
+            if(estado==0){
+                filtros+= ', Agentes Inativos'
+            }
+            if(estado==1){
+                filtros+=', Agentes Ativos'
+            }
+        }       
+        writable.write(`"${filtros}"\n`)
+        const titulos = '"Ramal";"Agente";"Login";"Logout";"Tempo Logado";"Chamadas Recebidas";"Chamadas Realizadas";"Chamadas Manuais";"Tempo em Chamada";"% de Serviço";"Status"\n'
+        writable.write(titulos)
+        //Contanto registros 
+        const total = await Report.countDadosLogin(empresa,ramal,de,ate,'login',0,estado,equipe,logados,status)
+        const registros = 100     
+        const totalPaginas = Math.ceil(total/registros)
+        for(let p=0; p<totalPaginas; p++){
+            const pagina = p+1
+            const login = await Report.dadosLogin(empresa,ramal,de,ate,'login',0,estado,equipe,logados,status,registros,pagina) 
+        
+            for(let i = 0; i <login.length; i++){
+                const idAgente=login[i].idAgente           
+                let dataLogin = `${login[i].data} ${login[i].hora}`
+                writable.write(`"${idAgente}";`)
+                writable.write(`"${login[i].nome}";`)
+                writable.write(`"${moment(dataLogin, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")}";`)
+                const logout = await Report.dadosLogin(empresa,idAgente,de,ate,'logout',login[i].id,estado,equipe,logados,status,registros,pagina)
+                let dataLogout = moment().format("YYYY-MM-DD HH:mm:ss")  
+                if(logout.length>0){                 
+                    dataLogout = `${logout[0].data} ${logout[0].hora}`  
+                    writable.write(`"${moment(dataLogout, "YYYY-MM-DD HH:mm:ss").format("DD/MM/YYYY HH:mm:ss")}";`)
+                }else{               
+                    writable.write(`"Logado";`)
+                }
+                const tl = moment(dataLogout,"YYYY-MM-DD HH:mm:ss").diff(moment(dataLogin,"YYYY-MM-DD HH:mm:ss"))
+                const tempoLogado = moment.duration(tl).asSeconds()
+                writable.write(`"${await Report.converteSeg_tempo(tempoLogado)}";`)
+                const tempoChamadasRecebidas = await Report.totalChamadasRecebidas(empresa,idAgente,dataLogin,dataLogout)
+                writable.write(`"${await Report.converteSeg_tempo(tempoChamadasRecebidas)}";`)
+                const tempoChamadasRealizadas = await Report.totalChamadasRealizadas(empresa,idAgente,dataLogin,dataLogout)                      
+                writable.write(`"${await Report.converteSeg_tempo(tempoChamadasRealizadas)}";`)
+                const tempoChamadasManuais = await Report.totalChamadasManuais(empresa,idAgente,dataLogin,dataLogout)                      
+                writable.write(`"${await Report.converteSeg_tempo(tempoChamadasManuais)}";`)
+                const tempoEmChamadas=tempoChamadasRecebidas+tempoChamadasRealizadas+tempoChamadasManuais
+                writable.write(`"${await Report.converteSeg_tempo(tempoEmChamadas)}";`)
+                const perc_servico = Math.floor((tempoEmChamadas/tempoLogado)*100)
+                writable.write(`"${perc_servico}%";`)
+                writable.write(`"${await Report.infoEstadoAgente(empresa,idAgente)}";`)
+                writable.write("\n")
+            }
+        }
+        writable.end()
+        res.send(`static/${empresa}/relatorio_de_login_x_logout.csv`)
+        return false
+    }
 
     //Gerenciamento
     async detalhamentoTabulacoes(req,res){
+        console.log('detalhamentoTabulacoes')
         const empresa = await User.getEmpresa(req)
         const params = req.body
         const hoje = moment().format("YYYY-MM-DD")
@@ -167,16 +370,25 @@ class ReportController{
         if(params.tabulacao)  tabulacao  = params.tabulacao
         if(params.pagina)     pagina     = params.pagina
         if(params.registros)  registros  = params.registros
+
                 
         const detalhamentoTabulacoes=[]
         //Informações Consolidadas
         const sinteticos = {}
               sinteticos['tabulacoes']= {}
+              
 
-        const sinteticosTabulacoes = await Report.sinteticosTabulacoes(empresa,dataInicio,dataFinal,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
-        for(let i = 0;i<sinteticosTabulacoes.length; i++) {
-                const status = await Tabulacoes.nomeStatus(empresa,sinteticosTabulacoes[i].status_tabulacao) 
-                  sinteticos['tabulacoes'][status]=sinteticosTabulacoes[i].total        
+        const sinteticosTabulacoesAutomaticas = await Report.sinteticosTabulacoesAutomaticas(empresa,dataInicio,dataFinal,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
+        console.log("Auto",sinteticosTabulacoesAutomaticas)
+        for(let i = 0;i<sinteticosTabulacoesAutomaticas.length; i++) {
+            sinteticos['tabulacoes'][`auto: ${sinteticosTabulacoesAutomaticas[i].obs_tabulacao}`]=sinteticosTabulacoesAutomaticas[i].total        
+        }
+
+        const sinteticosTabulacoesManuais = await Report.sinteticosTabulacoesManuais(empresa,dataInicio,dataFinal,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
+        console.log("Manuais",sinteticosTabulacoesManuais)
+        for(let i = 0;i<sinteticosTabulacoesManuais.length; i++) {
+           const status = await Tabulacoes.nomeStatus(empresa,sinteticosTabulacoesManuais[i].status_tabulacao) 
+            sinteticos['tabulacoes'][status]=sinteticosTabulacoesManuais[i].total        
         }
         detalhamentoTabulacoes.push(sinteticos)
         //Registros do Historico
@@ -201,8 +413,14 @@ class ReportController{
                     call['produtivo']='Não'
                   }       
                   if(historico[i].status_tabulacao==0){
-                    call['tabulacao']=historico[i].obs_tabulacao
-                    call['observacoes']="Tabulação automática"
+                      const status = historico[i].obs_tabulacao
+                      let obs="Tabulação automática"
+                      call['tabulacao']=status
+                      if(status=="Caixa Postal"){
+                        obs="Caixa Postal identificada pelo discador"
+                      }
+                    
+                    call['observacoes']=obs
                   }else{
                     call['tabulacao']=await Tabulacoes.nomeStatus(empresa,historico[i].status_tabulacao) 
                     call['observacoes']=historico[i].obs_tabulacao
@@ -239,10 +457,7 @@ class ReportController{
         if(params.tipo)       tipo       = params.tipo         
         if(params.contatados) contatados = params.contatados
         if(params.produtivo)  produtivo  = params.produtivo
-        if(params.tabulacao)  tabulacao  = params.tabulacao           
-        const total = await Report.countHistoricoChamadas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
-        const registros = 100     
-        const totalPaginas = Math.ceil(total/registros)
+        if(params.tabulacao)  tabulacao  = params.tabulacao     
         const dir = `public/${empresa}`;
         const file = `${dir}/relatorio_gerenciamentoGeral.csv`
         //Verifica se não existe
@@ -257,73 +472,71 @@ class ReportController{
             });
         }
         const writable = 
-        fs.createWriteStream(`${file}`, {flags: 'w', encoding: 'utf8'})
+        fs.createWriteStream(`${file}`, {flags: 'w', encoding: 'ascii'})
+        writable.write(`"Relatorio de Gerenciamento gerado em ${moment().format('DD/MM/YYYY')}";\n`)
+        let filtros = `Filtro: De ${moment(dataI).format('DD/MM/YYYY')} a ${moment(dataF).format('DD/MM/YYYY')}`
+        if(ramal!=false){ filtros+=`, Agente: ${ramal}`}
+        if(equipe!=false){ filtros+=`, Equipe: ${equipe}`}
+        if(campanha!=false){ filtros+=`, Campanha: ${campanha}`}
+        if(mailing!=false){ filtros+=`, Mailing: ${mailing}`}
+        if(numero!=false){ filtros+=`, Número: ${numero}`}
+        if(tipo!=false){ filtros+=`, Tipo: ${tipo}`}
+        if(contatados!=false){
+            if(contatados==1){
+                filtros+= ', Contatados'
+            }else{
+                filtros+=', Não Contatados'
+            }
+        }
+        if(produtivo!=false){
+            if(produtivo==1){
+                filtros+= ', Produtivos'
+            }else{
+                filtros+=', Improdutivos'
+            }
+        }
+        if(tabulacao!=false){ filtros+=`, Tabulação: ${tabulacao}`}     
+        writable.write(`"${filtros}"\n`)
+        const titulos = '"Ramal";"Agente";"Data";"Hora";"Campanha";"Nome do Cliente";"Número Discado";"Contatado";"Produtivo";"Tabulação";"Observações"\n'
+        writable.write(titulos)
+        const total = await Report.countHistoricoChamadas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
+        const registros = 100     
+        const totalPaginas = Math.ceil(total/registros)
+       
         for(let p=0; p<totalPaginas; p++){
             const pagina = p+1
             const historico = await Report.historicoChamadas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
-            const json2csvParser = new Parser({ delimiter: ';' });
             for(let i = 0;i<historico.length; i++) {
-                const call={}
-                    call['ramal']=historico[i].agente
-                    call['agente']=historico[i].nome
-                    call['data']=historico[i].dataCall
-                    call['hora']=historico[i].hora
-                    call['campanha']=await Campanhas.nomeCampanhas(empresa,historico[i].campanha)
-                    call['cliente']=historico[i].nome_registro
-                    call['numero']=historico[i].numero_discado
-                    if(historico[i].contatado=='S'){
-                        call['contatado']='Sim'
-                    }else{
-                        call['contatado']='Não'
-                    }
-                    if(historico[i].produtivo==1){
-                        call['produtivo']='Sim'
-                    }else{
-                        call['produtivo']='Não'
-                    }       
-                    if(historico[i].status_tabulacao==0){
-                        call['tabulacao']=historico[i].obs_tabulacao
-                        call['observacoes']="Tabulação automática"
-                    }else{
-                        call['tabulacao']=await Tabulacoes.nomeStatus(empresa,historico[i].status_tabulacao) 
-                        call['observacoes']=historico[i].obs_tabulacao
-                    }
-                const csv = json2csvParser.parse(call);
-                writable.write(csv)
+                writable.write(`"${historico[i].agente}";`)
+                writable.write(`"${historico[i].nome}";`)
+                writable.write(`"${historico[i].dataCall}";`)
+                writable.write(`"${historico[i].hora}";`)
+                writable.write(`"${await Campanhas.nomeCampanhas(empresa,historico[i].campanha)}";`)
+                writable.write(`"${historico[i].nome_registro}";`)
+                writable.write(`"${historico[i].numero_discado}";`)
+                if(historico[i].contatado=='S'){
+                    writable.write(`"Sim";`)
+                }else{
+                    writable.write(`"Não";`)
+                }
+                if(historico[i].produtivo==1){
+                    writable.write(`"Sim";`)
+                }else{
+                    writable.write(`"Não";`)
+                }       
+                if(historico[i].status_tabulacao==0){
+                    writable.write(`"${historico[i].obs_tabulacao}";`)
+                        writable.write(`"Tabulação automática";`)
+                }else{
+                    writable.write(`"${await Tabulacoes.nomeStatus(empresa,historico[i].status_tabulacao)}";`)
+                    writable.write(`"${historico[i].obs_tabulacao}";`)
+                }
+                writable.write('\n')
             }
-        }        
-        writable.end('\n')
-        res.setHeader('Content-disposition', `attachment; filename=${file}`);
-        res.setHeader('Content-type', 'text/csv');
-       // res.sendFile('relatorio_gerenciamentoGeral.csv',{root:dir})
+        }
+        writable.end()
         res.send(`static/${empresa}/relatorio_gerenciamentoGeral.csv`)
-
         return false
-
-        
-        /*res.setHeader('Content-disposition', 'attachment; filename=mailing.csv');
-        res.set('Content-Type', 'text/csv');
-      
-        //res.send("ok<a href='src/tmp/files/mailing.csv' download='mailing.csv' id='download-link'></a><script>document.getElementById('download-link').click();</script>")
-        //res.sendFile('src/tmp/files/mailing.csv',options)
-        /*        
-        const fields = data['fields']
-        const csvParser = new Parser({fields})
-        const mailing = csvParser.parse(data['registros']);        
-    
-        res.status(200).end(mailing);/*       
-        fs.writeFile('data.csv', csv.parse(mailing), function(err){
-            if(err){
-                console.error(err)
-                throw err
-            }
-            console.log('arquivo salvo')
-        })
-        /*const json2csvParser = new Parser({ delimiter: ';' });
-        const csv = json2csvParser.parse(mailing);       
-        res.setHeader('Content-disposition', 'attachment; filename=data.csv');
-        res.set('Content-Type', 'text/csv');
-        return res.status(200).send(csv);*/
     }
 
 
@@ -467,6 +680,114 @@ class ReportController{
         }
         res.json(detChamadas)
     }
+    //Exporta os registros de um mailing
+    async exportar_detalhamentoChamadas(req,res){
+        const empresa = await User.getEmpresa(req)
+        const params = req.body
+        const hoje = moment().format("YYYY-MM-DD")
+        //Filtros
+        let dataI  = hoje
+        let dataF  = hoje
+        let ramal = false
+        let equipe = false
+        let campanha = false
+        let mailing = false
+        let numero = false
+        let tipo = false        
+        let contatados = false
+        let produtivo = false
+        let tabulacao = false
+        if(params.dataInicio) dataI = params.dataInicio
+        if(params.dataFinal)  dataF  = params.dataFinal
+        if(params.ramal)      ramal      = params.ramal
+        if(params.equipe)     equipe     = params.equipe
+        if(params.campanha)   campanha   = params.campanha
+        if(params.mailing)    mailing    = params.mailing
+        if(params.numero)     numero     = params.numero 
+        if(params.tipo)       tipo       = params.tipo         
+        if(params.contatados) contatados = params.contatados
+        if(params.produtivo)  produtivo  = params.produtivo
+        if(params.tabulacao)  tabulacao  = params.tabulacao   
+        const dir = `public/${empresa}`;
+        const file = `${dir}/relatorio_detalhamentoChamadas.csv`
+        //Verifica se não existe
+        if (!fs.existsSync(dir)){
+            //Efetua a criação do diretório
+            fs.mkdir(dir, (err) => {
+                if (err) {
+                    console.log("Deu ruim...",err);
+                    return
+                }        
+                console.log("Diretório criado! =)")
+            });
+        }
+        const writable = 
+        fs.createWriteStream(`${file}`, {flags: 'w', encoding: 'ascii'})
+        writable.write(`"Detalhamento de Chamadas gerado em ${moment().format('DD/MM/YYYY')}";\n`)
+        let filtros = `Filtro: De ${moment(dataI).format('DD/MM/YYYY')} a ${moment(dataF).format('DD/MM/YYYY')}`
+        if(ramal!=false){ filtros+=`, Agente: ${ramal}`}
+        if(equipe!=false){ filtros+=`, Equipe: ${equipe}`}
+        if(campanha!=false){ filtros+=`, Campanha: ${campanha}`}
+        if(mailing!=false){ filtros+=`, Mailing: ${mailing}`}
+        if(numero!=false){ filtros+=`, Número: ${numero}`}
+        if(tipo!=false){ filtros+=`, Tipo: ${tipo}`}
+        if(contatados!=false){
+            if(contatados==1){
+                filtros+= ', Contatados'
+            }else{
+                filtros+=', Não Contatados'
+            }
+        }
+        if(produtivo!=false){
+            if(produtivo==1){
+                filtros+= ', Produtivos'
+            }else{
+                filtros+=', Improdutivos'
+            }
+        }
+        if(tabulacao!=false){ filtros+=`, Tabulação: ${tabulacao}`}     
+        writable.write(`"${filtros}"\n`)
+        const titulos = '"Ramal";"Agente";"Data";"Hora";"Campanha";"Nome do Cliente";"Número Discado";"Contatado";"Produtivo";"Tabulação";"Observações"\n'
+        writable.write(titulos)
+        const total = await Report.countHistoricoChamadas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao)
+        const registros = 100     
+        const totalPaginas = Math.ceil(total/registros)
+       
+        for(let p=0; p<totalPaginas; p++){
+            const pagina = p+1
+            const historico = await Report.historicoChamadas(empresa,dataI,dataF,ramal,equipe,campanha,mailing,numero,tipo,contatados,produtivo,tabulacao,pagina,registros)
+            for(let i = 0;i<historico.length; i++) {
+                writable.write(`"${historico[i].agente}";`)
+                writable.write(`"${historico[i].nome}";`)
+                writable.write(`"${historico[i].dataCall}";`)
+                writable.write(`"${historico[i].hora}";`)
+                writable.write(`"${await Campanhas.nomeCampanhas(empresa,historico[i].campanha)}";`)
+                writable.write(`"${historico[i].nome_registro}";`)
+                writable.write(`"${historico[i].numero_discado}";`)
+                if(historico[i].contatado=='S'){
+                    writable.write(`"Sim";`)
+                }else{
+                    writable.write(`"Não";`)
+                }
+                if(historico[i].produtivo==1){
+                    writable.write(`"Sim";`)
+                }else{
+                    writable.write(`"Não";`)
+                }       
+                if(historico[i].status_tabulacao==0){
+                    writable.write(`"${historico[i].obs_tabulacao}";`)
+                        writable.write(`"Tabulação automática";`)
+                }else{
+                    writable.write(`"${await Tabulacoes.nomeStatus(empresa,historico[i].status_tabulacao)}";`)
+                    writable.write(`"${historico[i].obs_tabulacao}";`)
+                }
+                writable.write('\n')
+            }
+        }
+        writable.end()
+        res.send(`static/${empresa}/relatorio_detalhamentoChamadas.csv`)
+        return false
+    }
 
     
 
@@ -574,6 +895,144 @@ class ReportController{
             }
         }
         res.json(monitoramentoAgentes)
+    }
+    //Exporta os monitoramento de agentes
+    async exportar_monitoramentoAgente(req,res){
+        const empresa = await User.getEmpresa(req)
+        const params = req.body
+        const hoje = moment().format("YYYY-MM-DD")
+        //Filtros
+        let dataI = hoje
+        let dataF = hoje
+        let ramal = false
+        let idCampanha = false
+        let equipe = false
+        let logados = false
+        let status = false
+        if(params.dataInicio) dataI = params.dataInicio 
+        if(params.dataFinal) dataF = params.dataFinal 
+        if(params.ramal) ramal = params.ramal
+        if(params.idCampanha) idCampanha = params.idCampanha 
+        if(params.equipe) equipe = params.equipe 
+        if(params.logados) logados = params.logados
+        if(params.pagina) pagina = params.pagina 
+        const dir = `public/${empresa}`;
+        const file = `${dir}/relatorio_monitoramentoAgente.csv`
+        //Verifica se não existe
+        if (!fs.existsSync(dir)){
+            //Efetua a criação do diretório
+            fs.mkdir(dir, (err) => {
+                if (err) {
+                    console.log("Deu ruim...",err);
+                    return
+                }        
+                console.log("Diretório criado! =)")
+            });
+        }
+        const writable = 
+        fs.createWriteStream(`${file}`, {flags: 'w', encoding: 'ascii'})
+        writable.write(`"Detalhamento de Chamadas gerado em ${moment().format('DD/MM/YYYY')}";\n`)
+        let filtros = `Filtro: De ${moment(dataI).format('DD/MM/YYYY')} a ${moment(dataF).format('DD/MM/YYYY')}`
+        if(ramal!=false){ filtros+=`, Agente: ${ramal}`}
+        if(equipe!=false){ filtros+=`, Equipe: ${equipe}`}
+        if(idCampanha!=false){ filtros+=`, Campanha: ${idCampanha}`}
+        if(logados!=false){
+            let statusLogado = ', Agentes Deslogados'
+            if(logados==1){
+                statusLogado = ', Agentes Logados'
+            }
+            filtros+=`${statusLogado}`
+        }
+        if(status!=false){
+            if(estado==0){
+                filtros+= ', Agentes Inativos'
+            }
+            if(estado==1){
+                filtros+=', Agentes Ativos'
+            }
+        }       
+        writable.write(`"${filtros}"\n`)
+        const titulos = '"Agente";"Status";"Ramal";"Chamadas Atendidas";"Equipe";"Campanha";"Tempo Médio de Tabulação (TMT)";"Tempo Médio de Atendimento (TMA)";"Tempo Médio de Ociosidade (TMO)";"Tabulações Produtivas";"Tabulações Improdutivas"\n'
+        writable.write(titulos)
+        const agentes = await Report.filtrarAgentes(empresa,false,false,ramal,false,equipe,logados,status)
+        for(let i=0; i<agentes.length; i++){
+            const idAgente = agentes[i].id
+            const infoUser = await Report.infoAgente(empresa,idAgente);
+            writable.write(`"${infoUser[0].nome}";`)
+          
+            const nome = infoUser[0].nome
+            const equipe = infoUser[0].equipe
+            const codEstado = infoUser[0].cod_estado
+            const estado = infoUser[0].estado                
+            let estadoAgente = codEstado
+            let falando=0
+            let desligada=0
+            let tabulando=0
+            let tabulada=0
+            const status = await Report.statusTabulacaoAgente(empresa,idAgente)
+            if(status!=0){
+                falando=status.event_falando
+                desligada=status.event_desligada
+                tabulando=status.event_tabulando
+                tabulada=status.event_tabulada
+            }
+            if(estadoAgente==3){                   
+                if((tabulando==1)||(desligada==1)){
+                    estadoAgente=3.5
+                }
+                if((falando==0)&&(desligada==1)&&(tabulada==1)){
+                    await Agente.alterarEstadoAgente(empresa,idAgente,1,0)
+                }
+            }else if(estadoAgente==6){   
+                const falandoManual = await Report.statusAtendimentoChamadaManual(empresa,idAgente)                
+                if(falandoManual==1){
+                    estadoAgente=7
+                }
+            }else if(estadoAgente==5){
+                if(tabulando==1){
+                    estadoAgente=3.5
+                }
+                if(falando==1){
+                    estadoAgente=3
+                }
+            }
+            writable.write(`"${estadoAgente}";`)
+            writable.write(`"${idAgente}";`)
+            let userCampanhas
+            if((idCampanha==false)||(idCampanha=="")){
+                userCampanhas=true
+            }else{      
+                userCampanhas = await Report.usuarioCampanha(empresa,idAgente,idCampanha)
+            }
+            if(userCampanhas==true){
+                const estadoRamal = await Agente.statusRamal(empresa,idAgente)
+                let tempo = 0       
+                const now = moment(new Date());         
+                const duration = moment.duration(now.diff(estadoRamal['hora']))
+                tempo=await Report.converteSeg_tempo(duration.asSeconds()) 
+               // const tempoStatus=await Report.tempoEstadoAgente(empresa,idAgente)
+                const hoje = moment().format("Y-MM-DD")
+                const chamadasAtendidas=await Report.chamadasAtendidas(empresa,idAgente,idCampanha,dataI,dataF,hoje)
+                const campanha = await Discador.listarCampanhasAtivasAgente(empresa,idAgente)
+                const TMT = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMT',idCampanha,dataI,dataF,hoje))
+                const TMA = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMA',idCampanha,dataI,dataF,hoje))
+                const TMO = await Report.converteSeg_tempo(await Report.tempoMedioAgente(empresa,idAgente,'TMO',idCampanha,dataI,dataF,hoje))
+                const produtivos = await Report.chamadasProdutividade(empresa,1,idAgente,idCampanha,dataI,dataF,hoje)
+                const improdutivos = await Report.chamadasProdutividade(empresa,0,idAgente,idCampanha,dataI,dataF,hoje)
+                    writable.write(`"${chamadasAtendidas}";`)
+                    writable.write(`"${equipe}";`)
+                    writable.write(`"${campanha}";`)
+                    writable.write(`"${TMT}";`)
+                    writable.write(`"${TMA}";`)
+                    writable.write(`"${TMO}";`)
+                    writable.write(`"${produtivos}";`)
+                    writable.write(`"${improdutivos}";`)
+                    writable.write("\n")
+            }
+        }
+        writable.end()
+        res.send(`static/${empresa}/relatorio_monitoramentoAgente.csv`)
+        return false
     }
 
     //Monitoramento de Campanhas

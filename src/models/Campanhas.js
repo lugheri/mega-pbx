@@ -634,28 +634,50 @@ class Campanhas{
 
 
     async addNumerosCampanha(empresa,idMailing,idCampanha){
-        connect.mongoose(empresa)
-        //Cria Schema dos numeros na campanha
-       /* const NumerosCampanha_Schema = new Schema({
-            idMailing:Number,
-            idCampanha:Number,
-            idRegistro:Number,
-            valido:Number,
-            telefone:Number
-        });*/
-
+        connect.mongoose(empresa)       
         //modelNumeros
         delete mongoose.connection.models[`numerosmailing_${idMailing}`];
-        const modelNumerosBase = mongoose.model(`numerosmailing_${idMailing}`,{})
-        console.log(`numerosmailing_${idMailing}`)
-
+        const modelNumerosBase = mongoose.model(`numerosMailing_${idMailing}`,{
+            idNumero: Number,
+            idRegistro: String,
+            ddd: String,
+            numero: String,
+            uf:String,
+            tipo:String,
+            valido: Boolean,
+            message: String,
+            tratado:Boolean,
+            contatado: Boolean,
+            produtivo: Boolean
+        })
         const numeros = await modelNumerosBase.find({valido:true});
         console.log(numeros.length);
-        await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,numeros)
 
-        console.log('Contando Numeros')
-        const numerosAdd = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
-        console.log('Numeros Adicionados',numerosAdd.length)
+        //Criando collection campanha
+        const modelnumerosCampanha = mongoose.model(`numerosCampanha_${idCampanha}`,{
+            idNumero: Number,
+            idRegistro: String,
+            ddd: String,
+            numero: String,
+            uf:String,
+            tipo:String,
+            valido: Boolean,
+            message: String,
+            tratado:Boolean,
+            contatado: Boolean,
+            produtivo: Boolean,
+            tentativas: Number
+        })
+
+        modelnumerosCampanha.collection.drop()
+        for(let n=0;n<numeros.length;n++){
+
+        }
+        //await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,numeros)
+
+        //console.log('Contando Numeros')
+        //const numerosAdd = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
+        //console.log('Numeros Adicionados',numerosAdd.length)
 
         
         return true

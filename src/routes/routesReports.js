@@ -15,16 +15,19 @@ module.exports = (routes) => {
     //Pausas
     //Relatório de Pausas
     routes.post('/relatorioPausas',ReportController.relatorioPausas)
+    routes.post('/exportar_relatorioPausas',ReportController.exportar_relatorioPausas)
     //Login x logout
     routes.post('/loginXLogout',ReportController.loginXLogout)
+    routes.post('/exportar_loginXLogout',ReportController.exportar_exportar_loginXLogout)
     //Assertividade Mailing
     routes.post('/detalhamentoTabulacoes',ReportController.detalhamentoTabulacoes)
+    routes.post('/exportarDetalhamentoTabulacoes',ReportController.exportarDetalhamentoTabulacoes)
     //Detalhamento de Chamadas
     routes.post('/detalhamentoChamadas',ReportController.detalhamentoChamadas)
-    //Detalhamento de Chamadas
-    routes.post('/exportarDetalhamentoTabulacoes',ReportController.exportarDetalhamentoTabulacoes)
+    routes.post('/exportar_detalhamentoChamadas',ReportController.exportar_detalhamentoChamadas)
     //Monitoramento de Agentes
     routes.post('/monitoramentoAgente',ReportController.monitoramentoAgente)
+    routes.post('/exportar_monitoramentoAgente',ReportController.exportar_monitoramentoAgente)
     //Monitoramento de Campanhas
     routes.get('/monitoramentoCampanha/:idCampanha',ReportController.monitoramentoCampanhas)
     //Atualiza Agressividade

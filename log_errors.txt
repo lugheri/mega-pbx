@@ -39,3 +39,23 @@
 8;"LUZIA DOS SANTOS DE OLIVEIRA";"032.175.458-18";"5954961";"27\01\1963";"1995972450";"21";"21\08\2021";"1120126561"
 9;"LUZIA DOS SANTOS DE OLIVEIRA";"032.175.458-18";"5954961";"27\01\1963";"1995972450";"21";"21\08\2021";"1120126561"' 
 2022-01-03 15:44:05 - Error: ENOENT: no such file or directory, stat 'M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\src\tmp\megaconecta\src\tmp\megaconecta\relatorio_gerenciamentoGeral.csv' 
+2022-01-04 12:01:57 - SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at parse (M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\node_modules\body-parser\lib\types\json.js:89:19)
+    at M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\node_modules\body-parser\lib\read.js:121:18
+    at invokeCallback (M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\node_modules\raw-body\index.js:224:16)
+    at done (M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\node_modules\raw-body\index.js:213:7)
+    at IncomingMessage.onEnd (M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\node_modules\raw-body\index.js:273:7)
+    at IncomingMessage.emit (node:events:402:35)
+    at endReadableNT (node:internal/streams/readable:1343:12)
+    at processTicksAndRejections (node:internal/process/task_queues:83:21) 
+2022-01-04 12:02:12 - SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at parse (M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\node_modules\body-parser\lib\types\json.js:89:19)
+    at M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\node_modules\body-parser\lib\read.js:121:18
+    at invokeCallback (M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\node_modules\raw-body\index.js:224:16)
+    at done (M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\node_modules\raw-body\index.js:213:7)
+    at IncomingMessage.onEnd (M:\MegaDev_v1\PBX\Backend\Api(New_Redis)\node_modules\raw-body\index.js:273:7)
+    at IncomingMessage.emit (node:events:402:35)
+    at endReadableNT (node:internal/streams/readable:1343:12)
+    at processTicksAndRejections (node:internal/process/task_queues:83:21) 

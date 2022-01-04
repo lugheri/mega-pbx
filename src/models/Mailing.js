@@ -218,16 +218,19 @@ class Mailing{
                              let numeroCompleto = ddd.toString()+numero.toString()
                              const infoN = this.validandoNumero(ddd,numeroCompleto)                     
                              const telefone = {}
-                                 telefone['idNumero']=idNumero
-                                 telefone['idRegistro']=idReg
-                                 telefone['ddd']=infoN['ddd']
-                                 telefone['numero']=numeroCompleto
-                                 telefone['uf']=infoN['uf']
-                                 telefone['tipo']=infoN['tipo']
-                                 telefone['valido']=infoN['valido']
-                                 telefone['message']=infoN['message']
+                                   telefone['idNumero']=idNumero
+                                   telefone['idRegistro']=idReg
+                                   telefone['ddd']=infoN['ddd']
+                                   telefone['numero']=numeroCompleto
+                                   telefone['uf']=infoN['uf']
+                                   telefone['tipo']=infoN['tipo']
+                                   telefone['valido']=infoN['valido']
+                                   telefone['message']=infoN['message']
+                                   telefone['tratado']=false
+                                   telefone['contatado']=false
+                                   telefone['produtivo']=false
                              //console.log(telefone)
-                         numerosMailing.push(telefone)
+                            numerosMailing.push(telefone)
                              idNumero++
                          }
                      }
@@ -249,6 +252,9 @@ class Mailing{
                                  telefone['tipo']=infoN['tipo']
                                  telefone['valido']=infoN['valido']
                                  telefone['message']=infoN['message']
+                                 telefone['tratado']=false
+                                 telefone['contatado']=false
+                                 telefone['produtivo']=false
                              
                              numerosMailing.push(telefone)
                              //console.log(telefone)
@@ -310,9 +316,103 @@ class Mailing{
                 }
             }
             //Inserindo Registros
-            await dddsMailing.insertMany(porEstado) 
+            await dddsMailing.insertMany(porEstado)
+            
+            //Contando Numeros Inválidos
+            const invalidos = await modelNumerosMailing.find({valido:false}).count();
+            console.log('Invalido')
+            await Mailings.updateOne({id:idBase},{numerosInvalidos:invalidos})
             return true
         }       
+    }
+
+    validandoNumero(ddd,numeroCompleto){
+        const info = {}
+
+        let uf = this.checaUF(ddd)
+        let error=false
+        let message='ok'
+        let valido = 1
+        let tipo=""
+        let dddCorrigido=ddd
+        //validando uf
+        if(uf=='er'){
+            message = 'DDD invalido'
+            error=true
+            valido=0
+            dddCorrigido='0'
+        }
+        let digitos = numeroCompleto.toString().slice(2,3)
+        //validando numero
+        if((numeroCompleto.toString().length<10)&&(numeroCompleto.toString().length>11)){
+            message="numero inválido"
+            error=true
+            valido=0
+        }else{
+            if(numeroCompleto.toString().length==10){
+                if(digitos>=6){
+                    message=`Primeiro dígito inválido para fixo numero`
+                    valido=0
+                    error=true
+                }else{
+                    tipo='fixo'
+                }
+            }else{
+                if(digitos>=7){
+                    tipo='celular'
+                }else{
+                    message=`Primeiro dígito inválido para celular `
+                    valido=0
+                    error=true
+                }
+            }
+        }
+        info['ddd']=dddCorrigido
+        info['uf']=uf
+        info['tipo']=tipo
+        info['valido']=valido
+        info['error']=error   
+        info['message']=message
+        return info;
+    }
+
+    removeCaracteresEspeciais_title(valor){
+        if(valor===undefined) return ""
+
+        const valorFormatado =  valor.replace(" ", "_")
+                                     .replace("/", "_")
+                                     .replace(".", "_")
+                                     .normalize("NFD")
+                                     .replace(/[^a-zA-Z0-9]/g,""); 
+
+        return valorFormatado
+    }
+
+    removeCaracteresEspeciais(valor){
+        if(valor===undefined) return ""
+        const valorFormatado =  valor.replace("/", "_")
+                                     .replace(".", "_")
+                                     .normalize("NFD")
+                                     .replace(/[^a-zA-Z0-9 ]/g,"");
+        return valorFormatado
+    }
+
+    removeCaracteresEspeciais_numero(valor){
+        if(valor===undefined) return 101
+        const numeroFormatado =  valor.toString()
+                                     .replace(" ", "")
+                                     .replace("/", "")
+                                     .replace(".", "")
+                                     .replace("-", "")
+                                     .replace("_", "")
+                                     .replace(/[^0-9]/g, "");
+        return this.filterInt(numeroFormatado)
+    }
+
+    filterInt(value){
+        if(/^(\-|\+)?([0-9]+|Infinity)$/.test(value))
+            return Number(value);
+        return 0;
     }
     
      //Remover Mailing
@@ -321,9 +421,37 @@ class Mailing{
         await Mailings.deleteOne({id:idMailing})
         
         //const modelDadosMailing = mongoose.model(`dadosMailing_${idMailing}`)
+
+      
+
+        delete mongoose.connection.models[`dadosMailing_${idMailing}`];
+        delete mongoose.connection.models[`numerosmailing_${idMailing}`];
+
+        const modelDadosMailing = mongoose.model(`dadosMailing_${idMailing}`,{
+            id_key_base:{type:Number, index:true},
+            nome:String,
+            cpf:String,
+            dados:Array
+        })
+
+        //modelNumeros
+        const modelNumerosMailing = mongoose.model(`numerosMailing_${idMailing}`,{
+            idNumero: Number,
+            idRegistro: String,
+            ddd: String,
+            numero: String,
+            uf:String,
+            tipo:String,
+            valido: Boolean,
+            message: String,
+            tratado:Boolean,
+            contatado: Boolean,
+            produtivo: Boolean
+        })
         
-        conn.getCollection(`dadosMailing_${idMailing}`).drop()
-        conn.getCollection(`numerosMailing_${idMailing}`).drop()
+        modelDadosMailing.collection.drop()
+        modelNumerosMailing.collection.drop()
+
 
         return true
 
@@ -558,44 +686,7 @@ class Mailing{
 
    
 
-    removeCaracteresEspeciais_title(valor){
-        if(valor===undefined) return ""
-
-        const valorFormatado =  valor.replace(" ", "_")
-                                     .replace("/", "_")
-                                     .replace(".", "_")
-                                     .normalize("NFD")
-                                     .replace(/[^a-zA-Z0-9]/g,""); 
-
-        return valorFormatado
-    }
-
-    removeCaracteresEspeciais(valor){
-        if(valor===undefined) return ""
-        const valorFormatado =  valor.replace("/", "_")
-                                     .replace(".", "_")
-                                     .normalize("NFD")
-                                     .replace(/[^a-zA-Z0-9 ]/g,"");
-        return valorFormatado
-    }
-
-    removeCaracteresEspeciais_numero(valor){
-        if(valor===undefined) return 101
-        const numeroFormatado =  valor.toString()
-                                     .replace(" ", "")
-                                     .replace("/", "")
-                                     .replace(".", "")
-                                     .replace("-", "")
-                                     .replace("_", "")
-                                     .replace(/[^0-9]/g, "");
-        return this.filterInt(numeroFormatado)
-    }
-
-    filterInt(value){
-        if(/^(\-|\+)?([0-9]+|Infinity)$/.test(value))
-            return Number(value);
-        return 0;
-    }
+    
 
     
 
@@ -1855,55 +1946,7 @@ class Mailing{
 
 
 
-    validandoNumero(ddd,numeroCompleto){
-        const info = {}
-
-        let uf = this.checaUF(ddd)
-        let error=false
-        let message='ok'
-        let valido = 1
-        let tipo=""
-        let dddCorrigido=ddd
-        //validando uf
-        if(uf=='er'){
-            message = 'DDD invalido'
-            error=true
-            valido=0
-            dddCorrigido='0'
-        }
-        let digitos = numeroCompleto.toString().slice(2,3)
-        //validando numero
-        if((numeroCompleto.toString().length<10)&&(numeroCompleto.toString().length>11)){
-            message="numero inválido"
-            error=true
-            valido=0
-        }else{
-            if(numeroCompleto.toString().length==10){
-                if(digitos>=6){
-                    message=`Primeiro dígito inválido para fixo numero`
-                    valido=0
-                    error=true
-                }else{
-                    tipo='fixo'
-                }
-            }else{
-                if(digitos>=7){
-                    tipo='celular'
-                }else{
-                    message=`Primeiro dígito inválido para celular `
-                    valido=0
-                    error=true
-                }
-            }
-        }
-        info['ddd']=dddCorrigido
-        info['uf']=uf
-        info['tipo']=tipo
-        info['valido']=valido
-        info['error']=error   
-        info['message']=message
-        return info;
-    }
+    
 
     async numerosInvalidos(empresa,tabelaNumeros){
         return new Promise (async (resolve,reject)=>{

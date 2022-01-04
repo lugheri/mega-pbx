@@ -186,9 +186,7 @@ class Tabulacoes{
     }
 
     async nomeStatus(empresa,idStatus){
-        if(idStatus==0){
-            return "Tabulação Automática"
-        }
+        console.log('idStatus',idStatus)       
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{   
