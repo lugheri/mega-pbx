@@ -70,7 +70,7 @@ class SessionController{
         const empresa = payload['empresa']
         const ramal = payload['userId']
        
-        await Redis.setter(`${ramal}:logado`,true,90)
+        await Redis.setter(`${ramal}:logado`,true,24090)
 
         res.json(payload)
     }

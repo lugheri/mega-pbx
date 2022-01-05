@@ -12,6 +12,7 @@ import moment from 'moment'
 import Mailings from '../database/Mailings'
 import MailingsTypeFields from '../database/MailingsTypeFields'
 import dddsMailing from '../database/dddsMailing'
+import MailingCampanha from '../database/MailingCampanha'
 
 
 class Mailing{
@@ -504,15 +505,91 @@ class Mailing{
 
     //Resumo por ddd
     async totalRegUF(idMailing){
+        connect.mongoose(empresa) 
         return await dddsMailing.distinct("uf",{idMailing:idMailing})
     }
 
-    async totalRegistrosUF(idMailing,uf){
+    async totalRegistrosUF(empresa,idMailing,uf){
+        connect.mongoose(empresa) 
         const infoUf = await dddsMailing.find({idMailing:idMailing,uf:uf})
         const total = {}
               total['totalNumerosUF']=infoUf[0].totalNumerosUF
               total['totalRegistrosUF']=infoUf[0].totalRegistrosUF
         return total  
+    }
+
+     //Conta os ufs do mailing
+     async ufsMailing(empresa,idCampanha){
+        connect.mongoose(empresa) 
+        const infoMailing = await MailingCampanha.find({idCampanha:idCampanha})
+        if(infoMailing.length==0){
+            return false
+        }
+        const idMailing = infoMailing[0].idMailing
+        const ddds = await dddsMailing.distinct("uf",{idMailing:idMailing})
+
+       
+        const estados=[
+            //Centro-Oeste       
+            {estado:'Distrito Federal',uf:'DF'},
+            {estado:'Goiás',uf:'GO'},
+            {estado:'Mato Grosso',uf:'MT'},
+            {estado:'Mato Grosso do Sul',uf:'MS'},       
+            //Nordeste
+            {estado:'Alagoas',uf:'AL'},
+            {estado:'Bahia',uf:'BA'},
+            {estado:'Ceará',uf:'CE'},
+            {estado:'Maranhão',uf:'MA'},
+            {estado:'Paraíba',uf:'PB'},
+            {estado:'Pernambuco',uf:'PE'},
+            {estado:'Piauí',uf:'PI'},
+            {estado:'Rio Grande do Norte ',uf:'RN'},
+            {estado:'Sergipe',uf:'SE'},       
+            //Norte
+            {estado:'Acre',uf:'AC'},
+            {estado:'Amapá',uf:'AP'},
+            {estado:'Amazonas',uf:'AM'},
+            {estado:'Pará',uf:'PA'},
+            {estado:'Rondônia',uf:'RO'},
+            {estado:'Roraima',uf:'RR'},
+            {estado:'Tocantins',uf:'TO'},       
+            //Sudeste
+            {estado:'Espírito Santo',uf:'ES'},
+            {estado:'Minas Gerais',uf:'MG'},
+            {estado:'Rio de Janeiro',uf:'RJ'},
+            {estado:'São Paulo',uf:'SP'},       
+            //Sul
+            {estado:'Paraná',uf:'PR'},
+            {estado:'Rio Grande do Sul',uf:'RS'},
+            {estado:'Santa Catarina',uf:'SC'}            
+        ]  
+        const ufs={}
+        for(let i=0; i<ddds.length; i++){
+
+            const numerosUF = await dddsMailing.find({idMailing:idMailing,uf:ddds[i]})
+
+            let fill = "#185979"
+            let totalNumeros=0
+            let numerosFiltrados = 0
+            let disponiveis = numerosUF[0].totalNumerosUF
+        
+            if(disponiveis==0){
+                fill="#f74c4c"
+            }
+            ufs[`${ddds[i]}`]={}
+            ufs[`${ddds[i]}`]['fill']=fill
+            ufs[`${ddds[i]}`]['total']=totalNumeros
+            ufs[`${ddds[i]}`]['filtrados']=numerosFiltrados,
+            ufs[`${ddds[i]}`]['disponiveis']=disponiveis
+            const filter = estados.find(estado => estado.uf == ddds[i])
+            ufs[`${ddds[i]}`]['name']=`${filter.estado}`
+        }
+        return ufs
+
+       
+
+
+
     }
 
 
@@ -524,92 +601,7 @@ class Mailing{
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //Conta os ufs do mailing
-    async ufsMailing(empresa,idCampanha){
-       
-
-
-
-        return new Promise (async (resolve,reject)=>{
-            const pool =  await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Mailing.js:ufsMailing","message":err.message,"stack":err.stack});
-                const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
-                if(infoMailing.length==0){
-                    pool.end((err)=>{
-                        if(err) console.error('Mailings 1188', err)
-                    }) 
-                    
-                    resolve(false)
-                    return false
-                }
-                const idMailing = infoMailing[0].id
-                const tabela = infoMailing[0].tabela_numeros
-
-                let sql = `SELECT COUNT(uf) AS total, uf 
-                            FROM ${empresa}_mailings.${tabela} 
-                            WHERE valido=1 GROUP BY uf`
-                const r = await  this.querySync(conn,sql)    
-                const estados=[
-                    //Centro-Oeste       
-                    {estado:'Distrito Federal',uf:'DF'},
-                    {estado:'Goiás',uf:'GO'},
-                    {estado:'Mato Grosso',uf:'MT'},
-                    {estado:'Mato Grosso do Sul',uf:'MS'},       
-                    //Nordeste
-                    {estado:'Alagoas',uf:'AL'},
-                    {estado:'Bahia',uf:'BA'},
-                    {estado:'Ceará',uf:'CE'},
-                    {estado:'Maranhão',uf:'MA'},
-                    {estado:'Paraíba',uf:'PB'},
-                    {estado:'Pernambuco',uf:'PE'},
-                    {estado:'Piauí',uf:'PI'},
-                    {estado:'Rio Grande do Norte ',uf:'RN'},
-                    {estado:'Sergipe',uf:'SE'},       
-                    //Norte
-                    {estado:'Acre',uf:'AC'},
-                    {estado:'Amapá',uf:'AP'},
-                    {estado:'Amazonas',uf:'AM'},
-                    {estado:'Pará',uf:'PA'},
-                    {estado:'Rondônia',uf:'RO'},
-                    {estado:'Roraima',uf:'RR'},
-                    {estado:'Tocantins',uf:'TO'},       
-                    //Sudeste
-                    {estado:'Espírito Santo',uf:'ES'},
-                    {estado:'Minas Gerais',uf:'MG'},
-                    {estado:'Rio de Janeiro',uf:'RJ'},
-                    {estado:'São Paulo',uf:'SP'},       
-                    //Sul
-                    {estado:'Paraná',uf:'PR'},
-                    {estado:'Rio Grande do Sul',uf:'RS'},
-                    {estado:'Santa Catarina',uf:'SC'}            
-                ]  
-                const ufs={}
-                for(let i=0; i<r.length; i++){
-                    let fill = "#185979"
-                    let totalNumeros=r[i].total
-                    let numerosFiltrados = await this.totalNumerosFiltrados(empresa,tabela,idCampanha,r[i].uf)
-                    let disponiveis = totalNumeros-numerosFiltrados
-                
-                    if(disponiveis==0){
-                        fill="#f74c4c"
-                    }
-                    ufs[`${r[i].uf}`]={}
-                    ufs[`${r[i].uf}`]['fill']=fill
-                    ufs[`${r[i].uf}`]['total']=totalNumeros
-                    ufs[`${r[i].uf}`]['filtrados']=numerosFiltrados,
-                    ufs[`${r[i].uf}`]['disponiveis']=disponiveis
-                    const filter = estados.find(estado => estado.uf == r[i].uf)
-                    ufs[`${r[i].uf}`]['name']=`${filter.estado}`
-                }
-                pool.end((err)=>{
-                    if(err) console.error('Mailings 1241', err)
-                }) 
-                
-                resolve(ufs)
-            })
-        })
-    }
+   
     
     async querySync(conn,sql){         
         return new Promise((resolve,reject)=>{            

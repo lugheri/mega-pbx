@@ -267,7 +267,7 @@ class MailingController{
             let reg={}
                 reg['fill']='#185979'
                 reg['UF']=uf
-                const total = await Mailing.totalRegistrosUF(idMailing,uf,)
+                const total = await Mailing.totalRegistrosUF(empresa,idMailing,uf,)
                 reg['registros']=total['totalRegistrosUF']
                 reg['numeros']=total['totalNumerosUF']
             registros.push(reg)
