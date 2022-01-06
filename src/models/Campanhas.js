@@ -627,9 +627,6 @@ class Campanhas{
               infoMailingCampanha['camposMailing'] = campos
         await MailingCampanha.create(infoMailingCampanha)
 
-       
-            
-
         return infoMailingCampanha
     }
 
@@ -644,7 +641,7 @@ class Campanhas{
         delete mongoose.connection.models[`numerosmailing_${idMailing}`];
         const modelNumerosBase = mongoose.model(`numerosmailing_${idMailing}`,{
             idNumero: Number,
-            idRegistro: String,
+            idRegistro: Number,
             ddd: String,
             numero: String,
             uf:String,
@@ -662,7 +659,7 @@ class Campanhas{
         delete mongoose.connection.models[`numeroscampanha_${idCampanha}`];
         const modelnumerosCampanha = mongoose.model(`numeroscampanha_${idCampanha}`,{
             idNumero: Number,
-            idRegistro: String,
+            idRegistro: Number,
             ddd: String,
             numero: String,
             uf:String,
@@ -718,11 +715,34 @@ class Campanhas{
 
     //Remove o mailing de uma campanha
     async removeMailingCampanha(empresa,idCampanha){
-        connect.mongoose(empresa)
-        delete mongoose.connection.models[`numeroscampanha_${idCampanha}`];
-        const modelnumerosCampanha = mongoose.model(`numeroscampanha_${idCampanha}`,{
+        connect.mongoose(empresa)    
+        const infoCampanha = await MailingCampanha.find({idCampanha:idCampanha})   
+        const idMailing=infoCampanha[0].idMailing
+        delete mongoose.connection.models[`numerosMailing_${idCampanha}`];
+        const modelNumerosMailing = mongoose.model(`numerosMailing_${idMailing}`,{
             idNumero: Number,
-            idRegistro: String,
+            idRegistro: Number,
+            ddd: String,
+            numero: String,
+            uf:String,
+            tipo:String,
+            valido: Boolean,
+            message: String,
+            tratado:Boolean,
+            trabalhado:Boolean,
+            contatado: Boolean,
+            produtivo: Boolean
+        })
+        await modelNumerosMailing.updateMany({tratado:true},{tratado:false})
+
+
+        //Remove Filtros
+        //Remove Campos tela agente
+        await Redis.delete(`${empresa}:mailingCampanha:${idCampanha}`)  
+        await MailingCampanha.deleteOne({idCampanha:idCampanha})
+        const schema = {
+            idNumero: Number,
+            idRegistro: Number,
             ddd: String,
             numero: String,
             uf:String,
@@ -731,17 +751,12 @@ class Campanhas{
             message: String,
             tratado:Boolean,
             contatado: Boolean,
-            produtivo: Boolean,
-            tentativas: Number
-        })
-        console.log('Removendo',`numeroscampanha_${idCampanha}`)
-        await modelnumerosCampanha.collection.drop()
-
-
-        //Remove Filtros
-        //Remove Campos tela agente
-        await Redis.delete(`${empresa}:mailingCampanha:${idCampanha}`)  
-        await MailingCampanha.deleteOne({idCampanha:idCampanha})
+            produtivo: Boolean
+        }
+        
+        delete mongoose.connection.models[`retrabalhocampanha_${idCampanha}`];
+        const modelRetrabalhoRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,schema)
+        await modelRetrabalhoRegistros.collection.drop()
         return true
     }
 

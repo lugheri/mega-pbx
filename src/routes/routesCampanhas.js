@@ -136,7 +136,15 @@ module.exports = (routes) => {
     routes.get('/statusMailing/:idMailing',MailingController.statusMailing)//Status do Mailing
     routes.get('/totalRegUF/:idMailing',MailingController.totalRegUF)//Resumo por ddd
     routes.delete('/removerMailing/:idMailing', MailingController.removerMailing)//remover Mailing
+    routes.get('/ufsMailing/:idMailing',MailingController.ufsMailing)//UFs do Mailing
+    routes.get('/dddsUfMailing/:idMailing/:uf',MailingController.dddsUfMailing)//DDDs por uf do mailing  
+    routes.get('/saudeMailing/:idMailing',MailingController.saudeMailing)//Saude do mailing
     
+    routes.get('/retrabalharMailing/:idMailing',MailingController.retrabalharMailing)//UFs do Mailing
+    
+
+
+    routes.get('/exportarMailing/:idMailing',MailingController.exportarMailing)//Exportar Arquivo
     
     /*OLD
     routes.post('/enviarArquivo',multer(multerDataFiles).single('file'), MailingController.importarBase)//Importar Arquivo
@@ -146,13 +154,13 @@ module.exports = (routes) => {
 
    
         
-    routes.get('/ufsMailing/:idMailing',MailingController.ufsMailing)//UFs do Mailing
-    routes.get('/retrabalharMailing/:idMailing',MailingController.retrabalharMailing)//UFs do Mailing
-    routes.get('/dddsUfMailing/:idMailing/:uf',MailingController.dddsUfMailing)//DDDs por uf do mailing   
-    routes.get('/saudeMailing/:idMailing',MailingController.saudeMailing)//Saude do mailing
+    
+    
+     
+    
 
     routes.get('/abrirMailing/:idMailing/:pag/:reg', MailingController.abrirMailing)//Abrir Mailing    
-    routes.get('/exportarMailing/:idMailing',MailingController.exportarMailing)//Exportar Arquivo
+    
     
     
     //BlackList

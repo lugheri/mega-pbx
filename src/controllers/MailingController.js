@@ -183,7 +183,7 @@ class MailingController{
             //modelNumeros
             const modelNumerosMailing = mongoose.model(`numerosMailing_${idBase}`,{
                 idNumero: Number,
-                idRegistro: String,
+                idRegistro: Number,
                 ddd: String,
                 numero: String,
                 uf:String,
@@ -191,6 +191,7 @@ class MailingController{
                 valido: Boolean,
                 message: String,
                 tratado:Boolean,
+                trabalhado:Boolean,
                 contatado: Boolean,
                 produtivo: Boolean
             })
@@ -259,7 +260,7 @@ class MailingController{
         const empresa = await User.getEmpresa(req)
         const idMailing = req.params.idMailing
         
-        const ufs = await Mailing.totalRegUF(idMailing)
+        const ufs = await Mailing.totalRegUF(empresa,idMailing)
         console.log('UF',ufs)
         const registros=[]
         for(let i=0; i<ufs.length;i++){
@@ -274,6 +275,75 @@ class MailingController{
         }
         res.json(registros)
     }
+
+    //Exibe os ufs de um mailing
+    async ufsMailing(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idMailing = req.params.idMailing
+        const r = await Mailing.ufsMailing(empresa,idMailing)
+        res.json(r)
+    }
+
+    //DDDs por uf do mailing
+    async dddsUfMailing(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idMailing = (req.params.idMailing)
+        const UF = req.params.uf        
+        
+        const ddds = await Mailing.dddsUfMailing(empresa,idMailing,UF)
+       
+        const retorno={}
+              retorno['dados']=[]
+            for(let i=0; i<ddds.length;i++){
+              retorno['dados'].push(ddds[i].total)
+            }
+            retorno['categoria']=[]
+            for(let i=0; i<ddds.length;i++){                       
+                retorno['categoria'].push(`ddd ${ddds[i].ddd}`)
+            }                              
+         res.json(retorno)      
+    }
+
+    //Saude do mailing
+    async saudeMailing(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idMailing = req.params.idMailing
+        const relatorioMailing = await Mailing.relatorioMailing(empresa,idMailing)
+        if(relatorioMailing==false){
+            res.json(false)
+            return
+        }
+
+        
+        const totalNumeros = relatorioMailing['totalNumeros']
+        const contatados = relatorioMailing['contatados']
+        const naoContatados = relatorioMailing['naoContatados']
+        const trabalhados = relatorioMailing['trabalhados']
+        const naoTrabalhados = relatorioMailing['naoTrabalhados']
+        let perc_naotrabalhados = 0
+        let perc_contatados = 0
+        let perc_naoContatados = 0
+            
+        if(totalNumeros!=0){
+            perc_naotrabalhados = parseFloat((naoTrabalhados / totalNumeros)*100).toFixed(1)
+            perc_contatados = parseFloat((contatados / totalNumeros)*100).toFixed(1)
+            perc_naoContatados = parseFloat((naoContatados / totalNumeros)*100).toFixed(1)                            
+        } 
+        const retorno={}
+              retorno['nao_trabalhados']=perc_naotrabalhados
+              retorno['contatados']=perc_contatados
+              retorno['nao_contatados']=perc_naoContatados
+        res.json(retorno)
+    }
+
+    async retrabalharMailing(req,res){
+        const empresa = await User.getEmpresa(req)
+        const idMailing = req.params.idMailing
+        await Mailing.retrabalharMailing(empresa,idMailing)
+        res.json(true)
+    }
+
+   
 
 
 
@@ -463,120 +533,59 @@ class MailingController{
     
 
     //Exporta os registros de um mailing
-    async exportarMailing(req,res){     
-
-        const empresa = await User.getEmpresa(req)
-        const idMailing = parseInt(req.params.idMailing)        
-        const data = await Mailing.exportarMailing(empresa,idMailing,res) 
-        const json2csvParser = new Parser({ delimiter: ';' });
-        const csv = json2csvParser.parse(data['registros']);
-        
+    async exportarMailing(req,res){    
+        /*const empresa = await User.getEmpresa(req)   
+        const idMailing = req.params.idMailing
+        const dir = `public/${empresa}`;
+        const file = `${dir}/dadosMailing.csv`
+        //Verifica se não existe
+        if (!fs.existsSync(dir)){
+            //Efetua a criação do diretório
+            fs.mkdir(dir, (err) => {
+                if (err) {
+                    console.log("Deu ruim...",err);
+                    return
+                }        
+                console.log("Diretório criado! =)")
+            });
+        }
+        const infoMailing = await Mailing.infoMailing(empresa,idMailing)
+        const totalRegistros = infoMailing['totalRegistros']
         const writable = 
-                fs.createWriteStream('src/tmp/files/mailing.csv', {flags: 'w', encoding: 'utf8'})
-        writable.write(csv)
-        writable.end('\n')
+        fs.createWriteStream(`${file}`, {flags: 'w', encoding: 'ascii'})
+        writable.write(`"Mailing exportado em ${moment().format('DD/MM/YYYY')}";\n`)
+        let info = `Mailing: ${infoMailing['nome']} Numeros:${infoMailing['totalNumeros']} Registros:${totalRegistros}`
+        writable.write(`"${info}"\n`)
+        //Preenchendo linha de titulos
+        const titulos = await Mailing.titulosExportarMailing(empresa,idMailing)
+        const dados = await Mailing.dadosMailing(empresa,idMailing)
+        const numeros = await Mailing.numerosMailing(empresa,idMailing)
+
+        for(let t=0;t<titulos.length;t++){
+            writable.write(`"${titulos}";`)
+        }
+        writable.write('\n')      
+
+
+        console.log(titulos)
+        writable.write(titulos)
+        writable.write('\n')      
+        const registrosPagina = 100     
+        const totalPaginas = Math.ceil(totalRegistros/registrosPagina)      
         
-         res.download('src/tmp/files/mailing.csv', function(err) {
-            if(err) {
-                console.log(err);
-            }
-        })
-        
-        /*res.setHeader('Content-disposition', 'attachment; filename=mailing.csv');
-        res.set('Content-Type', 'text/csv');
-      
-        //res.send("ok<a href='src/tmp/files/mailing.csv' download='mailing.csv' id='download-link'></a><script>document.getElementById('download-link').click();</script>")
-        //res.sendFile('src/tmp/files/mailing.csv',options)
-        /*        
-        const fields = data['fields']
-        const csvParser = new Parser({fields})
-        const mailing = csvParser.parse(data['registros']);        
-    
-        res.status(200).end(mailing);/*       
-        fs.writeFile('data.csv', csv.parse(mailing), function(err){
-            if(err){
-                console.error(err)
-                throw err
-            }
-            console.log('arquivo salvo')
-        })
-        /*const json2csvParser = new Parser({ delimiter: ';' });
-        const csv = json2csvParser.parse(mailing);       
-        res.setHeader('Content-disposition', 'attachment; filename=data.csv');
-        res.set('Content-Type', 'text/csv');
-        return res.status(200).send(csv);*/
+        writable.end()
+        res.send(`static/${empresa}/dadosMailing.csv`)*/
+        res.json(false)
+        return false
+
     }
 
        
-    //Exibe os ufs de um mailing
-    async ufsMailing(req,res){
-        const empresa = await User.getEmpresa(req)
-        const idMailing = req.params.idMailing
-        const r = await Mailing.ufsMailing(empresa,idMailing)
-        res.json(r)
-    }
+    
 
-    async retrabalharMailing(req,res){
-        const empresa = await User.getEmpresa(req)
-        const idMailing = req.params.idMailing
-        await Mailing.retrabalharMailing(empresa,idMailing)
-        res.json(true)
-    }
-
-    //DDDs por uf do mailing
-    async dddsUfMailing(req,res){
-        const empresa = await User.getEmpresa(req)
-        const idMailing = (req.params.idMailing)
-        const UF = req.params.uf
-        const infoTabela= await Mailing.tabelaMailing(empresa,idMailing)
-        const tabela = infoTabela[0].tabela_numeros
-        
-        const ddds = await Mailing.dddsUfMailing(empresa,tabela,UF)
-        const retorno={}
-              retorno['dados']=[]
-            for(let i=0; i<ddds.length;i++){
-              retorno['dados'].push(ddds[i].total)
-            }
-            retorno['categoria']=[]
-            for(let i=0; i<ddds.length;i++){                       
-                retorno['categoria'].push(`ddd ${ddds[i].ddd}`)
-            }                              
-         res.json(retorno)      
-    }
    
-    //Saude do mailing
-    async saudeMailing(req,res){
-        const empresa = await User.getEmpresa(req)
-        const idMailing = req.params.idMailing
-        const infoTabela= await Mailing.tabelaMailing(empresa,idMailing)
-        if(infoTabela.length != 0){
-            const tabela = infoTabela[0].tabela_numeros
-            const totalRegistros = infoTabela[0].totalNumeros
-            const contatados = 0//await Mailing.registrosContatados(empresa,tabela)
-            const naoContatados = 0//await Mailing.registrosNaoContatados(empresa,tabela)
-
-            const trabalhados = contatados + naoContatados
-            const naoTrabalhados = totalRegistros-trabalhados
-            let perc_naotrabalhados = 0
-            let perc_contatados = 0
-            let perc_naoContatados = 0
-            
-
-            if(totalRegistros!=0){
-                perc_naotrabalhados = parseFloat((naoTrabalhados / totalRegistros)*100).toFixed(1)
-                perc_contatados = parseFloat((contatados / totalRegistros)*100).toFixed(1)
-                perc_naoContatados = parseFloat((naoContatados / totalRegistros)*100).toFixed(1)                            
-            } 
-                
-            const retorno={}
-                  retorno['nao_trabalhados']=perc_naotrabalhados
-                  retorno['contatados']=perc_contatados
-                  retorno['nao_contatados']=perc_naoContatados
-                  res.json(retorno)
-            return false
-        }
-        res.json(false)
-    }
+    
+    
     
 }
 

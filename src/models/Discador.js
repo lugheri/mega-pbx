@@ -719,12 +719,16 @@ class Discador{
         delete mongoose.connection.models[`numerosmailing_${idMailing}`];   
         const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{
             idNumero: Number,
-            idRegistro: String,
+            idRegistro: Number,
             ddd: String,
             numero: String,
             uf:String,
+            tipo:String,
             valido: Boolean,
-            message: String
+            message: String,
+            tratado:Boolean,
+            contatado: Boolean,
+            produtivo: Boolean
         })
         const info = {};
               info['numeros']=[]
@@ -858,6 +862,81 @@ class Discador{
     }
 
     async campanhasTabulacaoMailing(empresa,dadosTabulacao){
+
+        const idCampanha = dadosTabulacao['idCampanha']
+        const idMailing = dadosTabulacao['idMailing']
+        const idNumero = dadosTabulacao['id_numero']
+        const idRegistro = dadosTabulacao['idRegistro']
+        const numero = dadosTabulacao['numero']
+        const contatado = dadosTabulacao['contatado']
+        const produtivo = dadosTabulacao['produtivo']        
+        const status_tabulacao = dadosTabulacao['status_tabulacao']
+        const observacoes = dadosTabulacao['observacoes']
+        const ramal = dadosTabulacao['ramal']
+        const removeNumero = dadosTabulacao['removeNumero']
+        
+        /*tabular['tipo']='agente'         
+        tabular['nome_registro']=nome_registro       
+        tabular['protocolo']=protocolo
+        tabular['uniqueid']=uniqueid
+        tabular['tipo_ligacao']=tipo_ligacao*/
+        
+        const schema = {
+            idNumero: Number,
+            idRegistro: Number,
+            ddd: String,
+            numero: String,
+            uf:String,
+            tipo:String,
+            valido: Boolean,
+            message: String,
+            tratado:Boolean,
+            trabalhado:Boolean,
+            contatado: Boolean,
+            produtivo: Boolean
+        }
+        
+        delete mongoose.connection.models[`retrabalhocampanha_${idCampanha}`];
+        const modelRetrabalhoRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,schema)
+
+        delete mongoose.connection.models[`numerosmailing_${idMailing}`];   
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schema)
+        let numContatado = false
+        if(contatado=='S'){
+            numContatado = true
+        }
+        if(produtivo==1){//Caso Produtivo atualiza todos os numeros do registro como produtivo
+            await modelNumerosMailing.updateOne({idRegistro:idRegistro},{trabalhado:true,produtivo:true,contatado:numContatado})
+        }else{
+            if(removeNumero==1){
+                await modelNumerosMailing.updateOne({idNumero:idNumero,idRegistro:idRegistro},{valido:false,message:"Numero removido na tabulacao"})
+            }
+            await modelNumerosMailing.updateOne({idNumero:idNumero,idRegistro:idRegistro},{trabalhado:true,produtivo:false,contatado:numContatado})
+            //Inserindo tabela de retrabalho
+            const reg = await modelRetrabalhoRegistros.find({idNumero:idNumero,idRegistro:idRegistro}).count()
+            if(reg==0){
+
+                const infoTelefone = await modelNumerosMailing.find({idNumero:idNumero,idRegistro:idRegistro})
+                const retrabalhar={}
+                    retrabalhar['idNumero']=idNumero
+                    retrabalhar['idRegistro']=idRegistro
+                    retrabalhar['ddd']=infoTelefone[0].ddd
+                    retrabalhar['numero']=numero
+                    retrabalhar['uf']=infoTelefone[0].uf
+                    retrabalhar['tipo']=infoTelefone[0].tipo
+                    retrabalhar['valido']=true
+                    retrabalhar['message']="ok"
+                    retrabalhar['tratado']=false
+                    retrabalhar['trabalhado']=false
+                    retrabalhar['contatado']=false
+                    retrabalhar['produtivo']=false
+                    console.log('Inserindo Retrabalho')
+                await modelRetrabalhoRegistros.insertMany(retrabalhar)
+            }else{
+                console.log('Atualizando Retrabalho')
+                await modelRetrabalhoRegistros.updateOne({idNumero:idNumero,idRegistro:idRegistro},{contatado:false,produtivo:false})
+            }
+        }
         console.log('Dados Tabulacao',dadosTabulacao)
         return true
     }
@@ -897,6 +976,8 @@ class Discador{
               tabular['protocolo']=protocolo
               tabular['uniqueid']=uniqueid
               tabular['tipo_ligacao']=tipo_ligacao   
+             
+              
 
         console.log('Tabular',tabular)
         this.campanhasTabulacaoMailing(empresa,tabular)
@@ -936,7 +1017,7 @@ class Discador{
 
      //Tabulação automática do sistema    
      async autoTabulacao(empresa,protocolo,idCampanha,idRegistro,id_numero,ramal,uniqueid,numero,status_tabulacao,observacoes,contatado,produtivo,tipo_ligacao){
-              
+        const idMailing = await Campanhas.idMailingCampanha(empresa,idCampanha)  
         const tabular = {}
               tabular['tipo']='auto'
               tabular['protocolo']=protocolo              
@@ -949,8 +1030,11 @@ class Discador{
               tabular['observacoes']=observacoes
               tabular['contatado']=contatado
               tabular['produtivo']=produtivo
-              tabular['tipo_ligacao']=tipo_ligacao    
-              const idMailing = await Campanhas.idMailingCampanha(empresa,idCampanha)   
+              tabular['tipo_ligacao']=tipo_ligacao 
+              tabular['idMailing']=idMailing
+              tabular['idCampanha']=idCampanha 
+              tabular['removeNumero']=0   
+               
         this.campanhasTabulacaoMailing(empresa,tabular)
                                                 
         await this.registraHistoricoAtendimento(empresa,protocolo,idCampanha,idMailing,idRegistro,id_numero,ramal,uniqueid,tipo_ligacao,numero,status_tabulacao,observacoes,contatado)
@@ -1465,35 +1549,60 @@ class Discador{
 
     //MODO DE FILTRAGEM AVANÇADO
     async selecionaNumerosCampanha(empresa,idCampanha,limit){
-        const base = await Redis.getter(`${empresa}:numerosMailingCampanha:${idCampanha}`)
-        if(base==null){
-            return false
+        if(limit==0){
+            return []
         }
-        let limite=limit
-        if(limit>base.length){
-            limite=base.length
+        connect.mongoose(empresa)
+        const infoMailingCampanha = await MailingCampanha.find({idCampanha:idCampanha})
+        const idMailing = infoMailingCampanha[0].idMailing
+        let modelRegistros
+        const schema = {
+            idNumero: Number,
+            idRegistro: Number,
+            ddd: String,
+            numero: String,
+            uf:String,
+            tipo:String,
+            valido: Boolean,
+            message: String,
+            tratado:Boolean,
+            trabalhado:Boolean,
+            contatado: Boolean,
+            produtivo: Boolean
         }
         const registrosFiltrados=[]
-        for(let b=0;b<limite;b++){
-            console.log(`valor b: ${b} Limit: ${limite}`)
-            //checando numero Disponivel
-            const filter = 1      
-            const numero =base[b].numero      
-            const check = await this.checkTabulacaoProdutivaNumero(empresa,numero,idCampanha)
-            if((check==0)&&(filter==1)){
+        //Verificando retrabalho
+        if(infoMailingCampanha[0].retrabalho==false){
+            delete mongoose.connection.models[`numerosmailing_${idMailing}`];
+            modelRegistros = mongoose.model(`numerosmailing_${idMailing}`,schema)
+        }else{
+            delete mongoose.connection.models[`retrabalhocampanha_${idCampanha}`];
+            modelRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,schema)
+        }
+        const registros = await modelRegistros.find({valido:true,tratado:false}).limit(limit)
+        console.log('Registros:',registros.length,`Retrabalhando: ${infoMailingCampanha[0].retrabalho}`,'Limite',limit)
+        if(registros.length==0){
+            await MailingCampanha.updateOne({idCampanha:idCampanha},{retrabalho:true})
+        }
+        for(let b=0;b<registros.length;b++){
+            const idNumero =registros[b].idNumero
+            const numero =registros[b].numero     
+            const idReg=registros[b].idRegistro      
+            const filtros = 0//Verificando se o registro esta dentro do filtro de discagem
+            const check = await this.checkTabulacaoProdutivaNumero(empresa,numero,idCampanha)//checa se o numero ja esta tabulado como produtivo nesta campanha
+            if((check==0)&&(filtros==0)){
                 const registro = {}
-                    registro['idNumero'] = base[b].idNumero
-                    registro['idRegistro'] = base[b].idRegistro
-                    registro['numero'] = numero      
-                    registrosFiltrados.push(registro)
+                      registro['idNumero'] = idNumero
+                      registro['idRegistro'] = idReg
+                      registro['numero'] = numero   
+                      
+                      console.log('REGISTRO - - -',registro)
+                registrosFiltrados.push(registro)
             }else{
-                b--
                 console.log(`Numero ja trabalhado: ${numero} valor b: ${b}`)
             }
-            base.splice(base.findIndex(registros => registros.idNumero == base[b].idNumero),1)
-            await Redis.setter(`${empresa}:numerosMailingCampanha:${idCampanha}`,base)
-            
-            
+            //Atualiza o registro como tabulado
+            await modelRegistros.updateOne({idNumero:idNumero,idRegistro:idReg},{tratado:true})
         }
         return registrosFiltrados
     }
@@ -1518,7 +1627,7 @@ class Discador{
             })
         }) 
     }
-
+    /*
     async getRegistersCache(empresa,idCampanha,limit) {
         const registrosEmCache = await Redis.getter(`${empresa}:registrosEmCache:${idCampanha}`)
         if((registrosEmCache)&&(registrosEmCache.length==0)){
