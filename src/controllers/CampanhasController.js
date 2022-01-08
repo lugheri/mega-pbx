@@ -5,6 +5,8 @@ import User from '../models/User'
 import Discador from '../models/Discador';
 import Filas from '../models/Filas';
 import Redis from '../Config/Redis'
+import schemaDadosMailing from '../database/schemaDadosMailing'
+import schemaNumerosMailing from '../database/schemaNumerosMailing'
 
 
 class CampanhasController{
@@ -343,25 +345,24 @@ class CampanhasController{
         const empresa = await User.getEmpresa(req)
         const idCampanha = req.params.idCampanha
         const UF = req.params.uf
-        const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
+        const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)        
         if(infoMailing.length==0){
             res.json(false) 
             return false
         }
-        const idMailing = infoMailing[0].id
-        const tabelaNumero=infoMailing[0].tabela_numeros        
+        const idMailing = infoMailing.id               
         //Total de Registros do uf
         const filters = {}
-              filters['totalNumeros']=await Campanhas.totalNumeros(empresa,tabelaNumero,UF)
-              filters['regFiltrados']=await Campanhas.numerosFiltrados(empresa,idMailing,tabelaNumero,idCampanha,UF)
+              filters['totalNumeros']=await Campanhas.totalNumeros(empresa,idMailing,UF,false)
+              filters['regFiltrados']=await Campanhas.numerosFiltrados(empresa,idMailing,idCampanha,UF)
         if(UF!=0){ 
             //Verificando filtros pelo DDD
             filters['DDD']=[]
-            const listDDDs = await Campanhas.dddsMailings(empresa,tabelaNumero,UF)
+            const listDDDs = await Campanhas.dddsMailings(empresa,idMailing,UF)
             for(let i=0;i<listDDDs.length;i++){
                 const ddd = {}
-                      ddd['ddd']=listDDDs[i].ddd
-                      ddd['numeros']=await Campanhas.totalNumeros(empresa,tabelaNumero,UF,listDDDs[i].ddd)
+                      ddd['ddd']=listDDDs[i]
+                      ddd['numeros']=await Campanhas.totalNumeros(empresa,idMailing,UF,listDDDs[i].ddd)
                       ddd['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'ddd',listDDDs[i].ddd,UF)
                 filters['DDD'].push(ddd)               
             }
@@ -369,13 +370,13 @@ class CampanhasController{
             filters['TIPO']=[]
             const celular = {}
                   celular['tipo']='celular'
-                  celular['numeros']=await Campanhas.totalNumeros_porTipo(empresa,tabelaNumero,UF,'celular')
+                  celular['numeros']=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'celular')
                   celular['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'tipo','celular',UF)
             filters['TIPO'].push(celular)  
                  
             const fixo = {}
                   fixo['tipo']='fixo'
-                  fixo['numeros']=await Campanhas.totalNumeros_porTipo(empresa,tabelaNumero,UF,'fixo')
+                  fixo['numeros']=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'fixo')
                   fixo['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'tipo','fixo',UF)
             filters['TIPO'].push(fixo)  
 
@@ -383,7 +384,7 @@ class CampanhasController{
             filters['UF']=[]
             const ufs = {}
                   ufs['uf']=UF
-                  ufs['numeros']=await Campanhas.totalNumeros(empresa,tabelaNumero,UF)
+                  ufs['numeros']=await Campanhas.totalNumeros(empresa,idMailing,UF)
                   ufs['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'uf',UF,UF)
             filters['UF'].push(ufs) 
                   
@@ -391,13 +392,13 @@ class CampanhasController{
             filters['TIPO']=[]
             const celular = {}
                   celular['tipo']='celular'
-                  celular['numeros']=await Campanhas.totalNumeros_porTipo(empresa,tabelaNumero,UF,'celular')
+                  celular['numeros']=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'celular')
                   celular['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'tipo','celular',"")
             filters['TIPO'].push(celular)  
                  
             const fixo = {}
                   fixo['tipo']='fixo'
-                  fixo['numeros']=await Campanhas.totalNumeros_porTipo(empresa,tabelaNumero,UF,'fixo')
+                  fixo['numeros']=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'fixo')
                   fixo['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'tipo','fixo',"")
             filters['TIPO'].push(fixo)  
         }

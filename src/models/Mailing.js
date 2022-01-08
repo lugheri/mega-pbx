@@ -14,6 +14,9 @@ import MailingsTypeFields from '../database/MailingsTypeFields'
 import dddsMailing from '../database/dddsMailing'
 import MailingCampanha from '../database/MailingCampanha'
 
+import schemaDadosMailing from '../database/schemaDadosMailing'
+import schemaNumerosMailing from '../database/schemaNumerosMailing'
+
 
 class Mailing{
     //Mailings em Mongo
@@ -185,20 +188,21 @@ class Mailing{
          }
          //console.log('Limite',limit)
          
-         for(let r = 0; r<limit; r++){            
+         for(let r = 0; r<limit; r++){        
+
              if(jsonFile[r]){
                  idReg=r+idKey
                  //Preparando dados
                  const registro = {} 
                        registro['id_key_base']=idReg
-                       registro['nome']=jsonFile[r][`${campoTipo_Nome[0].name}`]
+                       registro['nome']=jsonFile[0][`${campoTipo_Nome[0].name}`]
                        if(campoTipo_CPF.length>0){
-                          registro['cpf']=jsonFile[r][`${campoTipo_CPF[0].name}`]
+                          registro['cpf']=jsonFile[0][`${campoTipo_CPF[0].name}`]
                        }
                        registro['dados']=[]
                        const dados = {}
                        for(let d = 0; d<campoTipo_dados.length; d++){
-                           dados[`${campoTipo_dados[d].name}`]=jsonFile[r][`${campoTipo_dados[d].name}`]
+                           dados[`${campoTipo_dados[d].name}`]=jsonFile[0][`${campoTipo_dados[d].name}`]
                        }
                  registro['dados'].push(dados)   
                  dadosMailing.push(registro)    
@@ -209,13 +213,13 @@ class Mailing{
                  let ddd=0
                  //Verificando se foi enviado o campo de ddd
                  if(campoTipo_DDD.length>0){
-                     ddd = this.removeCaracteresEspeciais_numero(jsonFile[r][`${campoTipo_DDD[0].name}`]) 
+                     ddd = this.removeCaracteresEspeciais_numero(jsonFile[0][`${campoTipo_DDD[0].name}`]) 
                  }
                  //Verificando se foi enviado o campo de telefone
                  let idNumero = 1
                  if(campoTipo_Telefone.length>0){
                      for(let t = 0; t<campoTipo_Telefone.length; t++){
-                         const numero = this.removeCaracteresEspeciais_numero(jsonFile[r][`${campoTipo_Telefone[t].name}`])
+                         const numero = this.removeCaracteresEspeciais_numero(jsonFile[0][`${campoTipo_Telefone[t].name}`])
                          if(numero){ 
                              let numeroCompleto = ddd.toString()+numero.toString()
                              const infoN = this.validandoNumero(ddd,numeroCompleto)                     
@@ -243,7 +247,7 @@ class Mailing{
                  //Verificando se foi enviado o campo de DDD e Telefone
                  if(campoTipo_DDD_e_telefone.length>0){
                      for(let td = 0; td<campoTipo_DDD_e_telefone.length; td++){
-                         const numeroCompleto = this.removeCaracteresEspeciais_numero(jsonFile[r][`${campoTipo_DDD_e_telefone[td].name}`])
+                         const numeroCompleto = this.removeCaracteresEspeciais_numero(jsonFile[0][`${campoTipo_DDD_e_telefone[td].name}`])
                          if(numeroCompleto){
                              let dddC = numeroCompleto.toString().slice(0,2)     
                              const infoN = this.validandoNumero(dddC,numeroCompleto)                   
@@ -274,6 +278,7 @@ class Mailing{
                  //console.log("line",JSON.stringify(registros))
                 
                  jsonFile.shift()  
+             
             }
         }            
         
@@ -287,13 +292,13 @@ class Mailing{
          if(jsonFile.length>0){ 
             const idRegistro = idReg+1
             const totalRegistros = await modelDadosMailing.count()
-            const totalNumeros = await modelNumerosMailing.count()
+            const totalNumeros = await modelNumerosMailing.find({valido:true}).count()
             await Mailings.updateOne({id:idBase},{totalRegistros:totalRegistros,totalNumeros:totalNumeros})
             this.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idRegistro,modelDadosMailing,modelNumerosMailing,limit)
             // console.log(`Continuando...restam ${jsonFile.length} registros`,idRegistro)
          }else{
             const totalRegistros = await modelDadosMailing.count()
-            const totalNumeros = await modelNumerosMailing.count()
+            const totalNumeros = await modelNumerosMailing.find({valido:true}).count()
             await Mailings.updateOne({id:idBase},{pronto:true,totalRegistros:totalRegistros,totalNumeros:totalNumeros})
             //console.log('Importação concluida')
             //console.timeEnd('importacao')
@@ -303,8 +308,8 @@ class Mailing{
             const ufs = await modelNumerosMailing.distinct("uf")
             for(let u = 0;u<ufs.length;u++){
                 const uf=ufs[u]               
-                const totalNumerosUF = await modelNumerosMailing.find({uf:`${uf}`}).count() 
-                const totalRegistrosUF = await modelNumerosMailing.distinct("idRegistro",{uf:`${uf}`})
+                const totalNumerosUF = await modelNumerosMailing.find({uf:`${uf}`,valido:true}).count() 
+                const totalRegistrosUF = await modelNumerosMailing.distinct("idRegistro",{uf:`${uf}`,valido:true})
                 const ddds = await modelNumerosMailing.distinct("ddd",{uf:`${uf}`})
                 for(let d = 0;d<ddds.length;d++){
                     const ddd=ddds[d]
@@ -434,28 +439,10 @@ class Mailing{
         delete mongoose.connection.models[`dadosmailing_${idMailing}`];
         delete mongoose.connection.models[`numerosmailing_${idMailing}`];
 
-        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,{
-            id_key_base:{type:Number, index:true},
-            nome:String,
-            cpf:String,
-            dados:Array
-        })
+        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,schemaDadosMailing)
 
         //modelNumeros
-        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            tipo:String,
-            valido: Boolean,
-            message: String,
-            tratado:Boolean,
-            trabalhado:Boolean,
-            contatado: Boolean,
-            produtivo: Boolean
-        })
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
         
         await modelDadosMailing.collection.drop()
         await modelNumerosMailing.collection.drop()
@@ -617,20 +604,7 @@ class Mailing{
             return false
         }
         delete mongoose.connection.models[`numerosmailing_${idMailing}`];
-        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            tipo:String,
-            valido: Boolean,
-            message: String,
-            tratado:Boolean,
-            trabalhado:Boolean,
-            contatado: Boolean,
-            produtivo: Boolean
-        })
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
 
         relatorio['totalNumeros']=infoMailing['totalNumeros']
         relatorio['contatados']=await modelNumerosMailing.find({valido:true,trabalhado:true,contatado:true}).count()
@@ -644,22 +618,9 @@ class Mailing{
     async titulosExportarMailing(empresa,idMailing){
         connect.mongoose(empresa)
         delete mongoose.connection.models[`dadosmailing_${idMailing}`]
-        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,{
-            id_key_base:{type:Number, index:true},
-            nome:String,
-            cpf:String,
-            dados:Array
-        })
+        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,schemaDadosMailing)
         delete mongoose.connection.models[`numerosmailing_${idMailing}`]
-        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            valido: Boolean,
-            message: String
-        })
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
         const camposNome = await MailingsTypeFields.find({idMailing:idMailing,tipo:"nome"}).sort({ordem:1})
         const camposCpf = await MailingsTypeFields.find({idMailing:idMailing,tipo:"cpf"}).sort({ordem:1})
         const camposDDDs = await MailingsTypeFields.find({idMailing:idMailing,tipo:"ddd"}).sort({ordem:1})
@@ -687,27 +648,14 @@ class Mailing{
 
     async dadosMailing(empresa,idMailing){
         delete mongoose.connection.models[`dadosmailing_${idMailing}`]
-        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,{
-            id_key_base:{type:Number, index:true},
-            nome:String,
-            cpf:String,
-            dados:Array
-        })
+        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,schemaDadosMailing)
         return await modelDadosMailing.find()
 
     }
 
     async numerosMailing(empresa,idMailing){
         delete mongoose.connection.models[`numerosmailing_${idMailing}`]
-        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            valido: Boolean,
-            message: String
-        })
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
         return await modelNumerosMailing.find()
     }
 
@@ -716,22 +664,9 @@ class Mailing{
     async exportarMailing(empresa,idMailing){
         connect.mongoose(empresa)
         delete mongoose.connection.models[`dadosmailing_${idMailing}`]
-        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,{
-            id_key_base:{type:Number, index:true},
-            nome:String,
-            cpf:String,
-            dados:Array
-        })
+        const modelDadosMailing = mongoose.model(`dadosmailing_${idMailing}`,schemaDadosMailing)
         delete mongoose.connection.models[`numerosmailing_${idMailing}`]
-        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            valido: Boolean,
-            message: String
-        })
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
         const registros = await modelDadosMailing.find()
 
         const mailing = []
@@ -776,20 +711,8 @@ class Mailing{
         const idCampanha=infoCampanha[0].idCampanha
         console.log(`retrabalhocampanha_${idCampanha}`)
         delete mongoose.connection.models[`retrabalhocampanha_${idCampanha}`];
-        const modelRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,{
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            tipo:String,
-            valido: Boolean,
-            message: String,
-            tratado:Boolean,
-            contatado: Boolean,
-            produtivo: Boolean
-        })
-        await modelRegistros.updateMany({tratado:true},{tratado:false})
+        const modelRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,schemaNumerosMailing)
+        await modelRegistros.updateMany({tratado:true},{"$set":{tratado:false}})
         return true
     }
 

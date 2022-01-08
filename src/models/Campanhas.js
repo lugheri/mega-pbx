@@ -5,8 +5,11 @@ import Redis from '../Config/Redis'
 
 //Mongo models
 import mongoose from 'mongoose'
+import Mailings from '../database/Mailings'
 import MailingCampanha from '../database/MailingCampanha'
 import MailingsTypeFields from '../database/MailingsTypeFields'
+import dddsMailing from '../database/dddsMailing'
+import schemaNumerosMailing from '../database/schemaNumerosMailing'
 
 class Campanhas{ 
     async querySync(conn,sql){         
@@ -22,29 +25,20 @@ class Campanhas{
     }     
     //STATUS DE EVOLUCAO DE CAMPANHA
     async totalMailingsCampanha(empresa,idCampanha){
-        const totalMailingCampanha = await Redis.getter(`${empresa}:totalMailingsCampanha:${idCampanha}`)
-        if(totalMailingCampanha!=null){
-            return totalMailingCampanha
+        connect.mongoose(empresa)
+        const mailing = await MailingCampanha.find({idCampanha:idCampanha})
+        if(mailing.length==0){
+            return []
         }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-        
-                const sql = `SELECT m.totalNumeros-m.numerosInvalidos AS total, m.id AS idMailing
-                               FROM ${empresa}_dados.mailings as m 
-                               JOIN ${empresa}_dados.campanhas_mailing AS cm 
-                                 ON cm.idMailing=m.id 
-                              WHERE cm.idCampanha=${idCampanha}`
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 1079', err)
-                })
-                await Redis.setter(`${empresa}:totalMailingsCampanha:${idCampanha}`,rows)
-                resolve(rows)
-            })
-        })        
+        const idMailing = mailing[0].idMailing
+        const infoMailng = await Mailings.find({id:idMailing})
+
+        const totalMailingCampanha={}
+              totalMailingCampanha['total']=infoMailng[0].totalNumeros
+              totalMailingCampanha['idMailing']=idMailing
+        return [totalMailingCampanha]     
     }
+
     async mailingsContatadosPorCampanha(empresa,idCampanha,idMailing,status){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
@@ -639,37 +633,13 @@ class Campanhas{
 
         //modelNumeros
         delete mongoose.connection.models[`numerosmailing_${idMailing}`];
-        const modelNumerosBase = mongoose.model(`numerosmailing_${idMailing}`,{
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            tipo:String,
-            valido: Boolean,
-            message: String,
-            tratado:Boolean,
-            contatado: Boolean,
-            produtivo: Boolean
-        })
+        const modelNumerosBase = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
         const numeros = await modelNumerosBase.find({valido:true});
        
 
         //Criando collection campanha
         delete mongoose.connection.models[`numeroscampanha_${idCampanha}`];
-        const modelnumerosCampanha = mongoose.model(`numeroscampanha_${idCampanha}`,{
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            tipo:String,
-            valido: Boolean,
-            message: String,
-            tratado:Boolean,
-            contatado: Boolean,
-            produtivo: Boolean
-        })
+        const modelnumerosCampanha = mongoose.model(`numeroscampanha_${idCampanha}`,schemaNumerosMailing)
 
         let insertNumber=[]
         for(let n=0;n<numeros.length;n++){
@@ -719,20 +689,7 @@ class Campanhas{
         const infoCampanha = await MailingCampanha.find({idCampanha:idCampanha})   
         const idMailing=infoCampanha[0].idMailing
         delete mongoose.connection.models[`numerosMailing_${idCampanha}`];
-        const modelNumerosMailing = mongoose.model(`numerosMailing_${idMailing}`,{
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            tipo:String,
-            valido: Boolean,
-            message: String,
-            tratado:Boolean,
-            trabalhado:Boolean,
-            contatado: Boolean,
-            produtivo: Boolean
-        })
+        const modelNumerosMailing = mongoose.model(`numerosMailing_${idMailing}`,schemaNumerosMailing)
         await modelNumerosMailing.updateMany({tratado:true},{tratado:false})
 
 
@@ -740,22 +697,8 @@ class Campanhas{
         //Remove Campos tela agente
         await Redis.delete(`${empresa}:mailingCampanha:${idCampanha}`)  
         await MailingCampanha.deleteOne({idCampanha:idCampanha})
-        const schema = {
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            tipo:String,
-            valido: Boolean,
-            message: String,
-            tratado:Boolean,
-            contatado: Boolean,
-            produtivo: Boolean
-        }
-        
         delete mongoose.connection.models[`retrabalhocampanha_${idCampanha}`];
-        const modelRetrabalhoRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,schema)
+        const modelRetrabalhoRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,schemaNumerosMailing)
         await modelRetrabalhoRegistros.collection.drop()
         return true
     }
@@ -910,85 +853,39 @@ class Campanhas{
 
      //Retorna todas as informações de um mailing que esta atribuido em uma campanha
      async infoMailingCampanha(empresa,idCampanha){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql =`SELECT m.* 
-                            FROM ${empresa}_dados.mailings AS m
-                            JOIN ${empresa}_dados.campanhas_mailing AS c
-                                ON c.idMailing=m.id
-                            WHERE idCampanha=${idCampanha}`
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 790', err)
-                })
-                resolve(rows)
-            })
-        })
+        connect.mongoose(empresa)
+        const mailingCampanha = await MailingCampanha.find({idCampanha:idCampanha})
+        const idMailing = mailingCampanha[0].idMailing
+        const infoMailing = await Mailing.infoMailing(empresa,idMailing)
+        return infoMailing
     }
      //Conta o total de numeros de uma tabela pelo UF, ou DDD
-     async totalNumeros(empresa,tabela,uf,ddd){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                let filter=""
-                if(uf!=0){ filter += ` AND uf="${uf}"` }
-                if(ddd!=undefined){ filter += ` AND ddd=${ddd}`}
-                const sql = `SELECT COUNT(id) AS total 
-                            FROM ${empresa}_mailings.${tabela}
-                            WHERE valido=1 ${filter}` 
-                
-                const r = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 877', err)
-                })
-                resolve(r[0].total)
-            })
-        })
+     async totalNumeros(empresa,idMailing,uf,ddd){
+        connect.mongoose(empresa)
+        if(ddd){
+           const infoDDD = await dddsMailing.find({idMailing:idMailing,ddd:ddd})
+           return infoDDD[0].totalNumerosDDD
+        }
+        if(uf!=0){
+            const infoUF = await dddsMailing.find({idMailing:idMailing,uf:`${uf.toUpperCase()}`})  
+            return infoUF[0].totalNumerosUF
+        }
+        return 0
     }
      //Conta o total de registros filtrados de uma tabela pelo us
      async numerosFiltrados(empresa,idMailing,tabelaNumeros,idCampanha,uf){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                let filter=""
-                if(uf!=0){ filter += ` AND uf="${uf}"` }
-                const sql = `SELECT COUNT(id) AS total
-                            FROM ${empresa}_mailings.${tabelaNumeros}
-                            WHERE valido=1 AND campanha_${idCampanha}=1 ${filter}`
-                const r = await this.querySync(conn,sql)
-                
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 914', err)
-                })
-                resolve(r[0].total)
-            })
-        })
+        return 0
+        
     }
     //Retorna os DDDS de uma tabela de numeros
-    async dddsMailings(empresa,tabela,uf){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                let filter=""
-                if(uf!=0){ filter = `WHERE uf='${uf}'` }
-                let sql = `SELECT DISTINCT ddd 
-                            FROM ${empresa}_mailings.${tabela} ${filter}`
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 965', err)
-                })
-                resolve(rows)
-            })
-        })
+    async dddsMailings(empresa,idMailing,uf){
+        connect.mongoose(empresa)
+        return await dddsMailing.distinct("ddd",{idMailing:idMailing,uf:`${uf.toUpperCase()}`})
     }
     //Checa se existe algum filtro de DDD aplicado
     async checkTypeFilter(empresa,idCampanha,tipo,valor,uf){  
-        return new Promise (async (resolve,reject)=>{ 
+       
+        /*return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{     
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
@@ -1012,26 +909,16 @@ class Campanhas{
                 }
                 resolve(true);               
             })
-        })
+        })*/
+        return 0 
     }
-    async totalNumeros_porTipo(empresa,tabela,uf,tipo){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                let filter=""
-                if(uf!=0){ filter += ` AND uf="${uf}"` }
-                if(tipo!=undefined){ filter += ` AND tipo='${tipo}'`}
-                const sql = `SELECT COUNT(id) AS total 
-                            FROM ${empresa}_mailings.${tabela} 
-                            WHERE valido=1 ${filter}`       
-                const r = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 895', err)
-                })
-                resolve(r[0].total)
-            })
-        })
+    async totalNumeros_porTipo(empresa,idMailing,uf,tipo){
+        connect.mongoose(empresa)
+        delete mongoose.connection.models[`numerosmailing_${idMailing}`];
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
+        const numeros = await modelNumerosMailing.find({uf:`${uf}`,tipo:`${tipo}`}).count()
+        console.log('numeros',numeros)
+        return numeros
     }
     //CONFIGURAR TELA DO AGENTE    
      //Lista todos os campos que foram configurados do mailing

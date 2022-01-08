@@ -1,13 +1,21 @@
-/*import csv from 'csvtojson';*/
+import connect from '../Config/dbConnection';
+import mongoose from 'mongoose'
+import schemaDadosMailing from '../database/schemaDadosMailing'
+import schemaNumerosMailing from '../database/schemaNumerosMailing'
+
 import Mailing from '../models/Mailing';
 import Campanhas from '../models/Campanhas';
 import User from '../models/User';
 import moment from "moment";
+
+
+
+
+/*
+import csv from 'csvtojson';
 import fs from 'fs';
 let path = require('path');
 import { Parser } from 'json2csv';
-import connect from '../Config/dbConnection';
-import mongoose from 'mongoose'
 
 import { Readable } from "stream"
 import readLine from "readline"
@@ -18,7 +26,7 @@ import { promisify } from 'util';
 
 import { createWriteStream } from 'fs';
 import Redis from '../Config/Redis';
-
+*/
 
 
 class MailingController{
@@ -28,10 +36,7 @@ class MailingController{
     async listarMailings(req,res){
         const empresa = await User.getEmpresa(req)
         const mailingData = await Mailing.listaMailing(empresa)
-
         const mailings = []
-
-        
         for(let i=0; i<mailingData.length;i++){
             const infoMailing={}
                   infoMailing['id'] = mailingData[i].id
@@ -173,28 +178,10 @@ class MailingController{
             
             await Mailing.configuraTipoCampos(empresa,idBase,header,tipoCampos,keys)//Configura os tipos de campos
             //modelDados
-            const modelDadosMailing = mongoose.model(`dadosMailing_${idBase}`,{
-                id_key_base:{type:Number, index:true},
-                nome:String,
-                cpf:String,
-                dados:Array
-            })
+            const modelDadosMailing = mongoose.model(`dadosMailing_${idBase}`,schemaDadosMailing)
 
             //modelNumeros
-            const modelNumerosMailing = mongoose.model(`numerosMailing_${idBase}`,{
-                idNumero: Number,
-                idRegistro: Number,
-                ddd: String,
-                numero: String,
-                uf:String,
-                tipo:String,
-                valido: Boolean,
-                message: String,
-                tratado:Boolean,
-                trabalhado:Boolean,
-                contatado: Boolean,
-                produtivo: Boolean
-            })
+            const modelNumerosMailing = mongoose.model(`numerosMailing_${idBase}`,schemaNumerosMailing)
             const limit=1
             await Mailing.geraArquivoMailing(empresa,idBase,jsonFile,infoMailing,tipoCampos,idKey,modelDadosMailing,modelNumerosMailing,limit)
             

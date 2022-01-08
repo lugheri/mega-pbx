@@ -54,20 +54,15 @@ module.exports = (routes) => {
     routes.post('/addMailingCampanha',CampanhasController.addMailingCampanha)//Adiciona Mailing Campanha      
     routes.get('/listarMailingsCampanha/:idCampanha', CampanhasController.listarMailingCampanha) //Lista Mailing Campanha  
     routes.delete('/removerMailingCampanha/:idCampanha',CampanhasController.removeMailingCampanha)//Remove Mailing Campanha
-
-    routes.get('/testAddNumerosCampanha/:idMailing/:idCampanha',CampanhasController.addNumerosCampanha)
-    routes.get('/testIdMailingCampanha/:idCampanha',CampanhasController.idMailingCampanha)
     
-    
-
-     
-          
-    
+    routes.get('/filtrosDiscagem/:idCampanha/:uf',CampanhasController.filtrosDiscagem)//Remove Mailing Campanha
     
     //Em Refatoração
     routes.post('/filtrarDiscagem',CampanhasController.filtrarDiscagem)//Remove Mailing Campanha
-    routes.get('/filtrosDiscagem/:idCampanha/:uf',CampanhasController.filtrosDiscagem)//Remove Mailing Campanha
-    
+
+    //TESTES
+    routes.get('/testAddNumerosCampanha/:idMailing/:idCampanha',CampanhasController.addNumerosCampanha)
+    routes.get('/testIdMailingCampanha/:idCampanha',CampanhasController.idMailingCampanha)
 
     //Configuracao da tela do agente
     routes.get('/listarCamposConfigurados/:idCampanha', CampanhasController.listarCamposConfigurados)//Listar campos configurados
@@ -132,36 +127,22 @@ module.exports = (routes) => {
     routes.post('/enviarArquivo',multer(multerDataFiles).single('file'), MailingController.importarMailing)//Importar Arquivo
     routes.get('/iniciarConfigBase/:idBase',MailingController.iniciarConfigMailing)
     routes.post('/concluirConfigBase', MailingController.concluirConfigMailing)//Conclui a importação do mailing
-
     routes.get('/statusMailing/:idMailing',MailingController.statusMailing)//Status do Mailing
     routes.get('/totalRegUF/:idMailing',MailingController.totalRegUF)//Resumo por ddd
     routes.delete('/removerMailing/:idMailing', MailingController.removerMailing)//remover Mailing
     routes.get('/ufsMailing/:idMailing',MailingController.ufsMailing)//UFs do Mailing
     routes.get('/dddsUfMailing/:idMailing/:uf',MailingController.dddsUfMailing)//DDDs por uf do mailing  
-    routes.get('/saudeMailing/:idMailing',MailingController.saudeMailing)//Saude do mailing
-    
-    routes.get('/retrabalharMailing/:idMailing',MailingController.retrabalharMailing)//UFs do Mailing
-    
+    routes.get('/saudeMailing/:idMailing',MailingController.saudeMailing)//Saude do mailing    
+    routes.get('/retrabalharMailing/:idMailing',MailingController.retrabalharMailing)//UFs do Mailing   
 
-
+    //Em Revisao
     routes.get('/exportarMailing/:idMailing',MailingController.exportarMailing)//Exportar Arquivo
     
     /*OLD
     routes.post('/enviarArquivo',multer(multerDataFiles).single('file'), MailingController.importarBase)//Importar Arquivo
     routes.get('/iniciarConfigBase/:idBase',MailingController.iniciarConfigBase)//separa os campos do mailing para configuracao do seu tipo
     routes.post('/concluirConfigBase', MailingController.concluirConfigBase)//Conclui a importação do mailing*/
-    
-
-   
-        
-    
-    
-     
-    
-
     routes.get('/abrirMailing/:idMailing/:pag/:reg', MailingController.abrirMailing)//Abrir Mailing    
-    
-    
     
     //BlackList
     routes.post('/novaLista',BlacklistController.novaLista)

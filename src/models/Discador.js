@@ -12,6 +12,7 @@ import Redis from '../Config/Redis'
 //mongo
 import mongoose from 'mongoose'
 import MailingCampanha from '../database/MailingCampanha'
+import schemaNumerosMailing from '../database/schemaNumerosMailing'
 
 class Discador{
     async querySync(conn,sql){         
@@ -322,17 +323,23 @@ class Discador{
             const statusChannel = await Asterisk.statusChannel(empresa,chamadasSimultaneas[c].uniqueid)
             if(!statusChannel){
                 //Removendo a chamada caso o canal nao exista   
-                if(chamadasSimultaneas[c].event_na_fila==1){
-                   const hoje = moment().format("YYYY-MM-DD")
-                   const horario = chamadasSimultaneas[c].horario
-                   const dataLigacao = moment(`${hoje} ${horario}`).format("YYYY-MM-DD HH:mm:ss")
-                   const now = moment(new Date());         
-                   const duration = moment.duration(now.diff(dataLigacao))
-                   const segundos = duration.asSeconds()
-                   if(segundos<=30){
+                const hoje = moment().format("YYYY-MM-DD")
+                const horario = chamadasSimultaneas[c].horario
+                const dataLigacao = moment(`${hoje} ${horario}`).format("YYYY-MM-DD HH:mm:ss")
+                const now = moment(new Date());         
+                const duration = moment.duration(now.diff(dataLigacao))
+                const segundos = duration.asSeconds()
+                if(chamadasSimultaneas[c].event_na_fila==1){                  
+                   if(segundos<=20){
                     chamadasSimultaneas[c].status='Abandonou Fila!' 
                     // await this.removeChamadaSimultanea(empresa,chamadasSimultaneasCampanha[c])     
                     chamadasAtivas.push(chamadasSimultaneas[c])        
+                    }
+                }else{
+                    if(segundos<=15){
+                        chamadasSimultaneas[c].status='Encerrada' 
+                        // await this.removeChamadaSimultanea(empresa,chamadasSimultaneasCampanha[c])     
+                        chamadasAtivas.push(chamadasSimultaneas[c])        
                     }
                 }                 
             }else{         
@@ -717,19 +724,7 @@ class Discador{
     async infoChamada_byDialNumber(empresa,idMailing,idCampanha,idReg,id_numero,numero){
         connect.mongoose(empresa) 
         delete mongoose.connection.models[`numerosmailing_${idMailing}`];   
-        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,{
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            tipo:String,
-            valido: Boolean,
-            message: String,
-            tratado:Boolean,
-            contatado: Boolean,
-            produtivo: Boolean
-        })
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
         const info = {};
               info['numeros']=[]
 
@@ -881,26 +876,11 @@ class Discador{
         tabular['uniqueid']=uniqueid
         tabular['tipo_ligacao']=tipo_ligacao*/
         
-        const schema = {
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            tipo:String,
-            valido: Boolean,
-            message: String,
-            tratado:Boolean,
-            trabalhado:Boolean,
-            contatado: Boolean,
-            produtivo: Boolean
-        }
-        
         delete mongoose.connection.models[`retrabalhocampanha_${idCampanha}`];
-        const modelRetrabalhoRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,schema)
+        const modelRetrabalhoRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,schemaNumerosMailing)
 
         delete mongoose.connection.models[`numerosmailing_${idMailing}`];   
-        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schema)
+        const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
         let numContatado = false
         if(contatado=='S'){
             numContatado = true
@@ -1556,28 +1536,15 @@ class Discador{
         const infoMailingCampanha = await MailingCampanha.find({idCampanha:idCampanha})
         const idMailing = infoMailingCampanha[0].idMailing
         let modelRegistros
-        const schema = {
-            idNumero: Number,
-            idRegistro: Number,
-            ddd: String,
-            numero: String,
-            uf:String,
-            tipo:String,
-            valido: Boolean,
-            message: String,
-            tratado:Boolean,
-            trabalhado:Boolean,
-            contatado: Boolean,
-            produtivo: Boolean
-        }
+        
         const registrosFiltrados=[]
         //Verificando retrabalho
         if(infoMailingCampanha[0].retrabalho==false){
             delete mongoose.connection.models[`numerosmailing_${idMailing}`];
-            modelRegistros = mongoose.model(`numerosmailing_${idMailing}`,schema)
+            modelRegistros = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
         }else{
             delete mongoose.connection.models[`retrabalhocampanha_${idCampanha}`];
-            modelRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,schema)
+            modelRegistros = mongoose.model(`retrabalhocampanha_${idCampanha}`,schemaNumerosMailing)
         }
         const registros = await modelRegistros.find({valido:true,tratado:false}).limit(limit)
         console.log('Registros:',registros.length,`Retrabalhando: ${infoMailingCampanha[0].retrabalho}`,'Limite',limit)
