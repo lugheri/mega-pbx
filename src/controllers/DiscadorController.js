@@ -316,7 +316,7 @@ class DiscadorController{
                 //console.log('==>> D I S C A R = > = >') 
                 //console.log('Discando',idAtendimento)
                 const idMailing = await Campanhas.idMailingCampanha(empresa,idCampanha) 
-                //await Discador.discar(empresa,0,idAtendimento,numero,nomeFila,modoAtendimento,saudacao,aguarde,idCampanha,idMailing,idRegistro,idNumero)          
+                await Discador.discar(empresa,0,idAtendimento,numero,nomeFila,modoAtendimento,saudacao,aguarde,idCampanha,idMailing,idRegistro,idNumero)          
             }
         }
     }   

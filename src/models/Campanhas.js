@@ -8,6 +8,7 @@ import mongoose from 'mongoose'
 import Mailings from '../database/Mailings'
 import MailingCampanha from '../database/MailingCampanha'
 import MailingsTypeFields from '../database/MailingsTypeFields'
+import FiltrosDiscagem from '../database/FiltrosDiscagem'
 import dddsMailing from '../database/dddsMailing'
 import schemaNumerosMailing from '../database/schemaNumerosMailing'
 
@@ -45,8 +46,8 @@ class Campanhas{
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT count(id) AS total 
-                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                            WHERE contatado='${status}' AND idCampanha=${idCampanha} AND idMailing=${idMailing}`
+                               FROM ${empresa}_dados.historico_atendimento 
+                              WHERE contatado='${status}' AND campanha=${idCampanha} AND mailing=${idMailing}`
                 const total_mailing= await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.error('Campanhas.js 1079', err)
@@ -60,9 +61,9 @@ class Campanhas{
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT DISTINCT idMailing 
-                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                            WHERE idCampanha=${idCampanha}`
+                const sql = `SELECT DISTINCT mailing 
+                            FROM ${empresa}_dados.historico_atendimento 
+                            WHERE campanha=${idCampanha}`
                 const rows = await this.querySync(conn,sql);
                 pool.end((err)=>{
                     if(err) console.error('Campanhas.js 1079', err)
@@ -83,8 +84,8 @@ class Campanhas{
                     queryFilter=`AND (produtivo=0 OR produtivo is null)`
                 }
                 const sql = `SELECT count(id) AS total 
-                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                            WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ${queryFilter}`
+                            FROM ${empresa}_dados.historico_atendimento 
+                            WHERE campanha=${idCampanha} AND mailing=${idMailing} ${queryFilter}`
                 const total_mailing= await this.querySync(conn,sql)
                 pool.end((err)=>{
                     if(err) console.error('Campanhas.js 1079', err)
@@ -706,151 +707,23 @@ class Campanhas{
     //FILTROS DE DISCAGEM ##################################################################################
     //Aplica/remove um filtro de discagem
     async filtrarRegistrosCampanha(empresa,parametros){  
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{     
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const idCampanha = parametros.idCampanha;
-                const infoMailing = await this.infoMailingCampanha(empresa,idCampanha)//informacoes do mailing
-        
-                const idMailing = infoMailing[0].id;
-                const tabelaNumeros = infoMailing[0].tabela_numeros;
-                const tipo = parametros.tipo;
-                const valor = parametros.valor
-                const regiao = parametros.regiao 
+        connect.mongoose(empresa)
+        const idCampanha = parametros['idCampanha']
+        const filtro = parametros['tipo']
+        const valor = parametros['valor']
+        const regiao = parametros['regiao']
 
-        
-                if(infoMailing.length==0){
-                    //console.log('Mailing nao encontrado')
-                    return false
-                }
-                const checkFilter = await this.checkFilter(empresa,idCampanha,idMailing,tipo,valor,regiao)//Verificando se ja existe filtro aplicado
-        
-                //verifica se filtro ja esta aplicado
-                if(checkFilter===true){
-                    //console.log('checkFilter true')
-                    let sql=""
-                    if(regiao==""){//remo
-                        //console.log(`Removendo filtro ${tipo}=${valor}`)
-                        sql=`DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
-                            WHERE idCampanha=${idCampanha}
-                            AND idMailing=${idMailing}
-                            AND tipo='${tipo}'
-                            AND valor='${valor}'`
-                    }else{
-                        //console.log(`Removendo filtros ${tipo}=${valor}`)
-                        sql=`DELETE FROM ${empresa}_dados.campanhas_mailing_filtros 
-                                WHERE idCampanha=${idCampanha}
-                                    AND idMailing=${idMailing}
-                                    AND tipo='${tipo}'
-                                    AND valor='${valor}'
-                                    AND regiao='${regiao}'`
-                    }
-                    //console.log(`Removendo filtros sql`,sql)   
-           
-                    await this.querySync(conn,sql)
-            
-                    this.delFilterDial(empresa,tabelaNumeros,idCampanha,tipo,valor,regiao)
-                    //Listar filtros restantes
-                    sql = `SELECT * 
-                            FROM ${empresa}_dados.campanhas_mailing_filtros 
-                            WHERE idCampanha=${idCampanha} AND idMailing=${idMailing}`
-                    const fr = await this.querySync(conn,sql)//Filtros Restantes
-            
-                    if(fr.length>=1){
-                        for (let i = 0; i < fr.length; i++) {
-                            this.addFilterDial(empresa,tabelaNumeros,idCampanha,fr[i].tipo,fr[i].valor,fr[i].regiao)
-                        }
-                    }
-                    pool.end((err)=>{
-                        if(err) console.error('Campanhas.js 758', err)
-                    })
-                    resolve(true)
-                }
-                let sql=`INSERT INTO ${empresa}_dados.campanhas_mailing_filtros 
-                                (idCampanha,idMailing,tipo,valor,regiao)
-                        VALUES (${idCampanha},${idMailing},'${tipo}','${valor}','${regiao}')`
-                        //console.log(`last sql`,sql)          
-                 await this.querySync(conn,sql)
-                this.addFilterDial(empresa,tabelaNumeros,idCampanha,tipo,valor,regiao)
-                
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                })
-                resolve(true)
-            })
-        })      
+        //Verificando Filtros de Discagem
+        const filtros = await FiltrosDiscagem.find({idCampanha:idCampanha,filtro:`${filtro}`,valor:`${valor}`,regiao:`${regiao}`})
+        if(filtros.length==0){
+            await FiltrosDiscagem.create({idCampanha:idCampanha,filtro:`${filtro}`,valor:`${valor}`,regiao:`${regiao}`})
+        }else{
+            const id = filtros[0]._id
+            console.log('id',id)
+            await FiltrosDiscagem.deleteOne({_id:id})
+        }
+        return true    
     }
-    //Checa se já existe algum filtro aplicado com os parametros informados
-    async checkFilter(empresa,idCampanha,idMailing,tipo,valor,regiao){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql =`SELECT id 
-                            FROM ${empresa}_dados.campanhas_mailing_filtros 
-                            WHERE idCampanha=${idCampanha}
-                            AND idMailing=${idMailing}
-                            AND tipo='${tipo}'
-                            AND valor='${valor}'
-                            AND regiao='${regiao}'`
-                const r = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 810', err)
-                })
-                if(r.length==0){
-                    resolve(false)
-                    return
-                }                
-                resolve(true)
-            })
-        })  
-    }
-     //Remove um filtro de uma tabela
-     async delFilterDial(empresa,tabela,idCampanha,tipo,valor,regiao){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                //console.log(`delFilterDial ${tipo}=${valor}`)
-                let filter=""
-                filter+=`${tipo}='${valor}'`
-                if(regiao!=0){ filter+=` AND uf='${regiao}'`}
-            
-                let sql = `UPDATE ${empresa}_mailings.${tabela} 
-                            SET campanha_${idCampanha}=1 
-                            WHERE ${filter}`       
-                //console.log(`delFilter sql`,sql)
-                await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 836', err)
-                })
-                resolve(true)
-            })
-        })
-    }
-    //Aplica um filtro a uma tabela
-    async addFilterDial(empresa,tabela,idCampanha,tipo,valor,regiao){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                //console.log(`addFilterDial ${tipo}=${valor}`)
-                let filter=""
-                filter+=`${tipo}='${valor}'`
-                if(regiao!=0){ filter+=` AND uf='${regiao}'`}       
-                let sql = `UPDATE ${empresa}_mailings.${tabela} 
-                            SET campanha_${idCampanha}=0 
-                            WHERE ${filter}`          
-                await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 856', err)
-                })
-                resolve(true)
-            })
-        })
-    }
-
      //Retorna todas as informações de um mailing que esta atribuido em uma campanha
      async infoMailingCampanha(empresa,idCampanha){
         connect.mongoose(empresa)
@@ -873,8 +746,14 @@ class Campanhas{
         return 0
     }
      //Conta o total de registros filtrados de uma tabela pelo us
-     async numerosFiltrados(empresa,idMailing,tabelaNumeros,idCampanha,uf){
-        return 0
+     async numerosFiltrados(empresa,idCampanha,totalNumeros){
+        connect.mongoose(empresa)
+        const filtros = await FiltrosDiscagem.find({idCampanha:idCampanha})
+        if(filtros.length==0){
+            return totalNumeros
+        }else{
+            return 0
+        }
         
     }
     //Retorna os DDDS de uma tabela de numeros
@@ -883,61 +762,50 @@ class Campanhas{
         return await dddsMailing.distinct("ddd",{idMailing:idMailing,uf:`${uf.toUpperCase()}`})
     }
     //Checa se existe algum filtro de DDD aplicado
-    async checkTypeFilter(empresa,idCampanha,tipo,valor,uf){  
-       
-        /*return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{     
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                let filter  =""
-                if(tipo!='uf'){
-                    filter=` AND regiao = "${uf}"`
-                }
-                const sql =`SELECT id 
-                            FROM ${empresa}_dados.campanhas_mailing_filtros 
-                            WHERE idCampanha=${idCampanha}
-                            AND tipo='${tipo}' AND valor='${valor}'
-                            ${filter}`
-                            //  console.log('sql filtro',sql)
-                const r = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 988', err)
-                })
-                if(r.length==0){
-                    resolve(false);
-                    return
-                }
-                resolve(true);               
-            })
-        })*/
-        return 0 
+    async checkTypeFilter(empresa,idCampanha,totalNumeros,filtro,valor,uf){  
+        connect.mongoose(empresa)
+        const filtros = await FiltrosDiscagem.find({idCampanha:idCampanha,filtro:`${filtro}`,valor:`${valor}`,regiao:`${uf}`})
+        if(filtros.length==0){
+            return totalNumeros
+        }else{
+            const mailingCampanha = await MailingCampanha.find({idCampanha:idCampanha})
+            const idMailing = mailingCampanha[0].idMailing
+
+            delete mongoose.connection.models[`numerosmailing_${idMailing}`];
+            const NumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
+            const buscarfiltros={}
+                  buscarfiltros[`${filtro}`]=`${valor}`
+            if(uf){
+                  buscarfiltros['uf']=`${uf.toUpperCase()}`
+            }
+            console.log('Filtros',buscarfiltros)
+            const numeros = await NumerosMailing.find(buscarfiltros).count()
+            return numeros           
+
+        }
     }
+
     async totalNumeros_porTipo(empresa,idMailing,uf,tipo){
         connect.mongoose(empresa)
         delete mongoose.connection.models[`numerosmailing_${idMailing}`];
         const modelNumerosMailing = mongoose.model(`numerosmailing_${idMailing}`,schemaNumerosMailing)
-        const numeros = await modelNumerosMailing.find({uf:`${uf}`,tipo:`${tipo}`}).count()
+        const numeros = await modelNumerosMailing.find({uf:`${uf.toUpperCase()}`,tipo:`${tipo}`}).count()
         console.log('numeros',numeros)
         return numeros
     }
     //CONFIGURAR TELA DO AGENTE    
      //Lista todos os campos que foram configurados do mailing
-     async camposConfiguradosDisponiveis(empresa,idMailing){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT id,campo,apelido,tipo
-                            FROM ${empresa}_dados.mailing_tipo_campo 
-                            WHERE idMailing='${idMailing}' AND conferido=1`
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 1011', err)
-                })
-                resolve(rows)
-            })
-        })
+     async camposConfiguradosDisponiveis(empresa,idCampanha){
+        connect.mongoose(empresa)
+        const dadosCampanha = await MailingCampanha.find({idCampanha:idCampanha})
+        return dadosCampanha[0].camposMailing
     }
+
+    async atualizaCamposTelaAgente(empresa,idCampanha,camposConf){
+        connect.mongoose(empresa)
+        await MailingCampanha.updateOne({idCampanha:idCampanha},{camposMailing:camposConf})
+    }
+    /*
     //Verifica se o campo esta selecionado
     async campoSelecionadoTelaAgente(empresa,campo,tabela,idCampanha){
         return new Promise (async (resolve,reject)=>{ 
@@ -976,7 +844,7 @@ class Campanhas{
                 resolve(rows)
             })
         })
-    }
+    }*/
     async camposTelaAgente(empresa,idCampanha,tabela){
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
@@ -996,19 +864,8 @@ class Campanhas{
     }
     //Remove campo da campanha
     async delCampoTelaAgente(empresa,idCampanha,idCampo){
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados')
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `DELETE FROM ${empresa}_dados.campanhas_campos_tela_agente 
-                            WHERE idCampanha=${idCampanha} AND idCampo=${idCampo}`
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 1079', err)
-                })
-                resolve(rows)
-            })
-        })
+        console.log('idCampanha',idCampanha,'idCampo',idCampo)
+        return true
     }
     //AGENDAMENTO DE CAMPANHAS
     //Agenda campanha
@@ -1194,23 +1051,12 @@ class Campanhas{
         if(totalRegistrosCampanha!==null){
             return totalRegistrosCampanha
         }
-        return new Promise (async (resolve,reject)=>{
-            const pool = await connect.pool(empresa,'dados')
-             pool.getConnection(async (err,conn)=>{ 
-                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
-                const sql = `SELECT SUM(totalNumeros-numerosInvalidos) AS total 
-                               FROM ${empresa}_dados.mailings as m 
-                               JOIN ${empresa}_dados.campanhas_mailing AS cm ON cm.idMailing=m.id 
-                               JOIN ${empresa}_dados.campanhas AS c ON c.id=cm.idCampanha 
-                              WHERE c.id=${idCampanha}`
-                const rows = await this.querySync(conn,sql)
-                pool.end((err)=>{
-                    if(err) console.error('Campanhas.js 1622', err)
-                })
-                await Redis.setter(`${empresa}:totalRegistrosCampanha:${idCampanha}`,rows)
-                resolve(rows)
-            })
-        })
+        connect.mongoose(empresa)
+        const mailingCampanha = await MailingCampanha.find({idCampanha:idCampanha})
+        const idMailing = mailingCampanha[0].idMailing
+        const infoMailing = await Mailings.find({id:idMailing}) 
+        const total = infoMailing['totalNumeros']
+        await Redis.setter(`${empresa}:totalRegistrosCampanha:${idCampanha}`,total)
     }   
     //Lista Mailings das campanhas ativas
     async listarMailingCampanhasAtivas(empresa){
@@ -1218,6 +1064,14 @@ class Campanhas{
         if(mailingsCampanhasAtivas!==null){
             return mailingsCampanhasAtivas
         }
+        connect.mongoose(empresa)
+        
+
+
+
+
+
+
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados')
             pool.getConnection(async (err,conn)=>{  
@@ -1243,8 +1097,8 @@ class Campanhas{
             pool.getConnection(async (err,conn)=>{  
                 if(err) return console.error({"errorCode":err.code,"message":err.message,"stack":err.stack});
                 const sql = `SELECT  DATE_FORMAT(data,'%d/%m/%Y') AS ultimaData
-                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing 
-                            WHERE idCampanha=${idCampanha} AND idMailing=${idMailing} ORDER BY data DESC`
+                            FROM ${empresa}_dados.historico_atendimento 
+                            WHERE campanha=${idCampanha} AND mailing=${idMailing} ORDER BY data DESC`
                 const d= await this.querySync(conn,sql)
                 if(d.length==0){
                     return ""

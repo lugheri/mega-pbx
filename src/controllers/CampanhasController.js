@@ -58,15 +58,16 @@ class CampanhasController{
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.idCampanha)
         const mailings = []
-        const ma = await Campanhas.mailingsAnteriores(empresa,idCampanha)
+        const ma = await Campanhas.mailingsAnteriores(empresa,idCampanha)        
         for(let i=0;i<ma.length;i++){
-            const idMailing = ma[i].idMailing
+            const idMailing = ma[i].mailing
             const info = await Mailing.infoMailingAtivo(empresa,idMailing)
             const produtivos = await Campanhas.mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,1)
             const improdutivos = await Campanhas.mailingsContatadosPorMailingNaCampanha(empresa,idCampanha,idMailing,0)
             const data =  await Campanhas.dataUltimoRegMailingNaCampanha(empresa,idCampanha,idMailing)
             let total = improdutivos+produtivos
             let nome = "Informações Removidas"
+            console.log('info',info)
             if(info.length>0){               
                 total=info[0].totalNumeros-info[0].numerosInvalidos
                 nome=info[0].nome
@@ -353,8 +354,9 @@ class CampanhasController{
         const idMailing = infoMailing.id               
         //Total de Registros do uf
         const filters = {}
-              filters['totalNumeros']=await Campanhas.totalNumeros(empresa,idMailing,UF,false)
-              filters['regFiltrados']=await Campanhas.numerosFiltrados(empresa,idMailing,idCampanha,UF)
+        const totalNumeros= await Campanhas.totalNumeros(empresa,idMailing,UF,false)
+              filters['totalNumeros']=totalNumeros
+              filters['regFiltrados']=await Campanhas.numerosFiltrados(empresa,idCampanha,totalNumeros)
         if(UF!=0){ 
             //Verificando filtros pelo DDD
             filters['DDD']=[]
@@ -362,44 +364,50 @@ class CampanhasController{
             for(let i=0;i<listDDDs.length;i++){
                 const ddd = {}
                       ddd['ddd']=listDDDs[i]
-                      ddd['numeros']=await Campanhas.totalNumeros(empresa,idMailing,UF,listDDDs[i].ddd)
-                      ddd['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'ddd',listDDDs[i].ddd,UF)
+                const totalNumeros_DDD=await Campanhas.totalNumeros(empresa,idMailing,UF,listDDDs[i].ddd)
+                      ddd['numeros']=totalNumeros_DDD
+                      ddd['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,totalNumeros_DDD,'ddd',listDDDs[i].ddd,UF)
                 filters['DDD'].push(ddd)               
             }
             //Verificando filtros pelo Tipo de Número
             filters['TIPO']=[]
             const celular = {}
                   celular['tipo']='celular'
-                  celular['numeros']=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'celular')
-                  celular['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'tipo','celular',UF)
+            const totalNumeros_celular=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'celular')
+                  celular['numeros']=totalNumeros_celular
+                  celular['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,totalNumeros_celular,'tipo','celular',UF)
             filters['TIPO'].push(celular)  
                  
             const fixo = {}
                   fixo['tipo']='fixo'
-                  fixo['numeros']=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'fixo')
-                  fixo['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'tipo','fixo',UF)
+            const totalNumeros_fixo=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'fixo')
+                  fixo['numeros']=totalNumeros_fixo
+                  fixo['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,totalNumeros_fixo,'tipo','fixo',UF)
             filters['TIPO'].push(fixo)  
 
             //Verificando filtros pelo UF
             filters['UF']=[]
             const ufs = {}
                   ufs['uf']=UF
-                  ufs['numeros']=await Campanhas.totalNumeros(empresa,idMailing,UF)
-                  ufs['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'uf',UF,UF)
+            const totalNumeros_uf=await Campanhas.totalNumeros(empresa,idMailing,UF)
+                  ufs['numeros']=totalNumeros_uf
+                  ufs['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,totalNumeros_uf,'uf',UF,UF)
             filters['UF'].push(ufs) 
                   
         }else{
             filters['TIPO']=[]
             const celular = {}
+            const totalNumeros_celular=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'celular')
                   celular['tipo']='celular'
-                  celular['numeros']=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'celular')
-                  celular['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'tipo','celular',"")
+                  celular['numeros']=totalNumeros_celular
+                  celular['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,totalNumeros_celular,'tipo','celular',"")
             filters['TIPO'].push(celular)  
                  
             const fixo = {}
+            const totalNumeros_fixo=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'fixo')
                   fixo['tipo']='fixo'
-                  fixo['numeros']=await Campanhas.totalNumeros_porTipo(empresa,idMailing,UF,'fixo')
-                  fixo['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,'tipo','fixo',"")
+                  fixo['numeros']=totalNumeros_fixo
+                  fixo['filtered']=await Campanhas.checkTypeFilter(empresa,idCampanha,totalNumeros_fixo,'tipo','fixo',"")
             filters['TIPO'].push(fixo)  
         }
         res.json(filters) 
@@ -410,24 +418,25 @@ class CampanhasController{
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.idCampanha)
         const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
+      
         if(infoMailing.length==0){
             res.send(JSON.parse('{"erro":"Nenhum mailing encontrado na campanha"}'))
             return false
         }
-        const idMailing = infoMailing[0].id
-        const tabela = infoMailing[0].tabela_dados
-        
-        const campos = await Campanhas.camposConfiguradosDisponiveis(empresa,idMailing)      
+        const idMailing = infoMailing.id
+      
+        const campos = await Campanhas.camposConfiguradosDisponiveis(empresa,idCampanha) 
+        console.log('campos',campos)     
         const camposConf=[]
         for(let i=0; i< campos.length; i++){
             camposConf[i]={}
-            camposConf[i]['id']=campos[i].id 
-            camposConf[i]['campo']=campos[i].campo 
+            camposConf[i]['id']=campos[i].nome 
+            camposConf[i]['campo']=campos[i].nome 
             camposConf[i]['apelido']=campos[i].apelido 
             camposConf[i]['tipo']=campos[i].tipo 
             //Verificando se o campo esta adicionado na tela
             let selected=false
-            if(await Campanhas.campoSelecionadoTelaAgente(empresa,campos[i].id,tabela,idCampanha)===true){
+            if(campos[i].habilitado==1){
                 selected = true
             }
             camposConf[i]['selecionado']=selected          
@@ -439,33 +448,75 @@ class CampanhasController{
         const empresa = await User.getEmpresa(req)
         const idCampanha = req.body.idCampanha 
         const idCampo = req.body.idCampo
-        const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
-        const tabela =infoMailing[0].tabela_dados
-        if(await Campanhas.campoSelecionadoTelaAgente(empresa,idCampo,tabela,idCampanha)===false){
-            await Campanhas.addCampoTelaAgente(empresa,idCampanha,tabela,idCampo)
-            res.send(true)
-        }        
-        res.send(false)
+        const campos = await Campanhas.camposConfiguradosDisponiveis(empresa,idCampanha) 
+
+        console.log("ADD CAMPO")
+
+        const camposConf=[]
+        for(let i=0; i< campos.length; i++){
+            const campo = {}
+                  campo['nome'] = campos[i].nome 
+                  campo['apelido'] = campos[i].apelido 
+                  campo['tipo'] = campos[i].tipo
+                  if(idCampo==campos[i].nome){
+                    if(campos[i].habilitado==1){
+                        campo['habilitado'] = 0
+                    }else{
+                        campo['habilitado'] = 1
+                    }
+                  }else{
+                    campo['habilitado'] = campos[i].habilitado
+                  }
+            camposConf.push(campo)               
+        }  
+        await Campanhas.atualizaCamposTelaAgente(empresa,idCampanha,camposConf)
+        res.send(true)
     }
+
     //Lista apenas os campos selecionados
     async listaCampos_telaAgente(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.idCampanha)
         const infoMailing = await Campanhas.infoMailingCampanha(empresa,idCampanha)
-        if(infoMailing.length==0){
-            res.send(false)
-            return false
-        }
-        const tabela = infoMailing[0].tabela_dados
-        const campos = await Campanhas.camposTelaAgente(empresa,idCampanha,tabela)
-        res.send(campos)
+        
+        const campos = await Campanhas.camposConfiguradosDisponiveis(empresa,idCampanha) 
+        const camposConf=[]
+        for(let i=0; i< campos.length; i++){
+            const campo = {}
+                  campo['idJoin']=campos[i].nome 
+                  campo['id']=campos[i].nome 
+                  campo['nome'] = campos[i].nome 
+                  campo['apelido'] = campos[i].apelido 
+                  campo['tipo'] = campos[i].tipo
+            camposConf.push(campo)               
+        }  
+        res.send(camposConf)
     }
      //Desmarca o campo atual
      async removeCampo_telaAgente(req,res){
         const empresa = await User.getEmpresa(req)
         const idCampanha = parseInt(req.params.idCampanha)
-        const idCampo = parseInt(req.params.idCampo)
-        await Campanhas.delCampoTelaAgente(empresa,idCampanha,idCampo)
+        const idCampo = req.params.idCampo
+
+        const campos = await Campanhas.camposConfiguradosDisponiveis(empresa,idCampanha) 
+        const camposConf=[]
+        for(let i=0; i< campos.length; i++){
+            const campo = {}
+                  campo['nome'] = campos[i].nome 
+                  campo['apelido'] = campos[i].apelido 
+                  campo['tipo'] = campos[i].tipo
+                  if(idCampo==campos[i].nome){
+                    if(campos[i].habilitado==1){
+                        campo['habilitado'] = 0
+                    }else{
+                        campo['habilitado'] = 1
+                    }
+                  }else{
+                    campo['habilitado'] = campos[i].habilitado
+                  }
+            camposConf.push(campo)               
+        }  
+        await Campanhas.atualizaCamposTelaAgente(empresa,idCampanha,camposConf)
         res.send(true)
     }
     //AGENDAMENTO

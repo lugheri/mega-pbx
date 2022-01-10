@@ -1041,6 +1041,145 @@ class Discador{
         })                  
     }  
 
+    //INFORMACOES DO AGENTE
+    async agentesLogados(empresa){
+        const agentesLogados = await Redis.getter(`${empresa}:agentesLogados`)
+        if(agentesLogados!==null){
+            return agentesLogados
+        }
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
+            pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:agentesLogados","message":err.message, "line:":err.path});
+
+                const sql = `SELECT COUNT(id) AS logados
+                               FROM ${empresa}_dados.user_ramal
+                              WHERE estado>=1`                            
+                const ul = await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.error(err)
+                })
+                await Redis.setter(`${empresa}:agentesLogados`,ul[0].logados)
+                resolve(ul[0].logados) 
+            })
+        })                
+    }
+    async chamadasProdutividade_CampanhasAtivas_dia(empresa,statusProdutividade){
+        const chamadasProdutivas = await Redis.getter(`${empresa}:chamadasProdutividade_CampanhasAtivas_dia:${statusProdutividade}`)
+        if(chamadasProdutivas!==null){
+            return chamadasProdutivas
+        }
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividade_CampanhasAtivas_dia","message":err.message,"stack":err.stack});
+
+                let queryFilter="";
+                if(statusProdutividade==1){
+                    queryFilter=`AND produtivo=1`
+                }else{
+                    queryFilter=`AND (produtivo=0 OR produtivo is null)`
+                }
+                const hoje = moment().format("Y-MM-DD")
+                const sql = `SELECT COUNT(id) AS produtivas
+                               FROM ${empresa}_dados.historico_atendimento
+                              WHERE data='${hoje}' ${queryFilter} AND status_tabulacao>0`;
+                    
+                const p=await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.error(err)
+                }) 
+                await Redis.setter(`${empresa}:chamadasProdutividade_CampanhasAtivas_dia:${statusProdutividade}`,p[0].produtivas)
+                resolve(p[0].produtivas) 
+            })
+        })       
+    }
+    async totalChamadas_CampanhasAtivas_dia(empresa){
+        const totalChamadas_CampanhasAtivas_dia = await Redis.getter(`${empresa}:totalChamadas_CampanhasAtivas_dia`)
+        if(totalChamadas_CampanhasAtivas_dia!==null){
+            return totalChamadas_CampanhasAtivas_dia
+        }
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:totalChamadas_CampanhasAtivas_dia","message":err.message,"stack":err.stack});
+
+                const hoje = moment().format("Y-MM-DD")
+                const sql = `SELECT COUNT(id) AS chamadas
+                               FROM ${empresa}_dados.historico_atendimento
+                              WHERE data='${hoje}';`
+                const p=await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.error(err)
+                    }) 
+                await Redis.setter(`${empresa}:totalChamadas_CampanhasAtivas_dia`,p[0].chamadas)
+                resolve(p[0].chamadas) 
+            })
+        })       
+    }
+    async agentesPorEstado(empresa,estado){
+        const agentesPorEstado = await Redis.getter(`${empresa}:agentesPorEstado:${estado}`)
+        if(agentesPorEstado!==null){
+            return agentesPorEstado
+        }
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
+            pool.getConnection(async (err,conn)=>{  
+                if(err) return console.error({"errorCode":err.code,"arquivo":"agentesPorEstado.js:","message":err.message,"stack":err.stack});
+
+                const sql = `SELECT COUNT(id) AS agentes
+                            FROM ${empresa}_dados.user_ramal
+                            WHERE estado=${estado}`
+                const ul = await this.querySync(conn,sql);
+                pool.end((err)=>{
+                    if(err) console.error(err)
+                }) 
+                await Redis.setter(`${empresa}:agentesPorEstado:${estado}`,ul[0].agentes)
+                resolve(ul[0].agentes) 
+            })
+        })        
+    }
+
+     //Status atual de uma campanha 
+     async statusCampanha(empresa,idCampanha){
+        const statusCampanha =await Redis.getter(`${empresa}:statusCampanha:${idCampanha}`)       
+        if(statusCampanha==null){
+            return false
+        }
+        return statusCampanha
+    }
+    async chamadasProdutividade_porCampanha(empresa,idCampanha,statusProdutividade,idMailing){
+        const chamadasProdutividade_porCampanha = await Redis.getter(`${empresa}:chamadasProdutividade_porCampanha:${idCampanha}:mailing:${idMailing}:statusProdutividade:${statusProdutividade}`)
+        if(chamadasProdutividade_porCampanha===null){
+            return 0
+        }
+        return new Promise (async (resolve,reject)=>{ 
+            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
+            pool.getConnection(async (err,conn)=>{ 
+                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividade_porCampanha","message":err.message,"stack":err.stack});
+
+                let queryFilter="";
+                if(statusProdutividade==1){
+                    queryFilter=`AND produtivo=1`
+                }else{
+                    queryFilter=`AND (produtivo=0 OR produtivo is null)`
+                }
+                const sql = `SELECT COUNT(id) AS produtivas
+                               FROM ${empresa}_dados.historico_atendimento
+                              WHERE campanha=${idCampanha}                        
+                                AND mailing=${idMailing}
+                                ${queryFilter};`
+                const p=await this.querySync(conn,sql);
+                //console.log(sql)
+                pool.end((err)=>{
+                    if(err) console.error(err)
+                }) 
+                await Redis.setter(`${empresa}:chamadasProdutividade_porCampanha:${idCampanha}:mailing:${idMailing}:statusProdutividade:${statusProdutividade}`,p[0].produtivas,30)
+                resolve(p[0].produtivas) 
+            })
+        })       
+    }
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1087,111 +1226,15 @@ class Discador{
 
 
     
-    //INFORMACOES DO AGENTE
-    async agentesLogados(empresa){
-
-        const agentesLogados = await Redis.getter(`${empresa}:agentesLogados`)
-        if(agentesLogados!==null){
-            return agentesLogados
-        }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:agentesLogados","message":err.message, "line:":err.path});
-
-                const sql = `SELECT COUNT(id) AS logados
-                               FROM ${empresa}_dados.user_ramal
-                              WHERE estado>=1`                            
-                const ul = await this.querySync(conn,sql);
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                })
-                await Redis.setter(`${empresa}:agentesLogados`,ul[0].logados)
-                resolve(ul[0].logados) 
-            })
-        })                
-    }
-    async chamadasProdutividade_CampanhasAtivas_dia(empresa,statusProdutividade){
-        const chamadasProdutivas = await Redis.getter(`${empresa}:chamadasProdutividade_CampanhasAtivas_dia:${statusProdutividade}`)
-        if(chamadasProdutivas!==null){
-            return chamadasProdutivas
-        }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividade_CampanhasAtivas_dia","message":err.message,"stack":err.stack});
-
-                let queryFilter="";
-                if(statusProdutividade==1){
-                    queryFilter=`AND produtivo=1`
-                }else{
-                    queryFilter=`AND (produtivo=0 OR produtivo is null)`
-                }
-                const hoje = moment().format("Y-MM-DD")
-                const sql = `SELECT COUNT(id) AS produtivas
-                               FROM ${empresa}_dados.historico_atendimento
-                              WHERE data='${hoje}' ${queryFilter} `;
-                    
-                const p=await this.querySync(conn,sql);
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                }) 
-                await Redis.setter(`${empresa}:chamadasProdutividade_CampanhasAtivas_dia:${statusProdutividade}`,p[0].produtivas)
-                resolve(p[0].produtivas) 
-            })
-        })       
-    }
-    async totalChamadas_CampanhasAtivas_dia(empresa){
-        const totalChamadas_CampanhasAtivas_dia = await Redis.getter(`${empresa}:totalChamadas_CampanhasAtivas_dia`)
-        if(totalChamadas_CampanhasAtivas_dia!==null){
-            return totalChamadas_CampanhasAtivas_dia
-        }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:totalChamadas_CampanhasAtivas_dia","message":err.message,"stack":err.stack});
-
-                const hoje = moment().format("Y-MM-DD")
-                const sql = `SELECT COUNT(id) AS chamadas
-                            FROM ${empresa}_dados.historico_atendimento
-                            WHERE data='${hoje}';`
-                const p=await this.querySync(conn,sql);
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                    }) 
-                await Redis.setter(`${empresa}:totalChamadas_CampanhasAtivas_dia`,p[0].chamadas)
-                resolve(p[0].chamadas) 
-            })
-        })       
-    }
-    async agentesPorEstado(empresa,estado){
-        const agentesPorEstado = await Redis.getter(`${empresa}:agentesPorEstado:${estado}`)
-        if(agentesPorEstado!==null){
-            return agentesPorEstado
-        }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{  
-                if(err) return console.error({"errorCode":err.code,"arquivo":"agentesPorEstado.js:","message":err.message,"stack":err.stack});
-
-                const sql = `SELECT COUNT(id) AS agentes
-                            FROM ${empresa}_dados.user_ramal
-                            WHERE estado=${estado}`
-                const ul = await this.querySync(conn,sql);
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                }) 
-                await Redis.setter(`${empresa}:agentesPorEstado:${estado}`,ul[0].agentes)
-                resolve(ul[0].agentes) 
-            })
-        })        
-    }
+    
+    
+    
+    
     async chamadasAbandonadas_CampanhasAtivas(empresa){
         const chamadasAbandonadas = await Redis.getter(`${empresa}:chamadasAbandonadas_campanhasAtivas`)
         if(chamadasAbandonadas !== null) {
             return chamadasAbandonadas
         }
-
         return new Promise (async (resolve,reject)=>{ 
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
@@ -1209,7 +1252,7 @@ class Discador{
                 await Redis.setter(`${empresa}:chamadasAbandonadas_campanhasAtivas`,a[0].abandonadas) 
                 resolve(a[0].abandonadas) 
             })
-        })       
+        })
     }
     async chamadasPorContato_dia(empresa,statusContatado){
         const chamadasPorContato_dia = await Redis.getter(`${empresa}:chamadasPorContato_dia:${statusContatado}`)
@@ -1242,45 +1285,6 @@ class Discador{
         const chamadasEmAtendimento = chamadasSimultaneas.filter(chamadas => chamadas.event_em_atendimento==1)
         return chamadasEmAtendimento.length        
     }
-     //Status atual de uma campanha 
-     async statusCampanha(empresa,idCampanha){
-        const statusCampanha =await Redis.getter(`${empresa}:statusCampanha:${idCampanha}`)       
-        if(statusCampanha==null){
-            return false
-        }
-        return statusCampanha
-    }
-    async chamadasProdutividade_porCampanha(empresa,idCampanha,statusProdutividade,idMailing){
-        const chamadasProdutividade_porCampanha = await Redis.getter(`${empresa}:chamadasProdutividade_porCampanha:${idCampanha}:mailing:${idMailing}:statusProdutividade:${statusProdutividade}`)
-        if(chamadasProdutividade_porCampanha===null){
-            return 0
-        }
-        return new Promise (async (resolve,reject)=>{ 
-            const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
-            pool.getConnection(async (err,conn)=>{ 
-                if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividade_porCampanha","message":err.message,"stack":err.stack});
-
-                let queryFilter="";
-                if(statusProdutividade==1){
-                    queryFilter=`AND produtivo=1`
-                }else{
-                    queryFilter=`AND (produtivo=0 OR produtivo is null)`
-                }
-                const sql = `SELECT COUNT(id) AS produtivas
-                               FROM ${empresa}_mailings.campanhas_tabulacao_mailing
-                              WHERE idCampanha=${idCampanha}                        
-                                AND idMailing=${idMailing}
-                                ${queryFilter};`
-                const p=await this.querySync(conn,sql);
-                //console.log(sql)
-                pool.end((err)=>{
-                    if(err) console.error(err)
-                }) 
-                await Redis.setter(`${empresa}:chamadasProdutividade_porCampanha:${idCampanha}:mailing:${idMailing}:statusProdutividade:${statusProdutividade}`,p[0].produtivas,30)
-                resolve(p[0].produtivas) 
-            })
-        })       
-    }
     
     async chamadasProdutividade_porMailing(empresa,statusProdutividade,idMailing){
         const chamadasProdutividade_porMailing = await Redis.getter(`${empresa}:chamadasProdutividade_porMailing:${idMailing}:statusProdutividade:${statusProdutividade}`)
@@ -1291,7 +1295,6 @@ class Discador{
             const pool = await connect.pool(empresa,'dados',`${empresa}_dados`)
             pool.getConnection(async (err,conn)=>{ 
                 if(err) return console.error({"errorCode":err.code,"arquivo":"Discador.js:chamadasProdutividade_porMailing","message":err.message,"stack":err.stack});
-
                 let queryFilter="";
                 if(statusProdutividade==1){
                     queryFilter=`AND produtivo=1`
@@ -1299,14 +1302,13 @@ class Discador{
                     queryFilter=`AND (produtivo=0 OR produtivo is null)`
                 }
                 const sql = `SELECT COUNT(id) AS produtivas
-                            FROM ${empresa}_mailings.campanhas_tabulacao_mailing
-                            WHERE idMailing=${idMailing} ${queryFilter};`
+                            FROM ${empresa}_dados.historico_atendimento
+                            WHERE mailing=${idMailing} ${queryFilter};`
                 const p=await this.querySync(conn,sql);
                 pool.end((err)=>{
                     if(err) console.error(err)
                 }) 
                 await Redis.setter(`${empresa}:chamadasProdutividade_porMailing:${idMailing}:statusProdutividade:${statusProdutividade}`,p[0].produtivas,30)
-                
                 resolve(p[0].produtivas) 
             })
         })       

@@ -18,7 +18,7 @@ class Redis{
         }
        
        const client = await connection.redisConn()   
-       await client.del(collection)
+       //await client.del(collection)
        await client.set(collection, JSON.stringify(data));
      
        if(expires) await client.expire(collection,expire_time)

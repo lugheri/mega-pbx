@@ -2,6 +2,7 @@ import connect from '../Config/dbConnection'
 import Discador from '../models/Discador'
 import Agente from '../models/Agente'
 import Campanhas from '../models/Campanhas'
+import Mailing from '../models/Mailing'
 import Report from '../models/Report'
 import moment from 'moment'
 import Redis from '../Config/Redis'
@@ -21,7 +22,7 @@ class Dashboard{
         })
     } 
 
-    async painel(empresa){         
+    async painel(empresa){
         const hoje = moment().format("YYYY-MM-DD")
         const agentesLogados = await Discador.agentesLogados(empresa)
         const produtivas = await Discador.chamadasProdutividade_CampanhasAtivas_dia(empresa,1)
@@ -39,10 +40,10 @@ class Dashboard{
         const ag_emTela = await Discador.agentesPorEstado(empresa,5)
         const ag_chamadaManual = await Discador.agentesPorEstado(empresa,6)
         const chamadasAbandonadas = await Discador.chamadasAbandonadas_CampanhasAtivas(empresa)
+
         const naoContatados = await Discador.chamadasPorContato_dia(empresa,'N')       
         const contatados = await Discador.chamadasPorContato_dia(empresa,'S')
-        const emAtendimento = await Discador.chamadasEmAtendimento(empresa) 
-
+        const emAtendimento = await Discador.chamadasEmAtendimento(empresa)
         const dash={}
               dash['sinteticos']={}
               dash['sinteticos']['AgentesLogados']=agentesLogados        
@@ -59,9 +60,10 @@ class Dashboard{
               dash['sinteticos']['AnotherKpis']['NaoContatados']=naoContatados
               dash['sinteticos']['AnotherKpis']['Contatados']=contatados
               dash['sinteticos']['AnotherKpis']['ChamadasEmAtendimento']=emAtendimento  
-        const campanhasAtivas = await Campanhas.listarCampanhasAtivas(empresa)  
+        
+        const campanhasAtivas = await Campanhas.listarCampanhasAtivas(empresa)      
               dash["Campanhas"]=[]
-              for(let i = 0; i<campanhasAtivas.length; i++) {
+            for(let i = 0; i<campanhasAtivas.length; i++) {
                 const campanha={}
                 let statusDaCampanha=0
                 let mensagemCampanha="!"
@@ -70,15 +72,18 @@ class Dashboard{
                     statusDaCampanha=statusCampanha[0].estado
                     mensagemCampanha=statusCampanha[0].mensagem
                 }
-                const idMailing = await Campanhas.listarMailingCampanha(empresa,campanhasAtivas[i].id) 
-                const totalRegistros=await Campanhas.totalRegistrosCampanha(empresa,campanhasAtivas[i].id)
-                const Improdutivas_mailingAtual = await Discador.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,0,idMailing[0].idMailing)
-                const Produtivas_mailingAtual = await Discador.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,1,idMailing[0].idMailing)
+                const mailingCampanhas = await Campanhas.listarMailingCampanha(empresa,campanhasAtivas[i].id)
+                const idMailing=mailingCampanhas[0].idMailing
+                const infoMailing = await Mailing.infoMailing(empresa,idMailing)
+                console.log('infoNumero',infoMailing)
+                const totalRegistros=infoMailing['totalNumeros']
+                const Improdutivas_mailingAtual = await Discador.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,0,idMailing)
+                const Produtivas_mailingAtual = await Discador.chamadasProdutividade_porCampanha(empresa,campanhasAtivas[i].id,1,idMailing)
                 const Trabalhados_mailingAtual=Improdutivas_mailingAtual+Produtivas_mailingAtual
-                const NaoTrabalhados_mailingAtual=totalRegistros[0].total-Trabalhados_mailingAtual 
+                const NaoTrabalhados_mailingAtual=totalRegistros-Trabalhados_mailingAtual 
                 let PercentualTrabalhado=0
-                if(totalRegistros[0].total!=0){
-                    PercentualTrabalhado=Math.round((Trabalhados_mailingAtual / totalRegistros[0].total)*100)
+                if(totalRegistros!=0){
+                    PercentualTrabalhado=Math.round((Trabalhados_mailingAtual / totalRegistros)*100)
                 }
                 campanha["nomeCampanha"]=campanhasAtivas[i].nome
                 campanha["idCampanha"]=campanhasAtivas[i].id
@@ -94,17 +99,19 @@ class Dashboard{
                 campanha["NaoTrabalhado"]=NaoTrabalhados_mailingAtual
                 dash["Campanhas"].push(campanha)
             }
-        const mailings = await Campanhas.listarMailingCampanhasAtivas(empresa)
+
             dash["Mailings"]=[]
-        const mailingsAdicionados=[]
-            for(let i = 0; i<mailings.length; i++) {
-                const mailing={}               
-                const idMailing = mailings[i].id
-                const nomeMailing = mailings[i].nome
-                const totalRegistros=mailings[i].totalNumeros-mailings[i].numerosInvalidos 
+            for(let i = 0; i<campanhasAtivas.length; i++){ 
+                const mailingCampanha = await Campanhas.listarMailingCampanha(empresa,campanhasAtivas[i].id)
+                const idMailing=mailingCampanha[0].idMailing
+                const infoMailing = await Mailing.infoMailing(empresa,idMailing)
+
+                const mailing={}
+                const nomeMailing = infoMailing['nome']
+                const totalRegistros=infoMailing['totalNumeros']
                 const Improdutivas=await Discador.chamadasProdutividade_porMailing(empresa,0,idMailing)
                 const Produtivas=await Discador.chamadasProdutividade_porMailing(empresa,1,idMailing)
-                const trabalhado=Produtivas+Improdutivas
+                const trabalhado=Produtivas+Improdutivas                        
 
                 let perc_improdutivas=0
                 let perc_produtivas=0
@@ -120,11 +127,10 @@ class Dashboard{
                 mailing["data"]["Improdutivo"]=perc_improdutivas
                 mailing["data"]["Trabalhados"]=perc_trabalhado
                 //verifica se o mailing ja consta na lista de mailngs
-                if(mailingsAdicionados.includes(idMailing)==false){//Caso o cpf conste no array de cpfs
-                    dash["Mailings"].push(mailing)
-                }                
-                mailingsAdicionados.push(idMailing)
-            }            
+                dash["Mailings"].push(mailing)
+            }
+           
+                        
             dash["dia"]=await Report.diaAtual()
             dash["Agentes"]=[]
         const agentes = await Discador.listarAgentesLogados(empresa)
